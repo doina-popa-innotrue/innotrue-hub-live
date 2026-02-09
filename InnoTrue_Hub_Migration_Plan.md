@@ -1,7 +1,7 @@
 # InnoTrue Hub App — Production Migration Plan
 
 **Date:** February 8, 2026
-**Last updated:** February 9, 2026
+**Last updated:** February 10, 2026
 **Prepared by:** Technical Analysis
 **Scope:** Migration from Lovable Cloud to production-ready infrastructure
 
@@ -11,23 +11,36 @@
 
 | Step | Description | Status |
 |------|-------------|--------|
+| 1 | Fresh Git repository + branching (main/pre-prod/develop) | DONE |
 | 2 | Remove Lovable dependencies | DONE |
-| 3 | Environment separation (.env.example, .gitignore) | PARTIAL |
+| 3 | Environment separation (.env.example, .gitignore) | DONE |
 | 4c | SPA routing (_redirects, _headers) | DONE |
+| 4 | Cloudflare Pages deployment | MANUAL — see Step 4 |
 | 6 | Vitest unit testing (210 tests, 11 test files) | DONE |
 | 8 | CI scripts (typecheck added to package.json) | PARTIAL |
+| 9a | Supabase projects created (pre-prod + prod) | DONE |
+| 9b | Migrations pushed to pre-prod (393 migrations) | DONE |
+| 9b | Seed data applied to pre-prod | DONE |
+| 9b | Edge functions deployed to pre-prod (60 functions) | DONE |
+| 9d | Migrations pushed to prod (393 migrations) | DONE |
+| 9d | Seed data applied to prod | DONE |
+| 9d | Edge functions deployed to prod (60 functions) | DONE |
+| 9c | Pre-prod edge function secrets | MANUAL — see Step 9c |
+| 9e | Prod edge function secrets | MANUAL — see Step 9e |
+| 9f | Google OAuth config (both projects) | MANUAL — see Step 9f |
+| 9f | Auth Email Hook (both projects) | MANUAL — see Step 9f |
+| 9f | Auth redirect URLs (both projects) | MANUAL — see Step 9f |
+| 9f | Resend domain DNS verification | MANUAL — see Step 9f |
+| 9g | Cloudflare Pages environment variables | MANUAL — see Step 9g |
 | 12 | Code splitting / lazy loading (82% bundle reduction) | DONE |
 | — | AI provider: Vertex AI Gemini 3 Flash (EU/Frankfurt) | DONE |
 | — | CSP hardened (removed Lovable/OpenAI/Anthropic domains) | DONE |
 | — | Domain refs updated (app.innotrue.com) | DONE |
 | — | robots.txt, sitemap.xml, README.md rewritten | DONE |
 | — | Email audit: all 13 functions via Resend, old domain fixed | DONE |
-| — | Supabase Auth Email Hook config (dashboard) | MANUAL — see Step 2 |
-| — | Resend domain DNS verification (dashboard) | MANUAL — see Step 2 |
-| — | Google OAuth config (dashboard) | MANUAL — see Step 2 |
-| — | Edge function secrets (dashboard) | MANUAL — see Step 2 |
 | — | Staging email override (all 13 functions wired) | DONE |
 | — | Database seed file (supabase/seed.sql, 12 sections) | DONE |
+| 15 | Cursor IDE setup | MANUAL — see Step 15 |
 
 ---
 
@@ -283,9 +296,13 @@ Moving away from Lovable Cloud does not mean losing the AI-assisted "vibe coding
 
 ### Phase 1: Foundation (Week 1–2)
 
-#### Step 1 — Create Fresh Git Repository
+#### Step 1 — Create Fresh Git Repository ✅ COMPLETED (Feb 9, 2026)
 
 > **Why a fresh repo?** The Lovable-managed repo has their deployment config, commit history tied to their pipeline, and potentially committed secrets. A clean repo from the updated codebase is the safest approach. The Lovable repo stays available if you ever need to reference its history.
+
+**Repository:** https://github.com/doina-popa-innotrue/innotrue-hub-live.git (Private)
+
+**Branches:** `main` (production) → `pre-prod` (QA) → `develop` (daily work)
 
 **1a. Create a new GitHub repository:**
 
@@ -516,17 +533,17 @@ STAGING_EMAIL_OVERRIDE = your-test-inbox@example.com
 
 ---
 
-#### Step 3 — Create Environment Separation (PARTIALLY DONE)
+#### Step 3 — Create Environment Separation ✅ COMPLETED (Feb 9, 2026)
 
-> **Completed (Feb 9, 2026):** `.gitignore` updated with all `.env.*` patterns. `.env.example` template created with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. Remaining: create actual environment files once Supabase projects exist.
+> `.gitignore` updated with all `.env.*` patterns. `.env.example` template created. Supabase projects created and configured.
 
 **Environment map:**
 
-| Environment | Git Branch | Supabase Project | Frontend | APP_ENV |
+| Environment | Git Branch | Supabase Project Ref | Frontend | APP_ENV |
 |---|---|---|---|---|
-| Development | `develop` | Existing Lovable project (`pfwlsxovvqdiwaztqxrj`) | `localhost:8080` | `development` |
-| Pre-production | `pre-prod` | New: `innotrue-hub-preprod` | Cloudflare preview URL | `staging` |
-| Production | `main` | New: `innotrue-hub-prod` | `app.innotrue.com` | `production` |
+| Development | `develop` | `pfwlsxovvqdiwaztqxrj` (Lovable-owned) | `localhost:8080` | `development` |
+| Pre-production | `pre-prod` | `jtzcrirqflfnagceendt` | Cloudflare preview URL | `staging` |
+| Production | `main` | `qfdztdgublwlmewobxmx` | `app.innotrue.com` | `production` |
 
 Create three environment files (do NOT commit these — they're in `.gitignore`):
 
@@ -537,53 +554,73 @@ VITE_SUPABASE_PUBLISHABLE_KEY=<existing-anon-key>
 VITE_APP_ENV=development
 ```
 
-**`.env.staging`** (pre-prod Supabase, created in Step 9):
+**`.env.staging`** (pre-prod Supabase):
 ```env
-VITE_SUPABASE_URL=https://<preprod-project-ref>.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=<preprod-anon-key>
+VITE_SUPABASE_URL=https://jtzcrirqflfnagceendt.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<preprod-anon-key-from-dashboard>
 VITE_APP_ENV=staging
 ```
 
-**`.env.production`** (production Supabase, created in Step 9):
+**`.env.production`** (production Supabase):
 ```env
-VITE_SUPABASE_URL=https://<prod-project-ref>.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=<prod-anon-key>
+VITE_SUPABASE_URL=https://qfdztdgublwlmewobxmx.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<prod-anon-key-from-dashboard>
 VITE_SENTRY_DSN=<your-sentry-dsn>
 VITE_APP_ENV=production
 ```
 
-> **Note:** These local `.env` files are for local development only. Cloudflare Pages uses its own environment variables (configured in Step 9g) — it does NOT read local `.env` files.
+> **Note:** These local `.env` files are for local development only. Cloudflare Pages uses its own environment variables (configured in Step 9g) — it does NOT read local `.env` files. Get the anon keys from: Supabase Dashboard → Project → Settings → API → "Project API keys" → anon/public key.
 
 **Verify:** `npm run dev` uses `.env.development` and connects to the correct Supabase project.
 
 ---
 
-#### Step 4 — Deploy to Cloudflare Pages
+#### Step 4 — Deploy to Cloudflare Pages — MANUAL
 
-**4a. Install Wrangler CLI:**
+**4a. Install Wrangler CLI (optional, for CLI deploys):**
 ```bash
 npm install -g wrangler
 wrangler login
 ```
 
-**4b. Option A — Connect via Cloudflare Dashboard (Recommended):**
+**4b. Connect via Cloudflare Dashboard (Recommended) — Step by step:**
 
-1. Go to https://dash.cloudflare.com → Workers & Pages → Create application → Pages
-2. Connect your GitHub repository
-3. Configure build settings:
+1. Go to https://dash.cloudflare.com
+2. Navigate to **Workers & Pages** in the left sidebar
+3. Click **Create** → select **Pages** tab → **Connect to Git**
+4. Authorize GitHub if not already done → select repository **doina-popa-innotrue/innotrue-hub-live**
+5. Configure build settings:
+   - **Project name:** `innotrue-hub` (this determines your `.pages.dev` subdomain)
+   - **Production branch:** `main`
    - **Framework preset:** None (or Vite if available)
-   - **Build command:** `npm run build`
+   - **Build command:** `npm install --legacy-peer-deps && npm run build`
    - **Build output directory:** `dist`
    - **Root directory:** `/` (project root)
-   - **Node.js version:** Set environment variable `NODE_VERSION` = `20`
-4. Add environment variables:
-   - `VITE_SUPABASE_URL` → your production Supabase URL
-   - `VITE_SUPABASE_PUBLISHABLE_KEY` → your production anon key
-   - `VITE_SENTRY_DSN` → your Sentry DSN
-   - `VITE_APP_ENV` → `production`
-5. Click "Save and Deploy"
+6. Add **environment variables** (click "Add variable"):
 
-**4b. Option B — Deploy via CLI:**
+   **Production environment** (used when deploying `main` branch):
+   | Variable | Value |
+   |----------|-------|
+   | `NODE_VERSION` | `20` |
+   | `VITE_SUPABASE_URL` | `https://qfdztdgublwlmewobxmx.supabase.co` |
+   | `VITE_SUPABASE_PUBLISHABLE_KEY` | `<prod-anon-key from Supabase dashboard>` |
+   | `VITE_APP_ENV` | `production` |
+
+   **Preview environment** (used when deploying any other branch — pre-prod, develop, feature/*):
+   | Variable | Value |
+   |----------|-------|
+   | `NODE_VERSION` | `20` |
+   | `VITE_SUPABASE_URL` | `https://jtzcrirqflfnagceendt.supabase.co` |
+   | `VITE_SUPABASE_PUBLISHABLE_KEY` | `<preprod-anon-key from Supabase dashboard>` |
+   | `VITE_APP_ENV` | `staging` |
+
+7. Click **Save and Deploy**
+8. Wait for the first build to complete (2-3 minutes)
+9. Note the `.pages.dev` URL that Cloudflare gives you — you'll need it for Supabase redirect URLs (Step 9f-3)
+
+> **Important:** The build command includes `--legacy-peer-deps` because `react-day-picker` has a peer dependency conflict with React 18. This is harmless and expected.
+
+**4b-alt. Deploy via CLI (alternative):**
 ```bash
 # Build locally
 npm run build
@@ -849,114 +886,245 @@ jobs:
 > - **New pre-prod project** → for integration testing on `pre-prod` branch. Uses seed data.
 > - **New production project** → for live users on `main` branch. Seed data initially, then real data.
 
-**9a. Create two new Supabase projects:**
+**9a. Create two new Supabase projects ✅ COMPLETED (Feb 9, 2026)**
 
-1. Go to https://supabase.com/dashboard → New Project
-2. Create **both** projects in the **same region** (ideally `eu-west-1` or wherever existing project is):
-
-| Project Name | Purpose | Branch | APP_ENV |
+| Project | Ref | Plan | Purpose |
 |---|---|---|---|
-| `innotrue-hub-preprod` | Integration testing | `pre-prod` | `staging` |
-| `innotrue-hub-prod` | Production | `main` | `production` |
+| Pre-prod | `jtzcrirqflfnagceendt` | Micro | Integration testing |
+| Production | `qfdztdgublwlmewobxmx` | Small | Live production |
 
-3. For each project, note the:
-   - **Project ref** (e.g., `abcdefghijklmnop`)
-   - **Anon key** (public, starts with `eyJ...`)
-   - **Service role key** (secret, starts with `eyJ...`)
-   - **Database password** (set during creation)
+**9b. Push migrations, seed, and edge functions to pre-prod ✅ COMPLETED (Feb 9, 2026)**
 
-**9b. Push migrations and seed to pre-prod:**
+- 393 migrations applied successfully
+- Seed data (12 sections) applied — demo users, plans, programs, etc.
+- 60 edge functions deployed
+- Dashboard: https://supabase.com/dashboard/project/jtzcrirqflfnagceendt/functions
 
-```bash
-# Link to pre-prod project
-supabase link --project-ref <preprod-project-ref>
+**9c. Set pre-prod edge function secrets — MANUAL**
 
-# Push all 393 migrations (this may take a few minutes)
-supabase db push
-
-# Seed runs automatically on `supabase db reset`, but for a fresh
-# remote project you need to run seed manually:
-supabase db seed --project-ref <preprod-project-ref>
-# OR run the seed SQL directly via Supabase Dashboard → SQL Editor:
-# Copy/paste contents of supabase/seed.sql and execute
-
-# Deploy all edge functions
-supabase functions deploy --all --project-ref <preprod-project-ref>
-```
-
-**9c. Set pre-prod edge function secrets:**
+Run these commands in your terminal, replacing placeholder values with your actual keys:
 
 ```bash
-# Required secrets for pre-prod
-supabase secrets set RESEND_API_KEY=<your-resend-key> --project-ref <preprod-ref>
-supabase secrets set SITE_URL=https://<preprod-preview-url>.pages.dev --project-ref <preprod-ref>
-supabase secrets set STRIPE_SECRET_KEY=<stripe-TEST-key> --project-ref <preprod-ref>
-supabase secrets set GCP_SERVICE_ACCOUNT_KEY='<service-account-json>' --project-ref <preprod-ref>
-supabase secrets set GCP_PROJECT_ID=<gcp-project-id> --project-ref <preprod-ref>
-supabase secrets set GCP_LOCATION=europe-west3 --project-ref <preprod-ref>
+# ── CORE (required for most functionality) ──
+supabase secrets set RESEND_API_KEY='re_xxxxxxxxxxxx' \
+  --project-ref jtzcrirqflfnagceendt
 
-# Staging email override (all emails go to your inbox)
-supabase secrets set APP_ENV=staging --project-ref <preprod-ref>
-supabase secrets set STAGING_EMAIL_OVERRIDE=doina.popa@innotrue.com --project-ref <preprod-ref>
+supabase secrets set SITE_URL='https://YOUR-PREPROD-PREVIEW.pages.dev' \
+  --project-ref jtzcrirqflfnagceendt
+
+supabase secrets set STRIPE_SECRET_KEY='sk_test_xxxxxxxxxxxx' \
+  --project-ref jtzcrirqflfnagceendt
+
+# ── STAGING EMAIL OVERRIDE (redirects ALL emails to you) ──
+supabase secrets set APP_ENV='staging' \
+  --project-ref jtzcrirqflfnagceendt
+
+supabase secrets set STAGING_EMAIL_OVERRIDE='doina.popa@innotrue.com' \
+  --project-ref jtzcrirqflfnagceendt
+
+# ── AI (Vertex AI — used by 4 AI functions) ──
+supabase secrets set GCP_SERVICE_ACCOUNT_KEY='{ paste contents of key.json }' \
+  --project-ref jtzcrirqflfnagceendt
+
+supabase secrets set GCP_PROJECT_ID='your-gcp-project-id' \
+  --project-ref jtzcrirqflfnagceendt
+
+supabase secrets set GCP_LOCATION='europe-west3' \
+  --project-ref jtzcrirqflfnagceendt
+
+# ── SECURITY (for Google Calendar/OAuth integrations) ──
+supabase secrets set OAUTH_ENCRYPTION_KEY='<run: openssl rand -hex 32>' \
+  --project-ref jtzcrirqflfnagceendt
+
+supabase secrets set CALENDAR_HMAC_SECRET='<run: openssl rand -hex 32>' \
+  --project-ref jtzcrirqflfnagceendt
 ```
 
-**9d. Push migrations and seed to production:**
+**Optional integration secrets** (set later when you configure these services):
+```bash
+# Cal.com
+supabase secrets set CALCOM_API_KEY='cal_xxxx' --project-ref jtzcrirqflfnagceendt
+supabase secrets set CALCOM_WEBHOOK_SECRET='whsec_xxxx' --project-ref jtzcrirqflfnagceendt
+
+# TalentLMS
+supabase secrets set TALENTLMS_API_KEY='xxxx' --project-ref jtzcrirqflfnagceendt
+supabase secrets set TALENTLMS_DOMAIN='yourcompany.talentlms.com' --project-ref jtzcrirqflfnagceendt
+supabase secrets set TALENTLMS_WEBHOOK_SECRET='xxxx' --project-ref jtzcrirqflfnagceendt
+
+# Circle SSO
+supabase secrets set CIRCLE_API_KEY='xxxx' --project-ref jtzcrirqflfnagceendt
+supabase secrets set CIRCLE_COMMUNITY_ID='xxxx' --project-ref jtzcrirqflfnagceendt
+supabase secrets set CIRCLE_HEADLESS_AUTH_TOKEN='xxxx' --project-ref jtzcrirqflfnagceendt
+supabase secrets set CIRCLE_COMMUNITY_DOMAIN='xxxx' --project-ref jtzcrirqflfnagceendt
+
+# Google Calendar (service account for creating calendar events)
+supabase secrets set GOOGLE_SERVICE_ACCOUNT_JSON='{ service-account-json }' --project-ref jtzcrirqflfnagceendt
+supabase secrets set GOOGLE_CALENDAR_IMPERSONATE_EMAIL='admin@yourdomain.com' --project-ref jtzcrirqflfnagceendt
+```
+
+**Where to get each key:**
+
+| Secret | Where to get it |
+|--------|----------------|
+| `RESEND_API_KEY` | https://resend.com/api-keys → Create API Key |
+| `STRIPE_SECRET_KEY` | https://dashboard.stripe.com/apikeys → Secret key (use **test** key for pre-prod) |
+| `GCP_SERVICE_ACCOUNT_KEY` | Google Cloud Console → IAM → Service Accounts → Create Key (JSON format) |
+| `GCP_PROJECT_ID` | Google Cloud Console → top bar shows project ID |
+| `OAUTH_ENCRYPTION_KEY` | Generate locally: `openssl rand -hex 32` |
+| `CALENDAR_HMAC_SECRET` | Generate locally: `openssl rand -hex 32` |
+
+**9d. Push migrations, seed, and edge functions to prod ✅ COMPLETED (Feb 9, 2026)**
+
+- 393 migrations applied successfully
+- Seed data (12 sections) applied — demo users, plans, programs, etc.
+- 60 edge functions deployed
+- Dashboard: https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/functions
+
+**9e. Set production edge function secrets — MANUAL**
+
+Same as pre-prod but with **production values** and **NO staging override**:
 
 ```bash
-# Link to production project
-supabase link --project-ref <prod-project-ref>
+# ── CORE ──
+supabase secrets set RESEND_API_KEY='re_xxxxxxxxxxxx' \
+  --project-ref qfdztdgublwlmewobxmx
 
-# Push all migrations
-supabase db push
+supabase secrets set SITE_URL='https://app.innotrue.com' \
+  --project-ref qfdztdgublwlmewobxmx
 
-# Seed the database (for initial testing — you can clear demo users later)
-supabase db seed --project-ref <prod-project-ref>
-# OR run via SQL Editor
+supabase secrets set STRIPE_SECRET_KEY='sk_live_xxxxxxxxxxxx' \
+  --project-ref qfdztdgublwlmewobxmx
 
-# Deploy all edge functions
-supabase functions deploy --all --project-ref <prod-project-ref>
+# ── AI ──
+supabase secrets set GCP_SERVICE_ACCOUNT_KEY='{ paste contents of key.json }' \
+  --project-ref qfdztdgublwlmewobxmx
+
+supabase secrets set GCP_PROJECT_ID='your-gcp-project-id' \
+  --project-ref qfdztdgublwlmewobxmx
+
+supabase secrets set GCP_LOCATION='europe-west3' \
+  --project-ref qfdztdgublwlmewobxmx
+
+# ── SECURITY ──
+supabase secrets set OAUTH_ENCRYPTION_KEY='<run: openssl rand -hex 32>' \
+  --project-ref qfdztdgublwlmewobxmx
+
+supabase secrets set CALENDAR_HMAC_SECRET='<run: openssl rand -hex 32>' \
+  --project-ref qfdztdgublwlmewobxmx
+
+# IMPORTANT: Do NOT set APP_ENV or STAGING_EMAIL_OVERRIDE on production!
+# Emails must go to real recipients in production.
 ```
 
-**9e. Set production edge function secrets:**
+**9f. Configure manual dashboard settings — MANUAL**
 
-```bash
-# Required secrets for production
-supabase secrets set RESEND_API_KEY=<your-resend-key> --project-ref <prod-ref>
-supabase secrets set SITE_URL=https://app.innotrue.com --project-ref <prod-ref>
-supabase secrets set STRIPE_SECRET_KEY=<stripe-LIVE-key> --project-ref <prod-ref>
-supabase secrets set GCP_SERVICE_ACCOUNT_KEY='<service-account-json>' --project-ref <prod-ref>
-supabase secrets set GCP_PROJECT_ID=<gcp-project-id> --project-ref <prod-ref>
-supabase secrets set GCP_LOCATION=europe-west3 --project-ref <prod-ref>
+Do these for **EACH** project (pre-prod and prod). Detailed steps below:
 
-# Production: do NOT set APP_ENV or STAGING_EMAIL_OVERRIDE
-# (emails go to real recipients)
-```
+##### 9f-1. Google OAuth
 
-**9f. Configure manual dashboard settings for EACH new project:**
+**In Google Cloud Console (one-time, add both callback URLs):**
 
-Repeat the manual steps from Step 2 for both pre-prod and prod:
+1. Go to https://console.cloud.google.com/apis/credentials
+2. Find your existing OAuth 2.0 Client (or create one: Application type → Web application, Name → InnoTrue Hub)
+3. Under **Authorized redirect URIs**, add **both** callback URLs:
+   - `https://jtzcrirqflfnagceendt.supabase.co/auth/v1/callback` (pre-prod)
+   - `https://qfdztdgublwlmewobxmx.supabase.co/auth/v1/callback` (prod)
+4. Click **Save**
+5. Copy the **Client ID** and **Client Secret**
 
-1. **Google OAuth:** Dashboard → Authentication → Providers → Google
-   - Callback URL differs per project: `https://<project-ref>.supabase.co/auth/v1/callback`
-   - Add both callback URLs to your Google Cloud Console OAuth client
+**In Supabase Dashboard — Pre-prod:**
 
-2. **Auth Email Hook:** Dashboard → Authentication → Hooks → Send Email
-   - URI: `https://<project-ref>.supabase.co/functions/v1/send-auth-email`
-   - Header: `Authorization: Bearer <service-role-key-for-that-project>`
+1. Go to https://supabase.com/dashboard/project/jtzcrirqflfnagceendt/auth/providers
+2. Find **Google** in the list → Click to expand
+3. Toggle **Enable Google provider** → ON
+4. Paste your **Client ID** and **Client Secret**
+5. Click **Save**
 
-3. **Auth redirect URLs:** Dashboard → Authentication → URL Configuration
-   - Pre-prod: add your Cloudflare Pages preview URL
-   - Prod: add `https://app.innotrue.com`
+**In Supabase Dashboard — Prod:**
 
-**9g. Wire Cloudflare Pages environment variables:**
+1. Go to https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/auth/providers
+2. Same steps: Enable Google, paste same Client ID and Client Secret
+3. Click **Save**
+
+##### 9f-2. Auth Email Hook
+
+Your app uses a custom `send-auth-email` edge function that sends auth emails (signup confirmation, password reset, magic link, email change) through Resend with your branded sender address. Without this hook, Supabase sends these emails from `noreply@mail.app.supabase.io` which lands in spam.
+
+**Pre-prod:**
+
+1. Go to https://supabase.com/dashboard/project/jtzcrirqflfnagceendt/auth/hooks
+2. Find **Send Email Hook** (or "Custom SMTP / Email Hook")
+3. Enable the hook and set:
+   - **Hook type:** HTTP Request
+   - **URI:** `https://jtzcrirqflfnagceendt.supabase.co/functions/v1/send-auth-email`
+   - **HTTP Headers:** Add one header:
+     - **Key:** `Authorization`
+     - **Value:** `Bearer <YOUR_PREPROD_SERVICE_ROLE_KEY>`
+4. Click **Save**
+
+**To find the service role key:** Go to https://supabase.com/dashboard/project/jtzcrirqflfnagceendt/settings/api → "Project API keys" → copy the **service_role** key (the one marked as secret/hidden).
+
+**Prod:**
+
+1. Go to https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/auth/hooks
+2. Same steps but with prod values:
+   - **URI:** `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/send-auth-email`
+   - **Authorization:** `Bearer <YOUR_PROD_SERVICE_ROLE_KEY>`
+3. Click **Save**
+
+**To find the prod service role key:** https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/settings/api
+
+##### 9f-3. Auth Redirect URLs
+
+**Pre-prod** — go to https://supabase.com/dashboard/project/jtzcrirqflfnagceendt/auth/url-configuration
+- **Site URL:** Your Cloudflare Pages preview URL (e.g. `https://pre-prod.innotrue-hub-live.pages.dev`)
+- **Redirect URLs:** Add:
+  - `https://pre-prod.innotrue-hub-live.pages.dev/**`
+  - `http://localhost:8080/**` (for local dev)
+
+**Prod** — go to https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/auth/url-configuration
+- **Site URL:** `https://app.innotrue.com`
+- **Redirect URLs:** Add:
+  - `https://app.innotrue.com/**`
+
+##### 9f-4. Resend Domain DNS Verification
+
+If not already done, verify your sending domain in Resend:
+
+1. Go to https://resend.com/domains
+2. Add domain: `mail.innotrue.com`
+3. Add the DNS records Resend provides to your domain registrar:
+   - **SPF** (TXT record) — required
+   - **DKIM** (3 CNAME records) — required
+   - **DMARC** (TXT record) — recommended
+4. Click "Verify" in Resend after adding records (DNS propagation may take up to 48 hours)
+
+##### 9f Checklist
+
+| Task | Pre-prod | Prod |
+|------|----------|------|
+| Google OAuth callback URL in GCP | ⬜ | ⬜ |
+| Enable Google provider in Supabase | ⬜ | ⬜ |
+| Auth Email Hook configured | ⬜ | ⬜ |
+| Auth redirect URLs set | ⬜ | ⬜ |
+| Resend domain verified | ⬜ (shared) | ⬜ (shared) |
+| Core secrets set (RESEND, SITE_URL, STRIPE) | ⬜ | ⬜ |
+| AI secrets set (GCP_*) | ⬜ | ⬜ |
+| Security secrets set (OAUTH_ENCRYPTION, CALENDAR_HMAC) | ⬜ | ⬜ |
+| Staging override set (APP_ENV, STAGING_EMAIL_OVERRIDE) | ⬜ | N/A |
+
+**9g. Wire Cloudflare Pages environment variables — MANUAL**
 
 In Cloudflare Dashboard → Pages → your project → Settings → Environment variables:
 
 | Variable | Production (`main`) | Preview (other branches) |
 |---|---|---|
-| `VITE_SUPABASE_URL` | `https://<prod-ref>.supabase.co` | `https://<preprod-ref>.supabase.co` |
+| `VITE_SUPABASE_URL` | `https://qfdztdgublwlmewobxmx.supabase.co` | `https://jtzcrirqflfnagceendt.supabase.co` |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | `<prod-anon-key>` | `<preprod-anon-key>` |
 | `VITE_APP_ENV` | `production` | `staging` |
+| `NODE_VERSION` | `20` | `20` |
+
+Get the anon keys from each project's dashboard: Settings → API → "Project API keys" → anon/public.
 
 **9h. Switching Supabase CLI between projects:**
 
@@ -964,12 +1132,12 @@ The CLI can only be linked to one project at a time. Use `--project-ref` flags o
 
 ```bash
 # Quick switch
-supabase link --project-ref <preprod-ref>   # work on pre-prod
-supabase link --project-ref <prod-ref>      # switch to prod
+supabase link --project-ref jtzcrirqflfnagceendt   # work on pre-prod
+supabase link --project-ref qfdztdgublwlmewobxmx   # switch to prod
 
 # Or use --project-ref flag without re-linking
-supabase db push --project-ref <preprod-ref>
-supabase functions deploy --all --project-ref <prod-ref>
+supabase functions deploy --project-ref jtzcrirqflfnagceendt
+supabase functions deploy --project-ref qfdztdgublwlmewobxmx
 ```
 
 **9i. Data migration from Lovable project (later):**
@@ -979,18 +1147,50 @@ When you're ready to export real data from the Lovable-managed project:
 ```bash
 # Export data from existing project (ask Lovable for DB credentials, or use their export)
 pg_dump --data-only --no-owner --no-privileges \
-  -h db.<lovable-project-ref>.supabase.co -U postgres -d postgres \
+  -h db.pfwlsxovvqdiwaztqxrj.supabase.co -U postgres -d postgres \
   --exclude-table-data='auth.*' \
   > data_export.sql
 
 # Import into production (after reviewing the export)
-psql -h db.<prod-ref>.supabase.co -U postgres -d postgres < data_export.sql
+psql -h db.qfdztdgublwlmewobxmx.supabase.co -U postgres -d postgres < data_export.sql
 ```
 
+**Complete secrets reference — all 28 environment variables used by edge functions:**
+
+> Note: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_ANON_KEY` are auto-provided by Supabase — you do NOT need to set them manually.
+
+| Variable | Used by | Priority |
+|----------|---------|----------|
+| `RESEND_API_KEY` | 13 email functions | Required |
+| `SITE_URL` | 24 functions (URLs in emails, redirects, CORS) | Required |
+| `STRIPE_SECRET_KEY` | 7 payment functions | Required |
+| `GCP_SERVICE_ACCOUNT_KEY` | 4 AI functions (via ai-config.ts) | Required for AI |
+| `GCP_PROJECT_ID` | 4 AI functions | Required for AI |
+| `GCP_LOCATION` | 4 AI functions (defaults to europe-west3) | Required for AI |
+| `OAUTH_ENCRYPTION_KEY` | OAuth integrations (5 functions via oauth-crypto.ts) | Required for OAuth |
+| `CALENDAR_HMAC_SECRET` | calendar-feed, generate-calendar-url | Required for calendars |
+| `APP_ENV` | email-utils.ts staging override | Pre-prod only |
+| `STAGING_EMAIL_OVERRIDE` | email-utils.ts staging override | Pre-prod only |
+| `CALCOM_API_KEY` | calcom-create-booking, calcom-get-booking-url | Optional |
+| `CALCOM_WEBHOOK_SECRET` | calcom-webhook | Optional |
+| `TALENTLMS_API_KEY` | sync-talentlms-progress, talentlms-sso | Optional |
+| `TALENTLMS_DOMAIN` | sync-talentlms-progress, talentlms-sso | Optional |
+| `TALENTLMS_WEBHOOK_SECRET` | talentlms-webhook | Optional |
+| `CIRCLE_API_KEY` | circle-sso | Optional |
+| `CIRCLE_COMMUNITY_ID` | circle-sso | Optional |
+| `CIRCLE_HEADLESS_AUTH_TOKEN` | circle-sso | Optional |
+| `CIRCLE_COMMUNITY_DOMAIN` | circle-sso | Optional |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | google-calendar-create-event | Optional |
+| `GOOGLE_CALENDAR_IMPERSONATE_EMAIL` | google-calendar-create-event | Optional |
+| `REQUEST_SIGNING_SECRET` | request-signing.ts | Optional |
+
 **Verify:**
-- Both new projects have 393 migrations applied
-- Seed data is present (log in with demo credentials)
-- Edge functions are deployed (`supabase functions list --project-ref <ref>`)
+- Both projects have 393 migrations applied ✅
+- Seed data is present (log in with `doina.popa@innotrue.com` / `DemoPass123!`)
+- Edge functions are deployed (60 per project) ✅
+- Secrets are set (run `supabase secrets list --project-ref <ref>`)
+- Google OAuth login works
+- Auth emails are received (via Resend, not Supabase default SMTP)
 - Cloudflare Pages preview deploys connect to pre-prod Supabase
 - Cloudflare Pages production deploys connect to production Supabase
 
@@ -1154,20 +1354,222 @@ reportWebVitals();
 
 ---
 
+### Phase 5: Developer Environment Setup
+
+#### Step 15 — Cursor IDE & Developer Tools Setup
+
+Cursor replaces Lovable's browser-based editor. It's a VS Code fork with built-in AI (Claude, GPT-4) that understands your entire codebase.
+
+##### 15a. Install Cursor
+
+1. Download from [cursor.com](https://cursor.com)
+2. Install and open
+3. If prompted, import VS Code settings/extensions → **Yes** (brings over your themes, keybindings, etc.)
+4. Sign in to Cursor (free tier works; Pro at $20/month gives unlimited AI usage)
+
+##### 15b. Open the Project
+
+```bash
+# Clone the repo (if not already done)
+git clone https://github.com/doina-popa-innotrue/innotrue-hub-live.git
+cd innotrue-hub-live
+
+# Install dependencies
+npm install --legacy-peer-deps
+
+# Open in Cursor
+cursor .
+```
+
+Or: **File → Open Folder** → select the `innotrue-hub-live` folder.
+
+##### 15c. Recommended Extensions
+
+Install these from the Extensions panel (`Cmd+Shift+X`):
+
+| Extension | Purpose |
+|---|---|
+| **Tailwind CSS IntelliSense** | Autocomplete for Tailwind classes |
+| **ESLint** | Linting JavaScript/TypeScript |
+| **Prettier** | Code formatting |
+| **GitLens** | Git blame, history, comparison |
+| **Supabase** | Supabase schema/types integration |
+| **Error Lens** | Inline error/warning display |
+| **Auto Rename Tag** | Auto-rename paired HTML/JSX tags |
+| **Path Intellisense** | Autocomplete file paths |
+
+##### 15d. Workspace Settings
+
+Create `.vscode/settings.json` in the project root (if it doesn't exist):
+
+```json
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.tabSize": 2,
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "tailwindCSS.experimental.classRegex": [
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
+  ],
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/dist": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.git": true
+  }
+}
+```
+
+##### 15e. Cursor AI Configuration
+
+1. **Open Settings:** `Cmd+,` → search "Cursor"
+2. **Set AI Model:** Claude Sonnet 4 (recommended) or GPT-4o
+3. **Enable Codebase Indexing:**
+   - Go to Cursor Settings → Features → Codebase Indexing
+   - Click "Index Codebase" — this lets AI search your entire project
+   - Wait for indexing to complete (~1-2 minutes for 507 files)
+4. **Add Project Rules** (optional):
+   - Create `.cursorrules` in project root with project-specific context:
+   ```
+   This is the InnoTrue Hub App — a coaching/learning platform.
+   Stack: React + Vite + TypeScript + Supabase + Tailwind + shadcn/ui.
+   Use existing patterns from the codebase.
+   Follow the component structure in src/components/.
+   Use hooks from src/hooks/ for data fetching.
+   Use Supabase RPC calls for complex queries.
+   ```
+
+##### 15f. Using Cursor for Development
+
+| Action | Shortcut | Description |
+|---|---|---|
+| **AI Chat** | `Cmd+L` | Ask questions, generate code, debug |
+| **Inline Edit** | `Cmd+K` | Edit selected code with AI |
+| **Composer** | `Cmd+I` | Multi-file AI editing (like Lovable but better) |
+| **Terminal** | `` Ctrl+` `` | Open integrated terminal |
+| **Search Files** | `Cmd+P` | Quick file search |
+| **Search Text** | `Cmd+Shift+F` | Search across all files |
+| **Go to Definition** | `Cmd+Click` | Jump to function/type definition |
+
+**Typical workflow:**
+```
+1. Open Cursor → Cmd+L to open AI chat
+2. Describe the change: "Add a filter dropdown to the programs list page"
+3. AI generates code → review in diff view
+4. Accept changes → test in browser (npm run dev)
+5. Run tests: npm test
+6. Git commit and push → Cloudflare auto-deploys
+```
+
+##### 15g. Claude Code (Terminal AI) Setup
+
+Claude Code is a CLI tool for complex, multi-file tasks directly in the terminal.
+
+```bash
+# Install Claude Code
+npm install -g @anthropic-ai/claude-code
+
+# Navigate to project
+cd /path/to/innotrue-hub-live
+
+# Start Claude Code
+claude
+
+# Example prompts:
+# "Read all edge functions and list which ones send emails"
+# "Add a new notification type for session reminders"
+# "Refactor the auth flow to add remember-me functionality"
+```
+
+**When to use which:**
+| Tool | Best for |
+|---|---|
+| **Cursor (Cmd+L)** | Quick questions, single-file edits, UI changes |
+| **Cursor Composer (Cmd+I)** | Multi-file feature work, component creation |
+| **Claude Code (terminal)** | Large refactors, codebase analysis, migration tasks, debugging complex issues |
+
+##### 15h. Other Essential Tools
+
+| Tool | Install | Purpose |
+|---|---|---|
+| **Node.js 20+** | [nodejs.org](https://nodejs.org) or `brew install node` | JavaScript runtime |
+| **Supabase CLI** | `brew install supabase/tap/supabase` | Database migrations, edge functions, local dev |
+| **Wrangler CLI** | `npm install -g wrangler` | Cloudflare Pages manual deploys |
+| **GitHub CLI** | `brew install gh` | PR management, issue tracking from terminal |
+| **Git** | `brew install git` | Version control (pre-installed on macOS) |
+
+**Verify all tools are installed:**
+```bash
+node --version      # v20.x or higher
+npm --version       # 10.x or higher
+supabase --version  # 2.x
+wrangler --version  # 3.x
+gh --version        # 2.x
+git --version       # 2.x
+```
+
+##### 15i. Local Development Workflow
+
+```bash
+# 1. Start local dev server
+npm run dev
+# → Opens http://localhost:8080
+
+# 2. (Optional) Start local Supabase for offline development
+supabase start
+# → Local Supabase at http://localhost:54321
+
+# 3. Run tests before committing
+npm test
+
+# 4. Type-check before pushing
+npm run typecheck
+
+# 5. Build to verify production readiness
+npm run build
+```
+
+**Environment files:**
+- `.env.local` — your local overrides (gitignored)
+- `.env.example` — template showing required variables
+
+Create `.env.local` for local development:
+```bash
+VITE_SUPABASE_URL=https://jtzcrirqflfnagceendt.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key-here
+```
+
+Or for local Supabase:
+```bash
+VITE_SUPABASE_URL=http://localhost:54321
+VITE_SUPABASE_PUBLISHABLE_KEY=your-local-anon-key
+```
+
+---
+
 ## 6. Priority Order
 
 | Priority | Step | Impact | Effort | Status |
 |---|---|---|---|---|
-| 1 | Git repo + remove Lovable deps | Unblocks everything | Low | ✅ Lovable removed, git init pending |
-| 2 | Deploy to Cloudflare Pages | Independent production deploy | Low | Pending (SPA files ready) |
-| 3 | Environment separation | Security, safe testing | Low | ✅ .env.example + .gitignore done |
-| 4 | Sentry error monitoring | Production visibility | Low | Pending |
-| 5 | GitHub Actions CI | Prevent broken deploys | Medium | Partial (typecheck script added) |
-| 6 | Strict TypeScript | Catch bugs at compile time | High | Pending |
-| 7 | Vitest unit tests | Business logic safety net | High | ✅ 210 tests passing |
-| 8 | Supabase Pro + staging DB | Data protection | Medium | Pending |
-| 9 | Code splitting + PWA hardening | Performance | Medium | ✅ Code splitting done (82% reduction) |
-| 10 | RLS audit + rate limiting | Security hardening | Medium | Pending |
+| 1 | Step 1: Git repo + remove Lovable deps | Unblocks everything | Low | ✅ DONE |
+| 2 | Step 2: Environment separation | Security, safe testing | Low | ✅ DONE |
+| 3 | Step 3: Supabase projects + migrations | Database ready | Medium | ✅ DONE |
+| 4 | Step 9: Secrets, OAuth, Email Hook | App functional | Low | 🔧 MANUAL — see Step 9 |
+| 5 | Step 4: Deploy to Cloudflare Pages | Production deploy | Low | 🔧 MANUAL — see Step 4 |
+| 6 | Step 15: Cursor IDE + dev tools | Developer workflow | Low | 🔧 MANUAL — see Step 15 |
+| 7 | Step 12: Code splitting | Performance | Medium | ✅ DONE (82% reduction) |
+| 8 | Step 7: Vitest unit tests | Business logic safety | High | ✅ DONE (210 tests) |
+| 9 | Step 5: Sentry error monitoring | Production visibility | Low | Pending |
+| 10 | Step 6: GitHub Actions CI | Prevent broken deploys | Medium | Pending |
+| 11 | Step 8: Strict TypeScript | Catch bugs at compile | High | Pending |
+| 12 | Step 10: RLS audit + rate limiting | Security hardening | Medium | Pending |
+| 13 | Step 11: Supabase Pro upgrade | Data protection, SLA | Medium | Pending |
+| 14 | Step 13: PWA hardening | Offline + caching | Medium | Pending |
+| 15 | Step 14: Web Vitals monitoring | Performance tracking | Low | Pending |
 
 ---
 
