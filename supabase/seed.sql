@@ -38,20 +38,28 @@ UPDATE public.plans SET tier_level = 2, credit_allowance = 250
 
 -- Rename enterprise to something else or ensure Base/Advanced/Elite exist
 -- Insert Base, Advanced, Elite if they don't exist yet
-INSERT INTO public.plans (key, name, description, price_cents, billing_interval, is_active, is_free, tier_level, credit_allowance, is_purchasable)
+-- Note: price_cents and billing_interval were moved to plan_prices table
+INSERT INTO public.plans (key, name, description, is_active, is_free, tier_level, credit_allowance, is_purchasable)
 VALUES
-  ('base', 'Base', 'Essential tools for structured personal development', 1900, 'month', true, false, 1, 150, true),
-  ('advanced', 'Advanced', 'Comprehensive toolkit with advanced coaching and analytics', 4900, 'month', true, false, 3, 500, true),
-  ('elite', 'Elite', 'Full platform access with premium features and priority support', 9900, 'month', true, false, 4, 750, true)
+  ('base', 'Base', 'Essential tools for structured personal development', true, false, 1, 150, true),
+  ('advanced', 'Advanced', 'Comprehensive toolkit with advanced coaching and analytics', true, false, 3, 500, true),
+  ('elite', 'Elite', 'Full platform access with premium features and priority support', true, false, 4, 750, true)
 ON CONFLICT (key) DO UPDATE SET
   name = EXCLUDED.name,
   description = EXCLUDED.description,
-  price_cents = EXCLUDED.price_cents,
-  billing_interval = EXCLUDED.billing_interval,
   is_free = EXCLUDED.is_free,
   tier_level = EXCLUDED.tier_level,
   credit_allowance = EXCLUDED.credit_allowance,
   is_purchasable = EXCLUDED.is_purchasable;
+
+-- Plan prices (pricing moved to separate table)
+INSERT INTO public.plan_prices (plan_id, billing_interval, price_cents, is_default)
+VALUES
+  ((SELECT id FROM plans WHERE key = 'base'), 'month', 1900, true),
+  ((SELECT id FROM plans WHERE key = 'pro'), 'month', 2900, true),
+  ((SELECT id FROM plans WHERE key = 'advanced'), 'month', 4900, true),
+  ((SELECT id FROM plans WHERE key = 'elite'), 'month', 9900, true)
+ON CONFLICT (plan_id, billing_interval) DO NOTHING;
 
 -- Programs and Continuation plans (non-purchasable)
 INSERT INTO public.plans (key, name, description, is_active, is_free, tier_level, is_purchasable)
@@ -433,15 +441,47 @@ ON CONFLICT (key) DO NOTHING;
 -- SECTION 10: SAMPLE PROGRAMS & MODULES
 -- =============================================================================
 
+-- Create admin auth user early so program_versions FK works
+INSERT INTO auth.users (
+  id, instance_id, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, aud, role, created_at, updated_at,
+  confirmation_token, recovery_token
+) VALUES (
+  'a0000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000000',
+  'doina.popa@innotrue.com',
+  '$2a$10$PwGnGw5T7MaVqKuVY0DWKO.gV0YvuN4VhGQjSJWBLhRhIkRzT5RTe',
+  now(),
+  '{"provider": "email", "providers": ["email"]}'::jsonb,
+  '{"name": "Doina Popa"}'::jsonb,
+  'authenticated', 'authenticated', now(), now(),
+  '', ''
+) ON CONFLICT (id) DO NOTHING;
+
+-- Disable the auto-version trigger (auth.uid() is NULL during seed)
+ALTER TABLE public.programs DISABLE TRIGGER USER;
+
 -- CTA Immersion Premium Program
 INSERT INTO public.programs (slug, name, description, category, is_active, credit_cost, min_plan_tier) VALUES
-  ('cta-immersion-premium', 'CTA Immersion Premium', 'Comprehensive Salesforce CTA certification preparation program with live coaching, review board mocks, and hands-on practice.', 'immersion', true, 100, 2)
+  ('cta-immersion-premium', 'CTA Immersion Premium', 'Comprehensive Salesforce CTA certification preparation program with live coaching, review board mocks, and hands-on practice.', 'cta', true, 100, 2)
 ON CONFLICT (slug) DO NOTHING;
 
 -- Leadership Elevate Program
 INSERT INTO public.programs (slug, name, description, category, is_active, credit_cost, min_plan_tier) VALUES
-  ('leadership-elevate', 'Leadership Elevate', 'Transform your leadership skills through structured coaching, peer learning, and real-world application exercises.', 'coaching', true, 50, 1)
+  ('leadership-elevate', 'Leadership Elevate', 'Transform your leadership skills through structured coaching, peer learning, and real-world application exercises.', 'leadership', true, 50, 1)
 ON CONFLICT (slug) DO NOTHING;
+
+-- Re-enable triggers
+ALTER TABLE public.programs ENABLE TRIGGER USER;
+
+-- Manually create initial program versions (since trigger was disabled)
+INSERT INTO public.program_versions (program_id, version_number, version_name, created_by, is_current, snapshot_data)
+VALUES
+  ((SELECT id FROM programs WHERE slug = 'cta-immersion-premium'), 1, 'Initial Version', 'a0000000-0000-0000-0000-000000000001',
+   true, '{"name": "CTA Immersion Premium", "category": "cta"}'::jsonb),
+  ((SELECT id FROM programs WHERE slug = 'leadership-elevate'), 1, 'Initial Version', 'a0000000-0000-0000-0000-000000000001',
+   true, '{"name": "Leadership Elevate", "category": "leadership"}'::jsonb)
+ON CONFLICT DO NOTHING;
 
 -- CTA Immersion modules
 INSERT INTO public.program_modules (program_id, title, description, module_type, order_index, estimated_minutes, is_active) VALUES
@@ -559,10 +599,11 @@ BEGIN
   INSERT INTO public.user_roles (user_id, role) VALUES (v_client1_id, 'client')
   ON CONFLICT (user_id, role) DO NOTHING;
 
-  -- Enroll Sarah in CTA Immersion
-  INSERT INTO public.client_enrollments (id, client_user_id, program_id, status, enrolled_at)
-  VALUES (gen_random_uuid(), v_client1_id, v_cta_program_id, 'active', now() - interval '14 days')
-  ON CONFLICT DO NOTHING;
+  -- Enroll Sarah in CTA Immersion (skip if already enrolled)
+  IF NOT EXISTS (SELECT 1 FROM public.client_enrollments WHERE client_user_id = v_client1_id AND program_id = v_cta_program_id) THEN
+    INSERT INTO public.client_enrollments (id, client_user_id, program_id, status, start_date)
+    VALUES (gen_random_uuid(), v_client1_id, v_cta_program_id, 'active', CURRENT_DATE - 14);
+  END IF;
 
   -- =========================================================================
   -- Demo Client 2: Michael Chen
@@ -598,10 +639,11 @@ BEGIN
   INSERT INTO public.user_roles (user_id, role) VALUES (v_client2_id, 'client')
   ON CONFLICT (user_id, role) DO NOTHING;
 
-  -- Enroll Michael in Leadership Elevate
-  INSERT INTO public.client_enrollments (id, client_user_id, program_id, status, enrolled_at)
-  VALUES (gen_random_uuid(), v_client2_id, v_leadership_program_id, 'active', now() - interval '7 days')
-  ON CONFLICT DO NOTHING;
+  -- Enroll Michael in Leadership Elevate (skip if already enrolled)
+  IF NOT EXISTS (SELECT 1 FROM public.client_enrollments WHERE client_user_id = v_client2_id AND program_id = v_leadership_program_id) THEN
+    INSERT INTO public.client_enrollments (id, client_user_id, program_id, status, start_date)
+    VALUES (gen_random_uuid(), v_client2_id, v_leadership_program_id, 'active', CURRENT_DATE - 7);
+  END IF;
 
   -- =========================================================================
   -- Demo Coach: Emily Parker
@@ -647,12 +689,12 @@ BEGIN
   ON CONFLICT (program_id, coach_id) DO NOTHING;
 
   -- Assign coach to clients
-  INSERT INTO public.client_coaches (client_id, coach_id, is_active)
-  VALUES (v_client1_id, v_coach_id, true)
+  INSERT INTO public.client_coaches (client_id, coach_id)
+  VALUES (v_client1_id, v_coach_id)
   ON CONFLICT DO NOTHING;
 
-  INSERT INTO public.client_coaches (client_id, coach_id, is_active)
-  VALUES (v_client2_id, v_coach_id, true)
+  INSERT INTO public.client_coaches (client_id, coach_id)
+  VALUES (v_client2_id, v_coach_id)
   ON CONFLICT DO NOTHING;
 
   -- =========================================================================
@@ -663,18 +705,18 @@ BEGIN
     WHERE client_user_id = v_client1_id AND program_id = v_cta_program_id LIMIT 1;
 
   IF v_enrollment1_id IS NOT NULL THEN
-    INSERT INTO public.module_progress (enrollment_id, module_id, status, started_at, completed_at)
-    SELECT v_enrollment1_id, pm.id, 'completed', now() - interval '12 days', now() - interval '10 days'
+    INSERT INTO public.module_progress (enrollment_id, module_id, status, completed_at)
+    SELECT v_enrollment1_id, pm.id, 'completed', now() - interval '10 days'
     FROM program_modules pm WHERE pm.program_id = v_cta_program_id AND pm.order_index = 1
     ON CONFLICT DO NOTHING;
 
-    INSERT INTO public.module_progress (enrollment_id, module_id, status, started_at, completed_at)
-    SELECT v_enrollment1_id, pm.id, 'completed', now() - interval '8 days', now() - interval '5 days'
+    INSERT INTO public.module_progress (enrollment_id, module_id, status, completed_at)
+    SELECT v_enrollment1_id, pm.id, 'completed', now() - interval '5 days'
     FROM program_modules pm WHERE pm.program_id = v_cta_program_id AND pm.order_index = 2
     ON CONFLICT DO NOTHING;
 
-    INSERT INTO public.module_progress (enrollment_id, module_id, status, started_at)
-    SELECT v_enrollment1_id, pm.id, 'in_progress', now() - interval '3 days'
+    INSERT INTO public.module_progress (enrollment_id, module_id, status)
+    SELECT v_enrollment1_id, pm.id, 'in_progress'
     FROM program_modules pm WHERE pm.program_id = v_cta_program_id AND pm.order_index = 3
     ON CONFLICT DO NOTHING;
   END IF;
@@ -686,13 +728,13 @@ BEGIN
     WHERE client_user_id = v_client2_id AND program_id = v_leadership_program_id LIMIT 1;
 
   IF v_enrollment2_id IS NOT NULL THEN
-    INSERT INTO public.module_progress (enrollment_id, module_id, status, started_at, completed_at)
-    SELECT v_enrollment2_id, pm.id, 'completed', now() - interval '5 days', now() - interval '3 days'
+    INSERT INTO public.module_progress (enrollment_id, module_id, status, completed_at)
+    SELECT v_enrollment2_id, pm.id, 'completed', now() - interval '3 days'
     FROM program_modules pm WHERE pm.program_id = v_leadership_program_id AND pm.order_index = 1
     ON CONFLICT DO NOTHING;
 
-    INSERT INTO public.module_progress (enrollment_id, module_id, status, started_at)
-    SELECT v_enrollment2_id, pm.id, 'in_progress', now() - interval '1 day'
+    INSERT INTO public.module_progress (enrollment_id, module_id, status)
+    SELECT v_enrollment2_id, pm.id, 'in_progress'
     FROM program_modules pm WHERE pm.program_id = v_leadership_program_id AND pm.order_index = 2
     ON CONFLICT DO NOTHING;
   END IF;
