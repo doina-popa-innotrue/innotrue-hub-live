@@ -1,0 +1,2 @@
+-- Update the comment on program_modules.links column to include Circle
+COMMENT ON COLUMN public.program_modules.links IS 'Array of link objects with structure: [{"name": "Book Session", "url": "https://...", "type": "zoom|talentlms|circle|lucidchart|miro|gdrive|other"}]';

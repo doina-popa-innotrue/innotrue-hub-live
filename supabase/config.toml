@@ -1,0 +1,181 @@
+project_id = "pfwlsxovvqdiwaztqxrj"
+
+[functions.accept-org-invite]
+verify_jwt = false
+
+[functions.calcom-webhook]
+verify_jwt = false
+
+[functions.calcom-create-booking]
+verify_jwt = false
+
+[functions.calcom-get-booking-url]
+verify_jwt = false
+
+[functions.analytics-ai-insights]
+verify_jwt = false
+
+[functions.calendar-feed]
+verify_jwt = false
+
+[functions.check-ai-usage]
+verify_jwt = false
+
+[functions.check-module-capability]
+verify_jwt = false
+
+[functions.check-org-seat-limits]
+verify_jwt = false
+
+[functions.circle-sso]
+verify_jwt = false
+
+[functions.cleanup-notifications]
+verify_jwt = false
+
+[functions.confirm-credit-topup]
+verify_jwt = false
+
+[functions.course-recommendations]
+verify_jwt = false
+
+[functions.create-admin-user]
+verify_jwt = false
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.create-client-development-item]
+verify_jwt = false
+
+[functions.credit-maintenance]
+verify_jwt = false
+
+[functions.customer-portal]
+verify_jwt = false
+
+[functions.decision-insights]
+verify_jwt = false
+
+[functions.decision-reminders]
+verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false
+
+[functions.export-feature-config]
+verify_jwt = false
+
+[functions.fetch-ical-feed]
+verify_jwt = false
+
+[functions.generate-calendar-url]
+verify_jwt = false
+
+[functions.generate-public-profile]
+verify_jwt = false
+
+[functions.generate-reflection-prompt]
+verify_jwt = false
+
+[functions.get-user-email]
+verify_jwt = false
+
+[functions.google-calendar-create-event]
+verify_jwt = false
+
+[functions.notify-assignment-graded]
+verify_jwt = false
+
+[functions.notify-assignment-submitted]
+verify_jwt = false
+
+[functions.notify-waitlist]
+verify_jwt = false
+
+[functions.oauth-authorize]
+verify_jwt = false
+
+[functions.oauth-callback]
+verify_jwt = false
+
+[functions.oauth-create-meeting]
+verify_jwt = false
+
+[functions.oauth-disconnect]
+verify_jwt = false
+
+[functions.oauth-status]
+verify_jwt = false
+
+[functions.org-confirm-credit-purchase]
+verify_jwt = false
+
+[functions.org-platform-subscription]
+verify_jwt = false
+
+[functions.org-purchase-credits]
+verify_jwt = false
+
+[functions.process-email-queue]
+verify_jwt = false
+
+[functions.purchase-credit-topup]
+verify_jwt = false
+
+[functions.registration-follow-ups]
+verify_jwt = false
+
+[functions.request-account-deletion]
+verify_jwt = false
+
+[functions.seed-demo-data]
+verify_jwt = false
+
+[functions.send-auth-email]
+verify_jwt = false
+
+[functions.send-notification-email]
+verify_jwt = false
+
+[functions.send-org-invite]
+verify_jwt = false
+
+[functions.send-schedule-reminders]
+verify_jwt = false
+
+[functions.send-welcome-email]
+verify_jwt = false
+
+[functions.send-wheel-pdf]
+verify_jwt = false
+
+[functions.signup-user]
+verify_jwt = false
+
+[functions.subscription-reminders]
+verify_jwt = false
+
+[functions.sync-talentlms-progress]
+verify_jwt = false
+
+[functions.talentlms-sso]
+verify_jwt = false
+
+[functions.talentlms-webhook]
+verify_jwt = false
+
+[functions.track-analytics]
+verify_jwt = false
+
+[functions.transfer-placeholder-data]
+verify_jwt = false
+
+[functions.update-user-email]
+verify_jwt = false
+
+[functions.verify-email-change]
+verify_jwt = false
+
+[functions.verify-signup]
+verify_jwt = false

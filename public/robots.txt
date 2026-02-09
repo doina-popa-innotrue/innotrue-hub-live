@@ -1,0 +1,18 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /instructor
+Disallow: /goals
+Disallow: /decisions
+Disallow: /tasks
+Disallow: /programs
+Disallow: /modules
+Disallow: /groups
+Disallow: /calendar
+Disallow: /profile
+Disallow: /account-settings
+
+# Sitemap
+Sitemap: https://app.innotrue.com/sitemap.xml
