@@ -11,17 +11,17 @@
 
 | Step | Description | Status |
 |------|-------------|--------|
-| 1 | Fresh Git repository + branching (main/pre-prod/develop) | DONE |
+| 1 | Fresh Git repository + branching (main/preprod/develop) | DONE |
 | 2 | Remove Lovable dependencies | DONE |
 | 3 | Environment separation (.env.example, .gitignore) | DONE |
 | 4c | SPA routing (_redirects, _headers) | DONE |
 | 4 | Cloudflare Pages deployment | MANUAL — see Step 4 |
 | 6 | Vitest unit testing (210 tests, 11 test files) | DONE |
 | 8 | CI scripts (typecheck added to package.json) | PARTIAL |
-| 9a | Supabase projects created (pre-prod + prod) | DONE |
-| 9b | Migrations pushed to pre-prod (393 migrations) | DONE |
-| 9b | Seed data applied to pre-prod | DONE |
-| 9b | Edge functions deployed to pre-prod (60 functions) | DONE |
+| 9a | Supabase projects created (preprod + prod) | DONE |
+| 9b | Migrations pushed to preprod (393 migrations) | DONE |
+| 9b | Seed data applied to preprod | DONE |
+| 9b | Edge functions deployed to preprod (60 functions) | DONE |
 | 9d | Migrations pushed to prod (393 migrations) | DONE |
 | 9d | Seed data applied to prod | DONE |
 | 9d | Edge functions deployed to prod (60 functions) | DONE |
@@ -302,7 +302,7 @@ Moving away from Lovable Cloud does not mean losing the AI-assisted "vibe coding
 
 **Repository:** https://github.com/doina-popa-innotrue/innotrue-hub-live.git (Private)
 
-**Branches:** `main` (production) → `pre-prod` (QA) → `develop` (daily work)
+**Branches:** `main` (production) → `preprod` (QA) → `develop` (daily work)
 
 **1a. Create a new GitHub repository:**
 
@@ -362,7 +362,7 @@ Use a simple Git Flow with 3 long-lived branches:
 
 ```
 main          → production deploys (Cloudflare Pages production)
-pre-prod      → pre-production testing (Cloudflare Pages preview + pre-prod Supabase)
+preprod      → preproduction testing (Cloudflare Pages preview + preprod Supabase)
 develop       → daily development (local + dev Supabase / Lovable project)
 ```
 
@@ -373,9 +373,9 @@ Set up the branches:
 git checkout -b develop
 git push -u origin develop
 
-# Create pre-prod branch (integration testing before production)
-git checkout -b pre-prod
-git push -u origin pre-prod
+# Create preprod branch (integration testing before production)
+git checkout -b preprod
+git push -u origin preprod
 
 # Go back to develop for daily work
 git checkout develop
@@ -384,7 +384,7 @@ git checkout develop
 **Branch flow:**
 
 ```
-feature/xyz → develop → pre-prod → main
+feature/xyz → develop → preprod → main
                 ↑            ↑         ↑
             daily work   QA/test   production
 ```
@@ -398,14 +398,14 @@ feature/xyz → develop → pre-prod → main
   # Create PR: feature/add-new-assessment → develop
   ```
 
-- **Promote to pre-prod:** When develop is stable, merge to pre-prod
+- **Promote to preprod:** When develop is stable, merge to preprod
   ```bash
-  # Create PR: develop → pre-prod (test on pre-prod Supabase)
+  # Create PR: develop → preprod (test on preprod Supabase)
   ```
 
-- **Promote to production:** When pre-prod passes testing, merge to main
+- **Promote to production:** When preprod passes testing, merge to main
   ```bash
-  # Create PR: pre-prod → main (deploys to production)
+  # Create PR: preprod → main (deploys to production)
   ```
 
 **1e. Branch protection rules (recommended):**
@@ -415,19 +415,19 @@ In GitHub → Settings → Branches → Add rule:
 | Branch | Rules |
 |--------|-------|
 | `main` | Require PR, require CI to pass, no force push, require 1 approval |
-| `pre-prod` | Require PR, require CI to pass, no force push |
+| `preprod` | Require PR, require CI to pass, no force push |
 | `develop` | Require PR (optional), require CI to pass |
 
 **1f. Connect Cloudflare Pages to the repo:**
 
 Once pushed, connect the repo to Cloudflare Pages (Step 4). Configure:
 - **Production branch:** `main`
-- **Preview branches:** `pre-prod`, `develop`, `feature/*`
+- **Preview branches:** `preprod`, `develop`, `feature/*`
 
 Cloudflare Pages will auto-deploy `main` to production and create preview deploys for all other branches.
 
 **Verify:**
-- Repository is on GitHub with 3 branches (`main`, `pre-prod`, `develop`)
+- Repository is on GitHub with 3 branches (`main`, `preprod`, `develop`)
 - `.env` files are NOT in the repo (`git log --all --full-history -- .env` returns nothing)
 - `git log` shows your initial commit
 
@@ -542,7 +542,7 @@ STAGING_EMAIL_OVERRIDE = your-test-inbox@example.com
 | Environment | Git Branch | Supabase Project Ref | Frontend | APP_ENV |
 |---|---|---|---|---|
 | Development | `develop` | `pfwlsxovvqdiwaztqxrj` (Lovable-owned) | `localhost:8080` | `development` |
-| Pre-production | `pre-prod` | `jtzcrirqflfnagceendt` | Cloudflare preview URL | `staging` |
+| Pre-production | `preprod` | `jtzcrirqflfnagceendt` | Cloudflare preview URL | `staging` |
 | Production | `main` | `qfdztdgublwlmewobxmx` | `app.innotrue.com` | `production` |
 
 Create three environment files (do NOT commit these — they're in `.gitignore`):
@@ -554,7 +554,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=<existing-anon-key>
 VITE_APP_ENV=development
 ```
 
-**`.env.staging`** (pre-prod Supabase):
+**`.env.staging`** (preprod Supabase):
 ```env
 VITE_SUPABASE_URL=https://jtzcrirqflfnagceendt.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=<preprod-anon-key-from-dashboard>
@@ -606,7 +606,7 @@ wrangler login
    | `VITE_SUPABASE_PUBLISHABLE_KEY` | `<prod-anon-key from Supabase dashboard>` |
    | `VITE_APP_ENV` | `production` |
 
-   **Preview environment** (used when deploying any other branch — pre-prod, develop, feature/*):
+   **Preview environment** (used when deploying any other branch — preprod, develop, feature/*):
    | Variable | Value |
    |----------|-------|
    | `NODE_VERSION` | `20` |
@@ -883,7 +883,7 @@ jobs:
 
 > **Environment strategy:**
 > - **Existing Lovable project** (`pfwlsxovvqdiwaztqxrj`) → stays as dev/staging, used with Lovable or as a data export source. Don't touch it.
-> - **New pre-prod project** → for integration testing on `pre-prod` branch. Uses seed data.
+> - **New preprod project** → for integration testing on `preprod` branch. Uses seed data.
 > - **New production project** → for live users on `main` branch. Seed data initially, then real data.
 
 **9a. Create two new Supabase projects ✅ COMPLETED (Feb 9, 2026)**
@@ -893,14 +893,14 @@ jobs:
 | Pre-prod | `jtzcrirqflfnagceendt` | Micro | Integration testing |
 | Production | `qfdztdgublwlmewobxmx` | Small | Live production |
 
-**9b. Push migrations, seed, and edge functions to pre-prod ✅ COMPLETED (Feb 9, 2026)**
+**9b. Push migrations, seed, and edge functions to preprod ✅ COMPLETED (Feb 9, 2026)**
 
 - 393 migrations applied successfully
 - Seed data (12 sections) applied — demo users, plans, programs, etc.
 - 60 edge functions deployed
 - Dashboard: https://supabase.com/dashboard/project/jtzcrirqflfnagceendt/functions
 
-**9c. Set pre-prod edge function secrets — MANUAL**
+**9c. Set preprod edge function secrets — MANUAL**
 
 Run these commands in your terminal, replacing placeholder values with your actual keys:
 
@@ -967,7 +967,7 @@ supabase secrets set GOOGLE_CALENDAR_IMPERSONATE_EMAIL='admin@yourdomain.com' --
 | Secret | Where to get it |
 |--------|----------------|
 | `RESEND_API_KEY` | https://resend.com/api-keys → Create API Key |
-| `STRIPE_SECRET_KEY` | https://dashboard.stripe.com/apikeys → Secret key (use **test** key for pre-prod) |
+| `STRIPE_SECRET_KEY` | https://dashboard.stripe.com/apikeys → Secret key (use **test** key for preprod) |
 | `GCP_SERVICE_ACCOUNT_KEY` | Google Cloud Console → IAM → Service Accounts → Create Key (JSON format) |
 | `GCP_PROJECT_ID` | Google Cloud Console → top bar shows project ID |
 | `OAUTH_ENCRYPTION_KEY` | Generate locally: `openssl rand -hex 32` |
@@ -982,7 +982,7 @@ supabase secrets set GOOGLE_CALENDAR_IMPERSONATE_EMAIL='admin@yourdomain.com' --
 
 **9e. Set production edge function secrets — MANUAL**
 
-Same as pre-prod but with **production values** and **NO staging override**:
+Same as preprod but with **production values** and **NO staging override**:
 
 ```bash
 # ── CORE ──
@@ -1018,7 +1018,7 @@ supabase secrets set CALENDAR_HMAC_SECRET='<run: openssl rand -hex 32>' \
 
 **9f. Configure manual dashboard settings — MANUAL**
 
-Do these for **EACH** project (pre-prod and prod). Detailed steps below:
+Do these for **EACH** project (preprod and prod). Detailed steps below:
 
 ##### 9f-1. Google OAuth
 
@@ -1027,7 +1027,7 @@ Do these for **EACH** project (pre-prod and prod). Detailed steps below:
 1. Go to https://console.cloud.google.com/apis/credentials
 2. Find your existing OAuth 2.0 Client (or create one: Application type → Web application, Name → InnoTrue Hub)
 3. Under **Authorized redirect URIs**, add **both** callback URLs:
-   - `https://jtzcrirqflfnagceendt.supabase.co/auth/v1/callback` (pre-prod)
+   - `https://jtzcrirqflfnagceendt.supabase.co/auth/v1/callback` (preprod)
    - `https://qfdztdgublwlmewobxmx.supabase.co/auth/v1/callback` (prod)
 4. Click **Save**
 5. Copy the **Client ID** and **Client Secret**
@@ -1077,9 +1077,9 @@ Your app uses a custom `send-auth-email` edge function that sends auth emails (s
 ##### 9f-3. Auth Redirect URLs
 
 **Pre-prod** — go to https://supabase.com/dashboard/project/jtzcrirqflfnagceendt/auth/url-configuration
-- **Site URL:** Your Cloudflare Pages preview URL (e.g. `https://pre-prod.innotrue-hub-live.pages.dev`)
+- **Site URL:** Your Cloudflare Pages preview URL (e.g. `https://preprod.innotrue-hub-live.pages.dev`)
 - **Redirect URLs:** Add:
-  - `https://pre-prod.innotrue-hub-live.pages.dev/**`
+  - `https://preprod.innotrue-hub-live.pages.dev/**`
   - `http://localhost:8080/**` (for local dev)
 
 **Prod** — go to https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/auth/url-configuration
@@ -1132,7 +1132,7 @@ The CLI can only be linked to one project at a time. Use `--project-ref` flags o
 
 ```bash
 # Quick switch
-supabase link --project-ref jtzcrirqflfnagceendt   # work on pre-prod
+supabase link --project-ref jtzcrirqflfnagceendt   # work on preprod
 supabase link --project-ref qfdztdgublwlmewobxmx   # switch to prod
 
 # Or use --project-ref flag without re-linking
@@ -1191,7 +1191,7 @@ psql -h db.qfdztdgublwlmewobxmx.supabase.co -U postgres -d postgres < data_expor
 - Secrets are set (run `supabase secrets list --project-ref <ref>`)
 - Google OAuth login works
 - Auth emails are received (via Resend, not Supabase default SMTP)
-- Cloudflare Pages preview deploys connect to pre-prod Supabase
+- Cloudflare Pages preview deploys connect to preprod Supabase
 - Cloudflare Pages production deploys connect to production Supabase
 
 ---
