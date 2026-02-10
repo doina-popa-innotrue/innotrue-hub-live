@@ -72,6 +72,7 @@ const DiscountCodesManagement = lazy(() => import("./pages/admin/DiscountCodesMa
 const CapabilityAssessmentsManagement = lazy(() => import("./pages/admin/CapabilityAssessmentsManagement"));
 const AdminCapabilityAssessmentDetail = lazy(() => import("./pages/admin/CapabilityAssessmentDetail"));
 const AssessmentCategoriesManagement = lazy(() => import("./pages/admin/AssessmentCategoriesManagement"));
+const WheelCategoriesManagement = lazy(() => import("./pages/admin/WheelCategoriesManagement"));
 const ScenarioTemplatesManagement = lazy(() => import("./pages/admin/ScenarioTemplatesManagement"));
 const ScenarioTemplateDetail = lazy(() => import("./pages/admin/ScenarioTemplateDetail"));
 const ScenarioCategoriesManagement = lazy(() => import("./pages/admin/ScenarioCategoriesManagement"));
