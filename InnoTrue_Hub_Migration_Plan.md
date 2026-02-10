@@ -1,7 +1,7 @@
 # InnoTrue Hub App — Production Migration Plan
 
 **Date:** February 8, 2026
-**Last updated:** February 10, 2026
+**Last updated:** February 11, 2026
 **Prepared by:** Technical Analysis
 **Scope:** Migration from Lovable Cloud to production-ready infrastructure
 
@@ -15,9 +15,9 @@
 | 2 | Remove Lovable dependencies | DONE |
 | 3 | Environment separation (.env.example, .gitignore) | DONE |
 | 4c | SPA routing (_redirects, _headers) | DONE |
-| 4 | Cloudflare Pages deployment | MANUAL — see Step 4 |
+| 4 | Cloudflare Pages deployment (prod + preview branches) | DONE |
 | 6 | Vitest unit testing (210 tests, 11 test files) | DONE |
-| 8 | CI scripts (typecheck added to package.json) | PARTIAL |
+| 8 | GitHub Actions CI (lint, typecheck, test, build) | DONE (Feb 11) |
 | 9a | Supabase projects created (preprod + prod) | DONE |
 | 9b | Migrations pushed to preprod (393 migrations) | DONE |
 | 9b | Seed data applied to preprod | DONE |
@@ -25,13 +25,13 @@
 | 9d | Migrations pushed to prod (393 migrations) | DONE |
 | 9d | Seed data applied to prod | DONE |
 | 9d | Edge functions deployed to prod (60 functions) | DONE |
-| 9c | Pre-prod edge function secrets | MANUAL — see Step 9c |
-| 9e | Prod edge function secrets | MANUAL — see Step 9e |
-| 9f | Google OAuth config (both projects) | MANUAL — see Step 9f |
-| 9f | Auth Email Hook (both projects) | MANUAL — see Step 9f |
-| 9f | Auth redirect URLs (both projects) | MANUAL — see Step 9f |
-| 9f | Resend domain DNS verification | MANUAL — see Step 9f |
-| 9g | Cloudflare Pages environment variables | MANUAL — see Step 9g |
+| 9c | Pre-prod edge function secrets | DONE |
+| 9e | Prod edge function secrets | DONE |
+| 9f | Google OAuth config (both projects) | DONE |
+| 9f | Auth Email Hook (both projects) | DONE — verify email delivery |
+| 9f | Auth redirect URLs (both projects) | DONE |
+| 9f | Resend domain DNS verification | DONE — verify email delivery |
+| 9g | Cloudflare Pages environment variables | DONE (via CF_PAGES_BRANCH build command) |
 | 12 | Code splitting / lazy loading (82% bundle reduction) | DONE |
 | — | AI provider: Vertex AI Gemini 3 Flash (EU/Frankfurt) | DONE |
 | — | CSP hardened (removed Lovable/OpenAI/Anthropic domains) | DONE |
@@ -40,6 +40,8 @@
 | — | Email audit: all 13 functions via Resend, old domain fixed | DONE |
 | — | Staging email override (all 13 functions wired) | DONE |
 | — | Database seed file (supabase/seed.sql, 12 sections) | DONE |
+| — | Old domain fallbacks fixed (7 occurrences in 3 functions) | DONE (Feb 10) |
+| — | Staging env verified (login works on preprod + prod) | DONE (Feb 10) |
 | 15 | Cursor IDE setup | MANUAL — see Step 15 |
 
 ---
