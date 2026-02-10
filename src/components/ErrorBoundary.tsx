@@ -1,4 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import * as Sentry from '@sentry/react';
 import { AlertTriangle, RefreshCw, Bug, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,8 +78,20 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ errorInfo });
-    
-    // Log to monitoring
+
+    // Report to Sentry (if initialized)
+    const sentryEventId = Sentry.captureException(error, {
+      contexts: {
+        react: { componentStack: errorInfo.componentStack },
+      },
+    });
+
+    // Use Sentry event ID if available, otherwise keep the generated one
+    if (sentryEventId) {
+      this.setState({ errorId: sentryEventId });
+    }
+
+    // Log to console
     if (this.state.errorId) {
       logErrorToMonitoring(error, errorInfo, this.state.errorId);
     }

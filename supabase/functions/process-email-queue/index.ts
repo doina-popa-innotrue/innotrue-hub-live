@@ -218,7 +218,7 @@ function generateEmailContent(templateKey: string, data: Record<string, any>): E
         ${content}
         <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e5e5; text-align: center; color: #666; font-size: 12px;">
           <p>You received this email because you have notifications enabled for this type of activity.</p>
-          <p><a href="${Deno.env.get('SITE_URL') || 'https://innotruehub.com'}/settings/notifications" style="color: #6366f1;">Manage notification preferences</a></p>
+          <p><a href="${Deno.env.get('SITE_URL') || 'https://app.innotrue.com'}/settings/notifications" style="color: #6366f1;">Manage notification preferences</a></p>
         </div>
       </div>
     </body>
@@ -232,7 +232,7 @@ function generateEmailContent(templateKey: string, data: Record<string, any>): E
         <h2 style="margin-top: 0;">Welcome, ${userName}!</h2>
         <p>We're excited to have you on board. InnoTrue Hub is your platform for professional development and growth.</p>
         <p style="text-align: center; margin-top: 24px;">
-          <a href="${Deno.env.get('SITE_URL') || 'https://innotruehub.com'}/dashboard" style="${buttonStyles}">Get Started</a>
+          <a href="${Deno.env.get('SITE_URL') || 'https://app.innotrue.com'}/dashboard" style="${buttonStyles}">Get Started</a>
         </p>
       `),
     }),
@@ -284,7 +284,7 @@ function generateEmailContent(templateKey: string, data: Record<string, any>): E
         <p>${title}</p>
         <p>${message}</p>
         <p style="text-align: center; margin-top: 24px;">
-          <a href="${Deno.env.get('SITE_URL') || 'https://innotruehub.com'}/credits" style="${buttonStyles}">Top Up Credits</a>
+          <a href="${Deno.env.get('SITE_URL') || 'https://app.innotrue.com'}/credits" style="${buttonStyles}">Top Up Credits</a>
         </p>
       `),
     }),

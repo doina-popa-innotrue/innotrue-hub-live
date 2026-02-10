@@ -363,7 +363,7 @@ async function notifyModuleSessionParticipants(
 
     const moduleName = sessionData.program_modules?.title || "Module";
     const programName = sessionData.program_modules?.programs?.title || "Program";
-    const siteUrl = Deno.env.get("SITE_URL") || "https://innotruehub.com";
+    const siteUrl = Deno.env.get("SITE_URL") || "https://app.innotrue.com";
     const baseEntityLink = `${siteUrl}/client/module/${sessionData.module_id}`;
 
     console.log(`Sending notifications to ${participants.length} participants`);
@@ -476,7 +476,7 @@ async function notifyGroupSessionParticipants(
     };
 
     const groupName = sessionData.groups?.name || "Group";
-    const siteUrl = Deno.env.get("SITE_URL") || "https://innotruehub.com";
+    const siteUrl = Deno.env.get("SITE_URL") || "https://app.innotrue.com";
     const baseEntityLink = `${siteUrl}/groups/${sessionData.groups?.id || sessionData.group_id}`;
 
     console.log(`Sending notifications to ${participants.length} group session participants`);
