@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ function getSessionId(): string {
 
 export function CookieConsentBanner() {
   const { user } = useAuth();
+  const location = useLocation();
   const [showBanner, setShowBanner] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [preferences, setPreferences] = useState<CookiePreferences>({
@@ -124,6 +126,9 @@ export function CookieConsentBanner() {
   const savePreferences = () => {
     saveConsent(preferences);
   };
+
+  // Don't show on auth pages — user hasn't logged in yet, consent can wait
+  if (location.pathname.startsWith('/auth')) return null;
 
   if (!showBanner) return null;
 
