@@ -21,7 +21,4 @@ if (sentryDsn && import.meta.env.VITE_APP_ENV === 'production') {
   });
 }
 
-// Temporary: expose Sentry on window for verification (remove after confirming)
-(window as any).__SENTRY_API__ = Sentry;
-
 createRoot(document.getElementById("root")!).render(<App />);
