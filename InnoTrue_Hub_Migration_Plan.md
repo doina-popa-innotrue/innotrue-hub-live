@@ -1,7 +1,7 @@
 # InnoTrue Hub App — Production Migration Plan
 
 **Date:** February 8, 2026
-**Last updated:** February 11, 2026
+**Last updated:** February 12, 2026
 **Prepared by:** Technical Analysis
 **Scope:** Migration from Lovable Cloud to production-ready infrastructure
 
@@ -17,6 +17,7 @@
 | 4c | SPA routing (_redirects, _headers) | DONE |
 | 4 | Cloudflare Pages deployment (prod + preview branches) | DONE |
 | 6 | Vitest unit testing (210 tests, 11 test files) | DONE |
+| 7 | Sentry error monitoring (verified in production) | DONE (Feb 11) |
 | 8 | GitHub Actions CI (lint, typecheck, test, build) | DONE (Feb 11) |
 | 9a | Supabase projects created (preprod + prod) | DONE |
 | 9b | Migrations pushed to preprod (393 migrations) | DONE |
@@ -42,7 +43,13 @@
 | — | Database seed file (supabase/seed.sql, 12 sections) | DONE |
 | — | Old domain fallbacks fixed (7 occurrences in 3 functions) | DONE (Feb 10) |
 | — | Staging env verified (login works on preprod + prod) | DONE (Feb 10) |
-| 15 | Cursor IDE setup | MANUAL — see Step 15 |
+| 15 | Cursor IDE setup | DONE (Feb 11) |
+| — | PR #1 merged: CI + Sentry + domain fixes deployed to prod | DONE (Feb 11) |
+| 5 | Strict TypeScript | PENDING |
+| 10 | RLS audit + rate limiting | PENDING |
+| 11 | Supabase Pro upgrade | DONE (Feb 11) |
+| 13 | PWA hardening (auth exclusion, caching strategies) | DONE (Feb 11) |
+| 14 | Web Vitals monitoring (web-vitals v5 → Sentry) | DONE (Feb 11) |
 
 ---
 
