@@ -134,9 +134,9 @@ export function InstructorAssignmentScoring({
       if (!assignment.scoring_snapshot_id) {
         return {
           assignmentStatus: assignment.status,
-          snapshot: null,
-          ratings: [],
-          notes: [],
+          snapshot: null as { id: string; status: string } | null,
+          ratings: [] as { question_id: string; rating: number }[],
+          notes: [] as { question_id: string; content: string }[],
           instructorNotes: assignment.instructor_notes || "",
         };
       }

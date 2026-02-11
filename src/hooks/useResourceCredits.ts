@@ -194,7 +194,7 @@ export function useResourceUsage(resourceId: string) {
   return {
     isLoading,
     currentUsage: 0, // Legacy - no longer tracked per resource
-    limit: null, // Legacy - now uses credits
+    limit: null as number | null, // Legacy - now uses credits
     remaining: isFree ? null : availableCredits,
     incrementUsage: async () => {
       const result = await consumeResourceCredit();

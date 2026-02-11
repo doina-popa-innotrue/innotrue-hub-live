@@ -192,7 +192,7 @@ export default function ClientAssignments() {
           created_at: sa.created_at,
           updated_at: sa.updated_at,
           scored_at: sa.evaluated_at,
-          overall_score: null,
+          overall_score: null as number | null,
           module_title: (sa.scenario_templates as any)?.title || 'Untitled Scenario',
           module_id: '',
           program_name: (enrollment?.programs as any)?.name || 'Unknown Program',

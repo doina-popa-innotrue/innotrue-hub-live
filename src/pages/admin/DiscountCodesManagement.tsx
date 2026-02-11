@@ -101,12 +101,12 @@ export default function DiscountCodesManagement() {
         description: `Referral code - ${discountValue}% discount`,
         discount_type: 'percent' as const,
         discount_value: discountValue,
-        valid_for_program_ids: null,
-        valid_for_tier_names: null,
+        valid_for_program_ids: null as string[] | null,
+        valid_for_tier_names: null as string[] | null,
         max_uses: 1, // Single use by default for referral codes
-        assigned_user_email: null,
+        assigned_user_email: null as string | null,
         starts_at: new Date().toISOString(),
-        expires_at: null, // No expiry
+        expires_at: null as string | null, // No expiry
         is_active: true,
         created_by: user?.id,
       };

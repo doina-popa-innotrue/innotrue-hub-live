@@ -72,7 +72,7 @@ export function useProgramPlanAccess() {
               .from('program_tier_plans')
               .select('program_id, tier_name, program_plan_id')
               .in('program_id', programIds)
-          : { data: [] };
+          : { data: [] as { program_id: string; tier_name: string; program_plan_id: string }[] };
 
         const userProgramPlans: { programId: string; programPlanId: string; tierLevel: number; enrollmentTier?: string }[] = [];
 

@@ -148,8 +148,8 @@ export function useGroupSessionMutations(groupId: string | undefined, queryKeyPr
             booked_by: userId,
             status: 'scheduled',
             is_recurring: false, // Child sessions are not recurring themselves
-            recurrence_pattern: null,
-            recurrence_end_date: null,
+            recurrence_pattern: null as string | null,
+            recurrence_end_date: null as string | null,
             parent_session_id: masterSession.id,
             timezone: formData.timezone || 'UTC',
           }));

@@ -338,9 +338,9 @@ export default function Subscription() {
   };
 
   const getDisplayPrice = (plan: Plan) => {
-    if (plan.is_free) return { price_cents: 0, billing_interval: null };
+    if (plan.is_free) return { price_cents: 0, billing_interval: null as string | null };
     const price = getPriceForInterval(plan, billingInterval) || getDefaultPrice(plan);
-    return price || { price_cents: 0, billing_interval: null };
+    return price || { price_cents: 0, billing_interval: null as string | null };
   };
 
   const calculateYearlySavings = (plan: Plan) => {
