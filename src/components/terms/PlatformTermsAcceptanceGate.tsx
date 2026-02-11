@@ -148,7 +148,7 @@ export function PlatformTermsAcceptanceGate({ children }: PlatformTermsAcceptanc
   // Blocking modal for first access or blocking updates
   if (showBlockingModal && currentTerms) {
     return (
-      <div className="flex items-center justify-center min-h-screen p-4 bg-background">
+      <div className="flex items-center justify-center min-h-screen p-4 pb-24 bg-background relative z-[60]">
         <Card className="w-full max-w-2xl">
           <CardHeader className="text-center">
             <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">

@@ -34,6 +34,11 @@ dist-ssr
 # Bun
 bun.lockb
 
+# Playwright
+e2e/.auth/
+playwright-report/
+test-results/
+
 # Screenshots and local docs (kept in Google Drive, not in repo)
 Screenshot*.png
 260208 InnoTrue_Hub_Migration_Plan_UPDATED_ChatGPT.md
