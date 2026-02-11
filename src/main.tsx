@@ -22,3 +22,6 @@ if (sentryDsn && import.meta.env.VITE_APP_ENV === 'production') {
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+// Report Core Web Vitals (CLS, INP, LCP, FCP, TTFB)
+import('@/lib/vitals').then(({ reportWebVitals }) => reportWebVitals());
