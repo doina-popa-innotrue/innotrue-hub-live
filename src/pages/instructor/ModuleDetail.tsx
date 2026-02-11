@@ -50,6 +50,7 @@ type LocationState = {
 
 export default function InstructorModuleDetail() {
   const { programId, moduleId } = useParams();
+  if (!programId || !moduleId) return null;
   const [searchParams] = useSearchParams();
   const location = useLocation();
 
@@ -100,7 +101,7 @@ export default function InstructorModuleDetail() {
         setModule({
           ...moduleData,
           links: (moduleData.links as unknown as ModuleLink[]) || []
-        });
+        } as Module);
       }
 
       // Fetch enrolled clients for this program (used when no specific client context is provided)

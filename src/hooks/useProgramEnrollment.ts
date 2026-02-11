@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreditBatches } from '@/hooks/useCreditBatches';
-import { useDiscountCode } from '@/hooks/useDiscountCode';
+import { useDiscountCode, type DiscountResult } from '@/hooks/useDiscountCode';
 import { toast } from 'sonner';
 
 interface TierPricing {
@@ -116,7 +116,7 @@ export function useProgramEnrollment() {
       const availableCredits = summary?.total_available ?? 0;
 
       // Validate discount code if provided
-      let discountResult = null;
+      let discountResult: DiscountResult | null = null;
       let finalCreditCost = originalCreditCost;
       
       if (options?.discountCode && originalCreditCost !== null && originalCreditCost > 0) {
@@ -164,7 +164,7 @@ export function useProgramEnrollment() {
         }
 
         // Consume credits (at discounted rate)
-        const consumeResult = await consume(finalCreditCost, null, `Enrollment: Program tier ${tierName}${discountResult ? ' (with discount)' : ''}`);
+        const consumeResult = await consume(finalCreditCost, undefined, `Enrollment: Program tier ${tierName}${discountResult ? ' (with discount)' : ''}`);
         
         if (!consumeResult?.success) {
           toast.error('Failed to process credits');

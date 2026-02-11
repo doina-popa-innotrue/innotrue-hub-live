@@ -34,6 +34,7 @@ import type { ScenarioSection, SectionParagraph, ParagraphQuestionLink } from "@
 
 export default function ScenarioTemplateDetail() {
   const { id } = useParams<{ id: string }>();
+  if (!id) return null;
   const navigate = useNavigate();
   const { toast } = useToast();
   const { userRole } = useAuth();
@@ -42,7 +43,7 @@ export default function ScenarioTemplateDetail() {
   const { data: template, isLoading: templateLoading } = useScenarioTemplate(id);
   const { data: sections, isLoading: sectionsLoading } = useScenarioSections(id);
 
-  const isLocked = template?.is_locked && !isAdmin;
+  const isLocked = (template?.is_locked && !isAdmin) ?? false;
 
   if (templateLoading || sectionsLoading) {
     return <AdminLoadingState message="Loading scenario template..." />;

@@ -282,7 +282,7 @@ function SortableTierItem({ id, tier, index, onUpdateName, onRemove, canRemove }
 }
 
 export default function ProgramDetail() {
-  const { id } = useParams();
+  const { id } = useParams() as { id: string };
   const [program, setProgram] = useState<any>(null);
   const [modules, setModules] = useState<any[]>([]);
   const [openAdd, setOpenAdd] = useState(false);
@@ -361,7 +361,7 @@ export default function ProgramDetail() {
 
   async function addModule(data: any) {
     const { error } = await supabase.from('program_modules').insert({
-      program_id: id!,
+      program_id: id,
       title: data.title,
       description: data.description,
       content: data.content || null,
@@ -1116,7 +1116,7 @@ export default function ProgramDetail() {
           <CardContent>
             <InstructorCoachAssignment
               entityType="program"
-              entityId={id!}
+              entityId={id}
             />
           </CardContent>
         </Card>
@@ -1182,7 +1182,7 @@ export default function ProgramDetail() {
 
         <TabsContent value="access" className="mt-6">
           <ProgramPlanConfig
-            programId={id!}
+            programId={id}
             programTiers={program?.tiers || []}
             currentPlanId={program?.plan_id || null}
             currentMinTier={program?.min_plan_tier || 0}
@@ -1502,26 +1502,26 @@ export default function ProgramDetail() {
 
         <TabsContent value="cohorts" className="mt-6">
           {program && (
-            <ProgramCohortsManager programId={id!} />
+            <ProgramCohortsManager programId={id} />
           )}
         </TabsContent>
 
         <TabsContent value="terms" className="mt-6">
           {program && (
-            <ProgramTermsManager programId={id!} />
+            <ProgramTermsManager programId={id} />
           )}
         </TabsContent>
 
         <TabsContent value="badge" className="mt-6">
           {program && (
-            <ProgramBadgeManager programId={id!} programName={program.name} />
+            <ProgramBadgeManager programId={id} programName={program.name} />
           )}
         </TabsContent>
 
         <TabsContent value="versions" className="mt-6">
           {program && (
             <ProgramVersionHistory 
-              programId={id!} 
+              programId={id} 
               programName={program.name}
             />
           )}
@@ -1533,7 +1533,7 @@ export default function ProgramDetail() {
         onOpenChange={setTransferDialogOpen}
         module={transferModule}
         mode={transferMode}
-        currentProgramId={id!}
+        currentProgramId={id}
         onComplete={async () => {
           const { data: modulesData } = await supabase
             .from('program_modules')

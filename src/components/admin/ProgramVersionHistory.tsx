@@ -295,7 +295,7 @@ export function ProgramVersionHistory({ programId, programName }: ProgramVersion
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Created by {(version.profiles as any)?.name || "Unknown"} on{" "}
-                  {format(new Date(version.created_at), "PPp")}
+                  {version.created_at ? format(new Date(version.created_at), "PPp") : "Unknown date"}
                 </div>
               </div>
               <div className="flex items-center gap-2">

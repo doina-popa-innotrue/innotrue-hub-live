@@ -104,7 +104,7 @@ export default function ModuleFeedback({ moduleProgressId, isCoachOrInstructor =
       if (error) throw error;
       
       // Fetch coach names separately
-      const feedbackWithNames: Feedback[] = await Promise.all(
+      const feedbackWithNames = await Promise.all(
         (data || []).map(async (f) => {
           const { data: profile } = await supabase
             .from('profiles')
@@ -112,21 +112,26 @@ export default function ModuleFeedback({ moduleProgressId, isCoachOrInstructor =
             .eq('id', f.coach_id)
             .single();
           return {
-            ...f,
+            id: f.id,
+            feedback: f.feedback,
+            created_at: f.created_at,
+            updated_at: f.updated_at,
+            coach_id: f.coach_id,
+            template_type_id: f.template_type_id,
             structured_responses: (f.structured_responses as Record<string, unknown>) || {},
             status: (f.status as 'draft' | 'published') || 'draft',
-            profiles: profile || undefined,
+            profiles: profile ?? undefined,
           };
         })
       );
       
-      setFeedbackList(feedbackWithNames);
+      setFeedbackList(feedbackWithNames as Feedback[]);
       
       // Find current user's feedback if they're a coach/instructor
       if (isCoachOrInstructor && user) {
         const mine = feedbackWithNames.find(f => f.coach_id === user.id);
         if (mine) {
-          setMyFeedback(mine);
+          setMyFeedback(mine as Feedback);
           setContent(mine.feedback || '');
           setSelectedTemplateId(mine.template_type_id);
           setStructuredResponses(mine.structured_responses || {});

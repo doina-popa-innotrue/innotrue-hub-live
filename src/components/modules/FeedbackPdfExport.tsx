@@ -114,8 +114,8 @@ export default function FeedbackPdfExport({
         feedback: feedback.feedback,
         structuredResponses: (feedback.structured_responses as Record<string, unknown>) || {},
         templateFields,
-        createdAt: feedback.created_at,
-        updatedAt: feedback.updated_at,
+        createdAt: feedback.created_at ?? '',
+        updatedAt: feedback.updated_at ?? '',
         attachments: attachments?.map((a) => ({
           title: a.title,
           description: a.description || undefined,

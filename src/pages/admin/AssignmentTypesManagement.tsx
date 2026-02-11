@@ -115,7 +115,7 @@ export default function AssignmentTypesManagement() {
       toast({ title: "All fields must have a label", variant: "destructive" });
       return;
     }
-    handleCRUDSubmit(e);
+    handleCRUDSubmit(e ?? formData);
   };
 
   const addField = () => {

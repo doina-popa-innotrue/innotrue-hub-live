@@ -30,6 +30,7 @@ export default function ExternalCourses() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  if (!user) return null;
   const [courses, setCourses] = useState<ExternalCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -188,7 +189,7 @@ export default function ExternalCourses() {
           {courses.map((course) => (
             <ExternalCourseCard
               key={course.id}
-              course={course}
+              course={course as any}
               onEdit={handleEdit}
               onDelete={(id) => {
                 const courseToDelete = courses.find(c => c.id === id);
@@ -209,7 +210,7 @@ export default function ExternalCourses() {
           </DialogHeader>
           {user && (
             <ExternalCourseForm
-              initialData={editingCourse || undefined}
+              initialData={(editingCourse as any) || undefined}
               userId={user.id}
               onSubmit={handleSubmit}
               onCancel={() => setIsFormOpen(false)}

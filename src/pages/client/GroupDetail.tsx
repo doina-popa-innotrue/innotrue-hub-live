@@ -55,7 +55,7 @@ export default function GroupDetail() {
       const { data, error } = await supabase
         .from('groups')
         .select(`*, programs (name)`)
-        .eq('id', id)
+        .eq('id', id!)
         .single();
       if (error) throw error;
       return data;
@@ -90,7 +90,7 @@ export default function GroupDetail() {
       const { data, error } = await supabase
         .from('group_memberships')
         .select('*')
-        .eq('group_id', id)
+        .eq('group_id', id!)
         .eq('user_id', user.id)
         .maybeSingle();
       if (error) throw error;
@@ -105,7 +105,7 @@ export default function GroupDetail() {
       if (!user || !id) throw new Error('Missing user or group id');
       const { data, error } = await supabase.rpc('is_group_member', {
         _user_id: user.id,
-        _group_id: id,
+        _group_id: id!,
       });
       if (error) throw error;
       return Boolean(data);
@@ -117,7 +117,7 @@ export default function GroupDetail() {
   const { data: members } = useQuery({
     queryKey: ['group-members', id],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_group_member_directory', { _group_id: id });
+      const { data, error } = await supabase.rpc('get_group_member_directory', { _group_id: id! });
       if (error) throw error;
       return data;
     },
@@ -131,7 +131,7 @@ export default function GroupDetail() {
       const { data: tasksData, error } = await supabase
         .from('group_tasks')
         .select('*')
-        .eq('group_id', id)
+        .eq('group_id', id!)
         .order('created_at', { ascending: false });
       if (error) throw error;
 
@@ -163,7 +163,7 @@ export default function GroupDetail() {
       const { data: checkInsData, error } = await supabase
         .from('group_check_ins')
         .select('*')
-        .eq('group_id', id)
+        .eq('group_id', id!)
         .order('check_in_date', { ascending: false });
       if (error) throw error;
 
@@ -195,7 +195,7 @@ export default function GroupDetail() {
       const { data: notesData, error } = await supabase
         .from('group_notes')
         .select('*')
-        .eq('group_id', id)
+        .eq('group_id', id!)
         .order('created_at', { ascending: false });
       if (error) throw error;
 
@@ -227,7 +227,7 @@ export default function GroupDetail() {
       const { data: sessionsData, error } = await supabase
         .from('group_sessions')
         .select('*')
-        .eq('group_id', id)
+        .eq('group_id', id!)
         .order('session_date', { ascending: true });
       if (error) throw error;
 
@@ -259,7 +259,7 @@ export default function GroupDetail() {
       const { data: linksData, error } = await supabase
         .from('group_member_links')
         .select('*')
-        .eq('group_id', id)
+        .eq('group_id', id!)
         .order('created_at', { ascending: false });
       if (error) throw error;
 
@@ -290,7 +290,7 @@ export default function GroupDetail() {
       if (!user) throw new Error('Not authenticated');
       const { error } = await supabase
         .from('group_interest_registrations')
-        .insert({ group_id: id, user_id: user.id });
+        .insert({ group_id: id!, user_id: user.id });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -309,7 +309,7 @@ export default function GroupDetail() {
       const { error } = await supabase
         .from('group_tasks')
         .insert({
-          group_id: id,
+          group_id: id!,
           title: taskForm.title,
           description: taskForm.description || null,
           due_date: taskForm.due_date || null,
@@ -336,7 +336,7 @@ export default function GroupDetail() {
       const { error } = await supabase
         .from('group_check_ins')
         .insert({
-          group_id: id,
+          group_id: id!,
           user_id: user.id,
           content: checkInForm.content,
           mood: checkInForm.mood || null
@@ -362,7 +362,7 @@ export default function GroupDetail() {
       const { error } = await supabase
         .from('group_notes')
         .insert({
-          group_id: id,
+          group_id: id!,
           title: noteForm.title,
           content: noteForm.content || null,
           created_by: user.id
@@ -388,7 +388,7 @@ export default function GroupDetail() {
       const { error } = await supabase
         .from('group_member_links')
         .insert({
-          group_id: id,
+          group_id: id!,
           user_id: user.id,
           title: linkForm.title,
           url: linkForm.url,
@@ -625,6 +625,8 @@ export default function GroupDetail() {
       toast({ title: 'Check-in deleted' });
     }
   });
+
+  if (!id) return null;
 
   if (loadingGroup) {
     return (
@@ -908,7 +910,7 @@ export default function GroupDetail() {
             
             <GroupSessionsList
               sessions={sessions || []}
-              groupId={id!}
+              groupId={id}
               userTimezone={userTimezone}
               isAdmin={false}
               linkPrefix="/groups"
@@ -1235,7 +1237,7 @@ export default function GroupDetail() {
                     <CardContent className="py-4">
                       <div className="flex items-start gap-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={checkIn.profiles?.avatar_url} />
+                          <AvatarImage src={checkIn.profiles?.avatar_url ?? undefined} />
                           <AvatarFallback>{checkIn.profiles?.name?.charAt(0) || 'T'}</AvatarFallback>
                         </Avatar>
                         <Link to={`/groups/${id}/check-ins/${checkIn.id}`} className="flex-1">
@@ -1336,7 +1338,7 @@ export default function GroupDetail() {
           {/* Peer Assessments Tab */}
           <TabsContent value="peer-assessments" className="space-y-4">
             <GroupPeerAssessmentsPanel
-              groupId={id!}
+              groupId={id}
               members={members?.map((m: any) => ({
                 user_id: m.user_id,
                 name: m.name,
@@ -1359,7 +1361,7 @@ export default function GroupDetail() {
                     <CardContent className="py-3 flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage src={member.avatar_url} />
+                          <AvatarImage src={member.avatar_url ?? undefined} />
                           <AvatarFallback>{member.name?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>

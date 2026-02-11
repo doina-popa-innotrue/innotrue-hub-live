@@ -267,7 +267,7 @@ export default function ClientCalendar() {
             .not('session_date', 'is', null)
             .gte('session_date', new Date().toISOString())
             .order('session_date', { ascending: true })
-        : { data: [] };
+        : { data: [] as { id: string; title: string; session_date: string; duration_minutes: number; location: string; status: string; session_type: string; module_id: string; enrollment_id: string }[] };
 
       if (individualSessions) {
         individualSessions.forEach((session: any) => {

@@ -143,7 +143,7 @@ export default function StudentDetail() {
           end_date,
           programs!inner(name, slug, tiers)
         `)
-        .eq('id', enrollmentId!)
+        .eq('id', enrollmentId ?? '')
         .single();
 
       if (enrollmentError) throw enrollmentError;
@@ -154,20 +154,20 @@ export default function StudentDetail() {
       const { data: profile } = await supabase
         .from('profiles')
         .select('name, avatar_url, username')
-        .eq('id', enrollment.client_user_id)
+        .eq('id', enrollment.client_user_id ?? '')
         .single();
 
       setStudentInfo({
-        id: enrollment.client_user_id,
+        id: enrollment.client_user_id ?? '',
         name: profile?.name || 'Unknown',
         email: profile?.username || 'N/A',
         avatar_url: profile?.avatar_url || null,
-        enrollment_id: enrollment.id,
-        program_id: enrollment.program_id,
+        enrollment_id: enrollment.id ?? '',
+        program_id: enrollment.program_id ?? '',
         program_name: (enrollment as any).programs.name,
         program_slug: (enrollment as any).programs.slug,
         program_tiers: programTiers,
-        enrollment_status: enrollment.status,
+        enrollment_status: enrollment.status ?? '',
         tier: enrollment.tier || programTiers[0] || 'essentials',
         start_date: enrollment.start_date || '',
         end_date: enrollment.end_date || null,
@@ -177,7 +177,7 @@ export default function StudentDetail() {
       const { data: modules, error: modulesError } = await supabase
         .from('program_modules')
         .select('*')
-        .eq('program_id', enrollment.program_id)
+        .eq('program_id', enrollment.program_id ?? '')
         .eq('is_active', true)
         .order('order_index');
 
@@ -187,7 +187,7 @@ export default function StudentDetail() {
       const { data: progress, error: progressError } = await supabase
         .from('module_progress')
         .select('*')
-        .eq('enrollment_id', enrollmentId!);
+        .eq('enrollment_id', enrollmentId ?? '');
 
       if (progressError) throw progressError;
 

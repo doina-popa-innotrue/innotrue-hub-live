@@ -65,6 +65,10 @@ export default function CoachingDecisionDetail() {
     }
   }, [id]);
 
+  if (!id) {
+    return null;
+  }
+
   async function fetchDecision() {
     try {
       const { data, error } = await supabase
@@ -73,7 +77,7 @@ export default function CoachingDecisionDetail() {
           *,
           profiles!decisions_user_id_fkey (name)
         `)
-        .eq("id", id)
+        .eq("id", id!)
         .eq("shared_with_coach", true)
         .single();
 
@@ -99,7 +103,7 @@ export default function CoachingDecisionDetail() {
           *,
           profiles!decision_comments_author_id_fkey (name)
         `)
-        .eq("decision_id", id)
+        .eq("decision_id", id!)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
@@ -118,14 +122,12 @@ export default function CoachingDecisionDetail() {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("decision_comments").insert([
-        {
-          decision_id: id,
-          author_id: user?.id,
+      const { error } = await supabase.from("decision_comments").insert({
+          decision_id: id!,
+          author_id: user?.id ?? undefined,
           author_role: "coach",
           body: newComment,
-        },
-      ]);
+        } as any);
 
       if (error) throw error;
 

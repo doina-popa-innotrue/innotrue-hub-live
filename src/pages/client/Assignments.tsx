@@ -42,6 +42,7 @@ type TabType = 'pending' | 'submitted' | 'reviewed';
 export default function ClientAssignments() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  if (!user) return null;
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>(
@@ -192,7 +193,7 @@ export default function ClientAssignments() {
           created_at: sa.created_at,
           updated_at: sa.updated_at,
           scored_at: sa.evaluated_at,
-          overall_score: null,
+          overall_score: null as number | null,
           module_title: (sa.scenario_templates as any)?.title || 'Untitled Scenario',
           module_id: '',
           program_name: (enrollment?.programs as any)?.name || 'Unknown Program',

@@ -105,7 +105,7 @@ export default function OrganizationProgramsManagement() {
         program: license.programs as unknown as Program,
       }));
 
-      setLicenses(enrichedLicenses);
+      setLicenses(enrichedLicenses as OrganizationProgram[]);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({

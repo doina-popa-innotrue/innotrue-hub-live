@@ -162,7 +162,8 @@ export function TimelineProgressSection() {
 
   // Combine all completed items
   const allCompleted: CompletedItem[] = useMemo(() => {
-    return [...completedGoals, ...completedMilestones, completedTasks].flat();
+    return [...completedGoals, ...completedMilestones, ...completedTasks]
+      .filter((item): item is CompletedItem => item.completed_at != null);
   }, [completedGoals, completedMilestones, completedTasks]);
 
   // Calculate weekly data for chart

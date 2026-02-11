@@ -248,7 +248,7 @@ export default function PlansManagement() {
           plan_id: newPlan.id,
           billing_interval: p.billing_interval,
           price_cents: p.price_cents,
-          stripe_price_id: null,
+          stripe_price_id: null as string | null,
           is_default: p.is_default,
         }));
 

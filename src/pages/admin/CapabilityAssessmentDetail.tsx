@@ -85,7 +85,7 @@ export default function CapabilityAssessmentDetail() {
       const { data, error } = await supabase
         .from("capability_assessments")
         .select("*")
-        .eq("id", id)
+        .eq("id", id!)
         .single();
 
       if (error) throw error;
@@ -101,7 +101,7 @@ export default function CapabilityAssessmentDetail() {
       const { data, error } = await supabase
         .from("capability_domains")
         .select("*")
-        .eq("assessment_id", id)
+        .eq("assessment_id", id!)
         .order("order_index");
 
       if (error) throw error;
@@ -166,7 +166,7 @@ export default function CapabilityAssessmentDetail() {
             content
           )
         `)
-        .eq("assessment_id", id)
+        .eq("assessment_id", id!)
         .order("completed_at", { ascending: false });
 
       if (error) {
@@ -187,7 +187,7 @@ export default function CapabilityAssessmentDetail() {
       const maxOrder = domains?.length ? Math.max(...domains.map(d => d.order_index)) + 1 : 0;
       const { error } = await supabase
         .from("capability_domains")
-        .insert([{ ...data, assessment_id: id, order_index: maxOrder }]);
+        .insert([{ ...data, assessment_id: id!, order_index: maxOrder }]);
       if (error) throw error;
     },
     onSuccess: () => {

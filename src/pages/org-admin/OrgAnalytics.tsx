@@ -91,7 +91,7 @@ export default function OrgAnalytics() {
       const { data: members } = await supabase
         .from('organization_members')
         .select('user_id, created_at')
-        .eq('organization_id', organizationMembership.organization_id)
+        .eq('organization_id', organizationMembership.organization_id ?? '')
         .eq('is_active', true);
 
       const memberUserIds = members?.map(m => m.user_id) || [];
@@ -140,7 +140,7 @@ export default function OrgAnalytics() {
       const thirtyDaysAgo = subDays(new Date(), 30);
       const activeLearnersSet = new Set(
         allEnrollments
-          .filter(e => new Date(e.updated_at) > thirtyDaysAgo)
+          .filter(e => e.updated_at && new Date(e.updated_at) > thirtyDaysAgo)
           .map(e => e.client_user_id)
       );
 
@@ -189,13 +189,13 @@ export default function OrgAnalytics() {
         const profile = profiles?.find(p => p.id === userId);
         const userEnrollments = allEnrollments.filter(e => e.client_user_id === userId);
         const completedCount = userEnrollments.filter(e => e.status === 'completed').length;
-        
+
         // Get last activity date
         const lastActivity = userEnrollments.length > 0
-          ? userEnrollments.reduce((latest, e) => 
-              new Date(e.updated_at) > new Date(latest) ? e.updated_at : latest, 
-              userEnrollments[0].updated_at
-            )
+          ? userEnrollments.reduce((latest, e) =>
+              (e.updated_at && new Date(e.updated_at) > new Date(latest)) ? e.updated_at : latest,
+              userEnrollments[0].updated_at ?? ''
+            ) || null
           : null;
 
         // Determine status
@@ -231,11 +231,11 @@ export default function OrgAnalytics() {
       }
 
       allEnrollments.forEach(enrollment => {
-        const createdDate = format(new Date(enrollment.created_at), 'MMM d');
-        if (trends.has(createdDate)) {
+        const createdDate = enrollment.created_at ? format(new Date(enrollment.created_at), 'MMM d') : null;
+        if (createdDate && trends.has(createdDate)) {
           trends.get(createdDate)!.enrollments++;
         }
-        if (enrollment.status === 'completed') {
+        if (enrollment.status === 'completed' && enrollment.updated_at) {
           const updatedDate = format(new Date(enrollment.updated_at), 'MMM d');
           if (trends.has(updatedDate)) {
             trends.get(updatedDate)!.completions++;

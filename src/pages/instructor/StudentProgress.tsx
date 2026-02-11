@@ -72,14 +72,14 @@ export default function StudentProgress() {
         ? supabase
             .from('program_instructors')
             .select('program_id')
-            .eq('instructor_id', user.id)
+            .eq('instructor_id', user.id ?? '')
         : Promise.resolve({ data: [], error: null });
 
       const programCoachPromise = showCoach && userRoles.includes('coach') && user
         ? supabase
             .from('program_coaches')
             .select('program_id')
-            .eq('coach_id', user.id)
+            .eq('coach_id', user.id ?? '')
         : Promise.resolve({ data: [], error: null });
 
       const [instructorPrograms, coachPrograms] = await Promise.all([
@@ -127,14 +127,14 @@ export default function StudentProgress() {
           const { data: profile } = await supabase
             .from('profiles')
             .select('name, username')
-            .eq('id', enrollment.client_user_id)
+            .eq('id', enrollment.client_user_id ?? '')
             .single();
 
           // Get all modules in program with tier info
           const { data: allModules } = await supabase
             .from('program_modules')
             .select('id, tier_required')
-            .eq('program_id', enrollment.program_id)
+            .eq('program_id', enrollment.program_id ?? '')
             .eq('is_active', true);
 
           // Filter to accessible modules based on user's tier
@@ -147,7 +147,7 @@ export default function StudentProgress() {
           const { data: moduleProgress } = await supabase
             .from('module_progress')
             .select('status, updated_at, module_id')
-            .eq('enrollment_id', enrollment.id);
+            .eq('enrollment_id', enrollment.id ?? '');
 
           // Filter progress to accessible modules only
           const accessibleProgress = (moduleProgress || []).filter(m => 
@@ -161,17 +161,17 @@ export default function StudentProgress() {
 
           // Get last activity
           const lastActivity = accessibleProgress.length > 0
-            ? accessibleProgress.sort((a, b) => 
-                new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+            ? accessibleProgress.sort((a, b) =>
+                new Date(b.updated_at ?? '').getTime() - new Date(a.updated_at ?? '').getTime()
               )[0].updated_at
             : null;
 
           return {
             enrollment_id: enrollment.id,
-            client_user_id: enrollment.client_user_id,
+            client_user_id: enrollment.client_user_id ?? '',
             client_name: profile?.name || 'Unknown',
             client_email: profile?.username || 'N/A',
-            program_id: enrollment.program_id,
+            program_id: enrollment.program_id ?? '',
             program_name: (enrollment as any).programs.name,
             program_slug: (enrollment as any).programs.slug,
             enrollment_status: enrollment.status,
@@ -186,7 +186,7 @@ export default function StudentProgress() {
         })
       );
 
-      setStudents(studentProgressData);
+      setStudents(studentProgressData as StudentProgress[]);
     } catch (error: any) {
       console.error('Error loading student progress:', error);
     } finally {

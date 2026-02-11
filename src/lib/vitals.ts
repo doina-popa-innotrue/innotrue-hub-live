@@ -23,7 +23,6 @@ function sendToAnalytics(metric: Metric) {
     import('@sentry/react').then((Sentry) => {
       Sentry.metrics?.distribution(metric.name, metric.value, {
         unit: metric.name === 'CLS' ? '' : 'millisecond',
-        tags: { rating: metric.rating },
       });
     });
   } catch {

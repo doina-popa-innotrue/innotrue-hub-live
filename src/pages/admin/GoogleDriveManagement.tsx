@@ -57,7 +57,7 @@ export default function GoogleDriveManagement() {
     if (profilesData) {
       setProfiles(profilesData.map(profile => ({
         ...profile,
-        email: undefined // Email not needed for display - name is sufficient
+        email: undefined as string | undefined // Email not needed for display - name is sufficient
       })));
     }
 

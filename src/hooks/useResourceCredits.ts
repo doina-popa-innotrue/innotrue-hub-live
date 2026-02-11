@@ -84,7 +84,7 @@ export function useResourceCredits(resourceId?: string) {
     const { data, error } = await supabase.rpc('check_resource_access', {
       p_user_id: user.id,
       p_resource_id: checkId,
-      p_org_id: null,
+      p_org_id: null as unknown as string,
     });
 
     if (error) {
@@ -128,7 +128,7 @@ export function useResourceCredits(resourceId?: string) {
     const { data, error } = await supabase.rpc('consume_resource_credit', {
       p_user_id: user.id,
       p_resource_id: consumeId,
-      p_org_id: null,
+      p_org_id: null as unknown as string,
     });
 
     if (error) {
@@ -194,7 +194,7 @@ export function useResourceUsage(resourceId: string) {
   return {
     isLoading,
     currentUsage: 0, // Legacy - no longer tracked per resource
-    limit: null, // Legacy - now uses credits
+    limit: null as number | null, // Legacy - now uses credits
     remaining: isFree ? null : availableCredits,
     incrementUsage: async () => {
       const result = await consumeResourceCredit();

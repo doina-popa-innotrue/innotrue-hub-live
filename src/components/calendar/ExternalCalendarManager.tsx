@@ -44,8 +44,8 @@ interface ExternalCalendar {
   id: string;
   name: string;
   ical_url: string;
-  color: string;
-  is_active: boolean;
+  color: string | null;
+  is_active: boolean | null;
   last_synced_at: string | null;
 }
 
@@ -132,7 +132,7 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
       const { data, error } = await supabase
         .from('user_external_calendars')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user?.id ?? '')
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -232,7 +232,7 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
       const { error } = await supabase
         .from('user_external_calendars')
         .insert({
-          user_id: user?.id,
+          user_id: user?.id ?? '',
           name: newCalendar.name.trim(),
           ical_url: newCalendar.ical_url.trim(),
           color: newCalendar.color,
@@ -509,7 +509,7 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
                 <div className="flex items-center gap-3">
                   <div
                     className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: calendar.color }}
+                    style={{ backgroundColor: calendar.color ?? '#6366f1' }}
                   />
                   <div>
                     <p className="font-medium text-sm">{calendar.name}</p>
@@ -523,7 +523,7 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
                 
                 <div className="flex items-center gap-2">
                   <Switch
-                    checked={calendar.is_active}
+                    checked={calendar.is_active ?? false}
                     onCheckedChange={() => handleToggleActive(calendar)}
                   />
                   <Button

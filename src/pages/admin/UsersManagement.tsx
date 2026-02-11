@@ -128,7 +128,7 @@ export default function UsersManagement() {
             // Fetch email from auth.users via edge function
             supabase.functions.invoke('get-user-email', {
               body: { userId: profile.id }
-            }).catch(() => ({ data: null }))
+            }).catch((): { data: null } => ({ data: null }))
           ]);
 
           const roles = rolesResult.data;

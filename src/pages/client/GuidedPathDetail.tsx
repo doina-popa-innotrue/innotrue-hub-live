@@ -104,6 +104,7 @@ export default function GuidedPathDetail() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  if (!id) return null;
 
   const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set());
   const [expandedMilestones, setExpandedMilestones] = useState<Set<string>>(new Set());
@@ -135,7 +136,7 @@ export default function GuidedPathDetail() {
       // Sort nested data
       const sorted = {
         ...data,
-        guided_path_template_goals: (data.guided_path_template_goals || [])
+        guided_path_template_goals: ((data.guided_path_template_goals || []) as TemplateGoal[])
           .sort((a: TemplateGoal, b: TemplateGoal) => a.order_index - b.order_index)
           .map((goal: TemplateGoal) => ({
             ...goal,

@@ -134,9 +134,9 @@ export function InstructorAssignmentScoring({
       if (!assignment.scoring_snapshot_id) {
         return {
           assignmentStatus: assignment.status,
-          snapshot: null,
-          ratings: [],
-          notes: [],
+          snapshot: null as { id: string; status: string } | null,
+          ratings: [] as { question_id: string; rating: number }[],
+          notes: [] as { question_id: string; content: string }[],
           instructorNotes: assignment.instructor_notes || "",
         };
       }
@@ -400,11 +400,13 @@ export function InstructorAssignmentScoring({
         if (error) throw error;
       }
 
-      const notesToUpsert = Object.entries(notes).map(([questionId, content]) => ({
-        snapshot_id: snapshotId!,
-        question_id: questionId,
-        content: content.trim() || null,
-      }));
+      const notesToUpsert = Object.entries(notes)
+        .filter(([, content]) => content && content.trim())
+        .map(([questionId, content]) => ({
+          snapshot_id: snapshotId!,
+          question_id: questionId,
+          content: content.trim(),
+        }));
 
       // Persist question notes (use upsert, and clear content when blank)
       if (notesToUpsert.length > 0) {

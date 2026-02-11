@@ -353,7 +353,7 @@ function AssignScenarioDialog() {
       if (!data || data.length === 0) return [];
 
       // Fetch program names
-      const programIds = [...new Set(data.map(e => e.program_id))];
+      const programIds = [...new Set(data.map(e => e.program_id).filter((id): id is string => id != null))];
       const { data: programs } = await supabase
         .from("programs")
         .select("id, name")
@@ -361,7 +361,7 @@ function AssignScenarioDialog() {
       const programMap = new Map(programs?.map(p => [p.id, p]) || []);
 
       // Fetch client profiles
-      const userIds = [...new Set(data.map(e => e.client_user_id).filter(Boolean))];
+      const userIds = [...new Set(data.map(e => e.client_user_id).filter((id): id is string => !!id))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, name")
@@ -370,7 +370,7 @@ function AssignScenarioDialog() {
 
       return data.map(e => ({
         ...e,
-        programs: programMap.get(e.program_id) || null,
+        programs: programMap.get(e.program_id ?? '') || null,
         profiles: e.client_user_id ? profileMap.get(e.client_user_id) || null : null,
       })) as EnrollmentWithDetails[];
     },
@@ -472,7 +472,7 @@ function AssignScenarioDialog() {
 
   const selectAllInProgram = (programId: string) => {
     const programEnrollments = enrollmentsByProgram.get(programId) || [];
-    const userIdsInProgram = programEnrollments.map(e => e.client_user_id).filter(Boolean) as string[];
+    const userIdsInProgram = programEnrollments.map(e => e.client_user_id).filter((id): id is string => !!id);
     setSelectedUserIds(prev => [...new Set([...prev, ...userIdsInProgram])]);
   };
 
@@ -542,10 +542,10 @@ function AssignScenarioDialog() {
                 <Label>Enrollment (optional)</Label>
                 <Select
                   value={formData.enrollment_id}
-                  onValueChange={(value) => setFormData(prev => ({ 
-                    ...prev, 
+                  onValueChange={(value) => setFormData(prev => ({
+                    ...prev,
                     enrollment_id: value,
-                    user_id: enrollments?.find(e => e.id === value)?.client_user_id || prev.user_id,
+                    user_id: enrollments?.find(e => e.id === value)?.client_user_id ?? prev.user_id,
                     module_id: "", // Reset module when enrollment changes
                   }))}
                 >

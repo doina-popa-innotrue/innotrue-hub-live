@@ -187,12 +187,12 @@ export default function Profile() {
 
       if (!prefsError && prefsData) {
         setNotificationPrefs({
-          profile_updates: prefsData.profile_updates,
-          password_changes: prefsData.password_changes,
-          email_changes: prefsData.email_changes,
-          program_assignments: prefsData.program_assignments,
-          program_completions: prefsData.program_completions,
-          module_completions: prefsData.module_completions,
+          profile_updates: prefsData.profile_updates ?? true,
+          password_changes: prefsData.password_changes ?? true,
+          email_changes: prefsData.email_changes ?? true,
+          program_assignments: prefsData.program_assignments ?? true,
+          program_completions: prefsData.program_completions ?? true,
+          module_completions: prefsData.module_completions ?? false,
           instructor_program_assignments: prefsData.instructor_program_assignments ?? true,
           instructor_module_assignments: prefsData.instructor_module_assignments ?? true,
           coach_program_assignments: prefsData.coach_program_assignments ?? true,
@@ -512,7 +512,7 @@ export default function Profile() {
       const { data: profileData } = await supabase
         .from('profiles')
         .select('name')
-        .eq('id', user?.id)
+        .eq('id', user?.id ?? '')
         .single();
 
       // Send security notification email only if enabled
@@ -599,7 +599,16 @@ export default function Profile() {
         .from('notification_preferences')
         .upsert({
           user_id: user?.id ?? '',
-          ...notificationPrefs,
+          profile_updates: notificationPrefs.profile_updates,
+          password_changes: notificationPrefs.password_changes,
+          email_changes: notificationPrefs.email_changes,
+          program_assignments: notificationPrefs.program_assignments,
+          program_completions: notificationPrefs.program_completions,
+          module_completions: notificationPrefs.module_completions,
+          instructor_program_assignments: notificationPrefs.instructor_program_assignments ?? true,
+          instructor_module_assignments: notificationPrefs.instructor_module_assignments ?? true,
+          coach_program_assignments: notificationPrefs.coach_program_assignments ?? true,
+          coach_module_assignments: notificationPrefs.coach_module_assignments ?? true,
         });
 
       if (error) throw error;

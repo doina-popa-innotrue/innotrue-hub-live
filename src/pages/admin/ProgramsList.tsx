@@ -124,7 +124,7 @@ export default function ProgramsList() {
         })
       );
 
-      setPrograms(enriched);
+      setPrograms(enriched as Program[]);
     }
 
     setLoading(false);

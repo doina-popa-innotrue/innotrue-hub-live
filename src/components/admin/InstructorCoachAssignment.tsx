@@ -67,7 +67,7 @@ export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName
             id: item.instructor_id,
             name: profile?.name || 'Unknown',
             email: profile?.username || 'N/A',
-            qualifications: [],
+            qualifications: [] as string[],
           };
         })
       );
@@ -103,7 +103,7 @@ export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName
             id: item.coach_id,
             name: profile?.name || 'Unknown',
             email: profile?.username || 'N/A',
-            qualifications: [],
+            qualifications: [] as string[],
           };
         })
       );

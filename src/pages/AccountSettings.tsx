@@ -189,12 +189,12 @@ export default function AccountSettings() {
 
       if (!prefsError && prefsData) {
         setNotificationPrefs({
-          profile_updates: prefsData.profile_updates,
-          password_changes: prefsData.password_changes,
-          email_changes: prefsData.email_changes,
-          program_assignments: prefsData.program_assignments,
-          program_completions: prefsData.program_completions,
-          module_completions: prefsData.module_completions,
+          profile_updates: prefsData.profile_updates ?? true,
+          password_changes: prefsData.password_changes ?? true,
+          email_changes: prefsData.email_changes ?? true,
+          program_assignments: prefsData.program_assignments ?? true,
+          program_completions: prefsData.program_completions ?? true,
+          module_completions: prefsData.module_completions ?? false,
           instructor_program_assignments: prefsData.instructor_program_assignments ?? true,
           instructor_module_assignments: prefsData.instructor_module_assignments ?? true,
           coach_program_assignments: prefsData.coach_program_assignments ?? true,
@@ -824,9 +824,9 @@ export default function AccountSettings() {
       if (lucidMapping) {
         const { error } = await supabase
           .from('lucid_users')
-          .update({ 
-            lucid_email: lucidEmail.trim() || null,
-            lucid_url: lucidUrl.trim() || null 
+          .update({
+            lucid_email: lucidEmail.trim() || undefined,
+            lucid_url: lucidUrl.trim() || null
           })
           .eq('user_id', user?.id ?? '');
         if (error) throw error;
@@ -857,9 +857,9 @@ export default function AccountSettings() {
       if (miroMapping) {
         const { error } = await supabase
           .from('miro_users')
-          .update({ 
-            miro_email: miroEmail.trim() || null,
-            miro_url: miroUrl.trim() || null 
+          .update({
+            miro_email: miroEmail.trim() || undefined,
+            miro_url: miroUrl.trim() || null
           })
           .eq('user_id', user?.id ?? '');
         if (error) throw error;
@@ -890,9 +890,9 @@ export default function AccountSettings() {
       if (muralMapping) {
         const { error } = await supabase
           .from('mural_users')
-          .update({ 
-            mural_email: muralEmail.trim() || null,
-            mural_url: muralUrl.trim() || null 
+          .update({
+            mural_email: muralEmail.trim() || undefined,
+            mural_url: muralUrl.trim() || null
           })
           .eq('user_id', user?.id ?? '');
         if (error) throw error;

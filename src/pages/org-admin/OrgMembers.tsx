@@ -46,6 +46,7 @@ interface PendingInvite {
 export default function OrgMembers() {
   const { organizationMembership, user } = useAuth();
   const { toast } = useToast();
+  if (!user) return null;
   const [members, setMembers] = useState<Member[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -223,7 +224,7 @@ export default function OrgMembers() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPendingInvites(data || []);
+      setPendingInvites((data || []) as PendingInvite[]);
     } catch (error) {
       console.error('Error loading invites:', error);
     }

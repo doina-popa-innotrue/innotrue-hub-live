@@ -182,8 +182,8 @@ export function BulkCreditGrantDialog({ trigger, onSuccess }: BulkCreditGrantDia
             p_amount: creditAmount,
             p_expires_at: expiryDate.toISOString(),
             p_source_type: 'admin_grant',
-            p_feature_key: null,
-            p_source_reference_id: null,
+            p_feature_key: undefined,
+            p_source_reference_id: undefined,
             p_description: reason || "Bulk credit grant by admin",
           });
 

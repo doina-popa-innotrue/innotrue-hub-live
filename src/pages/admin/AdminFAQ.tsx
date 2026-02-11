@@ -1486,7 +1486,7 @@ export default function AdminFAQ() {
 }
 
 // Search helper component that highlights matching text
-function SearchableContent({ query, contentRef }: { query: string; contentRef: React.RefObject<HTMLDivElement> }) {
+function SearchableContent({ query, contentRef }: { query: string; contentRef: React.RefObject<HTMLDivElement> }): null {
   useEffect(() => {
     if (!contentRef.current || !query) return;
     

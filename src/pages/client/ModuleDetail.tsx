@@ -101,6 +101,7 @@ interface ClientContent {
 
 export default function ModuleDetail() {
   const { programId, moduleId } = useParams();
+  if (!programId || !moduleId) return null;
   const navigate = useNavigate();
   const { user } = useAuth();
   
@@ -270,7 +271,7 @@ export default function ModuleDetail() {
           ...moduleData,
           links: moduleData.links as unknown as ModuleLink[] || [],
           progress: progressData.data || undefined,
-        });
+        } as Module);
         setNotes(progressData.data?.notes || '');
       }
 

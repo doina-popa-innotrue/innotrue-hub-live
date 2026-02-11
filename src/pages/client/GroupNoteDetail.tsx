@@ -23,6 +23,7 @@ interface NoteWithProfile {
 
 export default function GroupNoteDetail() {
   const { groupId, noteId } = useParams<{ groupId: string; noteId: string }>();
+  if (!groupId || !noteId) return null;
 
   const { data: note, isLoading } = useQuery<NoteWithProfile | null>({
     queryKey: ['group-note', noteId],

@@ -138,7 +138,7 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
       const payload = {
         module_progress_id: moduleProgressId,
         assignment_type_id: assignmentType.id,
-        assessor_id: user?.id,
+        assessor_id: user?.id ?? '',
         responses: JSON.parse(JSON.stringify(responses)) as Json,
         overall_score: overallScore,
         overall_comments: overallComments || null,
@@ -204,8 +204,8 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
 
     setUploading(true);
     try {
-      let filePath = null;
-      let fileSize = null;
+      let filePath: string | null = null;
+      let fileSize: number | null = null;
 
       if (attachmentForm.type !== "link" && attachmentForm.file) {
         const fileExt = attachmentForm.file.name.split(".").pop();

@@ -97,8 +97,8 @@ export function useCreditService() {
       const { data, error } = await supabase.rpc("consume_credit_service", {
         p_user_id: user.id,
         p_service_id: serviceId,
-        p_action_reference_id: actionReferenceId || null,
-        p_notes: notes || null,
+        p_action_reference_id: actionReferenceId ?? undefined,
+        p_notes: notes ?? undefined,
       });
 
       if (error) {

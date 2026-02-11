@@ -71,6 +71,7 @@ function GuidedPathsFallback() {
 export default function GuidedPaths() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  if (!user) return null;
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'families' | 'templates'>('families');
   const [selectedFamily, setSelectedFamily] = useState<Family | null>(null);
@@ -119,7 +120,7 @@ export default function GuidedPaths() {
             if (!acc[c.template_id]) acc[c.template_id] = [];
             acc[c.template_id].push(c);
             return acc;
-          }, {} as Record<string, typeof conditionsData>);
+          }, {} as Record<string, NonNullable<typeof conditionsData>>);
 
           return {
             ...family,

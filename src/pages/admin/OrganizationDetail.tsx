@@ -73,6 +73,10 @@ export default function OrganizationDetail() {
     }
   }, [id]);
 
+  if (!id) {
+    return null;
+  }
+
   const loadOrganization = async () => {
     try {
       const { data, error } = await supabase
@@ -157,7 +161,7 @@ export default function OrganizationDetail() {
         program_name: (p.programs as any)?.name || 'Unknown Program'
       }));
 
-      setPrograms(programsWithNames);
+      setPrograms(programsWithNames as OrganizationProgram[]);
     } catch (error) {
       console.error('Error loading programs:', error);
     }
@@ -219,7 +223,7 @@ export default function OrganizationDetail() {
       const { error } = await supabase
         .from('organization_members')
         .insert({
-          organization_id: id!,
+          organization_id: id,
           user_id: selectedUserId,
           role: selectedRole as 'org_admin' | 'org_manager' | 'org_member'
         });

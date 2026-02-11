@@ -392,9 +392,9 @@ export function ModuleSessionManager({
               session_date: date.toISOString(),
               parent_session_id: masterId,
               is_recurring: false, // Child sessions are not recurring themselves
-              recurrence_pattern: null,
-              recurrence_end_date: null,
-              recurrence_count: null,
+              recurrence_pattern: null as string | null,
+              recurrence_end_date: null as string | null,
+              recurrence_count: null as number | null,
             }));
 
             const { error: childError } = await supabase

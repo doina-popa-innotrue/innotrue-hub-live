@@ -96,7 +96,7 @@ export default function AssessmentBuilderDetail() {
       const { data, error } = await supabase
         .from("assessment_definitions")
         .select("*")
-        .eq("id", id)
+        .eq("id", id!)
         .single();
       if (error) throw error;
       return data;
@@ -111,7 +111,7 @@ export default function AssessmentBuilderDetail() {
       const { data, error } = await supabase
         .from("assessment_dimensions")
         .select("*")
-        .eq("assessment_id", id)
+        .eq("assessment_id", id!)
         .order("order_index");
       if (error) throw error;
       return data as Dimension[];
@@ -126,7 +126,7 @@ export default function AssessmentBuilderDetail() {
       const { data, error } = await supabase
         .from("assessment_questions")
         .select("*")
-        .eq("assessment_id", id)
+        .eq("assessment_id", id!)
         .order("order_index");
       if (error) throw error;
       return data as Question[];
@@ -174,7 +174,7 @@ export default function AssessmentBuilderDetail() {
       const { data, error } = await supabase
         .from("assessment_interpretations")
         .select("*")
-        .eq("assessment_id", id)
+        .eq("assessment_id", id!)
         .order("priority", { ascending: false });
       if (error) throw error;
       return data as Interpretation[];
@@ -186,7 +186,7 @@ export default function AssessmentBuilderDetail() {
   const createDimension = useMutation({
     mutationFn: async (data: { name: string; description: string }) => {
       const { error } = await supabase.from("assessment_dimensions").insert([{
-        assessment_id: id,
+        assessment_id: id!,
         name: data.name,
         description: data.description || null,
         order_index: dimensions.length,
@@ -235,7 +235,7 @@ export default function AssessmentBuilderDetail() {
   const createQuestion = useMutation({
     mutationFn: async (data: { question_text: string; question_type: string }) => {
       const { error } = await supabase.from("assessment_questions").insert([{
-        assessment_id: id,
+        assessment_id: id!,
         question_text: data.question_text,
         question_type: data.question_type,
         order_index: questions.length,
@@ -371,7 +371,7 @@ export default function AssessmentBuilderDetail() {
         throw new Error("Invalid JSON in conditions");
       }
       const { error } = await supabase.from("assessment_interpretations").insert([{
-        assessment_id: id,
+        assessment_id: id!,
         name: data.name,
         description: data.description || null,
         interpretation_text: data.interpretation_text,

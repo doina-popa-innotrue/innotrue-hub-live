@@ -70,7 +70,7 @@ export default function EmailTemplatesManagement() {
     if (error) {
       console.error('Failed to load assets:', error);
     } else {
-      setAssets(data || []);
+      setAssets((data || []) as EmailAsset[]);
     }
   }
 

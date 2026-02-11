@@ -57,7 +57,7 @@ export function SEOHead({
   modifiedTime,
   author,
   jsonLd,
-}: SEOHeadProps) {
+}: SEOHeadProps): null {
   const fullTitle = title ? `${title} | ${SITE_NAME}` : SITE_NAME;
   const truncatedDescription = description.slice(0, 160);
   
@@ -173,7 +173,7 @@ export function generateOrganizationJsonLd() {
     name: 'InnoTrue',
     url: 'https://app.innotrue.com',
     logo: 'https://app.innotrue.com/pwa-512x512.png',
-    sameAs: [],
+    sameAs: [] as string[],
   };
 }
 

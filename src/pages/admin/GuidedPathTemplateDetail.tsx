@@ -107,6 +107,7 @@ const CONDITION_OPERATORS = [
 
 export default function GuidedPathTemplateDetail() {
   const { id } = useParams<{ id: string }>();
+  if (!id) return null;
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -187,7 +188,7 @@ export default function GuidedPathTemplateDetail() {
       // Sort nested data by order_index
       const sorted = {
         ...data,
-        guided_path_template_goals: (data.guided_path_template_goals || [])
+        guided_path_template_goals: ((data.guided_path_template_goals || []) as TemplateGoal[])
           .sort((a: TemplateGoal, b: TemplateGoal) => a.order_index - b.order_index)
           .map((goal: TemplateGoal) => ({
             ...goal,

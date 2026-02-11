@@ -66,7 +66,7 @@ export default function AcceptInvite() {
           .limit(1);
 
         const hasActivity = (enrollments && enrollments.length > 0) || (goals && goals.length > 0);
-        setIsExistingUser(hasActivity);
+        setIsExistingUser(hasActivity ?? false);
       } catch (error) {
         console.error('Error checking existing user:', error);
         setIsExistingUser(false);
@@ -88,7 +88,7 @@ export default function AcceptInvite() {
           accepted_at,
           organizations (id, name)
         `)
-        .eq('token', token)
+        .eq('token', token!)
         .single();
 
       if (error || !data) {
