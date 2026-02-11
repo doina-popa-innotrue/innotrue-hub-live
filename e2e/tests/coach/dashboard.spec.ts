@@ -1,7 +1,6 @@
 import { test, expect } from '../../fixtures/auth';
 
-// TODO: Enable once coach credentials are configured on preprod
-test.describe.skip('Coach Dashboard', () => {
+test.describe('Coach Dashboard', () => {
   test('coach dashboard loads successfully', async ({ coachPage }) => {
     await coachPage.goto('/teaching');
 

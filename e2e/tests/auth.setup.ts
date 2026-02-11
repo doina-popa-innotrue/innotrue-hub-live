@@ -17,10 +17,9 @@ setup('authenticate as client', async ({ page }) => {
   await loginAndSaveState(page, TEST_USERS.client, STORAGE_STATE.client);
 });
 
-// TODO: Enable once coach credentials are configured on preprod
-// setup('authenticate as coach', async ({ page }) => {
-//   await loginAndSaveState(page, TEST_USERS.coach, STORAGE_STATE.coach);
-// });
+setup('authenticate as coach', async ({ page }) => {
+  await loginAndSaveState(page, TEST_USERS.coach, STORAGE_STATE.coach);
+});
 
 /**
  * Login via the Auth page UI and save browser state for reuse in tests.
