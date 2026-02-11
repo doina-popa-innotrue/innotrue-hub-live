@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,31 +21,30 @@ interface PlatformTerms {
   effective_from: string;
 }
 
+type TermsStatus = 'no-terms' | 'accepted' | 'blocking' | 'update-banner';
+
+interface TermsCheckResult {
+  terms: PlatformTerms | null;
+  status: TermsStatus;
+}
+
 interface PlatformTermsAcceptanceGateProps {
   children: React.ReactNode;
 }
 
+const TERMS_QUERY_KEY = 'platform-terms-acceptance';
+
 export function PlatformTermsAcceptanceGate({ children }: PlatformTermsAcceptanceGateProps) {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [currentTerms, setCurrentTerms] = useState<PlatformTerms | null>(null);
-  const [userAcceptance, setUserAcceptance] = useState<any>(null);
-  const [showBlockingModal, setShowBlockingModal] = useState(false);
-  const [showUpdateBanner, setShowUpdateBanner] = useState(false);
+  const queryClient = useQueryClient();
   const [agreed, setAgreed] = useState(false);
   const [accepting, setAccepting] = useState(false);
 
-  useEffect(() => {
-    checkTermsAcceptance();
-  }, [user?.id]);
+  const { data, isLoading } = useQuery<TermsCheckResult>({
+    queryKey: [TERMS_QUERY_KEY, user?.id],
+    queryFn: async (): Promise<TermsCheckResult> => {
+      if (!user?.id) return { terms: null, status: 'no-terms' };
 
-  async function checkTermsAcceptance() {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    try {
       // Fetch current platform terms
       const { data: terms, error: termsError } = await supabase
         .from('platform_terms')
@@ -53,55 +53,41 @@ export function PlatformTermsAcceptanceGate({ children }: PlatformTermsAcceptanc
         .maybeSingle();
 
       if (termsError) throw termsError;
-
-      if (!terms) {
-        // No platform terms defined, allow access
-        setLoading(false);
-        return;
-      }
-
-      setCurrentTerms(terms);
+      if (!terms) return { terms: null, status: 'no-terms' };
 
       // Check if user has accepted current terms
       const { data: acceptance, error: acceptanceError } = await supabase
         .from('user_platform_terms_acceptance')
-        .select('*')
+        .select('id')
         .eq('user_id', user.id)
         .eq('platform_terms_id', terms.id)
         .maybeSingle();
 
       if (acceptanceError) throw acceptanceError;
+      if (acceptance) return { terms, status: 'accepted' };
 
-      setUserAcceptance(acceptance);
+      // User hasn't accepted current terms — check if they accepted any previous version
+      const { data: anyAcceptance } = await supabase
+        .from('user_platform_terms_acceptance')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1);
 
-      if (!acceptance) {
-        // User hasn't accepted current terms
-        // Check if user has accepted ANY previous version
-        const { data: anyAcceptance } = await supabase
-          .from('user_platform_terms_acceptance')
-          .select('*')
-          .eq('user_id', user.id)
-          .limit(1);
-
-        if (anyAcceptance && anyAcceptance.length > 0) {
-          // User accepted previous version - check if update is blocking
-          if (terms.is_blocking_on_update) {
-            setShowBlockingModal(true);
-          } else {
-            setShowUpdateBanner(true);
-          }
-        } else {
-          // First time - always block
-          setShowBlockingModal(true);
-        }
+      const hasAnyPrevious = anyAcceptance && anyAcceptance.length > 0;
+      if (hasAnyPrevious && !terms.is_blocking_on_update) {
+        return { terms, status: 'update-banner' };
       }
-    } catch (error: any) {
-      console.error('Error checking platform terms acceptance:', error);
-      toast.error('Failed to check terms acceptance');
-    } finally {
-      setLoading(false);
-    }
-  }
+
+      // First time or blocking update — show blocking modal
+      return { terms, status: 'blocking' };
+    },
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // 5 min — don't re-query on every mount
+    gcTime: 30 * 60 * 1000,   // 30 min cache retention
+  });
+
+  const currentTerms = data?.terms ?? null;
+  const status = data?.status ?? 'no-terms';
 
   async function acceptTerms() {
     if (!user?.id || !currentTerms) return;
@@ -123,18 +109,19 @@ export function PlatformTermsAcceptanceGate({ children }: PlatformTermsAcceptanc
       if (error) throw error;
 
       toast.success('Platform terms accepted');
-      setShowBlockingModal(false);
-      setShowUpdateBanner(false);
-      setUserAcceptance({ accepted: true });
-    } catch (error: any) {
+
+      // Invalidate the query cache so it re-fetches and returns 'accepted'
+      await queryClient.invalidateQueries({ queryKey: [TERMS_QUERY_KEY] });
+    } catch (error: unknown) {
       console.error('Error accepting platform terms:', error);
       toast.error('Failed to accept terms');
     } finally {
       setAccepting(false);
+      setAgreed(false);
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -146,7 +133,7 @@ export function PlatformTermsAcceptanceGate({ children }: PlatformTermsAcceptanc
   }
 
   // Blocking modal for first access or blocking updates
-  if (showBlockingModal && currentTerms) {
+  if (status === 'blocking' && currentTerms) {
     return (
       <div className="flex items-center justify-center min-h-screen p-4 pb-24 bg-background relative z-[60]">
         <Card className="w-full max-w-2xl">
@@ -161,12 +148,12 @@ export function PlatformTermsAcceptanceGate({ children }: PlatformTermsAcceptanc
           </CardHeader>
           <CardContent className="space-y-4">
             <ScrollArea className="h-[400px] w-full rounded-md border p-4">
-              <div 
+              <div
                 className="prose prose-sm max-w-none dark:prose-invert [&>p]:mb-4 [&>h1]:mt-6 [&>h1]:mb-3 [&>h2]:mt-5 [&>h2]:mb-2 [&>h3]:mt-4 [&>h3]:mb-2 [&>ul]:mb-4 [&>ol]:mb-4"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(currentTerms.content_html) }} 
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(currentTerms.content_html) }}
               />
             </ScrollArea>
-            
+
             <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
               <Checkbox
                 id="agree-platform-terms"
@@ -178,8 +165,8 @@ export function PlatformTermsAcceptanceGate({ children }: PlatformTermsAcceptanc
               </label>
             </div>
 
-            <Button 
-              onClick={acceptTerms} 
+            <Button
+              onClick={acceptTerms}
               disabled={!agreed || accepting}
               className="w-full"
             >
@@ -194,9 +181,9 @@ export function PlatformTermsAcceptanceGate({ children }: PlatformTermsAcceptanc
   return (
     <>
       {/* Non-blocking update banner */}
-      {showUpdateBanner && currentTerms && (
-        <PlatformTermsUpdateBanner 
-          terms={currentTerms} 
+      {status === 'update-banner' && currentTerms && (
+        <PlatformTermsUpdateBanner
+          terms={currentTerms}
           onAccept={acceptTerms}
           accepting={accepting}
         />
@@ -218,7 +205,7 @@ function PlatformTermsUpdateBanner({ terms, onAccept, accepting }: PlatformTerms
 
   if (showModal) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
         <Card className="w-full max-w-2xl mx-4">
           <CardHeader className="text-center">
             <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
@@ -231,12 +218,12 @@ function PlatformTermsUpdateBanner({ terms, onAccept, accepting }: PlatformTerms
           </CardHeader>
           <CardContent className="space-y-4">
             <ScrollArea className="h-[300px] w-full rounded-md border p-4">
-              <div 
+              <div
                 className="prose prose-sm max-w-none dark:prose-invert [&>p]:mb-4 [&>h1]:mt-6 [&>h1]:mb-3 [&>h2]:mt-5 [&>h2]:mb-2 [&>h3]:mt-4 [&>h3]:mb-2 [&>ul]:mb-4 [&>ol]:mb-4"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(terms.content_html) }} 
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(terms.content_html) }}
               />
             </ScrollArea>
-            
+
             <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
               <Checkbox
                 id="agree-updated-platform-terms"
@@ -249,15 +236,15 @@ function PlatformTermsUpdateBanner({ terms, onAccept, accepting }: PlatformTerms
             </div>
 
             <div className="flex gap-2">
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => setShowModal(false)}
                 className="flex-1"
               >
                 Review Later
               </Button>
-              <Button 
-                onClick={onAccept} 
+              <Button
+                onClick={onAccept}
                 disabled={!agreed || accepting}
                 className="flex-1"
               >
@@ -281,8 +268,8 @@ function PlatformTermsUpdateBanner({ terms, onAccept, accepting }: PlatformTerms
           </p>
         </div>
       </div>
-      <Button 
-        size="sm" 
+      <Button
+        size="sm"
         onClick={() => setShowModal(true)}
       >
         Review & Accept
