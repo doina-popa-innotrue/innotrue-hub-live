@@ -7,4 +7,5 @@ export const STORAGE_STATE = {
   admin: path.join(AUTH_DIR, 'admin.json'),
   client: path.join(AUTH_DIR, 'client.json'),
   coach: path.join(AUTH_DIR, 'coach.json'),
+  instructor: path.join(AUTH_DIR, 'instructor.json'),
 } as const;

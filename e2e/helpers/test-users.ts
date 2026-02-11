@@ -23,6 +23,12 @@ export const TEST_USERS = {
     expectedRole: 'coach' as const,
     dashboardPath: '/teaching',
   },
+  instructor: {
+    email: process.env.E2E_INSTRUCTOR_EMAIL || 'innohub_instructor@innotrue.com',
+    password: process.env.E2E_INSTRUCTOR_PASSWORD || 'DemoPass123!',
+    expectedRole: 'instructor' as const,
+    dashboardPath: '/teaching',
+  },
 } as const;
 
 export type TestUserRole = keyof typeof TEST_USERS;
