@@ -65,7 +65,7 @@ jobs:
       - name: Run E2E tests
         env:
           CI: true
-          PLAYWRIGHT_BASE_URL: https://app.innotrue.com
+          PLAYWRIGHT_BASE_URL: https://preprod.innotrue-hub-live.pages.dev
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
           E2E_CLIENT_EMAIL: ${{ secrets.E2E_CLIENT_EMAIL }}
