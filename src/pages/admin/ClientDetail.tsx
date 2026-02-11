@@ -22,7 +22,7 @@ import { ClientCreditAudit } from '@/components/admin/ClientCreditAudit';
 import { EnrollmentModuleStaffManager } from '@/components/admin';
 
 export default function ClientDetail() {
-  const { id } = useParams();
+  const { id } = useParams() as { id: string };
   const navigate = useNavigate();
   const [client, setClient] = useState<any>(null);
   const [enrollments, setEnrollments] = useState<any[]>([]);
@@ -1150,12 +1150,12 @@ export default function ClientDetail() {
         </Card>
       )}
 
-      <ClientCreditAudit userId={id!} />
+      <ClientCreditAudit userId={id} />
 
-      <ClientGoalsSection clientId={id!} />
+      <ClientGoalsSection clientId={id} />
 
       <div className="mt-6">
-        <ClientStaffNotes clientUserId={id!} isAdmin={true} />
+        <ClientStaffNotes clientUserId={id} isAdmin={true} />
       </div>
     </div>
   );

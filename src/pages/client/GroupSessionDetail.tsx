@@ -43,7 +43,7 @@ export default function GroupSessionDetail() {
       const { data, error } = await supabase
         .from('group_sessions')
         .select('*')
-        .eq('id', sessionId)
+        .eq('id', sessionId ?? '')
         .single();
       if (error) throw error;
       return data;
@@ -57,7 +57,7 @@ export default function GroupSessionDetail() {
       const { data, error } = await supabase
         .from('groups')
         .select('id, name')
-        .eq('id', groupId)
+        .eq('id', groupId ?? '')
         .single();
       if (error) throw error;
       return data;
@@ -72,7 +72,7 @@ export default function GroupSessionDetail() {
       const { data, error } = await supabase
         .from('group_session_participants')
         .select('id, user_id, response_status, responded_at')
-        .eq('session_id', sessionId);
+        .eq('session_id', sessionId ?? '');
       if (error) throw error;
       return data;
     },
@@ -109,8 +109,8 @@ export default function GroupSessionDetail() {
           response_status: status,
           responded_at: new Date().toISOString()
         })
-        .eq('session_id', sessionId)
-        .eq('user_id', user?.id);
+        .eq('session_id', sessionId ?? '')
+        .eq('user_id', user?.id ?? '');
       if (error) throw error;
       return status;
     },

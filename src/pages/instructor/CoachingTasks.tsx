@@ -25,6 +25,7 @@ interface SharedTask {
 export default function CoachingTasks() {
   const { user } = useAuth();
   const { toast } = useToast();
+  if (!user) return null;
   const [tasks, setTasks] = useState<SharedTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,7 +42,7 @@ export default function CoachingTasks() {
       const { data: coachClients, error: coachError } = await supabase
         .from("client_coaches")
         .select("client_id")
-        .eq("coach_id", user?.id);
+        .eq("coach_id", user?.id!);
 
       if (coachError) throw coachError;
 

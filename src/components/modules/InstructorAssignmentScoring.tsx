@@ -400,11 +400,13 @@ export function InstructorAssignmentScoring({
         if (error) throw error;
       }
 
-      const notesToUpsert = Object.entries(notes).map(([questionId, content]) => ({
-        snapshot_id: snapshotId!,
-        question_id: questionId,
-        content: content.trim() || null,
-      }));
+      const notesToUpsert = Object.entries(notes)
+        .filter(([, content]) => content && content.trim())
+        .map(([questionId, content]) => ({
+          snapshot_id: snapshotId!,
+          question_id: questionId,
+          content: content.trim(),
+        }));
 
       // Persist question notes (use upsert, and clear content when blank)
       if (notesToUpsert.length > 0) {

@@ -42,6 +42,7 @@ type TabType = 'pending' | 'submitted' | 'reviewed';
 export default function ClientAssignments() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  if (!user) return null;
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>(

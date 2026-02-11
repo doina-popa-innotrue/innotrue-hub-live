@@ -71,9 +71,9 @@ export default function ReflectionResourceForm({
 
     setUploading(true);
     try {
-      let filePath = null;
-      let fileSize = null;
-      let mimeType = null;
+      let filePath: string | null = null;
+      let fileSize: number | null = null;
+      let mimeType: string | null = null;
       let finalUrl = url;
 
       // Handle file upload

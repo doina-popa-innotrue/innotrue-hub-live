@@ -192,10 +192,10 @@ export default function ResourceLibraryManagement() {
     mutationFn: async (data: typeof formData) => {
       if (!user) throw new Error('Not authenticated');
       
-      let file_path = null;
-      let file_name = null;
-      let file_size = null;
-      let mime_type = null;
+      let file_path: string | null = null;
+      let file_name: string | null = null;
+      let file_size: number | null = null;
+      let mime_type: string | null = null;
 
       if (data.file) {
         setUploading(true);
@@ -240,25 +240,27 @@ export default function ResourceLibraryManagement() {
 
       // Add program assignments if any
       if (data.program_ids.length > 0 && newResource) {
+        const programLinks = data.program_ids.map(pid => ({
+            resource_id: newResource.id,
+            program_id: pid
+          }));
         const { error: linkError } = await supabase
           .from('resource_library_programs')
-          .insert(data.program_ids.map(pid => ({ 
-            resource_id: newResource.id, 
-            program_id: pid 
-          })));
-        
+          .insert(programLinks);
+
         if (linkError) throw linkError;
       }
 
       // Add skill assignments if any
       if (data.skill_ids.length > 0 && newResource) {
+        const skillLinks = data.skill_ids.map(sid => ({
+            resource_id: newResource.id,
+            skill_id: sid
+          }));
         const { error: skillError } = await supabase
           .from('resource_library_skills')
-          .insert(data.skill_ids.map(sid => ({ 
-            resource_id: newResource.id, 
-            skill_id: sid 
-          })));
-        
+          .insert(skillLinks);
+
         if (skillError) throw skillError;
       }
     },
@@ -394,10 +396,11 @@ export default function ResourceLibraryManagement() {
       
       // Insert new links
       if (programIds.length > 0) {
+        const links = programIds.map(pid => ({ resource_id: resourceId, program_id: pid }));
         const { error } = await supabase
           .from('resource_library_programs')
-          .insert(programIds.map(pid => ({ resource_id: resourceId, program_id: pid })));
-        
+          .insert(links);
+
         if (error) throw error;
       }
     },
@@ -462,12 +465,13 @@ export default function ResourceLibraryManagement() {
             .eq('resource_id', editingResource.id);
           
           if (formData.skill_ids.length > 0) {
+            const skillLinks = formData.skill_ids.map(sid => ({
+                resource_id: editingResource.id,
+                skill_id: sid
+              }));
             await supabase
               .from('resource_library_skills')
-              .insert(formData.skill_ids.map(sid => ({ 
-                resource_id: editingResource.id, 
-                skill_id: sid 
-              })));
+              .insert(skillLinks);
           }
           
           queryClient.invalidateQueries({ queryKey: ['resource-library'] });

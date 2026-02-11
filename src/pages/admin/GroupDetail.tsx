@@ -57,7 +57,7 @@ export default function AdminGroupDetail() {
       const { data, error } = await supabase
         .from('groups')
         .select(`*, programs (name), calcom_event_type_mappings!groups_calcom_mapping_id_fkey (id, calcom_event_type_name, scheduling_url)`)
-        .eq('id', id)
+        .eq('id', id!)
         .single();
       if (error) throw error;
       return data;
@@ -88,7 +88,7 @@ export default function AdminGroupDetail() {
       const { data, error } = await supabase
         .from('group_memberships')
         .select('*, profiles:user_id (id, name, avatar_url)')
-        .eq('group_id', id)
+        .eq('group_id', id!)
         .order('joined_at', { ascending: true });
       if (error) throw error;
       return data;
@@ -122,7 +122,7 @@ export default function AdminGroupDetail() {
       const { data, error } = await supabase
         .from('group_tasks')
         .select('*')
-        .eq('group_id', id)
+        .eq('group_id', id!)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -137,7 +137,7 @@ export default function AdminGroupDetail() {
       const { data, error } = await supabase
         .from('group_check_ins')
         .select('*')
-        .eq('group_id', id)
+        .eq('group_id', id!)
         .order('check_in_date', { ascending: false });
       if (error) throw error;
       return data;
@@ -152,7 +152,7 @@ export default function AdminGroupDetail() {
       const { data, error } = await supabase
         .from('group_notes')
         .select('*')
-        .eq('group_id', id)
+        .eq('group_id', id!)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -167,7 +167,7 @@ export default function AdminGroupDetail() {
       const { data, error } = await supabase
         .from('group_sessions')
         .select('*')
-        .eq('group_id', id)
+        .eq('group_id', id!)
         .order('session_date', { ascending: true });
       if (error) throw error;
       return data;
@@ -182,7 +182,7 @@ export default function AdminGroupDetail() {
       const { data, error } = await supabase
         .from('group_interest_registrations')
         .select('*')
-        .eq('group_id', id)
+        .eq('group_id', id!)
         .eq('status', 'pending');
       if (error) throw error;
       return data;
@@ -243,7 +243,7 @@ export default function AdminGroupDetail() {
     mutationFn: async (userId: string) => {
       await supabase.from('group_interest_registrations')
         .update({ status: 'declined' })
-        .eq('group_id', id)
+        .eq('group_id', id!)
         .eq('user_id', userId);
     },
     onSuccess: () => {
@@ -327,7 +327,7 @@ export default function AdminGroupDetail() {
           status: groupStatus,
           calcom_mapping_id: calcomMappingId && calcomMappingId !== 'none' ? calcomMappingId : null
         })
-        .eq('id', id);
+        .eq('id', id!);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -347,7 +347,7 @@ export default function AdminGroupDetail() {
       const { error } = await supabase
         .from('group_tasks')
         .insert({
-          group_id: id,
+          group_id: id!,
           title: taskForm.title,
           description: taskForm.description || null,
           due_date: taskForm.due_date || null,
@@ -391,7 +391,7 @@ export default function AdminGroupDetail() {
     return new Promise<void>((resolve, reject) => {
       createSessionMutation.mutate(
         { 
-          groupId: id!, 
+          groupId: id!,
           userId: user.id, 
           formData: { 
             ...formData, 
@@ -505,6 +505,8 @@ export default function AdminGroupDetail() {
     updateSessionStatusMutation.mutate({ sessionId, status });
   };
 
+  if (!id) return null;
+
   if (loadingGroup) {
     return (
       <div className="container mx-auto py-6 space-y-6">
@@ -568,7 +570,7 @@ export default function AdminGroupDetail() {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => window.open(group.google_drive_folder_url, '_blank', 'noopener,noreferrer')}
+              onClick={() => window.open(group.google_drive_folder_url!, '_blank', 'noopener,noreferrer')}
             >
               <FolderOpen className="mr-2 h-4 w-4" />Google Drive
             </Button>
@@ -577,7 +579,7 @@ export default function AdminGroupDetail() {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => window.open(group.slack_channel_url, '_blank', 'noopener,noreferrer')}
+              onClick={() => window.open(group.slack_channel_url!, '_blank', 'noopener,noreferrer')}
             >
               <Hash className="mr-2 h-4 w-4" />Slack
             </Button>
@@ -867,11 +869,11 @@ export default function AdminGroupDetail() {
           
           <GroupSessionsList
             sessions={sessions || []}
-            groupId={id!}
+            groupId={id}
             userTimezone={userTimezone}
             isAdmin={true}
             linkPrefix="/admin/groups"
-            calcomMappingName={group.calcom_event_type_mappings?.calcom_event_type_name}
+            calcomMappingName={group.calcom_event_type_mappings?.calcom_event_type_name ?? undefined}
             onCreateSession={handleCreateSessionForList}
             onDeleteSession={(session, deleteAll) => handleDeleteSession(session.id)}
             onStatusChange={handleUpdateSessionStatus}
@@ -1048,7 +1050,7 @@ export default function AdminGroupDetail() {
 
         {/* Peer Assessments Tab */}
         <TabsContent value="peer-assessments" className="space-y-4">
-          <GroupPeerAssessmentConfig groupId={id!} />
+          <GroupPeerAssessmentConfig groupId={id} />
         </TabsContent>
       </Tabs>
     </div>

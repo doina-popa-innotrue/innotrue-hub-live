@@ -89,6 +89,10 @@ export default function GoalDetail() {
     }
   }, [id]);
 
+  if (!id) {
+    return null;
+  }
+
   const fetchLinkedTasks = async () => {
     try {
       const { data, error } = await supabase
@@ -415,9 +419,8 @@ function CreateTaskFromGoalForm({ goalId, goalCategory, onSuccess }: CreateTaskF
 
     setSaving(true);
     try {
-      const { error } = await supabase.from('tasks').insert([
-        {
-          user_id: user?.id,
+      const { error } = await supabase.from('tasks').insert({
+          user_id: user!.id,
           title,
           description,
           goal_id: goalId,
@@ -428,8 +431,7 @@ function CreateTaskFromGoalForm({ goalId, goalCategory, onSuccess }: CreateTaskF
           due_date: dueDate || null,
           source_type: 'goal',
           status: 'todo',
-        },
-      ]);
+        });
 
       if (error) throw error;
 

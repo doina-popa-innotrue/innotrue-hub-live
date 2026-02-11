@@ -89,6 +89,7 @@ function SkillCard({ skill }: { skill: AvailableSkill }) {
 
 export default function SkillsMap() {
   const { user } = useAuth();
+  if (!user) return null;
   const [userSkills, setUserSkills] = useState<UserSkill[]>([]);
   const [availableSkills, setAvailableSkills] = useState<AvailableSkill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,7 +108,7 @@ export default function SkillsMap() {
     const { data } = await supabase
       .from('public_profile_settings')
       .select('custom_slug, is_public')
-      .eq('user_id', user?.id)
+      .eq('user_id', user!.id)
       .maybeSingle();
 
     if (data?.is_public && data?.custom_slug) {
@@ -182,7 +183,7 @@ export default function SkillsMap() {
       .from('user_skills')
       .update({ is_public: !currentVisibility })
       .eq('id', skillId)
-      .eq('user_id', user?.id);
+      .eq('user_id', user!.id);
 
     if (error) {
       toast.error('Failed to update skill visibility');

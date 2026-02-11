@@ -70,7 +70,7 @@ export default function InstructorProgramDetail() {
       const { data: programData, error: programError } = await supabase
         .from('programs')
         .select('*')
-        .eq('slug', slug)
+        .eq('slug', slug ?? '')
         .single();
 
       if (programError || !programData) {
@@ -79,10 +79,10 @@ export default function InstructorProgramDetail() {
         return;
       }
 
-      setProgram(programData);
+      setProgram(programData as Program);
 
       // Check if user is assigned as instructor or coach to this program
-      const userId = user?.id ?? '';
+      const userId: string = user?.id ?? '';
       const [instructorCheck, coachCheck] = await Promise.all([
         supabase
           .from('program_instructors')
@@ -112,7 +112,7 @@ export default function InstructorProgramDetail() {
         .eq('is_active', true)
         .order('order_index');
 
-      setModules(modulesData || []);
+      setModules((modulesData || []) as Module[]);
 
       // Load enrolled students (using staff_enrollments view to exclude financial data)
       const { data: enrollmentsData } = await supabase
@@ -129,7 +129,7 @@ export default function InstructorProgramDetail() {
 
       if (enrollmentsData && enrollmentsData.length > 0) {
         // Get profiles for enrolled users
-        const userIds = enrollmentsData.map(e => e.client_user_id);
+        const userIds = enrollmentsData.map(e => e.client_user_id).filter((id): id is string => id != null);
         const { data: profilesData } = await supabase
           .from('profiles')
           .select('id, name')
@@ -137,6 +137,9 @@ export default function InstructorProgramDetail() {
 
         const studentsWithProfiles = enrollmentsData.map(enrollment => ({
           ...enrollment,
+          client_user_id: enrollment.client_user_id ?? '',
+          id: enrollment.id ?? '',
+          status: enrollment.status ?? 'active',
           profile: profilesData?.find(p => p.id === enrollment.client_user_id) || null,
         })) as EnrolledStudent[];
 
@@ -336,7 +339,7 @@ export default function InstructorProgramDetail() {
                     {module.description && (
                       <RichTextDisplay content={module.description} className="text-sm text-muted-foreground" />
                     )}
-                    {module.links && Array.isArray(module.links) && (module.links as { name: string; url: string }[]).length > 0 && (
+                    {!!module.links && Array.isArray(module.links) && (module.links as { name: string; url: string }[]).length > 0 && (
                       <div className="space-y-2">
                         <p className="text-sm font-medium">Resource Links:</p>
                         <div className="flex flex-wrap gap-2">

@@ -261,7 +261,7 @@ export default function ClientDashboard() {
             };
           })
         );
-        setEnrollments(enrichedEnrollments);
+        setEnrollments(enrichedEnrollments as Enrollment[]);
       }
 
       // Fetch active goals
@@ -272,7 +272,7 @@ export default function ClientDashboard() {
         .eq('status', 'active')
         .order('created_at', { ascending: false })
         .limit(5);
-      setGoals(goalsData || []);
+      setGoals((goalsData as Goal[]) || []);
 
       // Fetch active decisions
       const { data: decisionsData } = await supabase
@@ -282,7 +282,7 @@ export default function ClientDashboard() {
         .in('status', ['upcoming', 'in_progress'])
         .order('created_at', { ascending: false })
         .limit(5);
-      setDecisions(decisionsData || []);
+      setDecisions((decisionsData as Decision[]) || []);
 
       // Fetch tasks
       const { data: tasksData } = await supabase
@@ -292,7 +292,7 @@ export default function ClientDashboard() {
         .in('status', ['todo', 'in_progress'])
         .order('due_date', { ascending: true, nullsFirst: false })
         .limit(5);
-      setTasks(tasksData || []);
+      setTasks((tasksData as Task[]) || []);
 
       // Fetch pending registrations
       const { data: registrationsData } = await supabase
@@ -309,7 +309,7 @@ export default function ClientDashboard() {
         `)
         .eq('user_id', user.id)
         .eq('status', 'pending');
-      setRegistrations(registrationsData || []);
+      setRegistrations((registrationsData as Registration[]) || []);
 
       // Fetch group memberships - separate queries to avoid TypeScript issues
       const memberRecordsResult = await supabase
@@ -318,7 +318,7 @@ export default function ClientDashboard() {
         .eq('user_id', user.id);
 
       const memberRecords = memberRecordsResult.data as any[] | null;
-      let activeGroups: { id: string; group_id: string; group_name: string; group_description: string; role: string }[] = [];
+      let activeGroups: { id: string; group_id: string; group_name: string; group_description: string | null; role: string }[] = [];
 
       if (memberRecords && memberRecords.length > 0) {
         const groupIds = memberRecords.map((m: any) => m.group_id);
@@ -390,18 +390,18 @@ export default function ClientDashboard() {
 
         if (moduleSessions) {
           const upcomingModuleSessions = moduleSessions.map(session => {
-            const program = programMap.get(session.enrollment_id);
+            const program = session.enrollment_id ? programMap.get(session.enrollment_id) : undefined;
             return {
               id: session.id,
-              title: session.title,
-              session_date: session.session_date,
-              next_occurrence: new Date(session.session_date),
+              title: session.title ?? 'Untitled Session',
+              session_date: session.session_date ?? '',
+              next_occurrence: new Date(session.session_date ?? ''),
               location: session.location,
               type: 'module' as const,
               program_id: program?.id,
               program_name: program?.name,
-              module_id: session.module_id,
-              enrollment_id: session.enrollment_id,
+              module_id: session.module_id ?? undefined,
+              enrollment_id: session.enrollment_id ?? undefined,
             };
           });
           allUpcomingSessions = [...allUpcomingSessions, ...upcomingModuleSessions];
@@ -468,7 +468,7 @@ export default function ClientDashboard() {
               const newEnrollmentItem: Enrollment = {
                 id: newEnrollment.id,
                 status: newEnrollment.status,
-                programs: programData,
+                programs: { ...programData, description: programData.description ?? '' },
                 progress: 0,
                 totalModules,
                 completedModules: 0,

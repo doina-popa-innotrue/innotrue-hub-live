@@ -69,7 +69,7 @@ export default function DecisionDetail() {
       const { data, error } = await supabase
         .from("decisions")
         .select("*")
-        .eq("id", id)
+        .eq("id", id!)
         .single();
 
       if (error) throw error;
@@ -116,7 +116,7 @@ export default function DecisionDetail() {
     setSaving(true);
     try {
       const decisionData = {
-        user_id: user?.id,
+        user_id: user!.id,
         title,
         description,
         status: status as "upcoming" | "in_progress" | "made" | "cancelled",
@@ -154,7 +154,7 @@ export default function DecisionDetail() {
         const { error } = await supabase
           .from("decisions")
           .update(decisionData)
-          .eq("id", id);
+          .eq("id", id!);
 
         if (error) throw error;
 

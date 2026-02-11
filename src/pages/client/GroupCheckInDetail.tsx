@@ -23,6 +23,7 @@ interface CheckInWithProfile {
 
 export default function GroupCheckInDetail() {
   const { groupId, checkInId } = useParams<{ groupId: string; checkInId: string }>();
+  if (!groupId || !checkInId) return null;
 
   const { data: checkIn, isLoading } = useQuery<CheckInWithProfile | null>({
     queryKey: ['group-check-in', checkInId],

@@ -45,7 +45,7 @@ export default function EmailAssetsManagement() {
       toast.error('Failed to load email assets');
       console.error(error);
     } else {
-      setAssets(data || []);
+      setAssets((data || []) as EmailAsset[]);
     }
     setLoading(false);
   }

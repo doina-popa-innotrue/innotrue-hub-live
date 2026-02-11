@@ -53,6 +53,7 @@ interface Module {
 export default function ProgramDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  if (!id) return null;
   const { user, userRole } = useAuth();
   const [program, setProgram] = useState<any>(null);
   const [modules, setModules] = useState<Module[]>([]);
@@ -98,7 +99,7 @@ export default function ProgramDetail() {
       const { data: participantSessions } = await supabase
         .from('module_session_participants')
         .select('module_sessions(module_id, status, session_date)')
-        .eq('user_id', user?.id);
+        .eq('user_id', user!.id);
       
       // Build a map of module_id -> session info
       const sessionMap: Record<string, { hasSession: boolean; hasUpcoming: boolean; status?: string }> = {};
@@ -165,7 +166,7 @@ export default function ProgramDetail() {
             min_plan_tier: module.min_plan_tier || 0,
           };
         }));
-        setModules(enrichedModules);
+        setModules(enrichedModules as Module[]);
       }
       setProgram(programData);
       setEnrollment(enrollmentData);

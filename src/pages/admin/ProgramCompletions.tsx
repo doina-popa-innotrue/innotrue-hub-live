@@ -90,12 +90,12 @@ export default function ProgramCompletions() {
         
         if (allCompleted) {
           const completedPrograms = enrollments.map(e => ({
-            program_name: (e.programs as any).name,
-            completed_at: e.updated_at,
+            program_name: ((e.programs as any)?.name as string) ?? '',
+            completed_at: (e.updated_at as string) ?? '',
           }));
 
           // Find the most recent completion date
-          const lastCompletionDate = completedPrograms.reduce((latest, p) => 
+          const lastCompletionDate = completedPrograms.reduce((latest: string, p) =>
             new Date(p.completed_at) > new Date(latest) ? p.completed_at : latest,
             completedPrograms[0].completed_at
           );
@@ -134,9 +134,10 @@ export default function ProgramCompletions() {
     mutationFn: async (userIds: string[]) => {
       if (!continuationPlan) throw new Error('Continuation plan not found');
 
+      const updateData = { plan_id: continuationPlan.id };
       const { error } = await supabase
         .from('profiles')
-        .update({ plan_id: continuationPlan.id })
+        .update(updateData)
         .in('id', userIds);
 
       if (error) throw error;
@@ -155,15 +156,15 @@ export default function ProgramCompletions() {
     },
   });
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked && completedUsers) {
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+    if (checked === true && completedUsers) {
       setSelectedUsers(new Set(completedUsers.map(u => u.user_id)));
     } else {
       setSelectedUsers(new Set());
     }
   };
 
-  const handleSelectUser = (userId: string, checked: boolean) => {
+  const handleSelectUser = (userId: string, checked: boolean | 'indeterminate') => {
     const newSelected = new Set(selectedUsers);
     if (checked) {
       newSelected.add(userId);
@@ -193,8 +194,8 @@ export default function ProgramCompletions() {
     }
   };
 
-  const allSelected = completedUsers && completedUsers.length > 0 && 
-    completedUsers.every(u => selectedUsers.has(u.user_id));
+  const allSelected = !!(completedUsers && completedUsers.length > 0 &&
+    completedUsers.every(u => selectedUsers.has(u.user_id)));
 
   return (
     <div className="space-y-6">

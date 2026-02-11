@@ -10,7 +10,7 @@ interface DiscountValidation {
   error_message: string | null;
 }
 
-interface DiscountResult {
+export interface DiscountResult {
   discountId: string;
   discountType: 'percentage' | 'fixed';
   discountValue: number;

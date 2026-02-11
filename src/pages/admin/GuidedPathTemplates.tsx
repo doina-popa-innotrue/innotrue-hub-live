@@ -106,7 +106,7 @@ export default function GuidedPathTemplates() {
 
       const conditionsByTemplate = (conditionsResult.data || []).reduce((acc, c) => {
         if (!acc[c.template_id]) acc[c.template_id] = [];
-        acc[c.template_id].push(c);
+        acc[c.template_id]!.push(c);
         return acc;
       }, {} as Record<string, typeof conditionsResult.data>);
 

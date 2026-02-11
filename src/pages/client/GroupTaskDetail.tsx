@@ -35,7 +35,7 @@ export default function GroupTaskDetail() {
       const { data, error } = await supabase
         .from('group_tasks')
         .select('*')
-        .eq('id', taskId)
+        .eq('id', taskId!)
         .single();
       if (error) throw error;
 
@@ -64,7 +64,7 @@ export default function GroupTaskDetail() {
       const { data, error } = await supabase
         .from('groups')
         .select('id, name')
-        .eq('id', groupId)
+        .eq('id', groupId!)
         .single();
       if (error) throw error;
       return data;
@@ -77,7 +77,7 @@ export default function GroupTaskDetail() {
       const { error } = await supabase
         .from('group_tasks')
         .update({ status })
-        .eq('id', taskId);
+        .eq('id', taskId!);
       if (error) throw error;
     },
     onSuccess: () => {

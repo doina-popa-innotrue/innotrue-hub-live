@@ -57,6 +57,8 @@ export default function TaskDetail() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isPrivate, setIsPrivate] = useState(false);
 
+  if (!id) return null;
+
   useEffect(() => {
     if (user) {
       fetchGoals();
@@ -74,7 +76,7 @@ export default function TaskDetail() {
       const { data, error } = await supabase
         .from("goals")
         .select("id, title")
-        .eq("user_id", user?.id)
+        .eq("user_id", user?.id ?? '')
         .order("title");
 
       if (error) throw error;
@@ -95,8 +97,8 @@ export default function TaskDetail() {
       const { data, error } = await supabase
         .from("tasks")
         .select("*")
-        .eq("id", id)
-        .eq("user_id", user?.id)
+        .eq("id", id!)
+        .eq("user_id", user!.id)
         .single();
 
       if (error) throw error;
@@ -156,7 +158,7 @@ export default function TaskDetail() {
           goal_id: goalId === "_none" ? null : goalId || null,
           is_private: isPrivate,
         })
-        .eq("id", id);
+        .eq("id", id!);
 
       if (error) throw error;
 
@@ -180,7 +182,7 @@ export default function TaskDetail() {
     if (!confirm("Are you sure you want to delete this task?")) return;
 
     try {
-      const { error } = await supabase.from("tasks").delete().eq("id", id);
+      const { error } = await supabase.from("tasks").delete().eq("id", id!);
 
       if (error) throw error;
 
@@ -205,7 +207,7 @@ export default function TaskDetail() {
       const { data, error } = await supabase
         .from("tasks")
         .insert([{
-          user_id: user?.id,
+          user_id: user?.id ?? '',
           title: `${task.title} (copy)`,
           description: task.description,
           status: "todo" as const,
@@ -229,7 +231,7 @@ export default function TaskDetail() {
         description: "A copy of the task has been created",
       });
       
-      navigate(`/tasks/${data.id}`);
+      navigate(`/tasks/${data!.id}`);
     } catch (error: any) {
       toast({
         title: "Error cloning task",

@@ -29,6 +29,7 @@ export type SnapshotTypeFilter = "all" | "self" | "instructor" | "peer";
 
 export default function CapabilityAssessmentDetail() {
   const { id } = useParams<{ id: string }>();
+  if (!id) return null;
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const navigate = useNavigate();

@@ -25,7 +25,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    /* Phase 2 (deferred): strictNullChecks — ~269 errors */
+    "strictNullChecks": true,
 
     "baseUrl": ".",
     "paths": {

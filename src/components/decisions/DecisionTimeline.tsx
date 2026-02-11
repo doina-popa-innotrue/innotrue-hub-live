@@ -89,7 +89,7 @@ export function DecisionTimeline({ decisionId }: DecisionTimelineProps) {
   // Add creation event
   if (decision) {
     events.push({
-      date: new Date(decision.created_at),
+      date: new Date(decision.created_at ?? new Date().toISOString()),
       type: "created",
       title: "Decision Created",
       description: `Started tracking: "${decision.title}"`,
@@ -137,7 +137,7 @@ export function DecisionTimeline({ decisionId }: DecisionTimelineProps) {
   // Add reflection
   if (reflection) {
     events.push({
-      date: new Date(reflection.created_at),
+      date: new Date(reflection.created_at ?? new Date().toISOString()),
       type: "reflection",
       title: "Reflection Added",
       description: `Satisfaction: ${reflection.satisfaction_score}/10`,

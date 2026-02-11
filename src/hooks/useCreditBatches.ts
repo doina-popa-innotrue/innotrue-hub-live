@@ -222,10 +222,10 @@ export function useCreditBatches() {
         p_owner_type: 'user',
         p_owner_id: user.id,
         p_amount: amount,
-        p_feature_key: featureKey || null,
+        p_feature_key: featureKey || undefined,
         p_action_type: actionType || 'general',
-        p_action_reference_id: actionReferenceId || null,
-        p_description: description || null,
+        p_action_reference_id: actionReferenceId || undefined,
+        p_description: description || undefined,
       });
 
       if (error) {
@@ -367,10 +367,10 @@ export function useOrgCreditBatches(organizationId: string | undefined) {
         p_owner_type: 'org',
         p_owner_id: organizationId,
         p_amount: amount,
-        p_feature_key: null,
+        p_feature_key: undefined,
         p_action_type: 'general',
-        p_action_reference_id: null,
-        p_description: description || null,
+        p_action_reference_id: undefined,
+        p_description: description || undefined,
       });
 
       if (error) {
@@ -441,9 +441,9 @@ export function useGrantCreditBatch() {
         p_amount: amount,
         p_expires_at: expiresAt.toISOString(),
         p_source_type: sourceType,
-        p_feature_key: featureKey || null,
-        p_source_reference_id: null,
-        p_description: description || null,
+        p_feature_key: featureKey || undefined,
+        p_source_reference_id: undefined,
+        p_description: description || undefined,
       });
 
       if (error) {

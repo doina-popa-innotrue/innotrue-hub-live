@@ -91,7 +91,7 @@ export function useAdminGroupPeerAssessments(groupId: string | undefined) {
     mutationFn: async (assessmentId: string) => {
       const { error } = await supabase
         .from('group_peer_assessments')
-        .insert({ group_id: groupId, assessment_id: assessmentId });
+        .insert({ group_id: groupId!, assessment_id: assessmentId });
 
       if (error) throw error;
     },

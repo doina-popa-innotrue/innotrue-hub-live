@@ -254,7 +254,7 @@ export function ExpressInterestDialog({
             <RadioGroup value={selection} onValueChange={setSelection}>
               {hasScheduledDates ? (
                 scheduledDates.map((schedule) => {
-                  const isFull = schedule.capacity && schedule.enrolled_count !== undefined && schedule.enrolled_count >= schedule.capacity;
+                  const isFull = !!(schedule.capacity && schedule.enrolled_count !== undefined && schedule.enrolled_count >= schedule.capacity);
                   const hasCapacity = schedule.capacity && schedule.capacity > 0;
                   
                   return (

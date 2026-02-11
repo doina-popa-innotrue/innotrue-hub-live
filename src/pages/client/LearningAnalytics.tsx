@@ -13,6 +13,7 @@ import { useEntitlements } from "@/hooks/useEntitlements";
 export default function LearningAnalytics() {
   const { user } = useAuth();
   const { toast } = useToast();
+  if (!user) return null;
   const { hasFeature } = useEntitlements();
   const hasExternalCourses = hasFeature('external_courses');
   const [loading, setLoading] = useState(true);
@@ -141,7 +142,7 @@ export default function LearningAnalytics() {
       const enrollmentsWithProgress = await Promise.all(
         (enrollments || []).map(async (e) => {
           const modulesForProgram = moduleProgress?.filter(
-            (m) => enrollments.find((en) => en.id === m.id)
+            (m) => enrollments?.find((en) => en.id === m.id)
           ) || [];
           const totalModules = modulesForProgram.length;
           const completedModules = modulesForProgram.filter((m) => m.status === "completed").length;

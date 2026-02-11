@@ -188,7 +188,7 @@ export default function Tasks() {
       const { data, error } = await supabase
         .from("tasks")
         .select("*")
-        .eq("user_id", user?.id)
+        .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -406,7 +406,7 @@ function TaskForm({ onSuccess }: { onSuccess: () => void }) {
       const { data, error } = await supabase
         .from("goals")
         .select("id, title")
-        .eq("user_id", user?.id)
+        .eq("user_id", user!.id)
         .order("title");
 
       if (error) throw error;
@@ -440,9 +440,8 @@ function TaskForm({ onSuccess }: { onSuccess: () => void }) {
     const cleanGoalId = goalId && goalId !== "_none" ? goalId : null;
     
     try {
-      const { error } = await supabase.from("tasks").insert([
-        {
-          user_id: user?.id,
+      const { error } = await supabase.from("tasks").insert({
+          user_id: user!.id,
           title,
           description,
           category: cleanCategory,
@@ -454,8 +453,7 @@ function TaskForm({ onSuccess }: { onSuccess: () => void }) {
           source_type: cleanGoalId ? "goal" : "manual",
           status: "todo",
           is_private: isPrivate,
-        },
-      ]);
+        });
 
       if (error) throw error;
 

@@ -96,7 +96,7 @@ export default function EnrolmentsManagement() {
     }
 
     // Fetch profiles for all client_user_ids
-    const userIds = [...new Set((enrolmentsData || []).map(e => e.client_user_id).filter(Boolean))];
+    const userIds = [...new Set((enrolmentsData || []).map(e => e.client_user_id).filter((x): x is string => x != null))];
     
     let profilesMap: Record<string, { id: string; name: string; username: string | null }> = {};
     

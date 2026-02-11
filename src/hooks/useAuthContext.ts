@@ -108,9 +108,9 @@ export function useAuthContext(contextSlug: string | null) {
           // Merge with defaults for any missing fields
           const features = data.features as AuthContextData['features'];
           setContext({
-            id: data.id,
-            slug: data.slug,
-            context_type: data.context_type,
+            id: data.id ?? '',
+            slug: data.slug ?? '',
+            context_type: data.context_type ?? 'generic',
             headline: data.headline || DEFAULT_CONTEXT.headline,
             subheadline: data.subheadline || DEFAULT_CONTEXT.subheadline,
             description: data.description || DEFAULT_CONTEXT.description,

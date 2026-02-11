@@ -89,6 +89,7 @@ interface PendingBadge {
 export default function InstructorCoachDashboard() {
   const { user, userRole, userRoles } = useAuth();
   const navigate = useNavigate();
+  if (!user) return null;
   const [loading, setLoading] = useState(true);
   const [programAssignments, setProgramAssignments] = useState<ProgramAssignment[]>([]);
   const [moduleAssignments, setModuleAssignments] = useState<ModuleAssignment[]>([]);
@@ -303,7 +304,7 @@ export default function InstructorCoachDashboard() {
               programs!inner(id, name, description, slug, category, is_active)
             `)
             .eq('instructor_id', user.id)
-        : Promise.resolve({ data: [], error: null });
+        : Promise.resolve({ data: [] as { id: string; program_id: string; programs: any }[], error: null });
 
       const programCoachPromise = showCoach && userRoles.includes('coach') && user
         ? supabase
@@ -314,7 +315,7 @@ export default function InstructorCoachDashboard() {
               programs!inner(id, name, description, slug, category, is_active)
             `)
             .eq('coach_id', user.id)
-        : Promise.resolve({ data: [], error: null });
+        : Promise.resolve({ data: [] as { id: string; program_id: string; programs: any }[], error: null });
 
       const [instructorPrograms, coachPrograms] = await Promise.all([
         programInstructorPromise,

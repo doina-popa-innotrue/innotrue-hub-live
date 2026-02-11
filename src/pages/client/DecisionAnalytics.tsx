@@ -58,14 +58,14 @@ export default function DecisionAnalytics() {
   const confidenceTrends = decisions
     ?.filter(d => d.decision_date && d.confidence_level !== null)
     .map(d => ({
-      date: format(parseISO(d.decision_date), "MMM yyyy"),
+      date: format(parseISO(d.decision_date!), "MMM yyyy"),
       confidence: d.confidence_level,
       title: d.title,
     })) || [];
 
   // Values alignment statistics
-  const valuesStats = decisions?.flatMap(d => d.decision_values || []).reduce((acc, v) => {
-    const existing = acc.find(item => item.name === v.value_name);
+  const valuesStats = (decisions?.flatMap(d => (d.decision_values as any[]) || []) ?? []).reduce((acc, v) => {
+    const existing = acc.find((item: { name: string; count: number; totalScore: number; avgScore: number }) => item.name === v.value_name);
     if (existing) {
       existing.count++;
       existing.totalScore += v.alignment_score || 0;
@@ -80,12 +80,12 @@ export default function DecisionAnalytics() {
     }
     return acc;
   }, [] as { name: string; count: number; totalScore: number; avgScore: number }[])
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10) || [];
+    .sort((a: { count: number }, b: { count: number }) => b.count - a.count)
+    .slice(0, 10);
 
   const totalDecisions = decisions?.length || 0;
   const madeDecisions = decisions?.filter(d => d.status === "made").length || 0;
-  const avgConfidence = decisions?.reduce((sum, d) => sum + (d.confidence_level || 0), 0) / (decisions?.length || 1);
+  const avgConfidence = (decisions?.reduce((sum, d) => sum + (d.confidence_level || 0), 0) ?? 0) / (decisions?.length || 1);
 
   return (
     <CapabilityGate capability="analytics_dashboard">
@@ -148,7 +148,7 @@ export default function DecisionAnalytics() {
           <CardContent>
             <div className="text-2xl font-bold">
               {decisions?.filter(d => {
-                const created = new Date(d.created_at);
+                const created = new Date(d.created_at!);
                 const now = new Date();
                 return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
               }).length || 0}

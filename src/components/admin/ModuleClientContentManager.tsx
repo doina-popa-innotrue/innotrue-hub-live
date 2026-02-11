@@ -111,7 +111,7 @@ export default function ModuleClientContentManager({ moduleId, moduleName, progr
       .eq('status', 'active');
 
     if (enrollments && enrollments.length > 0) {
-      const clientIds = enrollments.map(e => e.client_user_id);
+      const clientIds = enrollments.map(e => e.client_user_id).filter((id): id is string => id != null);
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, name')

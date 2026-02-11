@@ -193,7 +193,7 @@ export default function ConsumptionAnalytics() {
       let enriched: CreditTransaction[] = (transactions || []).map((t) => ({
         ...t,
         user_name: profileMap.get(t.user_id) || null,
-      }));
+      } as CreditTransaction));
 
       if (creditSearch) {
         const searchLower = creditSearch.toLowerCase();
@@ -274,7 +274,7 @@ export default function ConsumptionAnalytics() {
       
       // Build CSV
       const headers = ["Date", "User", "Type", "Action Type", "Amount", "Balance After", "Description"];
-      const rows = (allTransactions || []).map((tx) => [
+      const rows = ((allTransactions || []) as unknown as CreditTransaction[]).map((tx) => [
         format(new Date(tx.created_at), "yyyy-MM-dd HH:mm:ss"),
         profileMap.get(tx.user_id) || tx.user_id,
         tx.transaction_type,

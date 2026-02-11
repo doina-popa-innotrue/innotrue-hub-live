@@ -36,6 +36,7 @@ interface Enrollment {
 export default function OrgEnrollments() {
   const { organizationMembership } = useAuth();
   const { toast } = useToast();
+  if (!organizationMembership) return null;
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,7 +110,7 @@ export default function OrgEnrollments() {
         profile: profiles?.find(p => p.id === enrollment.client_user_id) || null,
       }));
 
-      setEnrollments(enrichedEnrollments);
+      setEnrollments(enrichedEnrollments as Enrollment[]);
 
       // Extract unique programs for filter
       const uniquePrograms = Array.from(

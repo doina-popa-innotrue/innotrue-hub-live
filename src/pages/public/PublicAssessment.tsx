@@ -76,7 +76,7 @@ export default function PublicAssessment() {
       const { data, error } = await supabase
         .from("assessment_definitions")
         .select("*")
-        .eq("slug", slug)
+        .eq("slug", slug ?? '')
         .eq("is_active", true)
         .eq("is_public", true)
         .single();
@@ -93,7 +93,7 @@ export default function PublicAssessment() {
       const { data, error } = await supabase
         .from("assessment_questions")
         .select("*")
-        .eq("assessment_id", assessment?.id)
+        .eq("assessment_id", assessment?.id ?? '')
         .order("order_index");
       if (error) throw error;
       return data as Question[];
@@ -141,7 +141,7 @@ export default function PublicAssessment() {
       const { data, error } = await supabase
         .from("assessment_dimensions")
         .select("*")
-        .eq("assessment_id", assessment?.id)
+        .eq("assessment_id", assessment?.id ?? '')
         .order("order_index");
       if (error) throw error;
       return data as Dimension[];
@@ -156,7 +156,7 @@ export default function PublicAssessment() {
       const { data, error } = await supabase
         .from("assessment_interpretations")
         .select("*")
-        .eq("assessment_id", assessment?.id)
+        .eq("assessment_id", assessment?.id ?? '')
         .order("priority", { ascending: false });
       if (error) throw error;
       return data as Interpretation[];
@@ -243,7 +243,7 @@ export default function PublicAssessment() {
 
       // Save response
       const { error } = await supabase.from("assessment_responses").insert({
-        assessment_id: assessment?.id,
+        assessment_id: assessment?.id ?? '',
         email,
         name: name || null,
         responses: answers,

@@ -59,7 +59,7 @@ export default function GoalForm({ goalId, defaultCategory, onSuccess, onCancel 
       const { data, error } = await supabase
         .from('goals')
         .select('*')
-        .eq('id', goalId)
+        .eq('id', goalId ?? '')
         .single();
 
       if (error) throw error;
