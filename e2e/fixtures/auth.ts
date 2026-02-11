@@ -17,6 +17,7 @@ type AuthFixtures = {
   adminPage: Page;
   clientPage: Page;
   coachPage: Page;
+  instructorPage: Page;
 };
 
 export const test = base.extend<AuthFixtures>({
@@ -41,6 +42,15 @@ export const test = base.extend<AuthFixtures>({
   coachPage: async ({ browser }, use) => {
     const context = await browser.newContext({
       storageState: STORAGE_STATE.coach,
+    });
+    const page = await context.newPage();
+    await use(page);
+    await context.close();
+  },
+
+  instructorPage: async ({ browser }, use) => {
+    const context = await browser.newContext({
+      storageState: STORAGE_STATE.instructor,
     });
     const page = await context.newPage();
     await use(page);

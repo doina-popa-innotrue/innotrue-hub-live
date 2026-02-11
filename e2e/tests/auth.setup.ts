@@ -21,6 +21,10 @@ setup('authenticate as coach', async ({ page }) => {
   await loginAndSaveState(page, TEST_USERS.coach, STORAGE_STATE.coach);
 });
 
+setup('authenticate as instructor', async ({ page }) => {
+  await loginAndSaveState(page, TEST_USERS.instructor, STORAGE_STATE.instructor);
+});
+
 /**
  * Login via the Auth page UI and save browser state for reuse in tests.
  */
