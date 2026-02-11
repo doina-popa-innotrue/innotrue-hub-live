@@ -47,7 +47,7 @@
 | — | PR #1 merged: CI + Sentry + domain fixes deployed to prod | DONE (Feb 11) |
 | 5 | Strict TypeScript | PENDING |
 | 10 | RLS audit + rate limiting | PENDING |
-| 11 | Supabase Pro upgrade | PENDING (manual) |
+| 11 | Supabase Pro upgrade | DONE (Feb 11) |
 | 13 | PWA hardening (auth exclusion, caching strategies) | DONE (Feb 11) |
 | 14 | Web Vitals monitoring (web-vitals v5 → Sentry) | DONE (Feb 11) |
 
