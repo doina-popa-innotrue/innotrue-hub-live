@@ -1,0 +1,67 @@
+# InnoTrue Hub App — AI Context
+
+## Project Overview
+InnoTrue Hub is a multi-tenant coaching and learning management SaaS platform.
+Stack: React 18 + Vite 5 + TypeScript + Supabase + Tailwind CSS + shadcn/ui.
+
+## Architecture
+- **Frontend:** Single-page app (SPA) deployed on Cloudflare Pages
+- **Backend:** Supabase (PostgreSQL + Auth + Storage + Edge Functions)
+- **AI:** Google Vertex AI Gemini 3 Flash (EU/Frankfurt, europe-west3)
+- **Auth:** Supabase native OAuth (Google provider)
+- **Email:** Resend (13 edge functions send branded emails)
+- **Payments:** Stripe (credit system with individual + org balances)
+
+## Key Conventions
+- Use `@/` path alias for imports (maps to `src/`)
+- UI components use shadcn/ui from `@/components/ui/`
+- Data fetching uses TanStack React Query hooks in `src/hooks/`
+- Forms use React Hook Form + Zod validation
+- State management: React Query for server state, React Context for auth
+- All pages are lazy-loaded in `src/App.tsx`
+- 5 user roles: admin, client, coach, instructor, org_admin
+
+## File Structure
+- `src/pages/` — Page components (lazy-loaded)
+- `src/components/` — Shared UI components
+- `src/components/ui/` — shadcn/ui primitives (do not modify directly)
+- `src/hooks/` — 65 custom React hooks (data fetching, business logic)
+- `src/contexts/` — React contexts (AuthContext, ThemeContext)
+- `src/lib/` — Utility functions and helpers
+- `src/integrations/supabase/` — Supabase client, types, generated types
+- `supabase/functions/` — 63 Deno edge functions
+- `supabase/functions/_shared/` — Shared edge function utilities (CORS, AI config, email utils)
+- `supabase/migrations/` — 393 database migrations
+
+## Database
+- 369+ tables, 20+ enum types
+- Key enums: app_role, program_category, module_type, enrollment_status
+- Plans system: tier_level 0-4, credit allowances, feature limits
+- Dual credit system: individual (user_credit_balances) + org (org_credit_balances)
+- RLS policies on all public tables
+
+## Edge Functions
+- All edge functions are in Deno/TypeScript
+- CORS config in `_shared/cors.ts`
+- AI config in `_shared/ai-config.ts`
+- Email helpers in `_shared/email-utils.ts` (staging override support)
+- All have `verify_jwt = false` in config.toml (custom auth checks inside)
+
+## Testing
+- Unit tests: Vitest (210 tests in `src/lib/__tests__/`)
+- E2E tests: Playwright
+- CI: GitHub Actions (lint, typecheck, test, build)
+
+## Git Workflow
+- `main` → production (app.innotrue.com)
+- `preprod` → pre-production testing
+- `develop` → daily development
+- Feature branches: `feature/xyz` → PR to `develop`
+
+## Code Style
+- TypeScript with 2-space indentation
+- Functional React components with hooks
+- Tailwind CSS for styling (no CSS modules or styled-components)
+- shadcn/ui components for UI primitives
+- Zod schemas for validation
+- Prefer existing patterns from the codebase over introducing new ones
