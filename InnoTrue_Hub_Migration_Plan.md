@@ -45,7 +45,8 @@
 | — | Staging env verified (login works on preprod + prod) | DONE (Feb 10) |
 | 15 | Cursor IDE setup | DONE (Feb 11) |
 | — | PR #1 merged: CI + Sentry + domain fixes deployed to prod | DONE (Feb 11) |
-| 5 | Strict TypeScript | PENDING |
+| 5a | Strict TypeScript Phase 1 (7 flags + 26 fixes) | DONE (Feb 12) |
+| 5b | Strict TypeScript Phase 2 (strictNullChecks, ~269 errors) | PENDING |
 | 10a | RLS audit (276 tables, all RLS enabled, 41 with policies) | DONE (Feb 12) |
 | 10b | Edge function validation audit (23 ✅, 28 ⚠️, 6 ❌, 6 ℹ️) | DONE (Feb 12) |
 | 11 | Supabase Pro upgrade | DONE (Feb 11) |
