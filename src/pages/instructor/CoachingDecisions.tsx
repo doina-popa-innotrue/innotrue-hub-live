@@ -43,7 +43,7 @@ export default function CoachingDecisions() {
       const { data: coachClients, error: coachError } = await supabase
         .from("client_coaches")
         .select("client_id")
-        .eq("coach_id", user?.id!);
+        .eq("coach_id", user.id);
 
       if (coachError) throw coachError;
 
