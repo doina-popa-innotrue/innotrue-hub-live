@@ -1,8 +1,8 @@
-import { Component, type ReactNode } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Component, type ReactNode } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, RefreshCw, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface Props {
   children: ReactNode;
@@ -26,7 +26,7 @@ export class ScenarioErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ScenarioErrorBoundary caught error:', error, errorInfo);
+    console.error("ScenarioErrorBoundary caught error:", error, errorInfo);
   }
 
   handleRetry = () => {
@@ -35,8 +35,8 @@ export class ScenarioErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      const { fallbackPath = '/scenarios', fallbackLabel = 'Back to Scenarios' } = this.props;
-      
+      const { fallbackPath = "/scenarios", fallbackLabel = "Back to Scenarios" } = this.props;
+
       return (
         <div className="container py-12">
           <Card className="max-w-md mx-auto">

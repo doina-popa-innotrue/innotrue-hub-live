@@ -1,19 +1,33 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAdminCRUD } from '@/hooks/useAdminCRUD';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Package, Coins, Loader2 } from 'lucide-react';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAdminCRUD } from "@/hooks/useAdminCRUD";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, Package, Coins, Loader2 } from "lucide-react";
 
 interface AddOn {
   id: string;
@@ -40,14 +54,14 @@ interface AddOnFeature {
 }
 
 const defaultFormData = {
-  key: '',
-  name: '',
-  display_name: '',
-  description: '',
-  price_cents: '',
+  key: "",
+  name: "",
+  display_name: "",
+  description: "",
+  price_cents: "",
   is_active: true,
   is_consumable: false,
-  initial_quantity: '',
+  initial_quantity: "",
   selectedFeatures: [] as string[],
 };
 
@@ -56,23 +70,18 @@ export default function AddOnsManagement() {
   const [formData, setFormData] = useState(defaultFormData);
 
   const { data: features } = useQuery({
-    queryKey: ['features'],
+    queryKey: ["features"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('features')
-        .select('id, key, name')
-        .order('name');
+      const { data, error } = await supabase.from("features").select("id, key, name").order("name");
       if (error) throw error;
       return data as Feature[];
     },
   });
 
   const { data: addOnFeatures } = useQuery({
-    queryKey: ['add-on-features'],
+    queryKey: ["add-on-features"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('add_on_features')
-        .select('*');
+      const { data, error } = await supabase.from("add_on_features").select("*");
       if (error) throw error;
       return data as AddOnFeature[];
     },
@@ -88,23 +97,22 @@ export default function AddOnsManagement() {
     openEdit,
     isMutating: isSubmitting,
   } = useAdminCRUD<AddOn, typeof defaultFormData>({
-    queryKey: 'add-ons',
-    tableName: 'add_ons',
-    entityName: 'Add-on',
+    queryKey: "add-ons",
+    tableName: "add_ons",
+    entityName: "Add-on",
     initialFormData: defaultFormData,
     mapItemToForm: (addOn) => {
-      const linkedFeatures = addOnFeatures
-        ?.filter((af) => af.add_on_id === addOn.id)
-        .map((af) => af.feature_id) || [];
+      const linkedFeatures =
+        addOnFeatures?.filter((af) => af.add_on_id === addOn.id).map((af) => af.feature_id) || [];
       return {
-        key: addOn.key || '',
+        key: addOn.key || "",
         name: addOn.name,
-        display_name: (addOn as any).display_name || '',
-        description: addOn.description || '',
-        price_cents: addOn.price_cents?.toString() || '',
+        display_name: (addOn as any).display_name || "",
+        description: addOn.description || "",
+        price_cents: addOn.price_cents?.toString() || "",
         is_active: addOn.is_active,
         is_consumable: addOn.is_consumable,
-        initial_quantity: addOn.initial_quantity?.toString() || '',
+        initial_quantity: addOn.initial_quantity?.toString() || "",
         selectedFeatures: linkedFeatures,
       };
     },
@@ -114,7 +122,7 @@ export default function AddOnsManagement() {
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const { data: addOn, error } = await supabase
-        .from('add_ons')
+        .from("add_ons")
         .insert({
           key: data.key,
           name: data.name,
@@ -123,42 +131,41 @@ export default function AddOnsManagement() {
           price_cents: data.price_cents ? parseInt(data.price_cents) : null,
           is_active: data.is_active,
           is_consumable: data.is_consumable,
-          initial_quantity: data.is_consumable && data.initial_quantity ? parseInt(data.initial_quantity) : null,
+          initial_quantity:
+            data.is_consumable && data.initial_quantity ? parseInt(data.initial_quantity) : null,
         })
         .select()
         .single();
       if (error) throw error;
 
       if (data.selectedFeatures.length > 0) {
-        const { error: featuresError } = await supabase
-          .from('add_on_features')
-          .insert(
-            data.selectedFeatures.map((featureId) => ({
-              add_on_id: addOn.id,
-              feature_id: featureId,
-            }))
-          );
+        const { error: featuresError } = await supabase.from("add_on_features").insert(
+          data.selectedFeatures.map((featureId) => ({
+            add_on_id: addOn.id,
+            feature_id: featureId,
+          })),
+        );
         if (featuresError) throw featuresError;
       }
 
       return addOn;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['add-ons'] });
-      queryClient.invalidateQueries({ queryKey: ['add-on-features'] });
-      toast.success('Add-on created');
+      queryClient.invalidateQueries({ queryKey: ["add-ons"] });
+      queryClient.invalidateQueries({ queryKey: ["add-on-features"] });
+      toast.success("Add-on created");
       setIsDialogOpen(false);
       setFormData(defaultFormData);
     },
     onError: (error) => {
-      toast.error('Failed to create add-on: ' + error.message);
+      toast.error("Failed to create add-on: " + error.message);
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
       const { error } = await supabase
-        .from('add_ons')
+        .from("add_ons")
         .update({
           key: data.key,
           name: data.name,
@@ -167,65 +174,64 @@ export default function AddOnsManagement() {
           price_cents: data.price_cents ? parseInt(data.price_cents) : null,
           is_active: data.is_active,
           is_consumable: data.is_consumable,
-          initial_quantity: data.is_consumable && data.initial_quantity ? parseInt(data.initial_quantity) : null,
+          initial_quantity:
+            data.is_consumable && data.initial_quantity ? parseInt(data.initial_quantity) : null,
         })
-        .eq('id', id);
+        .eq("id", id);
       if (error) throw error;
 
       // Remove existing feature links
-      await supabase.from('add_on_features').delete().eq('add_on_id', id);
+      await supabase.from("add_on_features").delete().eq("add_on_id", id);
 
       // Add new feature links
       if (data.selectedFeatures.length > 0) {
-        const { error: featuresError } = await supabase
-          .from('add_on_features')
-          .insert(
-            data.selectedFeatures.map((featureId) => ({
-              add_on_id: id,
-              feature_id: featureId,
-            }))
-          );
+        const { error: featuresError } = await supabase.from("add_on_features").insert(
+          data.selectedFeatures.map((featureId) => ({
+            add_on_id: id,
+            feature_id: featureId,
+          })),
+        );
         if (featuresError) throw featuresError;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['add-ons'] });
-      queryClient.invalidateQueries({ queryKey: ['add-on-features'] });
-      toast.success('Add-on updated');
+      queryClient.invalidateQueries({ queryKey: ["add-ons"] });
+      queryClient.invalidateQueries({ queryKey: ["add-on-features"] });
+      toast.success("Add-on updated");
       setIsDialogOpen(false);
       setFormData(defaultFormData);
     },
     onError: (error) => {
-      toast.error('Failed to update add-on: ' + error.message);
+      toast.error("Failed to update add-on: " + error.message);
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('add_ons').delete().eq('id', id);
+      const { error } = await supabase.from("add_ons").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['add-ons'] });
-      queryClient.invalidateQueries({ queryKey: ['add-on-features'] });
-      toast.success('Add-on deleted');
+      queryClient.invalidateQueries({ queryKey: ["add-ons"] });
+      queryClient.invalidateQueries({ queryKey: ["add-on-features"] });
+      toast.success("Add-on deleted");
     },
     onError: (error) => {
-      toast.error('Failed to delete add-on: ' + error.message);
+      toast.error("Failed to delete add-on: " + error.message);
     },
   });
 
   const handleSubmit = () => {
     if (!formData.name.trim()) {
-      toast.error('Name is required');
+      toast.error("Name is required");
       return;
     }
     if (!formData.key.trim()) {
-      toast.error('Key is required');
+      toast.error("Key is required");
       return;
     }
     if (formData.is_consumable && !formData.initial_quantity) {
-      toast.error('Initial quantity is required for consumable add-ons');
+      toast.error("Initial quantity is required for consumable add-ons");
       return;
     }
 
@@ -237,17 +243,16 @@ export default function AddOnsManagement() {
   };
 
   const getAddOnFeatures = (addOnId: string) => {
-    const featureIds = addOnFeatures
-      ?.filter((af) => af.add_on_id === addOnId)
-      .map((af) => af.feature_id) || [];
+    const featureIds =
+      addOnFeatures?.filter((af) => af.add_on_id === addOnId).map((af) => af.feature_id) || [];
     return features?.filter((f) => featureIds.includes(f.id)) || [];
   };
 
   const formatPrice = (cents: number | null) => {
-    if (!cents) return '-';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    if (!cents) return "-";
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
     }).format(cents / 100);
   };
 
@@ -334,17 +339,13 @@ export default function AddOnsManagement() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={addOn.is_active ? 'default' : 'outline'}>
-                      {addOn.is_active ? 'Active' : 'Inactive'}
+                    <Badge variant={addOn.is_active ? "default" : "outline"}>
+                      {addOn.is_active ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEdit(addOn)}
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(addOn)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
@@ -373,9 +374,7 @@ export default function AddOnsManagement() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>
-              {editingItem ? 'Edit Add-On' : 'Create Add-On'}
-            </DialogTitle>
+            <DialogTitle>{editingItem ? "Edit Add-On" : "Create Add-On"}</DialogTitle>
             <DialogDescription>
               Configure the add-on package and select which features it includes
             </DialogDescription>
@@ -388,9 +387,7 @@ export default function AddOnsManagement() {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g., AI Credits Pack"
                 />
               </div>
@@ -400,7 +397,10 @@ export default function AddOnsManagement() {
                   id="key"
                   value={formData.key}
                   onChange={(e) =>
-                    setFormData({ ...formData, key: e.target.value.toLowerCase().replace(/\s+/g, '_') })
+                    setFormData({
+                      ...formData,
+                      key: e.target.value.toLowerCase().replace(/\s+/g, "_"),
+                    })
                   }
                   placeholder="e.g., ai_credits"
                 />
@@ -412,9 +412,7 @@ export default function AddOnsManagement() {
               <Input
                 id="display_name"
                 value={formData.display_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, display_name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
                 placeholder="e.g. add-on"
               />
               <p className="text-xs text-muted-foreground">
@@ -427,9 +425,7 @@ export default function AddOnsManagement() {
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Describe what this add-on includes..."
               />
             </div>
@@ -440,9 +436,7 @@ export default function AddOnsManagement() {
                 id="price"
                 type="number"
                 value={formData.price_cents}
-                onChange={(e) =>
-                  setFormData({ ...formData, price_cents: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, price_cents: e.target.value })}
                 placeholder="e.g., 4999 for $49.99"
               />
             </div>
@@ -452,7 +446,11 @@ export default function AddOnsManagement() {
                 id="is_consumable"
                 checked={formData.is_consumable}
                 onCheckedChange={(checked) =>
-                  setFormData({ ...formData, is_consumable: checked, initial_quantity: checked ? formData.initial_quantity : '' })
+                  setFormData({
+                    ...formData,
+                    is_consumable: checked,
+                    initial_quantity: checked ? formData.initial_quantity : "",
+                  })
                 }
               />
               <Label htmlFor="is_consumable">Consumable (credits/uses)</Label>
@@ -465,9 +463,7 @@ export default function AddOnsManagement() {
                   id="initial_quantity"
                   type="number"
                   value={formData.initial_quantity}
-                  onChange={(e) =>
-                    setFormData({ ...formData, initial_quantity: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, initial_quantity: e.target.value })}
                   placeholder="e.g., 5 for 5 review board mocks"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -480,9 +476,7 @@ export default function AddOnsManagement() {
               <Switch
                 id="is_active"
                 checked={formData.is_active}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, is_active: checked })
-                }
+                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
               />
               <Label htmlFor="is_active">Active</Label>
             </div>
@@ -499,16 +493,13 @@ export default function AddOnsManagement() {
                         if (checked) {
                           setFormData({
                             ...formData,
-                            selectedFeatures: [
-                              ...formData.selectedFeatures,
-                              feature.id,
-                            ],
+                            selectedFeatures: [...formData.selectedFeatures, feature.id],
                           });
                         } else {
                           setFormData({
                             ...formData,
                             selectedFeatures: formData.selectedFeatures.filter(
-                              (id) => id !== feature.id
+                              (id) => id !== feature.id,
                             ),
                           });
                         }
@@ -528,11 +519,14 @@ export default function AddOnsManagement() {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={createMutation.isPending || updateMutation.isPending}>
+            <Button
+              onClick={handleSubmit}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
               {(createMutation.isPending || updateMutation.isPending) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              {editingItem ? 'Update' : 'Create'}
+              {editingItem ? "Update" : "Create"}
             </Button>
           </DialogFooter>
         </DialogContent>

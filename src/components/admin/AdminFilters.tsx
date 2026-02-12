@@ -1,9 +1,15 @@
-import { ReactNode } from 'react';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Search, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ReactNode } from "react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Search, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface FilterOption {
   value: string;
@@ -40,7 +46,7 @@ interface AdminFiltersProps {
 
 /**
  * Standardized filter bar for admin pages with search and dropdown filters.
- * 
+ *
  * @example
  * ```tsx
  * <AdminFilters
@@ -74,25 +80,30 @@ interface AdminFiltersProps {
 export function AdminFilters({
   searchValue,
   onSearchChange,
-  searchPlaceholder = 'Search...',
+  searchPlaceholder = "Search...",
   filters = [],
   children,
   className,
   showClearAll,
   onClearAll,
 }: AdminFiltersProps) {
-  const hasActiveFilters = 
-    (searchValue && searchValue.length > 0) || 
-    filters.some(f => f.value !== 'all' && f.value !== '');
+  const hasActiveFilters =
+    (searchValue && searchValue.length > 0) ||
+    filters.some((f) => f.value !== "all" && f.value !== "");
 
   return (
-    <div className={cn('flex flex-col sm:flex-row gap-3 flex-wrap items-start sm:items-center', className)}>
+    <div
+      className={cn(
+        "flex flex-col sm:flex-row gap-3 flex-wrap items-start sm:items-center",
+        className,
+      )}
+    >
       {onSearchChange && (
         <div className="relative w-full sm:w-auto sm:min-w-[280px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={searchPlaceholder}
-            value={searchValue ?? ''}
+            value={searchValue ?? ""}
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-9 pr-9"
           />
@@ -101,7 +112,7 @@ export function AdminFilters({
               variant="ghost"
               size="icon"
               className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-              onClick={() => onSearchChange('')}
+              onClick={() => onSearchChange("")}
             >
               <X className="h-3 w-3" />
             </Button>
@@ -110,11 +121,7 @@ export function AdminFilters({
       )}
 
       {filters.map((filter) => (
-        <Select
-          key={filter.key}
-          value={filter.value}
-          onValueChange={filter.onChange}
-        >
+        <Select key={filter.key} value={filter.value} onValueChange={filter.onChange}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder={filter.label} />
           </SelectTrigger>
@@ -145,7 +152,7 @@ export function AdminFilters({
 
 /**
  * Hook to manage filter state for admin pages.
- * 
+ *
  * @example
  * ```tsx
  * const { searchTerm, setSearchTerm, filters, setFilter, clearAll } = useAdminFilters({
@@ -175,4 +182,4 @@ export function useAdminFilters<T extends Record<string, string>>(initialFilters
 }
 
 // Need to import useState for the hook
-import { useState } from 'react';
+import { useState } from "react";

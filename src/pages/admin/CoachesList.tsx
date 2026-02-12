@@ -1,11 +1,25 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useNavigate } from 'react-router-dom';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 interface Coach {
   user_id: string;
@@ -23,9 +37,9 @@ export default function CoachesList() {
   async function fetchCoaches() {
     // Get all users with coach role
     const { data: coachRoles } = await supabase
-      .from('user_roles')
-      .select('user_id')
-      .eq('role', 'coach');
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "coach");
 
     if (!coachRoles || coachRoles.length === 0) {
       setCoaches([]);
@@ -36,28 +50,28 @@ export default function CoachesList() {
     const enrichedCoaches = await Promise.all(
       coachRoles.map(async (roleEntry) => {
         const { data: profile } = await supabase
-          .from('profiles')
-          .select('name, id, plan_id')
-          .eq('id', roleEntry.user_id)
+          .from("profiles")
+          .select("name, id, plan_id")
+          .eq("id", roleEntry.user_id)
           .single();
 
         let plan: { id: string; name: string } | null = null;
         if (profile?.plan_id) {
           const { data: planData } = await supabase
-            .from('plans')
-            .select('id, name')
-            .eq('id', profile.plan_id)
+            .from("plans")
+            .select("id, name")
+            .eq("id", profile.plan_id)
             .single();
           plan = planData;
         }
 
         // Get email via edge function
-        let email = '';
+        let email = "";
         try {
-          const { data: emailData } = await supabase.functions.invoke('get-user-email', {
-            body: { userId: roleEntry.user_id }
+          const { data: emailData } = await supabase.functions.invoke("get-user-email", {
+            body: { userId: roleEntry.user_id },
           });
-          email = emailData?.email || '';
+          email = emailData?.email || "";
         } catch {
           // Ignore email fetch errors
         }
@@ -65,10 +79,9 @@ export default function CoachesList() {
         // Count assigned clients
         let clientCountVal = 0;
         try {
-          const result = await (supabase
-            .from('client_coaches') as any)
-            .select('id')
-            .eq('coach_id', roleEntry.user_id);
+          const result = await (supabase.from("client_coaches") as any)
+            .select("id")
+            .eq("coach_id", roleEntry.user_id);
           clientCountVal = result.data?.length || 0;
         } catch {
           // Ignore count errors
@@ -76,12 +89,12 @@ export default function CoachesList() {
 
         return {
           user_id: roleEntry.user_id,
-          name: profile?.name || 'Unknown',
+          name: profile?.name || "Unknown",
           email,
           clientCount: clientCountVal,
           plan,
         };
-      })
+      }),
     );
 
     setCoaches(enrichedCoaches);
@@ -132,7 +145,9 @@ export default function CoachesList() {
               {coaches.map((coach) => (
                 <TableRow key={coach.user_id}>
                   <TableCell className="font-medium">{coach.name}</TableCell>
-                  <TableCell>{coach.email || <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell>
+                    {coach.email || <span className="text-muted-foreground">—</span>}
+                  </TableCell>
                   <TableCell>
                     {coach.plan ? (
                       <Badge variant="outline">{coach.plan.name}</Badge>
@@ -142,11 +157,7 @@ export default function CoachesList() {
                   </TableCell>
                   <TableCell>{coach.clientCount}</TableCell>
                   <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/admin/users`)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/admin/users`)}>
                       View in Users
                     </Button>
                   </TableCell>

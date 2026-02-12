@@ -60,7 +60,8 @@ export function MyCoachesSection() {
         if (programCoaches) {
           programCoachIds = programCoaches.map((pc) => ({
             coach_id: pc.coach_id,
-            program_name: enrollments?.find((e) => e.program_id === pc.program_id)?.programs?.name || "Program",
+            program_name:
+              enrollments?.find((e) => e.program_id === pc.program_id)?.programs?.name || "Program",
           }));
         }
       }
@@ -76,7 +77,8 @@ export function MyCoachesSection() {
         if (programInstructors) {
           programInstructorIds = programInstructors.map((pi) => ({
             instructor_id: pi.instructor_id,
-            program_name: enrollments?.find((e) => e.program_id === pi.program_id)?.programs?.name || "Program",
+            program_name:
+              enrollments?.find((e) => e.program_id === pi.program_id)?.programs?.name || "Program",
           }));
         }
       }
@@ -221,10 +223,7 @@ export function MyCoachesSection() {
         <CardContent className="pt-6">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {staff.map((member) => (
-              <div
-                key={member.id}
-                className="flex items-center gap-3 p-3 rounded-lg border"
-              >
+              <div key={member.id} className="flex items-center gap-3 p-3 rounded-lg border">
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={member.avatar_url || undefined} />
                   <AvatarFallback>
@@ -238,10 +237,7 @@ export function MyCoachesSection() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{member.name}</p>
                   <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                    <Badge
-                      variant="outline"
-                      className="text-xs capitalize shrink-0"
-                    >
+                    <Badge variant="outline" className="text-xs capitalize shrink-0">
                       {member.role}
                     </Badge>
                     <span className="text-xs text-muted-foreground break-words">

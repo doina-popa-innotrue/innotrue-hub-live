@@ -1,11 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Settings2 } from "lucide-react";
-import { AdminPageHeader, AdminLoadingState, AdminBreadcrumb, AdminTable } from "@/components/admin";
+import {
+  AdminPageHeader,
+  AdminLoadingState,
+  AdminBreadcrumb,
+  AdminTable,
+} from "@/components/admin";
 import type { AdminTableColumn } from "@/components/admin";
 
 interface DecisionCapabilitySetting {
@@ -73,13 +84,15 @@ export default function DecisionCapabilitiesManagement() {
     updateMutation.mutate({ capability, featureKey });
   };
 
-  const basicCapabilities = settings?.filter(s => s.feature_key === "decision_toolkit_basic") || [];
-  const advancedCapabilities = settings?.filter(s => s.feature_key === "decision_toolkit_advanced") || [];
+  const basicCapabilities =
+    settings?.filter((s) => s.feature_key === "decision_toolkit_basic") || [];
+  const advancedCapabilities =
+    settings?.filter((s) => s.feature_key === "decision_toolkit_advanced") || [];
 
   const columns: AdminTableColumn<DecisionCapabilitySetting>[] = [
     {
-      key: 'capability',
-      header: 'Capability',
+      key: "capability",
+      header: "Capability",
       accessor: (item) => (
         <div>
           <p className="font-medium">{CAPABILITY_LABELS[item.capability] || item.capability}</p>
@@ -94,8 +107,8 @@ export default function DecisionCapabilitiesManagement() {
       },
     },
     {
-      key: 'feature_key',
-      header: 'Tier',
+      key: "feature_key",
+      header: "Tier",
       accessor: (item) => (
         <Select
           value={item.feature_key}
@@ -119,11 +132,7 @@ export default function DecisionCapabilitiesManagement() {
 
   return (
     <div className="space-y-6">
-      <AdminBreadcrumb
-        items={[
-          { label: 'Decision Capabilities' },
-        ]}
-      />
+      <AdminBreadcrumb items={[{ label: "Decision Capabilities" }]} />
 
       <AdminPageHeader
         title="Decision Toolkit Capabilities"
@@ -141,13 +150,11 @@ export default function DecisionCapabilitiesManagement() {
                   Basic Tier
                   <Badge variant="secondary">{basicCapabilities.length} capabilities</Badge>
                 </CardTitle>
-                <CardDescription>
-                  Included in decision_toolkit_basic feature
-                </CardDescription>
+                <CardDescription>Included in decision_toolkit_basic feature</CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-1 text-sm">
-                  {basicCapabilities.map(cap => (
+                  {basicCapabilities.map((cap) => (
                     <li key={cap.id} className="text-muted-foreground">
                       • {CAPABILITY_LABELS[cap.capability] || cap.capability}
                     </li>
@@ -165,13 +172,11 @@ export default function DecisionCapabilitiesManagement() {
                   Advanced Tier
                   <Badge variant="secondary">{advancedCapabilities.length} capabilities</Badge>
                 </CardTitle>
-                <CardDescription>
-                  Included in decision_toolkit_advanced feature
-                </CardDescription>
+                <CardDescription>Included in decision_toolkit_advanced feature</CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-1 text-sm">
-                  {advancedCapabilities.map(cap => (
+                  {advancedCapabilities.map((cap) => (
                     <li key={cap.id} className="text-muted-foreground">
                       • {CAPABILITY_LABELS[cap.capability] || cap.capability}
                     </li>
@@ -192,8 +197,8 @@ export default function DecisionCapabilitiesManagement() {
             showActions={false}
             emptyState={{
               icon: Settings2,
-              title: 'No capability settings found',
-              description: 'Capability settings will appear here once configured.',
+              title: "No capability settings found",
+              description: "Capability settings will appear here once configured.",
             }}
           />
         </>

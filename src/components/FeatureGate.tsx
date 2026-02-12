@@ -1,10 +1,10 @@
-import { ReactNode } from 'react';
-import { useCombinedFeatureAccess } from '@/hooks/useCombinedFeatureAccess';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Lock, Zap } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ReactNode } from "react";
+import { useCombinedFeatureAccess } from "@/hooks/useCombinedFeatureAccess";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Lock, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface FeatureGateProps {
   featureKey: string;
@@ -13,11 +13,11 @@ interface FeatureGateProps {
   showUpgrade?: boolean;
 }
 
-export function FeatureGate({ 
-  featureKey, 
-  children, 
+export function FeatureGate({
+  featureKey,
+  children,
   fallback,
-  showUpgrade = true 
+  showUpgrade = true,
 }: FeatureGateProps) {
   const { hasAccess, isLoading, remainingUsage } = useCombinedFeatureAccess(featureKey);
   const navigate = useNavigate();
@@ -43,11 +43,11 @@ export function FeatureGate({
         <AlertDescription className="mt-2 space-y-4">
           <p>
             {remainingUsage !== null && remainingUsage <= 0
-              ? 'You have reached your usage limit for this feature this month.'
-              : 'This feature is not available on your current plan.'}
+              ? "You have reached your usage limit for this feature this month."
+              : "This feature is not available on your current plan."}
           </p>
           {showUpgrade && (
-            <Button onClick={() => navigate('/subscription')} size="sm">
+            <Button onClick={() => navigate("/subscription")} size="sm">
               <Zap className="mr-2 h-4 w-4" />
               Upgrade Plan
             </Button>

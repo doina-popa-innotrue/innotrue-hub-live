@@ -1,19 +1,33 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Trash2, Upload, Bell, Link as LinkIcon, CheckCircle, XCircle, PlayCircle, Crown, Zap, Edit2, ExternalLink } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import { profileSchema, emailChangeSchema, passwordChangeSchema } from '@/lib/validations';
-import { z } from 'zod';
-import { resetTour } from '@/hooks/useOnboardingTour';
-import { InterestsValuesForm } from '@/components/profile/InterestsValuesForm';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  Upload,
+  Bell,
+  Link as LinkIcon,
+  CheckCircle,
+  XCircle,
+  PlayCircle,
+  Crown,
+  Zap,
+  Edit2,
+  ExternalLink,
+} from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { profileSchema, emailChangeSchema, passwordChangeSchema } from "@/lib/validations";
+import { z } from "zod";
+import { resetTour } from "@/hooks/useOnboardingTour";
+import { InterestsValuesForm } from "@/components/profile/InterestsValuesForm";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 
 interface Education {
   institution: string;
@@ -94,7 +108,7 @@ export default function Profile() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<Profile>({
-    name: '',
+    name: "",
     avatar_url: null,
     bio: null,
     linkedin_url: null,
@@ -103,9 +117,9 @@ export default function Profile() {
     education: [],
     certifications: [],
   });
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [newEmail, setNewEmail] = useState("");
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>({
     profile_updates: true,
     password_changes: true,
@@ -129,23 +143,23 @@ export default function Profile() {
   const [accessingCircle, setAccessingCircle] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<{ name: string; key: string } | null>(null);
   const [lucidMapping, setLucidMapping] = useState<LucidMapping | null>(null);
-  const [lucidEmail, setLucidEmail] = useState('');
-  const [lucidUrl, setLucidUrl] = useState('');
+  const [lucidEmail, setLucidEmail] = useState("");
+  const [lucidUrl, setLucidUrl] = useState("");
   const [savingLucid, setSavingLucid] = useState(false);
   const [editingLucid, setEditingLucid] = useState(false);
-  
+
   // Miro state
   const [miroMapping, setMiroMapping] = useState<MiroMapping | null>(null);
-  const [miroEmail, setMiroEmail] = useState('');
-  const [miroUrl, setMiroUrl] = useState('');
+  const [miroEmail, setMiroEmail] = useState("");
+  const [miroUrl, setMiroUrl] = useState("");
   const [savingMiro, setSavingMiro] = useState(false);
   const [editingMiro, setEditingMiro] = useState(false);
   const [disconnectingMiro, setDisconnectingMiro] = useState(false);
-  
+
   // Mural state
   const [muralMapping, setMuralMapping] = useState<MuralMapping | null>(null);
-  const [muralEmail, setMuralEmail] = useState('');
-  const [muralUrl, setMuralUrl] = useState('');
+  const [muralEmail, setMuralEmail] = useState("");
+  const [muralUrl, setMuralUrl] = useState("");
   const [savingMural, setSavingMural] = useState(false);
   const [editingMural, setEditingMural] = useState(false);
   const [disconnectingMural, setDisconnectingMural] = useState(false);
@@ -160,15 +174,15 @@ export default function Profile() {
     if (!user) return;
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
         .single();
 
       if (error) throw error;
 
       setProfile({
-        name: data.name || '',
+        name: data.name || "",
         avatar_url: data.avatar_url || null,
         bio: data.bio || null,
         linkedin_url: data.linkedin_url || null,
@@ -180,9 +194,9 @@ export default function Profile() {
 
       // Load notification preferences
       const { data: prefsData, error: prefsError } = await supabase
-        .from('notification_preferences')
-        .select('*')
-        .eq('user_id', user.id)
+        .from("notification_preferences")
+        .select("*")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (!prefsError && prefsData) {
@@ -202,19 +216,19 @@ export default function Profile() {
 
       // Load user roles
       const { data: rolesData, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
 
       if (!rolesError && rolesData) {
-        setUserRoles(rolesData.map(r => r.role));
+        setUserRoles(rolesData.map((r) => r.role));
       }
 
       // Load TalentLMS mapping
       const { data: talentLmsData, error: talentLmsError } = await supabase
-        .from('talentlms_users')
-        .select('talentlms_user_id, talentlms_username')
-        .eq('user_id', user.id)
+        .from("talentlms_users")
+        .select("talentlms_user_id, talentlms_username")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (!talentLmsError && talentLmsData) {
@@ -223,9 +237,9 @@ export default function Profile() {
 
       // Load Circle mapping
       const { data: circleData, error: circleError } = await supabase
-        .from('circle_users')
-        .select('circle_user_id, circle_email')
-        .eq('user_id', user.id)
+        .from("circle_users")
+        .select("circle_user_id, circle_email")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (!circleError && circleData) {
@@ -234,9 +248,9 @@ export default function Profile() {
 
       // Load Lucid mapping
       const { data: lucidData, error: lucidError } = await supabase
-        .from('lucid_users')
-        .select('lucid_email, lucid_url')
-        .eq('user_id', user.id)
+        .from("lucid_users")
+        .select("lucid_email, lucid_url")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (!lucidError && lucidData) {
@@ -245,9 +259,9 @@ export default function Profile() {
 
       // Load Miro mapping
       const { data: miroData, error: miroError } = await supabase
-        .from('miro_users')
-        .select('miro_email, miro_url')
-        .eq('user_id', user.id)
+        .from("miro_users")
+        .select("miro_email, miro_url")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (!miroError && miroData) {
@@ -256,9 +270,9 @@ export default function Profile() {
 
       // Load Mural mapping
       const { data: muralData, error: muralError } = await supabase
-        .from('mural_users')
-        .select('mural_email, mural_url')
-        .eq('user_id', user.id)
+        .from("mural_users")
+        .select("mural_email, mural_url")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (!muralError && muralData) {
@@ -268,9 +282,9 @@ export default function Profile() {
       // Load current plan
       if (data.plan_id) {
         const { data: planData } = await supabase
-          .from('plans')
-          .select('name, key')
-          .eq('id', data.plan_id)
+          .from("plans")
+          .select("name, key")
+          .eq("id", data.plan_id)
           .single();
 
         if (planData) {
@@ -279,9 +293,9 @@ export default function Profile() {
       }
     } catch (error: any) {
       toast({
-        title: 'Error loading profile',
+        title: "Error loading profile",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -297,14 +311,14 @@ export default function Profile() {
       }
 
       const file = event.target.files[0];
-      
+
       // Validate file type
-      const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      const validImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
       if (!validImageTypes.includes(file.type)) {
         toast({
-          title: 'Invalid file type',
-          description: 'Please upload a valid image file (JPEG, PNG, GIF, or WebP)',
-          variant: 'destructive',
+          title: "Invalid file type",
+          description: "Please upload a valid image file (JPEG, PNG, GIF, or WebP)",
+          variant: "destructive",
         });
         return;
       }
@@ -313,38 +327,36 @@ export default function Profile() {
       const maxSize = 5 * 1024 * 1024;
       if (file.size > maxSize) {
         toast({
-          title: 'File too large',
-          description: 'Please upload an image smaller than 5MB',
-          variant: 'destructive',
+          title: "File too large",
+          description: "Please upload an image smaller than 5MB",
+          variant: "destructive",
         });
         return;
       }
 
-      const fileExt = file.name.split('.').pop();
-      const userId = user?.id ?? 'unknown';
+      const fileExt = file.name.split(".").pop();
+      const userId = user?.id ?? "unknown";
       const fileName = `${userId}/${Math.random()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file);
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(fileName);
 
       setProfile({ ...profile, avatar_url: publicUrl });
 
       toast({
-        title: 'Avatar uploaded',
-        description: 'Your profile picture has been updated.',
+        title: "Avatar uploaded",
+        description: "Your profile picture has been updated.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error uploading avatar',
+        title: "Error uploading avatar",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setUploading(false);
@@ -359,13 +371,13 @@ export default function Profile() {
       const validated = profileSchema.parse({
         name: profile.name,
         bio: profile.bio,
-        linkedin_url: profile.linkedin_url || '',
-        x_url: profile.x_url || '',
-        bluesky_url: profile.bluesky_url || '',
+        linkedin_url: profile.linkedin_url || "",
+        x_url: profile.x_url || "",
+        bluesky_url: profile.bluesky_url || "",
       });
 
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update({
           name: validated.name,
           avatar_url: profile.avatar_url,
@@ -376,38 +388,38 @@ export default function Profile() {
           education: profile.education as any,
           certifications: profile.certifications as any,
         })
-        .eq('id', user?.id ?? '');
+        .eq("id", user?.id ?? "");
 
       if (error) throw error;
 
       // Send notification email only if user has it enabled
       if (notificationPrefs.profile_updates) {
-        await supabase.functions.invoke('send-notification-email', {
+        await supabase.functions.invoke("send-notification-email", {
           body: {
             email: user?.email,
             name: profile.name,
-            type: 'profile_update',
+            type: "profile_update",
             timestamp: new Date().toISOString(),
           },
         });
       }
 
       toast({
-        title: 'Profile updated',
-        description: 'Your profile has been saved successfully.',
+        title: "Profile updated",
+        description: "Your profile has been saved successfully.",
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         toast({
-          title: 'Validation error',
+          title: "Validation error",
           description: error.errors[0].message,
-          variant: 'destructive',
+          variant: "destructive",
         });
       } else {
         toast({
-          title: 'Error saving profile',
+          title: "Error saving profile",
           description: error.message,
-          variant: 'destructive',
+          variant: "destructive",
         });
       }
     } finally {
@@ -421,9 +433,9 @@ export default function Profile() {
 
       if (validated.email === user?.email) {
         toast({
-          title: 'Same email',
-          description: 'This is already your current email address.',
-          variant: 'destructive',
+          title: "Same email",
+          description: "This is already your current email address.",
+          variant: "destructive",
         });
         return;
       }
@@ -444,52 +456,52 @@ export default function Profile() {
 
         if (oldEmail) {
           notificationPromises.push(
-            supabase.functions.invoke('send-notification-email', {
+            supabase.functions.invoke("send-notification-email", {
               body: {
                 email: oldEmail,
-                name: profile.name || 'User',
-                type: 'email_change_old',
+                name: profile.name || "User",
+                type: "email_change_old",
                 timestamp: new Date().toISOString(),
                 programName: targetEmail,
               },
-            })
+            }),
           );
         }
 
         notificationPromises.push(
-          supabase.functions.invoke('send-notification-email', {
+          supabase.functions.invoke("send-notification-email", {
             body: {
               email: targetEmail,
-              name: profile.name || 'User',
-              type: 'email_change_new',
+              name: profile.name || "User",
+              type: "email_change_new",
               timestamp: new Date().toISOString(),
               programName: targetEmail,
             },
-          })
+          }),
         );
 
         await Promise.allSettled(notificationPromises);
       }
 
-      setNewEmail('');
+      setNewEmail("");
       await loadProfile();
 
       toast({
-        title: 'Success',
+        title: "Success",
         description: `Email updated to ${targetEmail}. Notification emails sent to both addresses.`,
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         toast({
-          title: 'Validation error',
+          title: "Validation error",
           description: error.errors[0].message,
-          variant: 'destructive',
+          variant: "destructive",
         });
       } else {
         toast({
-          title: 'Error updating email',
+          title: "Error updating email",
           description: error.message,
-          variant: 'destructive',
+          variant: "destructive",
         });
       }
     }
@@ -510,42 +522,43 @@ export default function Profile() {
 
       // Get profile data for email notification
       const { data: profileData } = await supabase
-        .from('profiles')
-        .select('name')
-        .eq('id', user?.id ?? '')
+        .from("profiles")
+        .select("name")
+        .eq("id", user?.id ?? "")
         .single();
 
       // Send security notification email only if enabled
       if (notificationPrefs.password_changes) {
-        await supabase.functions.invoke('send-notification-email', {
+        await supabase.functions.invoke("send-notification-email", {
           body: {
             email: user?.email,
-            name: profileData?.name || 'User',
-            type: 'password_change',
+            name: profileData?.name || "User",
+            type: "password_change",
             timestamp: new Date().toISOString(),
           },
         });
       }
 
-      setNewPassword('');
-      setConfirmPassword('');
+      setNewPassword("");
+      setConfirmPassword("");
 
       toast({
-        title: 'Password updated',
-        description: 'Your password has been changed successfully. A confirmation email has been sent.',
+        title: "Password updated",
+        description:
+          "Your password has been changed successfully. A confirmation email has been sent.",
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         toast({
-          title: 'Validation error',
+          title: "Validation error",
           description: error.errors[0].message,
-          variant: 'destructive',
+          variant: "destructive",
         });
       } else {
         toast({
-          title: 'Error changing password',
+          title: "Error changing password",
           description: error.message,
-          variant: 'destructive',
+          variant: "destructive",
         });
       }
     }
@@ -554,7 +567,7 @@ export default function Profile() {
   const addEducation = () => {
     setProfile({
       ...profile,
-      education: [...profile.education, { institution: '', degree: '', year: '' }],
+      education: [...profile.education, { institution: "", degree: "", year: "" }],
     });
   };
 
@@ -574,7 +587,7 @@ export default function Profile() {
   const addCertification = () => {
     setProfile({
       ...profile,
-      certifications: [...profile.certifications, { name: '', url: '', platform: '' }],
+      certifications: [...profile.certifications, { name: "", url: "", platform: "" }],
     });
   };
 
@@ -595,33 +608,31 @@ export default function Profile() {
     try {
       setSavingPrefs(true);
 
-      const { error } = await supabase
-        .from('notification_preferences')
-        .upsert({
-          user_id: user?.id ?? '',
-          profile_updates: notificationPrefs.profile_updates,
-          password_changes: notificationPrefs.password_changes,
-          email_changes: notificationPrefs.email_changes,
-          program_assignments: notificationPrefs.program_assignments,
-          program_completions: notificationPrefs.program_completions,
-          module_completions: notificationPrefs.module_completions,
-          instructor_program_assignments: notificationPrefs.instructor_program_assignments ?? true,
-          instructor_module_assignments: notificationPrefs.instructor_module_assignments ?? true,
-          coach_program_assignments: notificationPrefs.coach_program_assignments ?? true,
-          coach_module_assignments: notificationPrefs.coach_module_assignments ?? true,
-        });
+      const { error } = await supabase.from("notification_preferences").upsert({
+        user_id: user?.id ?? "",
+        profile_updates: notificationPrefs.profile_updates,
+        password_changes: notificationPrefs.password_changes,
+        email_changes: notificationPrefs.email_changes,
+        program_assignments: notificationPrefs.program_assignments,
+        program_completions: notificationPrefs.program_completions,
+        module_completions: notificationPrefs.module_completions,
+        instructor_program_assignments: notificationPrefs.instructor_program_assignments ?? true,
+        instructor_module_assignments: notificationPrefs.instructor_module_assignments ?? true,
+        coach_program_assignments: notificationPrefs.coach_program_assignments ?? true,
+        coach_module_assignments: notificationPrefs.coach_module_assignments ?? true,
+      });
 
       if (error) throw error;
 
       toast({
-        title: 'Preferences saved',
-        description: 'Your notification preferences have been updated.',
+        title: "Preferences saved",
+        description: "Your notification preferences have been updated.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error saving preferences',
+        title: "Error saving preferences",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setSavingPrefs(false);
@@ -633,23 +644,23 @@ export default function Profile() {
       setDisconnecting(true);
 
       const { error } = await supabase
-        .from('talentlms_users')
+        .from("talentlms_users")
         .delete()
-        .eq('user_id', user?.id ?? '');
+        .eq("user_id", user?.id ?? "");
 
       if (error) throw error;
 
       setTalentLmsMapping(null);
 
       toast({
-        title: 'Academy disconnected',
-        description: 'Your Academy account has been disconnected.',
+        title: "Academy disconnected",
+        description: "Your Academy account has been disconnected.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error disconnecting Academy',
+        title: "Error disconnecting Academy",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setDisconnecting(false);
@@ -661,23 +672,23 @@ export default function Profile() {
       setDisconnectingCircle(true);
 
       const { error } = await supabase
-        .from('circle_users')
+        .from("circle_users")
         .delete()
-        .eq('user_id', user?.id ?? '');
+        .eq("user_id", user?.id ?? "");
 
       if (error) throw error;
 
       setCircleMapping(null);
 
       toast({
-        title: 'Community disconnected',
-        description: 'Your Community account has been disconnected.',
+        title: "Community disconnected",
+        description: "Your Community account has been disconnected.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error disconnecting Community',
+        title: "Error disconnecting Community",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setDisconnectingCircle(false);
@@ -690,9 +701,9 @@ export default function Profile() {
 
       if (!lucidEmail.trim()) {
         toast({
-          title: 'Email required',
-          description: 'Please enter your Lucid email address.',
-          variant: 'destructive',
+          title: "Email required",
+          description: "Please enter your Lucid email address.",
+          variant: "destructive",
         });
         return;
       }
@@ -700,23 +711,21 @@ export default function Profile() {
       if (lucidMapping) {
         // Update existing mapping
         const { error } = await supabase
-          .from('lucid_users')
+          .from("lucid_users")
           .update({
             lucid_email: lucidEmail.trim(),
             lucid_url: lucidUrl.trim() || null,
           })
-          .eq('user_id', user?.id ?? '');
+          .eq("user_id", user?.id ?? "");
 
         if (error) throw error;
       } else {
         // Create new mapping
-        const { error } = await supabase
-          .from('lucid_users')
-          .insert({
-            user_id: user?.id ?? '',
-            lucid_email: lucidEmail.trim(),
-            lucid_url: lucidUrl.trim() || null,
-          });
+        const { error } = await supabase.from("lucid_users").insert({
+          user_id: user?.id ?? "",
+          lucid_email: lucidEmail.trim(),
+          lucid_url: lucidUrl.trim() || null,
+        });
 
         if (error) throw error;
       }
@@ -728,14 +737,14 @@ export default function Profile() {
       setEditingLucid(false);
 
       toast({
-        title: 'Lucid connected',
-        description: 'Your Lucid account has been linked successfully.',
+        title: "Lucid connected",
+        description: "Your Lucid account has been linked successfully.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error saving Lucid connection',
+        title: "Error saving Lucid connection",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setSavingLucid(false);
@@ -747,25 +756,25 @@ export default function Profile() {
       setDisconnectingLucid(true);
 
       const { error } = await supabase
-        .from('lucid_users')
+        .from("lucid_users")
         .delete()
-        .eq('user_id', user?.id ?? '');
+        .eq("user_id", user?.id ?? "");
 
       if (error) throw error;
 
       setLucidMapping(null);
-      setLucidEmail('');
-      setLucidUrl('');
+      setLucidEmail("");
+      setLucidUrl("");
 
       toast({
-        title: 'Lucid disconnected',
-        description: 'Your Lucid account has been disconnected.',
+        title: "Lucid disconnected",
+        description: "Your Lucid account has been disconnected.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error disconnecting Lucid',
+        title: "Error disconnecting Lucid",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setDisconnectingLucid(false);
@@ -773,17 +782,17 @@ export default function Profile() {
   };
 
   const accessLucid = () => {
-    const url = lucidMapping?.lucid_url || 'https://lucid.app';
-    window.open(url, '_blank');
+    const url = lucidMapping?.lucid_url || "https://lucid.app";
+    window.open(url, "_blank");
     toast({
-      title: 'Opening Lucid',
-      description: 'Opening Lucid in a new window...',
+      title: "Opening Lucid",
+      description: "Opening Lucid in a new window...",
     });
   };
 
   const startEditingLucid = () => {
-    setLucidEmail(lucidMapping?.lucid_email || '');
-    setLucidUrl(lucidMapping?.lucid_url || '');
+    setLucidEmail(lucidMapping?.lucid_email || "");
+    setLucidUrl(lucidMapping?.lucid_url || "");
     setEditingLucid(true);
   };
 
@@ -794,31 +803,29 @@ export default function Profile() {
 
       if (!miroEmail.trim()) {
         toast({
-          title: 'Email required',
-          description: 'Please enter your Miro email address.',
-          variant: 'destructive',
+          title: "Email required",
+          description: "Please enter your Miro email address.",
+          variant: "destructive",
         });
         return;
       }
 
       if (miroMapping) {
         const { error } = await supabase
-          .from('miro_users')
+          .from("miro_users")
           .update({
             miro_email: miroEmail.trim(),
             miro_url: miroUrl.trim() || null,
           })
-          .eq('user_id', user?.id ?? '');
+          .eq("user_id", user?.id ?? "");
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('miro_users')
-          .insert({
-            user_id: user?.id ?? '',
-            miro_email: miroEmail.trim(),
-            miro_url: miroUrl.trim() || null,
-          });
+        const { error } = await supabase.from("miro_users").insert({
+          user_id: user?.id ?? "",
+          miro_email: miroEmail.trim(),
+          miro_url: miroUrl.trim() || null,
+        });
 
         if (error) throw error;
       }
@@ -830,14 +837,14 @@ export default function Profile() {
       setEditingMiro(false);
 
       toast({
-        title: 'Miro connected',
-        description: 'Your Miro account has been linked successfully.',
+        title: "Miro connected",
+        description: "Your Miro account has been linked successfully.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error saving Miro connection',
+        title: "Error saving Miro connection",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setSavingMiro(false);
@@ -849,25 +856,25 @@ export default function Profile() {
       setDisconnectingMiro(true);
 
       const { error } = await supabase
-        .from('miro_users')
+        .from("miro_users")
         .delete()
-        .eq('user_id', user?.id ?? '');
+        .eq("user_id", user?.id ?? "");
 
       if (error) throw error;
 
       setMiroMapping(null);
-      setMiroEmail('');
-      setMiroUrl('');
+      setMiroEmail("");
+      setMiroUrl("");
 
       toast({
-        title: 'Miro disconnected',
-        description: 'Your Miro account has been disconnected.',
+        title: "Miro disconnected",
+        description: "Your Miro account has been disconnected.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error disconnecting Miro',
+        title: "Error disconnecting Miro",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setDisconnectingMiro(false);
@@ -875,17 +882,17 @@ export default function Profile() {
   };
 
   const accessMiro = () => {
-    const url = miroMapping?.miro_url || 'https://miro.com';
-    window.open(url, '_blank');
+    const url = miroMapping?.miro_url || "https://miro.com";
+    window.open(url, "_blank");
     toast({
-      title: 'Opening Miro',
-      description: 'Opening Miro in a new window...',
+      title: "Opening Miro",
+      description: "Opening Miro in a new window...",
     });
   };
 
   const startEditingMiro = () => {
-    setMiroEmail(miroMapping?.miro_email || '');
-    setMiroUrl(miroMapping?.miro_url || '');
+    setMiroEmail(miroMapping?.miro_email || "");
+    setMiroUrl(miroMapping?.miro_url || "");
     setEditingMiro(true);
   };
 
@@ -896,31 +903,29 @@ export default function Profile() {
 
       if (!muralEmail.trim()) {
         toast({
-          title: 'Email required',
-          description: 'Please enter your Mural email address.',
-          variant: 'destructive',
+          title: "Email required",
+          description: "Please enter your Mural email address.",
+          variant: "destructive",
         });
         return;
       }
 
       if (muralMapping) {
         const { error } = await supabase
-          .from('mural_users')
+          .from("mural_users")
           .update({
             mural_email: muralEmail.trim(),
             mural_url: muralUrl.trim() || null,
           })
-          .eq('user_id', user?.id ?? '');
+          .eq("user_id", user?.id ?? "");
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('mural_users')
-          .insert({
-            user_id: user?.id ?? '',
-            mural_email: muralEmail.trim(),
-            mural_url: muralUrl.trim() || null,
-          });
+        const { error } = await supabase.from("mural_users").insert({
+          user_id: user?.id ?? "",
+          mural_email: muralEmail.trim(),
+          mural_url: muralUrl.trim() || null,
+        });
 
         if (error) throw error;
       }
@@ -932,14 +937,14 @@ export default function Profile() {
       setEditingMural(false);
 
       toast({
-        title: 'Mural connected',
-        description: 'Your Mural account has been linked successfully.',
+        title: "Mural connected",
+        description: "Your Mural account has been linked successfully.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error saving Mural connection',
+        title: "Error saving Mural connection",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setSavingMural(false);
@@ -951,25 +956,25 @@ export default function Profile() {
       setDisconnectingMural(true);
 
       const { error } = await supabase
-        .from('mural_users')
+        .from("mural_users")
         .delete()
-        .eq('user_id', user?.id ?? '');
+        .eq("user_id", user?.id ?? "");
 
       if (error) throw error;
 
       setMuralMapping(null);
-      setMuralEmail('');
-      setMuralUrl('');
+      setMuralEmail("");
+      setMuralUrl("");
 
       toast({
-        title: 'Mural disconnected',
-        description: 'Your Mural account has been disconnected.',
+        title: "Mural disconnected",
+        description: "Your Mural account has been disconnected.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error disconnecting Mural',
+        title: "Error disconnecting Mural",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setDisconnectingMural(false);
@@ -977,17 +982,17 @@ export default function Profile() {
   };
 
   const accessMural = () => {
-    const url = muralMapping?.mural_url || 'https://mural.co';
-    window.open(url, '_blank');
+    const url = muralMapping?.mural_url || "https://mural.co";
+    window.open(url, "_blank");
     toast({
-      title: 'Opening Mural',
-      description: 'Opening Mural in a new window...',
+      title: "Opening Mural",
+      description: "Opening Mural in a new window...",
     });
   };
 
   const startEditingMural = () => {
-    setMuralEmail(muralMapping?.mural_email || '');
-    setMuralUrl(muralMapping?.mural_url || '');
+    setMuralEmail(muralMapping?.mural_email || "");
+    setMuralUrl(muralMapping?.mural_url || "");
     setEditingMural(true);
   };
 
@@ -995,7 +1000,7 @@ export default function Profile() {
     try {
       setAccessingCircle(true);
 
-      const { data, error } = await supabase.functions.invoke('circle-sso', {
+      const { data, error } = await supabase.functions.invoke("circle-sso", {
         body: {},
       });
 
@@ -1006,17 +1011,17 @@ export default function Profile() {
       }
 
       if (data?.loginUrl) {
-        window.open(data.loginUrl, '_blank');
+        window.open(data.loginUrl, "_blank");
         toast({
-          title: 'Opening Community',
-          description: 'Opening InnoTrue Community in a new window...',
+          title: "Opening Community",
+          description: "Opening InnoTrue Community in a new window...",
         });
       }
     } catch (error: any) {
       toast({
-        title: 'Error accessing Community',
+        title: "Error accessing Community",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setAccessingCircle(false);
@@ -1027,11 +1032,11 @@ export default function Profile() {
     try {
       setRequestingReconnect(true);
 
-      const response = await supabase.functions.invoke('send-notification-email', {
+      const response = await supabase.functions.invoke("send-notification-email", {
         body: {
           email: user?.email,
           name: profile.name,
-          type: 'talentlms_reconnect_request',
+          type: "talentlms_reconnect_request",
           timestamp: new Date().toISOString(),
         },
       });
@@ -1039,14 +1044,14 @@ export default function Profile() {
       if (response.error) throw response.error;
 
       toast({
-        title: 'Request sent',
-        description: 'Your administrator has been notified of your reconnection request.',
+        title: "Request sent",
+        description: "Your administrator has been notified of your reconnection request.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error sending request',
+        title: "Error sending request",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setRequestingReconnect(false);
@@ -1121,7 +1126,7 @@ export default function Profile() {
             <Textarea
               id="bio"
               placeholder="Tell us about yourself..."
-              value={profile.bio || ''}
+              value={profile.bio || ""}
               onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
               rows={4}
             />
@@ -1135,27 +1140,21 @@ export default function Profile() {
             <div>
               <CardTitle>Subscription Plan</CardTitle>
               <CardDescription>
-                {currentPlan ? `You are on the ${currentPlan.name} plan` : 'No active subscription'}
+                {currentPlan ? `You are on the ${currentPlan.name} plan` : "No active subscription"}
               </CardDescription>
             </div>
-            {currentPlan?.key === 'enterprise' && (
-              <Crown className="h-6 w-6 text-primary" />
-            )}
-            {currentPlan?.key === 'pro' && (
-              <Zap className="h-6 w-6 text-primary" />
-            )}
+            {currentPlan?.key === "enterprise" && <Crown className="h-6 w-6 text-primary" />}
+            {currentPlan?.key === "pro" && <Zap className="h-6 w-6 text-primary" />}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div>
-              <p className="font-medium">{currentPlan?.name || 'Free Plan'}</p>
-              <p className="text-sm text-muted-foreground">
-                View available plans and features
-              </p>
+              <p className="font-medium">{currentPlan?.name || "Free Plan"}</p>
+              <p className="text-sm text-muted-foreground">View available plans and features</p>
             </div>
-            <Button onClick={() => window.location.href = '/subscription'}>
-              {currentPlan ? 'Manage Subscription' : 'View Plans'}
+            <Button onClick={() => (window.location.href = "/subscription")}>
+              {currentPlan ? "Manage Subscription" : "View Plans"}
             </Button>
           </div>
         </CardContent>
@@ -1171,7 +1170,7 @@ export default function Profile() {
             <Input
               id="linkedin"
               placeholder="https://linkedin.com/in/username"
-              value={profile.linkedin_url || ''}
+              value={profile.linkedin_url || ""}
               onChange={(e) => setProfile({ ...profile, linkedin_url: e.target.value })}
             />
           </div>
@@ -1180,7 +1179,7 @@ export default function Profile() {
             <Input
               id="x"
               placeholder="https://x.com/username"
-              value={profile.x_url || ''}
+              value={profile.x_url || ""}
               onChange={(e) => setProfile({ ...profile, x_url: e.target.value })}
             />
           </div>
@@ -1189,7 +1188,7 @@ export default function Profile() {
             <Input
               id="bluesky"
               placeholder="https://bsky.app/profile/username"
-              value={profile.bluesky_url || ''}
+              value={profile.bluesky_url || ""}
               onChange={(e) => setProfile({ ...profile, bluesky_url: e.target.value })}
             />
           </div>
@@ -1224,7 +1223,8 @@ export default function Profile() {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
-                Your account is linked to InnoTrue Academy. When you access Academy modules, you'll be automatically signed in.
+                Your account is linked to InnoTrue Academy. When you access Academy modules, you'll
+                be automatically signed in.
               </p>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -1237,16 +1237,14 @@ export default function Profile() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Disconnect Academy Account?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will remove the link between your InnoTrue Hub account and your Academy account. 
-                      You won't be able to access Academy modules through single sign-on until an administrator 
-                      reconnects your account.
+                      This will remove the link between your InnoTrue Hub account and your Academy
+                      account. You won't be able to access Academy modules through single sign-on
+                      until an administrator reconnects your account.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={disconnectTalentLms}>
-                      Disconnect
-                    </AlertDialogAction>
+                    <AlertDialogAction onClick={disconnectTalentLms}>Disconnect</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -1258,7 +1256,8 @@ export default function Profile() {
                 <span className="font-medium">Not Connected</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Your account is not currently linked to InnoTrue Academy. You can request your administrator to set up the connection.
+                Your account is not currently linked to InnoTrue Academy. You can request your
+                administrator to set up the connection.
               </p>
               <Button onClick={requestReconnect} disabled={requestingReconnect}>
                 {requestingReconnect && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -1297,7 +1296,8 @@ export default function Profile() {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
-                Your account is connected to InnoTrue Community. Click below to access the community.
+                Your account is connected to InnoTrue Community. Click below to access the
+                community.
               </p>
               <div className="flex gap-2">
                 <Button onClick={accessCircle} disabled={accessingCircle}>
@@ -1315,16 +1315,14 @@ export default function Profile() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Disconnect Community Account?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will remove the link between your InnoTrue Hub account and your Community account. 
-                        You won't be able to access the Community through single sign-on until an administrator 
-                        reconnects your account.
+                        This will remove the link between your InnoTrue Hub account and your
+                        Community account. You won't be able to access the Community through single
+                        sign-on until an administrator reconnects your account.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={disconnectCircle}>
-                        Disconnect
-                      </AlertDialogAction>
+                      <AlertDialogAction onClick={disconnectCircle}>Disconnect</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -1337,7 +1335,9 @@ export default function Profile() {
                 <span className="font-medium">Not Connected</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Your account is not currently linked to InnoTrue Community. When you first access Community content, an account will be automatically created for you, or you can contact your administrator to set up the connection.
+                Your account is not currently linked to InnoTrue Community. When you first access
+                Community content, an account will be automatically created for you, or you can
+                contact your administrator to set up the connection.
               </p>
               <Button onClick={accessCircle} disabled={accessingCircle}>
                 {accessingCircle && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -1400,14 +1400,13 @@ export default function Profile() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Disconnect Lucid Account?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will remove the link between your Evolve360 Hub account and your Lucid account.
+                        This will remove the link between your Evolve360 Hub account and your Lucid
+                        account.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={disconnectLucid}>
-                        Disconnect
-                      </AlertDialogAction>
+                      <AlertDialogAction onClick={disconnectLucid}>Disconnect</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -1422,10 +1421,9 @@ export default function Profile() {
                 </div>
               )}
               <p className="text-sm text-muted-foreground">
-                {editingLucid 
-                  ? 'Update your Lucid account details below.'
-                  : 'Link your Lucid account to quickly access LucidChart and LucidSpark from Evolve360 Hub.'
-                }
+                {editingLucid
+                  ? "Update your Lucid account details below."
+                  : "Link your Lucid account to quickly access LucidChart and LucidSpark from Evolve360 Hub."}
               </p>
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -1455,7 +1453,7 @@ export default function Profile() {
               <div className="flex gap-2">
                 <Button onClick={saveLucidConnection} disabled={savingLucid}>
                   {savingLucid && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {editingLucid ? 'Update Connection' : 'Connect Lucid'}
+                  {editingLucid ? "Update Connection" : "Connect Lucid"}
                 </Button>
                 {editingLucid && (
                   <Button variant="outline" onClick={() => setEditingLucid(false)}>
@@ -1520,14 +1518,13 @@ export default function Profile() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Disconnect Miro Account?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will remove the link between your Evolve360 Hub account and your Miro account.
+                        This will remove the link between your Evolve360 Hub account and your Miro
+                        account.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={disconnectMiro}>
-                        Disconnect
-                      </AlertDialogAction>
+                      <AlertDialogAction onClick={disconnectMiro}>Disconnect</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -1542,10 +1539,9 @@ export default function Profile() {
                 </div>
               )}
               <p className="text-sm text-muted-foreground">
-                {editingMiro 
-                  ? 'Update your Miro account details below.'
-                  : 'Link your Miro account to quickly access Miro whiteboards from Evolve360 Hub.'
-                }
+                {editingMiro
+                  ? "Update your Miro account details below."
+                  : "Link your Miro account to quickly access Miro whiteboards from Evolve360 Hub."}
               </p>
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -1575,7 +1571,7 @@ export default function Profile() {
               <div className="flex gap-2">
                 <Button onClick={saveMiroConnection} disabled={savingMiro}>
                   {savingMiro && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {editingMiro ? 'Update Connection' : 'Connect Miro'}
+                  {editingMiro ? "Update Connection" : "Connect Miro"}
                 </Button>
                 {editingMiro && (
                   <Button variant="outline" onClick={() => setEditingMiro(false)}>
@@ -1640,14 +1636,13 @@ export default function Profile() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Disconnect Mural Account?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will remove the link between your Evolve360 Hub account and your Mural account.
+                        This will remove the link between your Evolve360 Hub account and your Mural
+                        account.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={disconnectMural}>
-                        Disconnect
-                      </AlertDialogAction>
+                      <AlertDialogAction onClick={disconnectMural}>Disconnect</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -1662,10 +1657,9 @@ export default function Profile() {
                 </div>
               )}
               <p className="text-sm text-muted-foreground">
-                {editingMural 
-                  ? 'Update your Mural account details below.'
-                  : 'Link your Mural account to quickly access Mural workspaces from Evolve360 Hub.'
-                }
+                {editingMural
+                  ? "Update your Mural account details below."
+                  : "Link your Mural account to quickly access Mural workspaces from Evolve360 Hub."}
               </p>
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -1695,7 +1689,7 @@ export default function Profile() {
               <div className="flex gap-2">
                 <Button onClick={saveMuralConnection} disabled={savingMural}>
                   {savingMural && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {editingMural ? 'Update Connection' : 'Connect Mural'}
+                  {editingMural ? "Update Connection" : "Connect Mural"}
                 </Button>
                 {editingMural && (
                   <Button variant="outline" onClick={() => setEditingMural(false)}>
@@ -1726,11 +1720,7 @@ export default function Profile() {
             <div key={index} className="space-y-3 p-4 border rounded-lg">
               <div className="flex justify-between items-start">
                 <h4 className="font-medium">Education {index + 1}</h4>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeEducation(index)}
-                >
+                <Button variant="ghost" size="sm" onClick={() => removeEducation(index)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -1738,7 +1728,7 @@ export default function Profile() {
                 <Label>Institution</Label>
                 <Input
                   value={edu.institution}
-                  onChange={(e) => updateEducation(index, 'institution', e.target.value)}
+                  onChange={(e) => updateEducation(index, "institution", e.target.value)}
                   placeholder="University name"
                 />
               </div>
@@ -1746,7 +1736,7 @@ export default function Profile() {
                 <Label>Degree</Label>
                 <Input
                   value={edu.degree}
-                  onChange={(e) => updateEducation(index, 'degree', e.target.value)}
+                  onChange={(e) => updateEducation(index, "degree", e.target.value)}
                   placeholder="e.g., Bachelor of Science"
                 />
               </div>
@@ -1754,7 +1744,7 @@ export default function Profile() {
                 <Label>Year</Label>
                 <Input
                   value={edu.year}
-                  onChange={(e) => updateEducation(index, 'year', e.target.value)}
+                  onChange={(e) => updateEducation(index, "year", e.target.value)}
                   placeholder="e.g., 2020"
                 />
               </div>
@@ -1781,11 +1771,7 @@ export default function Profile() {
             <div key={index} className="space-y-3 p-4 border rounded-lg">
               <div className="flex justify-between items-start">
                 <h4 className="font-medium">Certification {index + 1}</h4>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeCertification(index)}
-                >
+                <Button variant="ghost" size="sm" onClick={() => removeCertification(index)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -1793,7 +1779,7 @@ export default function Profile() {
                 <Label>Certification Name</Label>
                 <Input
                   value={cert.name}
-                  onChange={(e) => updateCertification(index, 'name', e.target.value)}
+                  onChange={(e) => updateCertification(index, "name", e.target.value)}
                   placeholder="e.g., AWS Certified Solutions Architect"
                 />
               </div>
@@ -1801,7 +1787,7 @@ export default function Profile() {
                 <Label>Platform</Label>
                 <Input
                   value={cert.platform}
-                  onChange={(e) => updateCertification(index, 'platform', e.target.value)}
+                  onChange={(e) => updateCertification(index, "platform", e.target.value)}
                   placeholder="e.g., Credly, Accredible"
                 />
               </div>
@@ -1809,7 +1795,7 @@ export default function Profile() {
                 <Label>Certificate URL</Label>
                 <Input
                   value={cert.url}
-                  onChange={(e) => updateCertification(index, 'url', e.target.value)}
+                  onChange={(e) => updateCertification(index, "url", e.target.value)}
                   placeholder="https://..."
                 />
               </div>
@@ -1822,7 +1808,8 @@ export default function Profile() {
         <CardHeader>
           <CardTitle>Change Email Address</CardTitle>
           <CardDescription>
-            Update your email address. We'll send security notifications to both your old and new email.
+            Update your email address. We'll send security notifications to both your old and new
+            email.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1831,7 +1818,7 @@ export default function Profile() {
             <Input
               id="current-email"
               type="email"
-              value={user?.email || ''}
+              value={user?.email || ""}
               disabled
               className="bg-muted"
             />
@@ -1888,7 +1875,9 @@ export default function Profile() {
             <Bell className="h-5 w-5" />
             <div>
               <CardTitle>Email Notification Preferences</CardTitle>
-              <CardDescription>Choose which email notifications you want to receive</CardDescription>
+              <CardDescription>
+                Choose which email notifications you want to receive
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -1903,7 +1892,7 @@ export default function Profile() {
             <Switch
               id="profile-updates"
               checked={notificationPrefs.profile_updates}
-              onCheckedChange={(checked) => 
+              onCheckedChange={(checked) =>
                 setNotificationPrefs({ ...notificationPrefs, profile_updates: checked })
               }
             />
@@ -1919,7 +1908,7 @@ export default function Profile() {
             <Switch
               id="password-changes"
               checked={notificationPrefs.password_changes}
-              onCheckedChange={(checked) => 
+              onCheckedChange={(checked) =>
                 setNotificationPrefs({ ...notificationPrefs, password_changes: checked })
               }
             />
@@ -1935,7 +1924,7 @@ export default function Profile() {
             <Switch
               id="email-changes"
               checked={notificationPrefs.email_changes}
-              onCheckedChange={(checked) => 
+              onCheckedChange={(checked) =>
                 setNotificationPrefs({ ...notificationPrefs, email_changes: checked })
               }
             />
@@ -1951,7 +1940,7 @@ export default function Profile() {
             <Switch
               id="program-assignments"
               checked={notificationPrefs.program_assignments}
-              onCheckedChange={(checked) => 
+              onCheckedChange={(checked) =>
                 setNotificationPrefs({ ...notificationPrefs, program_assignments: checked })
               }
             />
@@ -1960,14 +1949,12 @@ export default function Profile() {
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="program-completions">Program Completions</Label>
-              <p className="text-sm text-muted-foreground">
-                Celebrate when you complete a program
-              </p>
+              <p className="text-sm text-muted-foreground">Celebrate when you complete a program</p>
             </div>
             <Switch
               id="program-completions"
               checked={notificationPrefs.program_completions}
-              onCheckedChange={(checked) => 
+              onCheckedChange={(checked) =>
                 setNotificationPrefs({ ...notificationPrefs, program_completions: checked })
               }
             />
@@ -1983,13 +1970,13 @@ export default function Profile() {
             <Switch
               id="module-completions"
               checked={notificationPrefs.module_completions}
-              onCheckedChange={(checked) => 
+              onCheckedChange={(checked) =>
                 setNotificationPrefs({ ...notificationPrefs, module_completions: checked })
               }
             />
           </div>
 
-          {userRoles.includes('instructor') && (
+          {userRoles.includes("instructor") && (
             <>
               <div className="pt-4 border-t">
                 <h4 className="font-medium mb-4">Instructor Notifications</h4>
@@ -2005,8 +1992,11 @@ export default function Profile() {
                 <Switch
                   id="instructor-program-assignments"
                   checked={notificationPrefs.instructor_program_assignments ?? true}
-                  onCheckedChange={(checked) => 
-                    setNotificationPrefs({ ...notificationPrefs, instructor_program_assignments: checked })
+                  onCheckedChange={(checked) =>
+                    setNotificationPrefs({
+                      ...notificationPrefs,
+                      instructor_program_assignments: checked,
+                    })
                   }
                 />
               </div>
@@ -2021,15 +2011,18 @@ export default function Profile() {
                 <Switch
                   id="instructor-module-assignments"
                   checked={notificationPrefs.instructor_module_assignments ?? true}
-                  onCheckedChange={(checked) => 
-                    setNotificationPrefs({ ...notificationPrefs, instructor_module_assignments: checked })
+                  onCheckedChange={(checked) =>
+                    setNotificationPrefs({
+                      ...notificationPrefs,
+                      instructor_module_assignments: checked,
+                    })
                   }
                 />
               </div>
             </>
           )}
 
-          {userRoles.includes('coach') && (
+          {userRoles.includes("coach") && (
             <>
               <div className="pt-4 border-t">
                 <h4 className="font-medium mb-4">Coach Notifications</h4>
@@ -2045,8 +2038,11 @@ export default function Profile() {
                 <Switch
                   id="coach-program-assignments"
                   checked={notificationPrefs.coach_program_assignments ?? true}
-                  onCheckedChange={(checked) => 
-                    setNotificationPrefs({ ...notificationPrefs, coach_program_assignments: checked })
+                  onCheckedChange={(checked) =>
+                    setNotificationPrefs({
+                      ...notificationPrefs,
+                      coach_program_assignments: checked,
+                    })
                   }
                 />
               </div>
@@ -2061,8 +2057,11 @@ export default function Profile() {
                 <Switch
                   id="coach-module-assignments"
                   checked={notificationPrefs.coach_module_assignments ?? true}
-                  onCheckedChange={(checked) => 
-                    setNotificationPrefs({ ...notificationPrefs, coach_module_assignments: checked })
+                  onCheckedChange={(checked) =>
+                    setNotificationPrefs({
+                      ...notificationPrefs,
+                      coach_module_assignments: checked,
+                    })
                   }
                 />
               </div>
@@ -2090,20 +2089,23 @@ export default function Profile() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Want to see the feature tour again? Click below to restart the onboarding tour for your current role.
+            Want to see the feature tour again? Click below to restart the onboarding tour for your
+            current role.
           </p>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => {
-              const tourId = userRole === 'admin' 
-                ? 'admin-tour' 
-                : (userRole === 'instructor' || userRole === 'coach') 
-                  ? 'instructor-tour' 
-                  : 'client-tour';
+              const tourId =
+                userRole === "admin"
+                  ? "admin-tour"
+                  : userRole === "instructor" || userRole === "coach"
+                    ? "instructor-tour"
+                    : "client-tour";
               resetTour(tourId);
               toast({
                 title: "Tour Restarted",
-                description: "The onboarding tour will start in a moment. Navigate to the relevant pages to see the tour steps.",
+                description:
+                  "The onboarding tour will start in a moment. Navigate to the relevant pages to see the tour steps.",
               });
               setTimeout(() => window.location.reload(), 1000);
             }}

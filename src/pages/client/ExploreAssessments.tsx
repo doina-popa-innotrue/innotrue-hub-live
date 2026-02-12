@@ -5,11 +5,34 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, CheckCircle, Star, Lock, Zap, ExternalLink, DollarSign } from "lucide-react";
+import {
+  Loader2,
+  Search,
+  CheckCircle,
+  Star,
+  Lock,
+  Zap,
+  ExternalLink,
+  DollarSign,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useAssessmentFeatureAccess } from "@/hooks/useAssessmentFeatureAccess";
@@ -41,7 +64,9 @@ export default function ExploreAssessments() {
   const { data: assessments, isLoading } = useQuery({
     queryKey: ["explore-assessments"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data: assessmentData, error: assessmentError } = await supabase
@@ -59,9 +84,9 @@ export default function ExploreAssessments() {
 
       if (interestError) throw interestError;
 
-      const interestSet = new Set(interestData?.map(i => i.assessment_id));
+      const interestSet = new Set(interestData?.map((i) => i.assessment_id));
 
-      return assessmentData.map(assessment => ({
+      return assessmentData.map((assessment) => ({
         ...assessment,
         hasInterest: interestSet.has(assessment.id),
       })) as Assessment[];
@@ -70,17 +95,17 @@ export default function ExploreAssessments() {
 
   const expressInterestMutation = useMutation({
     mutationFn: async ({ assessmentId, notes }: { assessmentId: string; notes: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase
-        .from("assessment_interest_registrations")
-        .insert({
-          user_id: user.id,
-          assessment_id: assessmentId,
-          status: "pending",
-          notes: notes || null,
-        });
+      const { error } = await supabase.from("assessment_interest_registrations").insert({
+        user_id: user.id,
+        assessment_id: assessmentId,
+        status: "pending",
+        notes: notes || null,
+      });
 
       if (error) throw error;
     },
@@ -96,7 +121,8 @@ export default function ExploreAssessments() {
   });
 
   const filteredAssessments = assessments?.filter((assessment) => {
-    const matchesSearch = assessment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch =
+      assessment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       assessment.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === "all" || assessment.category === categoryFilter;
     return matchesSearch && matchesCategory;
@@ -111,7 +137,7 @@ export default function ExploreAssessments() {
             Discover psychometric assessments to enhance your self-awareness
           </p>
         </div>
-        <Button variant="outline" onClick={() => navigate('/assessments')}>
+        <Button variant="outline" onClick={() => navigate("/assessments")}>
           My Assessments
         </Button>
       </div>
@@ -152,9 +178,9 @@ export default function ExploreAssessments() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredAssessments?.map((assessment) => {
             const isLocked = !hasAccessToFeature(assessment.feature_key);
-            
+
             return (
-              <Card key={assessment.id} className={`relative ${isLocked ? 'opacity-75' : ''}`}>
+              <Card key={assessment.id} className={`relative ${isLocked ? "opacity-75" : ""}`}>
                 {isLocked && (
                   <div className="absolute -top-2 -left-2 z-10">
                     <Badge variant="secondary" className="shadow-lg">
@@ -174,9 +200,7 @@ export default function ExploreAssessments() {
                 <CardHeader>
                   <CardTitle className="text-lg">{assessment.name}</CardTitle>
                   {assessment.provider && (
-                    <p className="text-sm text-muted-foreground">
-                      by {assessment.provider}
-                    </p>
+                    <p className="text-sm text-muted-foreground">by {assessment.provider}</p>
                   )}
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant="secondary">{assessment.category}</Badge>
@@ -188,9 +212,9 @@ export default function ExploreAssessments() {
                     )}
                   </div>
                   {assessment.url && (
-                    <a 
-                      href={assessment.url} 
-                      target="_blank" 
+                    <a
+                      href={assessment.url}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-primary hover:underline inline-flex items-center gap-1"
                     >
@@ -201,15 +225,18 @@ export default function ExploreAssessments() {
                 </CardHeader>
                 {assessment.description && (
                   <CardContent className="pt-0">
-                    <RichTextDisplay content={assessment.description} className="text-sm text-muted-foreground" />
+                    <RichTextDisplay
+                      content={assessment.description}
+                      className="text-sm text-muted-foreground"
+                    />
                   </CardContent>
                 )}
                 <CardFooter>
                   {isLocked ? (
-                    <Button 
-                      variant="outline" 
-                      className="w-full" 
-                      onClick={() => navigate('/subscription')}
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => navigate("/subscription")}
                     >
                       <Zap className="h-4 w-4 mr-2" />
                       Upgrade to Access
@@ -222,7 +249,10 @@ export default function ExploreAssessments() {
                   ) : (
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button className="w-full" onClick={() => setSelectedAssessment(assessment)}>
+                        <Button
+                          className="w-full"
+                          onClick={() => setSelectedAssessment(assessment)}
+                        >
                           Express Interest
                         </Button>
                       </DialogTrigger>

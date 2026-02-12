@@ -150,7 +150,9 @@ export function DecisionReflection({ decisionId }: DecisionReflectionProps) {
               </div>
               <Slider
                 value={[reflection.alignment_with_values_score || 5]}
-                onValueChange={([score]) => updateReflection({ alignment_with_values_score: score })}
+                onValueChange={([score]) =>
+                  updateReflection({ alignment_with_values_score: score })
+                }
                 min={0}
                 max={10}
                 step={1}

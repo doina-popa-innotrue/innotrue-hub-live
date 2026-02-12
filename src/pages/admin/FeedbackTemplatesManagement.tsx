@@ -1,20 +1,40 @@
-import { useState } from 'react';
-import { useAdminCRUD } from '@/hooks/useAdminCRUD';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Plus, Edit2, Trash2 } from 'lucide-react';
-import { SortableFieldList } from '@/components/admin/SortableFieldList';
+import { useState } from "react";
+import { useAdminCRUD } from "@/hooks/useAdminCRUD";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Loader2, Plus, Edit2, Trash2 } from "lucide-react";
+import { SortableFieldList } from "@/components/admin/SortableFieldList";
 
 interface StructureField {
   id: string;
-  type: 'text' | 'textarea' | 'number' | 'rating' | 'select' | 'checkbox' | 'richtext';
+  type: "text" | "textarea" | "number" | "rating" | "select" | "checkbox" | "richtext";
   label: string;
   description?: string;
   required?: boolean;
@@ -33,8 +53,8 @@ interface Template {
 }
 
 const defaultFormData = {
-  name: '',
-  description: '',
+  name: "",
+  description: "",
   is_active: true,
   structure: [] as StructureField[],
 };
@@ -54,28 +74,29 @@ export default function FeedbackTemplatesManagement() {
     formData,
     setFormData,
   } = useAdminCRUD<Template, typeof defaultFormData>({
-    queryKey: 'feedback-templates',
-    tableName: 'feedback_template_types',
-    entityName: 'Template',
+    queryKey: "feedback-templates",
+    tableName: "feedback_template_types",
+    entityName: "Template",
     initialFormData: defaultFormData,
     mapItemToForm: (template) => ({
       name: template.name,
-      description: template.description || '',
+      description: template.description || "",
       is_active: template.is_active,
       structure: template.structure || [],
     }),
-    transform: (data) => data.map((t: any) => ({
-      ...t,
-      structure: (t.structure as unknown as StructureField[]) || [],
-    })),
+    transform: (data) =>
+      data.map((t: any) => ({
+        ...t,
+        structure: (t.structure as unknown as StructureField[]) || [],
+      })),
   });
 
   const addField = () => {
     const newField: StructureField = {
       id: crypto.randomUUID(),
-      type: 'text',
-      label: '',
-      description: '',
+      type: "text",
+      label: "",
+      description: "",
       required: false,
     };
     setFormData({ ...formData, structure: [...formData.structure, newField] });
@@ -118,7 +139,7 @@ export default function FeedbackTemplatesManagement() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{editingItem ? 'Edit Template' : 'New Template'}</DialogTitle>
+                <DialogTitle>{editingItem ? "Edit Template" : "New Template"}</DialogTitle>
                 <DialogDescription>
                   Define the structure for feedback that coaches/instructors can provide
                 </DialogDescription>
@@ -146,7 +167,10 @@ export default function FeedbackTemplatesManagement() {
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    <Switch checked={formData.is_active} onCheckedChange={(v) => setFormData({ ...formData, is_active: v })} />
+                    <Switch
+                      checked={formData.is_active}
+                      onCheckedChange={(v) => setFormData({ ...formData, is_active: v })}
+                    />
                     <Label>Active</Label>
                   </div>
                 </div>
@@ -188,7 +212,9 @@ export default function FeedbackTemplatesManagement() {
                                   <Label className="text-xs">Type</Label>
                                   <Select
                                     value={field.type}
-                                    onValueChange={(v) => updateField(index, { type: v as StructureField['type'] })}
+                                    onValueChange={(v) =>
+                                      updateField(index, { type: v as StructureField["type"] })
+                                    }
                                   >
                                     <SelectTrigger>
                                       <SelectValue />
@@ -209,20 +235,24 @@ export default function FeedbackTemplatesManagement() {
                               <div className="space-y-1">
                                 <Label className="text-xs">Description / Placeholder</Label>
                                 <Input
-                                  value={field.description || ''}
-                                  onChange={(e) => updateField(index, { description: e.target.value })}
+                                  value={field.description || ""}
+                                  onChange={(e) =>
+                                    updateField(index, { description: e.target.value })
+                                  }
                                   placeholder="Help text for this field"
                                 />
                               </div>
 
-                              {field.type === 'rating' && (
+                              {field.type === "rating" && (
                                 <div className="grid grid-cols-2 gap-3">
                                   <div className="space-y-1">
                                     <Label className="text-xs">Min</Label>
                                     <Input
                                       type="number"
                                       value={field.min ?? 1}
-                                      onChange={(e) => updateField(index, { min: Number(e.target.value) })}
+                                      onChange={(e) =>
+                                        updateField(index, { min: Number(e.target.value) })
+                                      }
                                     />
                                   </div>
                                   <div className="space-y-1">
@@ -230,20 +260,24 @@ export default function FeedbackTemplatesManagement() {
                                     <Input
                                       type="number"
                                       value={field.max ?? 5}
-                                      onChange={(e) => updateField(index, { max: Number(e.target.value) })}
+                                      onChange={(e) =>
+                                        updateField(index, { max: Number(e.target.value) })
+                                      }
                                     />
                                   </div>
                                 </div>
                               )}
 
-                              {field.type === 'select' && (
+                              {field.type === "select" && (
                                 <div className="space-y-1">
                                   <Label className="text-xs">Options (one per line)</Label>
                                   <Textarea
-                                    value={(field.options || []).join('\n')}
-                                    onChange={(e) => updateField(index, { 
-                                      options: e.target.value.split('\n').filter(o => o.trim()) 
-                                    })}
+                                    value={(field.options || []).join("\n")}
+                                    onChange={(e) =>
+                                      updateField(index, {
+                                        options: e.target.value.split("\n").filter((o) => o.trim()),
+                                      })
+                                    }
                                     placeholder="Option 1&#10;Option 2&#10;Option 3"
                                     rows={3}
                                   />
@@ -280,7 +314,7 @@ export default function FeedbackTemplatesManagement() {
                   </Button>
                   <Button type="submit" disabled={isSubmitting || !formData.name.trim()}>
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {editingItem ? 'Update' : 'Create'}
+                    {editingItem ? "Update" : "Create"}
                   </Button>
                 </div>
               </form>
@@ -292,7 +326,7 @@ export default function FeedbackTemplatesManagement() {
           <CardHeader>
             <CardTitle>Templates</CardTitle>
             <CardDescription>
-              {templates?.length || 0} template{templates?.length !== 1 ? 's' : ''} defined
+              {templates?.length || 0} template{templates?.length !== 1 ? "s" : ""} defined
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -316,22 +350,15 @@ export default function FeedbackTemplatesManagement() {
                     <TableRow key={template.id}>
                       <TableCell className="font-medium">{template.name}</TableCell>
                       <TableCell className="text-muted-foreground">
-                        {template.description || '-'}
+                        {template.description || "-"}
                       </TableCell>
                       <TableCell>{template.structure.length}</TableCell>
                       <TableCell>
-                        <Switch
-                          checked={template.is_active}
-                          disabled
-                        />
+                        <Switch checked={template.is_active} disabled />
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEdit(template)}
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(template)}>
                             <Edit2 className="h-4 w-4" />
                           </Button>
                           <Button

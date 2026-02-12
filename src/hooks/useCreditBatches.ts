@@ -1,8 +1,8 @@
-import { useCallback, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { useCallback, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface BonusBatch {
   id: string;
@@ -106,27 +106,27 @@ interface ConsumeResult {
 
 /**
  * Unified hook for managing user credits with lazy calculation.
- * 
+ *
  * Credits are calculated on-demand:
  * - Plan credits: Monthly allowance minus usage this billing period
  * - Bonus credits: Manual grants, purchases, rollovers (stored in batches)
- * 
+ *
  * This approach scales to millions of users without requiring cron jobs.
- * 
+ *
  * @example
  * ```tsx
  * function CreditDisplay() {
  *   const { summary, consume, isLoading } = useCreditBatches();
- * 
+ *
  *   const handleUseAI = async () => {
  *     const result = await consume(5, 'ai_insights', 'Used AI analysis');
  *     if (result.success) {
  *       toast.success('Credits consumed!');
  *     }
  *   };
- * 
+ *
  *   if (isLoading) return <Skeleton />;
- * 
+ *
  *   return (
  *     <div>
  *       <p>Plan: {summary?.plan_remaining} / {summary?.plan_allowance}</p>
@@ -143,21 +143,21 @@ export function useCreditBatches() {
   const queryClient = useQueryClient();
 
   // Fetch user credit summary using lazy calculation
-  const { 
-    data: summary, 
-    isLoading, 
-    refetch 
+  const {
+    data: summary,
+    isLoading,
+    refetch,
   } = useQuery({
-    queryKey: ['credit-batches-summary', user?.id],
+    queryKey: ["credit-batches-summary", user?.id],
     queryFn: async (): Promise<CreditSummary | null> => {
       if (!user) return null;
 
-      const { data, error } = await supabase.rpc('get_user_credit_summary_v2', {
+      const { data, error } = await supabase.rpc("get_user_credit_summary_v2", {
         p_user_id: user.id,
       });
 
       if (error) {
-        console.error('Error fetching credit summary:', error);
+        console.error("Error fetching credit summary:", error);
         return null;
       }
 
@@ -168,36 +168,43 @@ export function useCreditBatches() {
   });
 
   // Get available credits for a specific feature (plan + program + bonus)
-  const getFeatureCredits = useCallback((featureKey: string): number => {
-    if (!summary) return 0;
-    
-    // Feature-specific allocation minus usage
-    const allocation = summary.feature_allocations?.[featureKey] ?? 0;
-    const usage = summary.feature_usage?.[featureKey] ?? 0;
-    const featureRemaining = Math.max(0, allocation - usage);
-    
-    // Plus general plan credits (if no feature-specific allocation)
-    const planCredits = allocation > 0 ? 0 : summary.plan_remaining;
-    
-    // Plus program credits for this feature
-    const programCredits = summary.program_details
-      ?.filter(p => p.feature_key === featureKey)
-      .reduce((sum, p) => sum + p.remaining, 0) ?? 0;
-    
-    // Plus bonus credits (feature-specific or general)
-    const bonusCredits = summary.bonus_credits ?? 0;
-    
-    return featureRemaining + planCredits + programCredits + bonusCredits;
-  }, [summary]);
+  const getFeatureCredits = useCallback(
+    (featureKey: string): number => {
+      if (!summary) return 0;
+
+      // Feature-specific allocation minus usage
+      const allocation = summary.feature_allocations?.[featureKey] ?? 0;
+      const usage = summary.feature_usage?.[featureKey] ?? 0;
+      const featureRemaining = Math.max(0, allocation - usage);
+
+      // Plus general plan credits (if no feature-specific allocation)
+      const planCredits = allocation > 0 ? 0 : summary.plan_remaining;
+
+      // Plus program credits for this feature
+      const programCredits =
+        summary.program_details
+          ?.filter((p) => p.feature_key === featureKey)
+          .reduce((sum, p) => sum + p.remaining, 0) ?? 0;
+
+      // Plus bonus credits (feature-specific or general)
+      const bonusCredits = summary.bonus_credits ?? 0;
+
+      return featureRemaining + planCredits + programCredits + bonusCredits;
+    },
+    [summary],
+  );
 
   // Check if user can consume a specific amount for a feature
-  const canConsume = useCallback((amount: number, featureKey?: string): boolean => {
-    if (!summary) return false;
-    if (featureKey) {
-      return getFeatureCredits(featureKey) >= amount;
-    }
-    return summary.total_available >= amount;
-  }, [summary, getFeatureCredits]);
+  const canConsume = useCallback(
+    (amount: number, featureKey?: string): boolean => {
+      if (!summary) return false;
+      if (featureKey) {
+        return getFeatureCredits(featureKey) >= amount;
+      }
+      return summary.total_available >= amount;
+    },
+    [summary, getFeatureCredits],
+  );
 
   // Consume credits mutation
   const consumeMutation = useMutation({
@@ -215,15 +222,15 @@ export function useCreditBatches() {
       description?: string;
     }): Promise<ConsumeResult> => {
       if (!user) {
-        return { success: false, error: 'Not authenticated' };
+        return { success: false, error: "Not authenticated" };
       }
 
-      const { data, error } = await supabase.rpc('consume_credits_fifo', {
-        p_owner_type: 'user',
+      const { data, error } = await supabase.rpc("consume_credits_fifo", {
+        p_owner_type: "user",
         p_owner_id: user.id,
         p_amount: amount,
         p_feature_key: featureKey || undefined,
-        p_action_type: actionType || 'general',
+        p_action_type: actionType || "general",
         p_action_reference_id: actionReferenceId || undefined,
         p_description: description || undefined,
       });
@@ -236,8 +243,8 @@ export function useCreditBatches() {
     },
     onSuccess: (result) => {
       if (result.success) {
-        queryClient.invalidateQueries({ queryKey: ['credit-batches-summary'] });
-        queryClient.invalidateQueries({ queryKey: ['user-credit-transactions'] });
+        queryClient.invalidateQueries({ queryKey: ["credit-batches-summary"] });
+        queryClient.invalidateQueries({ queryKey: ["user-credit-transactions"] });
       }
     },
     onError: (error: Error) => {
@@ -246,31 +253,32 @@ export function useCreditBatches() {
   });
 
   // Consume credits helper
-  const consume = useCallback(async (
-    amount: number,
-    featureKey?: string,
-    description?: string,
-    actionType?: string,
-    actionReferenceId?: string,
-  ): Promise<ConsumeResult> => {
-    return consumeMutation.mutateAsync({
-      amount,
-      featureKey,
-      actionType,
-      actionReferenceId,
-      description,
-    });
-  }, [consumeMutation]);
+  const consume = useCallback(
+    async (
+      amount: number,
+      featureKey?: string,
+      description?: string,
+      actionType?: string,
+      actionReferenceId?: string,
+    ): Promise<ConsumeResult> => {
+      return consumeMutation.mutateAsync({
+        amount,
+        featureKey,
+        actionType,
+        actionReferenceId,
+        description,
+      });
+    },
+    [consumeMutation],
+  );
 
   // Batches expiring soon
   const expiringBatches = useMemo(() => {
     if (!summary?.bonus_batches) return [];
     const sevenDaysFromNow = new Date();
     sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-    
-    return summary.bonus_batches.filter(batch => 
-      new Date(batch.expires_at) <= sevenDaysFromNow
-    );
+
+    return summary.bonus_batches.filter((batch) => new Date(batch.expires_at) <= sevenDaysFromNow);
   }, [summary?.bonus_batches]);
 
   // Days until period reset
@@ -327,21 +335,21 @@ export function useOrgCreditBatches(organizationId: string | undefined) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { 
-    data: summary, 
-    isLoading, 
-    refetch 
+  const {
+    data: summary,
+    isLoading,
+    refetch,
   } = useQuery({
-    queryKey: ['org-credit-batches-summary', organizationId],
+    queryKey: ["org-credit-batches-summary", organizationId],
     queryFn: async (): Promise<OrgCreditSummary | null> => {
       if (!organizationId) return null;
 
-      const { data, error } = await supabase.rpc('get_org_credit_summary_v2', {
+      const { data, error } = await supabase.rpc("get_org_credit_summary_v2", {
         p_org_id: organizationId,
       });
 
       if (error) {
-        console.error('Error fetching org credit summary:', error);
+        console.error("Error fetching org credit summary:", error);
         return null;
       }
 
@@ -360,15 +368,15 @@ export function useOrgCreditBatches(organizationId: string | undefined) {
       description?: string;
     }): Promise<ConsumeResult> => {
       if (!organizationId) {
-        return { success: false, error: 'No organization selected' };
+        return { success: false, error: "No organization selected" };
       }
 
-      const { data, error } = await supabase.rpc('consume_credits_fifo', {
-        p_owner_type: 'org',
+      const { data, error } = await supabase.rpc("consume_credits_fifo", {
+        p_owner_type: "org",
         p_owner_id: organizationId,
         p_amount: amount,
         p_feature_key: undefined,
-        p_action_type: 'general',
+        p_action_type: "general",
         p_action_reference_id: undefined,
         p_description: description || undefined,
       });
@@ -381,8 +389,8 @@ export function useOrgCreditBatches(organizationId: string | undefined) {
     },
     onSuccess: (result) => {
       if (result.success) {
-        queryClient.invalidateQueries({ queryKey: ['org-credit-batches-summary', organizationId] });
-        queryClient.invalidateQueries({ queryKey: ['org-credit-transactions', organizationId] });
+        queryClient.invalidateQueries({ queryKey: ["org-credit-batches-summary", organizationId] });
+        queryClient.invalidateQueries({ queryKey: ["org-credit-transactions", organizationId] });
       }
     },
     onError: (error: Error) => {
@@ -390,12 +398,12 @@ export function useOrgCreditBatches(organizationId: string | undefined) {
     },
   });
 
-  const consume = useCallback(async (
-    amount: number,
-    description?: string,
-  ): Promise<ConsumeResult> => {
-    return consumeMutation.mutateAsync({ amount, description });
-  }, [consumeMutation]);
+  const consume = useCallback(
+    async (amount: number, description?: string): Promise<ConsumeResult> => {
+      return consumeMutation.mutateAsync({ amount, description });
+    },
+    [consumeMutation],
+  );
 
   return {
     summary,
@@ -427,7 +435,7 @@ export function useGrantCreditBatch() {
       featureKey,
       description,
     }: {
-      ownerType: 'user' | 'org';
+      ownerType: "user" | "org";
       ownerId: string;
       amount: number;
       expiresAt: Date;
@@ -435,7 +443,7 @@ export function useGrantCreditBatch() {
       featureKey?: string;
       description?: string;
     }): Promise<string> => {
-      const { data, error } = await supabase.rpc('grant_credit_batch', {
+      const { data, error } = await supabase.rpc("grant_credit_batch", {
         p_owner_type: ownerType,
         p_owner_id: ownerId,
         p_amount: amount,
@@ -453,9 +461,9 @@ export function useGrantCreditBatch() {
       return data as string;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['credit-batches-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['org-credit-batches-summary'] });
-      toast.success('Credits granted successfully');
+      queryClient.invalidateQueries({ queryKey: ["credit-batches-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["org-credit-batches-summary"] });
+      toast.success("Credits granted successfully");
     },
     onError: (error: Error) => {
       toast.error(error.message);
@@ -480,9 +488,9 @@ export function formatCredits(credits: number): string {
 /**
  * Format price in cents to a currency string.
  */
-export function formatPrice(cents: number, currency: string = 'EUR'): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
+export function formatPrice(cents: number, currency: string = "EUR"): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
     currency: currency.toUpperCase(),
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,

@@ -1,21 +1,42 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, FolderTree, GripVertical } from 'lucide-react';
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Pencil, Trash2, FolderTree, GripVertical } from "lucide-react";
 import {
   AdminPageHeader,
   AdminLoadingState,
   AdminEmptyState,
   AdminFormActions,
-} from '@/components/admin';
-import { useSkillCategories, useSkillCategoryMutations, SkillCategory } from '@/hooks/useSkillCategories';
+} from "@/components/admin";
+import {
+  useSkillCategories,
+  useSkillCategoryMutations,
+  SkillCategory,
+} from "@/hooks/useSkillCategories";
 import {
   DndContext,
   closestCenter,
@@ -24,16 +45,16 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from '@dnd-kit/core';
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { cn } from '@/lib/utils';
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { cn } from "@/lib/utils";
 
 type FormData = {
   name: string;
@@ -46,11 +67,11 @@ type FormData = {
 };
 
 const initialFormData: FormData = {
-  name: '',
-  key: '',
-  description: '',
-  color: '',
-  icon: '',
+  name: "",
+  key: "",
+  description: "",
+  color: "",
+  icon: "",
   order_index: 0,
   is_active: true,
 };
@@ -63,14 +84,9 @@ interface SortableRowProps {
 }
 
 function SortableRow({ category, onEdit, onDelete }: SortableRowProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: category.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: category.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -78,11 +94,7 @@ function SortableRow({ category, onEdit, onDelete }: SortableRowProps) {
   };
 
   return (
-    <TableRow
-      ref={setNodeRef}
-      style={style}
-      className={cn(isDragging && 'opacity-50 bg-muted')}
-    >
+    <TableRow ref={setNodeRef} style={style} className={cn(isDragging && "opacity-50 bg-muted")}>
       <TableCell>
         <button
           {...attributes}
@@ -92,40 +104,29 @@ function SortableRow({ category, onEdit, onDelete }: SortableRowProps) {
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </button>
       </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        {category.order_index}
-      </TableCell>
+      <TableCell className="text-muted-foreground text-sm">{category.order_index}</TableCell>
       <TableCell className="font-medium">
         <div className="flex items-center gap-2">
           {category.color && (
-            <div 
-              className="w-3 h-3 rounded-full" 
-              style={{ backgroundColor: category.color }}
-            />
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }} />
           )}
           {category.name}
         </div>
       </TableCell>
       <TableCell>
-        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-          {category.key}
-        </code>
+        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{category.key}</code>
       </TableCell>
       <TableCell className="text-muted-foreground max-w-[300px] truncate">
-        {category.description || '—'}
+        {category.description || "—"}
       </TableCell>
       <TableCell>
-        <Badge variant={category.is_active ? 'default' : 'secondary'}>
-          {category.is_active ? 'Active' : 'Inactive'}
+        <Badge variant={category.is_active ? "default" : "secondary"}>
+          {category.is_active ? "Active" : "Inactive"}
         </Badge>
       </TableCell>
       <TableCell>
         <div className="flex gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => onEdit(category)}
-          >
+          <Button size="icon" variant="ghost" onClick={() => onEdit(category)}>
             <Pencil className="h-4 w-4" />
           </Button>
           <AlertDialog>
@@ -138,7 +139,8 @@ function SortableRow({ category, onEdit, onDelete }: SortableRowProps) {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Category</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete "{category.name}"? Skills in this category will become uncategorized.
+                  Are you sure you want to delete "{category.name}"? Skills in this category will
+                  become uncategorized.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -159,7 +161,7 @@ function SortableRow({ category, onEdit, onDelete }: SortableRowProps) {
 }
 
 export default function SkillCategoriesManagement() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<SkillCategory | null>(null);
   const [formData, setFormData] = useState<FormData>(initialFormData);
@@ -167,23 +169,27 @@ export default function SkillCategoriesManagement() {
   const { data: categories = [], isLoading } = useSkillCategories({ activeOnly: false });
   const { createMutation, updateMutation, deleteMutation } = useSkillCategoryMutations();
 
-  const filteredCategories = categories.filter(cat =>
-    cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cat.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (cat.description?.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredCategories = categories.filter(
+    (cat) =>
+      cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      cat.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      cat.description?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const generateKey = (name: string) => {
-    return name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_|_$/g, "");
   };
 
   const handleNameChange = (name: string) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       // Auto-generate key when creating new category and key matches what would be generated from the previous name
       // (meaning user hasn't manually edited the key)
-      const shouldAutoGenerateKey = !editingCategory && 
-        (prev.key === '' || prev.key === generateKey(prev.name));
-      
+      const shouldAutoGenerateKey =
+        !editingCategory && (prev.key === "" || prev.key === generateKey(prev.name));
+
       return {
         ...prev,
         name,
@@ -194,7 +200,7 @@ export default function SkillCategoriesManagement() {
 
   const getNextOrderIndex = () => {
     if (categories.length === 0) return 10;
-    const maxOrder = Math.max(...categories.map(c => c.order_index));
+    const maxOrder = Math.max(...categories.map((c) => c.order_index));
     return maxOrder + 10; // Increment by 10 to allow manual reordering
   };
 
@@ -202,7 +208,7 @@ export default function SkillCategoriesManagement() {
     setEditingCategory(null);
     setFormData({
       ...initialFormData,
-      key: '', // Explicitly set empty key for new categories
+      key: "", // Explicitly set empty key for new categories
       order_index: getNextOrderIndex(),
     });
     setIsDialogOpen(true);
@@ -213,7 +219,7 @@ export default function SkillCategoriesManagement() {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -225,7 +231,7 @@ export default function SkillCategoriesManagement() {
 
       if (oldIndex !== -1 && newIndex !== -1) {
         const reordered = arrayMove(filteredCategories, oldIndex, newIndex);
-        
+
         // Update order_index for all affected items (use increments of 10)
         const updates = reordered.map((cat, index) => ({
           id: cat.id,
@@ -245,9 +251,9 @@ export default function SkillCategoriesManagement() {
     setFormData({
       name: category.name,
       key: category.key,
-      description: category.description || '',
-      color: category.color || '',
-      icon: category.icon || '',
+      description: category.description || "",
+      color: category.color || "",
+      icon: category.icon || "",
       order_index: category.order_index,
       is_active: category.is_active,
     });
@@ -256,7 +262,7 @@ export default function SkillCategoriesManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data = {
       name: formData.name,
       key: formData.key || generateKey(formData.name),
@@ -272,7 +278,7 @@ export default function SkillCategoriesManagement() {
     } else {
       await createMutation.mutateAsync(data);
     }
-    
+
     setIsDialogOpen(false);
     setFormData(initialFormData);
   };
@@ -304,7 +310,7 @@ export default function SkillCategoriesManagement() {
           <p className="text-xs text-muted-foreground">Unique identifier (auto-generated)</p>
         </div>
       </div>
-      
+
       <div className="space-y-2">
         <Label>Description</Label>
         <Textarea
@@ -337,7 +343,9 @@ export default function SkillCategoriesManagement() {
           <Input
             type="number"
             value={formData.order_index}
-            onChange={(e) => setFormData({ ...formData, order_index: parseInt(e.target.value) || 0 })}
+            onChange={(e) =>
+              setFormData({ ...formData, order_index: parseInt(e.target.value) || 0 })
+            }
           />
         </div>
       </div>
@@ -370,7 +378,7 @@ export default function SkillCategoriesManagement() {
         description="Manage categories for organizing skills into capability clusters"
         isDialogOpen={isDialogOpen}
         onDialogOpenChange={setIsDialogOpen}
-        dialogTitle={editingCategory ? 'Edit Category' : 'Add New Category'}
+        dialogTitle={editingCategory ? "Edit Category" : "Add New Category"}
         dialogContent={formContent}
         createButtonLabel="Add Category"
         actions={<FolderTree className="h-8 w-8 text-primary" />}
@@ -420,7 +428,7 @@ export default function SkillCategoriesManagement() {
                 </TableHeader>
                 <TableBody>
                   <SortableContext
-                    items={filteredCategories.map(c => c.id)}
+                    items={filteredCategories.map((c) => c.id)}
                     strategy={verticalListSortingStrategy}
                   >
                     {filteredCategories.map((category) => (

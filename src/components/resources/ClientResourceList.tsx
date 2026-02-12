@@ -1,13 +1,24 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, FileText, Download, ExternalLink, Eye, Lock, Link as LinkIcon, Image, Video, FolderOpen } from 'lucide-react';
-import { toast } from 'sonner';
-import { ResourceViewer } from './ResourceViewer';
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Loader2,
+  FileText,
+  Download,
+  ExternalLink,
+  Eye,
+  Lock,
+  Link as LinkIcon,
+  Image,
+  Video,
+  FolderOpen,
+} from "lucide-react";
+import { toast } from "sonner";
+import { ResourceViewer } from "./ResourceViewer";
 
 interface Resource {
   id: string;
@@ -47,33 +58,34 @@ export function ClientResourceList({ moduleId, programId }: ClientResourceListPr
 
   // Get user's enrolled programs
   const { data: enrolledProgramIds } = useQuery({
-    queryKey: ['user-enrolled-programs', user?.id],
+    queryKey: ["user-enrolled-programs", user?.id],
     queryFn: async () => {
       if (!user) return [];
-      
+
       const { data, error } = await supabase
-        .from('client_enrollments')
-        .select('program_id')
-        .eq('client_user_id', user.id)
-        .eq('status', 'active');
-      
+        .from("client_enrollments")
+        .select("program_id")
+        .eq("client_user_id", user.id)
+        .eq("status", "active");
+
       if (error) throw error;
-      return data.map(e => e.program_id);
+      return data.map((e) => e.program_id);
     },
     enabled: !!user,
   });
 
   // Fetch assigned resources for this module (direct assignments + from collections)
   const { data: assignments, isLoading } = useQuery({
-    queryKey: ['client-module-resources', moduleId],
+    queryKey: ["client-module-resources", moduleId],
     queryFn: async () => {
       const allAssignments: ResourceAssignment[] = [];
       const seenResourceIds = new Set<string>();
 
       // Fetch direct resource assignments
       const { data: directData, error: directError } = await supabase
-        .from('module_resource_assignments')
-        .select(`
+        .from("module_resource_assignments")
+        .select(
+          `
           *,
           resource:resource_id(
             id,
@@ -88,35 +100,40 @@ export function ClientResourceList({ moduleId, programId }: ClientResourceListPr
             mime_type,
             downloadable
           )
-        `)
-        .eq('module_id', moduleId)
-        .order('order_index', { ascending: true });
+        `,
+        )
+        .eq("module_id", moduleId)
+        .order("order_index", { ascending: true });
 
       if (directError) throw directError;
 
       // Fetch program assignments for direct resources
-      const directResourceIds = directData.map(a => a.resource_id);
+      const directResourceIds = directData.map((a) => a.resource_id);
       const { data: directProgramLinks } = await supabase
-        .from('resource_library_programs')
-        .select('resource_id, program_id')
-        .in('resource_id', directResourceIds);
+        .from("resource_library_programs")
+        .select("resource_id, program_id")
+        .in("resource_id", directResourceIds);
 
       // Add direct assignments
-      directData.forEach(assignment => {
+      directData.forEach((assignment) => {
         seenResourceIds.add(assignment.resource_id);
         allAssignments.push({
           ...assignment,
           resource: {
             ...assignment.resource,
-            program_ids: directProgramLinks?.filter(pl => pl.resource_id === assignment.resource_id).map(pl => pl.program_id) || [],
-          }
+            program_ids:
+              directProgramLinks
+                ?.filter((pl) => pl.resource_id === assignment.resource_id)
+                .map((pl) => pl.program_id) || [],
+          },
         });
       });
 
       // Fetch collection links and their resources
       const { data: collectionLinks } = await (supabase as any)
-        .from('module_collection_links')
-        .select(`
+        .from("module_collection_links")
+        .select(
+          `
           collection_id,
           resource_collections(
             id,
@@ -138,14 +155,15 @@ export function ClientResourceList({ moduleId, programId }: ClientResourceListPr
               )
             )
           )
-        `)
-        .eq('module_id', moduleId)
-        .order('order_index', { ascending: true });
+        `,
+        )
+        .eq("module_id", moduleId)
+        .order("order_index", { ascending: true });
 
       // Add collection resources (avoiding duplicates)
       if (collectionLinks) {
         const collectionResourceIds: string[] = [];
-        
+
         collectionLinks.forEach((link: any) => {
           if (link.resource_collections?.resource_collection_items) {
             link.resource_collections.resource_collection_items.forEach((item: any) => {
@@ -170,14 +188,17 @@ export function ClientResourceList({ moduleId, programId }: ClientResourceListPr
         // Fetch program assignments for collection resources
         if (collectionResourceIds.length > 0) {
           const { data: collectionProgramLinks } = await supabase
-            .from('resource_library_programs')
-            .select('resource_id, program_id')
-            .in('resource_id', collectionResourceIds);
+            .from("resource_library_programs")
+            .select("resource_id, program_id")
+            .in("resource_id", collectionResourceIds);
 
           // Update program_ids for collection resources
-          allAssignments.forEach(assignment => {
+          allAssignments.forEach((assignment) => {
             if (assignment.fromCollection) {
-              assignment.resource.program_ids = collectionProgramLinks?.filter(pl => pl.resource_id === assignment.resource_id).map(pl => pl.program_id) || [];
+              assignment.resource.program_ids =
+                collectionProgramLinks
+                  ?.filter((pl) => pl.resource_id === assignment.resource_id)
+                  .map((pl) => pl.program_id) || [];
             }
           });
         }
@@ -188,32 +209,32 @@ export function ClientResourceList({ moduleId, programId }: ClientResourceListPr
   });
 
   // Filter resources based on program enrollment
-  const accessibleAssignments = assignments?.filter(assignment => {
+  const accessibleAssignments = assignments?.filter((assignment) => {
     const programIds = assignment.resource.program_ids || [];
-    
+
     // If resource is public (no program restrictions), allow access
     if (programIds.length === 0) return true;
-    
+
     // Check if user is enrolled in any of the required programs
-    return programIds.some(pid => enrolledProgramIds?.includes(pid));
+    return programIds.some((pid) => enrolledProgramIds?.includes(pid));
   });
 
   const handleDownload = async (resource: Resource) => {
     if (!resource.file_path || !resource.downloadable) return;
 
     const { data, error } = await supabase.storage
-      .from('resource-library')
+      .from("resource-library")
       .download(resource.file_path);
 
     if (error) {
-      toast.error('Failed to download file');
+      toast.error("Failed to download file");
       return;
     }
 
     const url = URL.createObjectURL(data);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = resource.file_name || 'download';
+    a.download = resource.file_name || "download";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -226,7 +247,7 @@ export function ClientResourceList({ moduleId, programId }: ClientResourceListPr
   };
 
   const formatFileSize = (bytes: number | null) => {
-    if (!bytes) return '';
+    if (!bytes) return "";
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -234,20 +255,24 @@ export function ClientResourceList({ moduleId, programId }: ClientResourceListPr
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'link': return <LinkIcon className="h-4 w-4" />;
-      case 'image': return <Image className="h-4 w-4" />;
-      case 'video': return <Video className="h-4 w-4" />;
-      default: return <FileText className="h-4 w-4" />;
+      case "link":
+        return <LinkIcon className="h-4 w-4" />;
+      case "image":
+        return <Image className="h-4 w-4" />;
+      case "video":
+        return <Video className="h-4 w-4" />;
+      default:
+        return <FileText className="h-4 w-4" />;
     }
   };
 
   const canViewInBrowser = (mimeType: string | null): boolean => {
     if (!mimeType) return false;
     return (
-      mimeType === 'application/pdf' ||
-      mimeType.startsWith('image/') ||
-      mimeType.startsWith('video/') ||
-      mimeType.startsWith('text/')
+      mimeType === "application/pdf" ||
+      mimeType.startsWith("image/") ||
+      mimeType.startsWith("video/") ||
+      mimeType.startsWith("text/")
     );
   };
 
@@ -285,7 +310,9 @@ export function ClientResourceList({ moduleId, programId }: ClientResourceListPr
                       {assignment.resource.resource_type}
                     </Badge>
                     {assignment.is_required && (
-                      <Badge variant="default" className="text-xs">Required</Badge>
+                      <Badge variant="default" className="text-xs">
+                        Required
+                      </Badge>
                     )}
                     {!assignment.resource.downloadable && assignment.resource.file_path && (
                       <Badge variant="secondary" className="text-xs gap-1">
@@ -306,9 +333,7 @@ export function ClientResourceList({ moduleId, programId }: ClientResourceListPr
                     </p>
                   )}
                   {assignment.notes && (
-                    <p className="text-sm text-muted-foreground mt-1 italic">
-                      {assignment.notes}
-                    </p>
+                    <p className="text-sm text-muted-foreground mt-1 italic">{assignment.notes}</p>
                   )}
                   <div className="flex items-center gap-2 mt-3 flex-wrap">
                     {assignment.resource.file_path && (

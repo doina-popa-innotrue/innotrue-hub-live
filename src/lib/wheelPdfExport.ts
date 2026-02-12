@@ -1,10 +1,10 @@
-import jsPDF from 'jspdf';
-import { WHEEL_OF_LIFE_CATEGORIES, WheelCategory } from './wheelOfLifeCategories';
+import jsPDF from "jspdf";
+import { WHEEL_OF_LIFE_CATEGORIES, WheelCategory } from "./wheelOfLifeCategories";
 
 export async function generateWheelPdf(
   userName: string,
   ratings: Record<WheelCategory, number>,
-  notes?: string
+  notes?: string,
 ): Promise<void> {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -13,20 +13,25 @@ export async function generateWheelPdf(
   // Title
   doc.setFontSize(24);
   doc.setTextColor(59, 130, 246); // Primary blue
-  doc.text('Wheel of Life Assessment', pageWidth / 2, yPosition, { align: 'center' });
+  doc.text("Wheel of Life Assessment", pageWidth / 2, yPosition, { align: "center" });
   yPosition += 15;
 
   // Subtitle
   doc.setFontSize(12);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Results for ${userName}`, pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(`Results for ${userName}`, pageWidth / 2, yPosition, { align: "center" });
   yPosition += 8;
-  doc.text(`Generated on ${new Date().toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  })}`, pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(
+    `Generated on ${new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })}`,
+    pageWidth / 2,
+    yPosition,
+    { align: "center" },
+  );
   yPosition += 20;
 
   // Divider line
@@ -42,8 +47,8 @@ export async function generateWheelPdf(
 
   // Summary box
   doc.setFillColor(249, 250, 251); // Light gray background
-  doc.roundedRect(20, yPosition, pageWidth - 40, 25, 3, 3, 'F');
-  
+  doc.roundedRect(20, yPosition, pageWidth - 40, 25, 3, 3, "F");
+
   doc.setFontSize(11);
   doc.setTextColor(60, 60, 60);
   const summaryY = yPosition + 10;
@@ -55,7 +60,7 @@ export async function generateWheelPdf(
   // Categories header
   doc.setFontSize(14);
   doc.setTextColor(30, 30, 30);
-  doc.text('Your Ratings by Category', 20, yPosition);
+  doc.text("Your Ratings by Category", 20, yPosition);
   yPosition += 10;
 
   // Categories with scores
@@ -67,16 +72,16 @@ export async function generateWheelPdf(
   leftColumn.forEach((cat, idx) => {
     const label = WHEEL_OF_LIFE_CATEGORIES[cat];
     const score = ratings[cat];
-    const y = yPosition + (idx * 12);
-    
+    const y = yPosition + idx * 12;
+
     // Category name
     doc.setTextColor(60, 60, 60);
     doc.text(label, 25, y);
-    
+
     // Score bar background
     doc.setFillColor(230, 230, 230);
-    doc.roundedRect(70, y - 4, 30, 6, 1, 1, 'F');
-    
+    doc.roundedRect(70, y - 4, 30, 6, 1, 1, "F");
+
     // Score bar filled
     const fillWidth = (score / 10) * 30;
     if (score <= 4) {
@@ -86,8 +91,8 @@ export async function generateWheelPdf(
     } else {
       doc.setFillColor(34, 197, 94); // Green
     }
-    doc.roundedRect(70, y - 4, fillWidth, 6, 1, 1, 'F');
-    
+    doc.roundedRect(70, y - 4, fillWidth, 6, 1, 1, "F");
+
     // Score number
     doc.setTextColor(30, 30, 30);
     doc.text(`${score}`, 105, y);
@@ -96,17 +101,17 @@ export async function generateWheelPdf(
   rightColumn.forEach((cat, idx) => {
     const label = WHEEL_OF_LIFE_CATEGORIES[cat];
     const score = ratings[cat];
-    const y = yPosition + (idx * 12);
+    const y = yPosition + idx * 12;
     const xOffset = pageWidth / 2 + 5;
-    
+
     // Category name
     doc.setTextColor(60, 60, 60);
     doc.text(label, xOffset, y);
-    
+
     // Score bar background
     doc.setFillColor(230, 230, 230);
-    doc.roundedRect(xOffset + 45, y - 4, 30, 6, 1, 1, 'F');
-    
+    doc.roundedRect(xOffset + 45, y - 4, 30, 6, 1, 1, "F");
+
     // Score bar filled
     const fillWidth = (score / 10) * 30;
     if (score <= 4) {
@@ -116,8 +121,8 @@ export async function generateWheelPdf(
     } else {
       doc.setFillColor(34, 197, 94);
     }
-    doc.roundedRect(xOffset + 45, y - 4, fillWidth, 6, 1, 1, 'F');
-    
+    doc.roundedRect(xOffset + 45, y - 4, fillWidth, 6, 1, 1, "F");
+
     // Score number
     doc.setTextColor(30, 30, 30);
     doc.text(`${score}`, xOffset + 80, y);
@@ -132,25 +137,25 @@ export async function generateWheelPdf(
 
   doc.setFontSize(14);
   doc.setTextColor(30, 30, 30);
-  doc.text('Areas for Growth', 20, yPosition);
+  doc.text("Areas for Growth", 20, yPosition);
   yPosition += 8;
-  
+
   doc.setFontSize(10);
   doc.setTextColor(80, 80, 80);
   growthAreas.forEach((cat, idx) => {
-    doc.text(`• ${WHEEL_OF_LIFE_CATEGORIES[cat]} (${ratings[cat]}/10)`, 25, yPosition + (idx * 6));
+    doc.text(`• ${WHEEL_OF_LIFE_CATEGORIES[cat]} (${ratings[cat]}/10)`, 25, yPosition + idx * 6);
   });
   yPosition += 25;
 
   doc.setFontSize(14);
   doc.setTextColor(30, 30, 30);
-  doc.text('Your Strengths', 20, yPosition);
+  doc.text("Your Strengths", 20, yPosition);
   yPosition += 8;
-  
+
   doc.setFontSize(10);
   doc.setTextColor(80, 80, 80);
   strengthAreas.forEach((cat, idx) => {
-    doc.text(`• ${WHEEL_OF_LIFE_CATEGORIES[cat]} (${ratings[cat]}/10)`, 25, yPosition + (idx * 6));
+    doc.text(`• ${WHEEL_OF_LIFE_CATEGORIES[cat]} (${ratings[cat]}/10)`, 25, yPosition + idx * 6);
   });
   yPosition += 30;
 
@@ -158,9 +163,9 @@ export async function generateWheelPdf(
   if (notes && notes.trim()) {
     doc.setFontSize(14);
     doc.setTextColor(30, 30, 30);
-    doc.text('Your Notes', 20, yPosition);
+    doc.text("Your Notes", 20, yPosition);
     yPosition += 8;
-    
+
     doc.setFontSize(10);
     doc.setTextColor(80, 80, 80);
     const splitNotes = doc.splitTextToSize(notes, pageWidth - 50);
@@ -172,18 +177,20 @@ export async function generateWheelPdf(
   const footerY = doc.internal.pageSize.getHeight() - 20;
   doc.setFontSize(9);
   doc.setTextColor(150, 150, 150);
-  doc.text('InnoTrue Hub - Your Personal Development Partner', pageWidth / 2, footerY, { align: 'center' });
-  doc.text('www.innotruehub.com', pageWidth / 2, footerY + 5, { align: 'center' });
+  doc.text("InnoTrue Hub - Your Personal Development Partner", pageWidth / 2, footerY, {
+    align: "center",
+  });
+  doc.text("www.innotruehub.com", pageWidth / 2, footerY + 5, { align: "center" });
 
   // Save
-  const fileName = `wheel-of-life-${new Date().toISOString().split('T')[0]}.pdf`;
+  const fileName = `wheel-of-life-${new Date().toISOString().split("T")[0]}.pdf`;
   doc.save(fileName);
 }
 
 export function generateWheelPdfBlob(
   userName: string,
   ratings: Record<WheelCategory, number>,
-  notes?: string
+  notes?: string,
 ): Blob {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -192,20 +199,25 @@ export function generateWheelPdfBlob(
   // Title
   doc.setFontSize(24);
   doc.setTextColor(59, 130, 246);
-  doc.text('Wheel of Life Assessment', pageWidth / 2, yPosition, { align: 'center' });
+  doc.text("Wheel of Life Assessment", pageWidth / 2, yPosition, { align: "center" });
   yPosition += 15;
 
   // Subtitle
   doc.setFontSize(12);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Results for ${userName}`, pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(`Results for ${userName}`, pageWidth / 2, yPosition, { align: "center" });
   yPosition += 8;
-  doc.text(`Generated on ${new Date().toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  })}`, pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(
+    `Generated on ${new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })}`,
+    pageWidth / 2,
+    yPosition,
+    { align: "center" },
+  );
   yPosition += 20;
 
   // Divider
@@ -220,8 +232,8 @@ export function generateWheelPdfBlob(
   const lowest = Math.min(...values);
 
   doc.setFillColor(249, 250, 251);
-  doc.roundedRect(20, yPosition, pageWidth - 40, 25, 3, 3, 'F');
-  
+  doc.roundedRect(20, yPosition, pageWidth - 40, 25, 3, 3, "F");
+
   doc.setFontSize(11);
   doc.setTextColor(60, 60, 60);
   const summaryY = yPosition + 10;
@@ -233,17 +245,17 @@ export function generateWheelPdfBlob(
   // Categories
   doc.setFontSize(14);
   doc.setTextColor(30, 30, 30);
-  doc.text('Your Ratings by Category', 20, yPosition);
+  doc.text("Your Ratings by Category", 20, yPosition);
   yPosition += 10;
 
   doc.setFontSize(11);
   const categories = Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[];
-  
+
   categories.forEach((cat, idx) => {
     const label = WHEEL_OF_LIFE_CATEGORIES[cat];
     const score = ratings[cat];
-    const y = yPosition + (idx * 8);
-    
+    const y = yPosition + idx * 8;
+
     doc.setTextColor(60, 60, 60);
     doc.text(`${label}: ${score}/10`, 25, y);
   });
@@ -254,7 +266,9 @@ export function generateWheelPdfBlob(
   const footerY = doc.internal.pageSize.getHeight() - 20;
   doc.setFontSize(9);
   doc.setTextColor(150, 150, 150);
-  doc.text('InnoTrue Hub - Your Personal Development Partner', pageWidth / 2, footerY, { align: 'center' });
+  doc.text("InnoTrue Hub - Your Personal Development Partner", pageWidth / 2, footerY, {
+    align: "center",
+  });
 
-  return doc.output('blob');
+  return doc.output("blob");
 }

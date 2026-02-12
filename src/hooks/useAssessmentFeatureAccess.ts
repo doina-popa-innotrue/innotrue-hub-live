@@ -1,4 +1,4 @@
-import { useEntitlements } from './useEntitlements';
+import { useEntitlements } from "./useEntitlements";
 
 interface AssessmentFeatureAccess {
   accessibleFeatureKeys: Set<string>;
@@ -9,13 +9,13 @@ interface AssessmentFeatureAccess {
 /**
  * Hook for checking assessment feature access.
  * Thin wrapper around useEntitlements that filters for assessment-related features.
- * 
+ *
  * @deprecated Consider using useEntitlements directly with hasFeature() and getFeaturesByPrefix('assessments')
  */
 export function useAssessmentFeatureAccess(): AssessmentFeatureAccess {
   const { isLoading, hasFeature, getFeaturesByPrefix } = useEntitlements();
 
-  const accessibleFeatureKeys = getFeaturesByPrefix('assessments');
+  const accessibleFeatureKeys = getFeaturesByPrefix("assessments");
 
   const hasAccessToFeature = (featureKey: string | null): boolean => {
     // If no feature key is set, assessment is accessible to all

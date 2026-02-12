@@ -73,10 +73,12 @@ export default function CoachingDecisionDetail() {
     try {
       const { data, error } = await supabase
         .from("decisions")
-        .select(`
+        .select(
+          `
           *,
           profiles!decisions_user_id_fkey (name)
-        `)
+        `,
+        )
         .eq("id", id!)
         .eq("shared_with_coach", true)
         .single();
@@ -99,15 +101,17 @@ export default function CoachingDecisionDetail() {
     try {
       const { data, error } = await supabase
         .from("decision_comments")
-        .select(`
+        .select(
+          `
           *,
           profiles!decision_comments_author_id_fkey (name)
-        `)
+        `,
+        )
         .eq("decision_id", id!)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      setComments(data as any || []);
+      setComments((data as any) || []);
     } catch (error: any) {
       toast({
         title: "Error loading comments",
@@ -123,11 +127,11 @@ export default function CoachingDecisionDetail() {
     setSubmitting(true);
     try {
       const { error } = await supabase.from("decision_comments").insert({
-          decision_id: id!,
-          author_id: user?.id ?? undefined,
-          author_role: "coach",
-          body: newComment,
-        } as any);
+        decision_id: id!,
+        author_id: user?.id ?? undefined,
+        author_role: "coach",
+        body: newComment,
+      } as any);
 
       if (error) throw error;
 
@@ -208,9 +212,7 @@ export default function CoachingDecisionDetail() {
                 <Badge variant="outline" className="capitalize">
                   {decision.status.replace("_", " ")}
                 </Badge>
-                {decision.importance && (
-                  <Badge className="capitalize">{decision.importance}</Badge>
-                )}
+                {decision.importance && <Badge className="capitalize">{decision.importance}</Badge>}
                 {decision.urgency && (
                   <Badge variant="secondary" className="capitalize">
                     {decision.urgency} urgency

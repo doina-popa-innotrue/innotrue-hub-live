@@ -1,52 +1,52 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Users, BookOpen, GraduationCap, TrendingUp, Plus, Building2, Coins } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useOrgCreditBatches } from '@/hooks/useCreditBatches';
-import { subDays } from 'date-fns';
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Users, BookOpen, GraduationCap, TrendingUp, Plus, Building2, Coins } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useOrgCreditBatches } from "@/hooks/useCreditBatches";
+import { subDays } from "date-fns";
 
 export default function OrgAdminDashboard() {
   const { organizationMembership, user } = useAuth();
 
   // Org credit batches for balance widget
   const { totalAvailable, isLoading: creditsLoading } = useOrgCreditBatches(
-    organizationMembership?.organization_id
+    organizationMembership?.organization_id,
   );
 
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['org-stats', organizationMembership?.organization_id],
+    queryKey: ["org-stats", organizationMembership?.organization_id],
     queryFn: async () => {
       if (!organizationMembership?.organization_id) return null;
 
       // Get member count
       const { count: memberCount } = await supabase
-        .from('organization_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', organizationMembership.organization_id)
-        .eq('is_active', true);
+        .from("organization_members")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", organizationMembership.organization_id)
+        .eq("is_active", true);
 
       // Get members who joined in the last 30 days for growth calculation
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
       const { count: newMembersCount } = await supabase
-        .from('organization_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', organizationMembership.organization_id)
-        .eq('is_active', true)
-        .gte('joined_at', thirtyDaysAgo);
+        .from("organization_members")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", organizationMembership.organization_id)
+        .eq("is_active", true)
+        .gte("joined_at", thirtyDaysAgo);
 
       // Get all member user IDs first
       const { data: members } = await supabase
-        .from('organization_members')
-        .select('user_id')
-        .eq('organization_id', organizationMembership.organization_id)
-        .eq('is_active', true);
+        .from("organization_members")
+        .select("user_id")
+        .eq("organization_id", organizationMembership.organization_id)
+        .eq("is_active", true);
 
-      const memberUserIds = members?.map(m => m.user_id) || [];
+      const memberUserIds = members?.map((m) => m.user_id) || [];
 
       // Get enrollment counts for org members
       let programCount = 0;
@@ -56,25 +56,28 @@ export default function OrgAdminDashboard() {
       if (memberUserIds.length > 0) {
         // Get enrollments for these users (using staff_enrollments view to exclude financial data)
         const { data: enrollments } = await supabase
-          .from('staff_enrollments')
-          .select('id, program_id, status')
-          .in('client_user_id', memberUserIds);
+          .from("staff_enrollments")
+          .select("id, program_id, status")
+          .in("client_user_id", memberUserIds);
 
         if (enrollments) {
           enrollmentCount = enrollments.length;
-          activeEnrollmentCount = enrollments.filter(e => e.status === 'active').length;
-          
+          activeEnrollmentCount = enrollments.filter((e) => e.status === "active").length;
+
           // Count unique programs
-          const uniquePrograms = new Set(enrollments.map(e => e.program_id));
+          const uniquePrograms = new Set(enrollments.map((e) => e.program_id));
           programCount = uniquePrograms.size;
         }
       }
 
       // Calculate growth percentage
       const previousTotal = (memberCount || 0) - (newMembersCount || 0);
-      const growthPercent = previousTotal > 0
-        ? Math.round(((newMembersCount || 0) / previousTotal) * 100)
-        : (newMembersCount || 0) > 0 ? 100 : 0;
+      const growthPercent =
+        previousTotal > 0
+          ? Math.round(((newMembersCount || 0) / previousTotal) * 100)
+          : (newMembersCount || 0) > 0
+            ? 100
+            : 0;
 
       return {
         memberCount: memberCount || 0,
@@ -89,35 +92,37 @@ export default function OrgAdminDashboard() {
   });
 
   const { data: recentMembers, isLoading: membersLoading } = useQuery({
-    queryKey: ['org-recent-members', organizationMembership?.organization_id],
+    queryKey: ["org-recent-members", organizationMembership?.organization_id],
     queryFn: async () => {
       if (!organizationMembership?.organization_id) return [];
 
       const { data } = await supabase
-        .from('organization_members')
-        .select(`
+        .from("organization_members")
+        .select(
+          `
           id,
           role,
           joined_at,
           user_id
-        `)
-        .eq('organization_id', organizationMembership.organization_id)
-        .eq('is_active', true)
-        .order('joined_at', { ascending: false })
+        `,
+        )
+        .eq("organization_id", organizationMembership.organization_id)
+        .eq("is_active", true)
+        .order("joined_at", { ascending: false })
         .limit(5);
 
       if (!data || data.length === 0) return [];
 
       // Fetch profile info for these members
-      const userIds = data.map(m => m.user_id);
+      const userIds = data.map((m) => m.user_id);
       const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, name')
-        .in('id', userIds);
+        .from("profiles")
+        .select("id, name")
+        .in("id", userIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
 
-      return data.map(member => ({
+      return data.map((member) => ({
         ...member,
         profile: profileMap.get(member.user_id) as { id: string; name: string | null } | undefined,
       }));
@@ -139,32 +144,32 @@ export default function OrgAdminDashboard() {
 
   const statCards = [
     {
-      title: 'Total Members',
+      title: "Total Members",
       value: stats?.memberCount || 0,
       icon: Users,
-      description: 'Active organization members',
-      color: 'text-primary',
+      description: "Active organization members",
+      color: "text-primary",
     },
     {
-      title: 'Programs',
+      title: "Programs",
       value: stats?.programCount || 0,
       icon: BookOpen,
-      description: 'Programs with enrollments',
-      color: 'text-chart-2',
+      description: "Programs with enrollments",
+      color: "text-chart-2",
     },
     {
-      title: 'Enrollments',
+      title: "Enrollments",
       value: stats?.activeEnrollmentCount || 0,
       icon: GraduationCap,
       description: `${stats?.enrollmentCount || 0} total enrollments`,
-      color: 'text-chart-3',
+      color: "text-chart-3",
     },
     {
-      title: 'Growth',
+      title: "Growth",
       value: `+${stats?.growthPercent || 0}%`,
       icon: TrendingUp,
       description: `${stats?.newMembersCount || 0} new this month`,
-      color: 'text-chart-4',
+      color: "text-chart-4",
     },
   ];
 
@@ -225,13 +230,9 @@ export default function OrgAdminDashboard() {
           {creditsLoading ? (
             <Skeleton className="h-10 w-32" />
           ) : (
-            <div className="text-3xl font-bold text-primary">
-              {totalAvailable.toLocaleString()}
-            </div>
+            <div className="text-3xl font-bold text-primary">{totalAvailable.toLocaleString()}</div>
           )}
-          <p className="text-sm text-muted-foreground mt-1">
-            Available for program enrollments
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Available for program enrollments</p>
         </CardContent>
       </Card>
 
@@ -268,11 +269,11 @@ export default function OrgAdminDashboard() {
                       <Users className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium">{member.profile?.name || 'Unknown'}</p>
+                      <p className="font-medium">{member.profile?.name || "Unknown"}</p>
                     </div>
                   </div>
                   <Badge variant="secondary" className="capitalize">
-                    {member.role.replace('org_', '')}
+                    {member.role.replace("org_", "")}
                   </Badge>
                 </div>
               ))}
@@ -298,9 +299,7 @@ export default function OrgAdminDashboard() {
                 <Users className="h-5 w-5" />
                 Manage Members
               </CardTitle>
-              <CardDescription>
-                Invite, remove, or update member roles
-              </CardDescription>
+              <CardDescription>Invite, remove, or update member roles</CardDescription>
             </CardHeader>
           </Link>
         </Card>
@@ -312,9 +311,7 @@ export default function OrgAdminDashboard() {
                 <BookOpen className="h-5 w-5" />
                 Organization Programs
               </CardTitle>
-              <CardDescription>
-                View and manage your organization's programs
-              </CardDescription>
+              <CardDescription>View and manage your organization's programs</CardDescription>
             </CardHeader>
           </Link>
         </Card>
@@ -326,9 +323,7 @@ export default function OrgAdminDashboard() {
                 <Building2 className="h-5 w-5" />
                 Organization Settings
               </CardTitle>
-              <CardDescription>
-                Configure your organization profile
-              </CardDescription>
+              <CardDescription>Configure your organization profile</CardDescription>
             </CardHeader>
           </Link>
         </Card>

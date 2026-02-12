@@ -1,18 +1,45 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus, Trash2, FileText, GripVertical, Download, ExternalLink, ChevronUp, ChevronDown, Lock, Layers, FolderOpen } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  FileText,
+  GripVertical,
+  Download,
+  ExternalLink,
+  ChevronUp,
+  ChevronDown,
+  Lock,
+  Layers,
+  FolderOpen,
+} from "lucide-react";
+import { toast } from "sonner";
 
 interface Resource {
   id: string;
@@ -61,21 +88,22 @@ interface ModuleResourceAssignmentProps {
 export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<string>('resources');
+  const [activeTab, setActiveTab] = useState<string>("resources");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
-  const [selectedResourceId, setSelectedResourceId] = useState<string>('');
-  const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
-  const [notes, setNotes] = useState('');
+  const [selectedResourceId, setSelectedResourceId] = useState<string>("");
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string>("");
+  const [notes, setNotes] = useState("");
   const [isRequired, setIsRequired] = useState(false);
 
   // Fetch assigned resources for this module
   const { data: assignments, isLoading: loadingAssignments } = useQuery({
-    queryKey: ['module-resource-assignments', moduleId],
+    queryKey: ["module-resource-assignments", moduleId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('module_resource_assignments')
-        .select(`
+        .from("module_resource_assignments")
+        .select(
+          `
           *,
           resource:resource_id(
             id,
@@ -89,9 +117,10 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
             file_size,
             downloadable
           )
-        `)
-        .eq('module_id', moduleId)
-        .order('order_index', { ascending: true });
+        `,
+        )
+        .eq("module_id", moduleId)
+        .order("order_index", { ascending: true });
 
       if (error) throw error;
       return data as ResourceAssignment[];
@@ -100,14 +129,14 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
 
   // Fetch available resources from library (published & active)
   const { data: availableResources, isLoading: loadingResources } = useQuery({
-    queryKey: ['available-resources'],
+    queryKey: ["available-resources"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('resource_library')
-        .select('id, canonical_id, title, description, resource_type')
-        .eq('is_active', true)
-        .eq('is_published', true)
-        .order('title', { ascending: true });
+        .from("resource_library")
+        .select("id, canonical_id, title, description, resource_type")
+        .eq("is_active", true)
+        .eq("is_published", true)
+        .order("title", { ascending: true });
 
       if (error) throw error;
       return data as Resource[];
@@ -116,16 +145,18 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
 
   // Fetch linked collections for this module
   const { data: collectionLinks, isLoading: loadingCollections } = useQuery({
-    queryKey: ['module-collection-links', moduleId],
+    queryKey: ["module-collection-links", moduleId],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
-        .from('module_collection_links')
-        .select(`
+        .from("module_collection_links")
+        .select(
+          `
           *,
           resource_collections(id, name, description, is_active)
-        `)
-        .eq('module_id', moduleId)
-        .order('order_index', { ascending: true });
+        `,
+        )
+        .eq("module_id", moduleId)
+        .order("order_index", { ascending: true });
 
       if (error) throw error;
       return data as CollectionLink[];
@@ -134,13 +165,13 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
 
   // Fetch available collections
   const { data: availableCollections, isLoading: loadingAvailableCollections } = useQuery({
-    queryKey: ['available-collections'],
+    queryKey: ["available-collections"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
-        .from('resource_collections')
-        .select('id, name, description, is_active')
-        .eq('is_active', true)
-        .order('name', { ascending: true });
+        .from("resource_collections")
+        .select("id, name, description, is_active")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
 
       if (error) throw error;
       return data as ResourceCollection[];
@@ -148,73 +179,77 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
   });
 
   // Filter out already linked collections
-  const unlinkedCollections = availableCollections?.filter(
-    c => !collectionLinks?.some(cl => cl.collection_id === c.id)
-  ) || [];
+  const unlinkedCollections =
+    availableCollections?.filter(
+      (c) => !collectionLinks?.some((cl) => cl.collection_id === c.id),
+    ) || [];
 
   // Filter out already assigned resources
-  const unassignedResources = availableResources?.filter(
-    r => !assignments?.some(a => a.resource_id === r.id)
-  ) || [];
+  const unassignedResources =
+    availableResources?.filter((r) => !assignments?.some((a) => a.resource_id === r.id)) || [];
 
   const assignMutation = useMutation({
     mutationFn: async () => {
-      if (!user || !selectedResourceId) throw new Error('Invalid data');
+      if (!user || !selectedResourceId) throw new Error("Invalid data");
 
       const nextOrderIndex = (assignments?.length || 0) + 1;
 
-      const { error } = await supabase
-        .from('module_resource_assignments')
-        .insert({
-          module_id: moduleId,
-          resource_id: selectedResourceId,
-          order_index: nextOrderIndex,
-          is_required: isRequired,
-          notes: notes || null,
-          assigned_by: user.id,
-        });
+      const { error } = await supabase.from("module_resource_assignments").insert({
+        module_id: moduleId,
+        resource_id: selectedResourceId,
+        order_index: nextOrderIndex,
+        is_required: isRequired,
+        notes: notes || null,
+        assigned_by: user.id,
+      });
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['module-resource-assignments', moduleId] });
+      queryClient.invalidateQueries({ queryKey: ["module-resource-assignments", moduleId] });
       setDialogOpen(false);
-      setSelectedResourceId('');
-      setNotes('');
+      setSelectedResourceId("");
+      setNotes("");
       setIsRequired(false);
-      toast.success('Resource assigned to module');
+      toast.success("Resource assigned to module");
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to assign resource');
+      toast.error(error.message || "Failed to assign resource");
     },
   });
 
   const removeMutation = useMutation({
     mutationFn: async (assignmentId: string) => {
       const { error } = await supabase
-        .from('module_resource_assignments')
+        .from("module_resource_assignments")
         .delete()
-        .eq('id', assignmentId);
+        .eq("id", assignmentId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['module-resource-assignments', moduleId] });
-      toast.success('Resource removed from module');
+      queryClient.invalidateQueries({ queryKey: ["module-resource-assignments", moduleId] });
+      toast.success("Resource removed from module");
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to remove resource');
+      toast.error(error.message || "Failed to remove resource");
     },
   });
 
   const reorderMutation = useMutation({
-    mutationFn: async ({ assignmentId, direction }: { assignmentId: string; direction: 'up' | 'down' }) => {
+    mutationFn: async ({
+      assignmentId,
+      direction,
+    }: {
+      assignmentId: string;
+      direction: "up" | "down";
+    }) => {
       if (!assignments) return;
 
-      const currentIndex = assignments.findIndex(a => a.id === assignmentId);
+      const currentIndex = assignments.findIndex((a) => a.id === assignmentId);
       if (currentIndex === -1) return;
 
-      const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+      const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
       if (newIndex < 0 || newIndex >= assignments.length) return;
 
       const current = assignments[currentIndex];
@@ -222,84 +257,88 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
 
       // Swap order indices
       await supabase
-        .from('module_resource_assignments')
+        .from("module_resource_assignments")
         .update({ order_index: target.order_index })
-        .eq('id', current.id);
+        .eq("id", current.id);
 
       await supabase
-        .from('module_resource_assignments')
+        .from("module_resource_assignments")
         .update({ order_index: current.order_index })
-        .eq('id', target.id);
+        .eq("id", target.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['module-resource-assignments', moduleId] });
+      queryClient.invalidateQueries({ queryKey: ["module-resource-assignments", moduleId] });
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to reorder');
+      toast.error(error.message || "Failed to reorder");
     },
   });
 
   const toggleRequiredMutation = useMutation({
-    mutationFn: async ({ assignmentId, isRequired }: { assignmentId: string; isRequired: boolean }) => {
+    mutationFn: async ({
+      assignmentId,
+      isRequired,
+    }: {
+      assignmentId: string;
+      isRequired: boolean;
+    }) => {
       const { error } = await supabase
-        .from('module_resource_assignments')
+        .from("module_resource_assignments")
         .update({ is_required: isRequired })
-        .eq('id', assignmentId);
+        .eq("id", assignmentId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['module-resource-assignments', moduleId] });
+      queryClient.invalidateQueries({ queryKey: ["module-resource-assignments", moduleId] });
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to update');
+      toast.error(error.message || "Failed to update");
     },
   });
 
   // Collection mutations
   const linkCollectionMutation = useMutation({
     mutationFn: async () => {
-      if (!user || !selectedCollectionId) throw new Error('Invalid data');
+      if (!user || !selectedCollectionId) throw new Error("Invalid data");
 
       const nextOrderIndex = (collectionLinks?.length || 0) + 1;
 
-      const { error } = await (supabase as any)
-        .from('module_collection_links')
-        .insert({
-          module_id: moduleId,
-          collection_id: selectedCollectionId,
-          order_index: nextOrderIndex,
-          created_by: user.id,
-        });
+      const { error } = await (supabase as any).from("module_collection_links").insert({
+        module_id: moduleId,
+        collection_id: selectedCollectionId,
+        order_index: nextOrderIndex,
+        created_by: user.id,
+      });
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['module-collection-links', moduleId] });
+      queryClient.invalidateQueries({ queryKey: ["module-collection-links", moduleId] });
       setCollectionDialogOpen(false);
-      setSelectedCollectionId('');
-      toast.success('Collection linked to module');
+      setSelectedCollectionId("");
+      toast.success("Collection linked to module");
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to link collection');
+      toast.error(error.message || "Failed to link collection");
     },
   });
 
   const unlinkCollectionMutation = useMutation({
     mutationFn: async (linkId: string) => {
       const { error } = await (supabase as any)
-        .from('module_collection_links')
+        .from("module_collection_links")
         .delete()
-        .eq('id', linkId);
+        .eq("id", linkId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['module-collection-links', moduleId] });
-      toast.success('Collection unlinked from module');
+      queryClient.invalidateQueries({ queryKey: ["module-collection-links", moduleId] });
+      toast.success("Collection unlinked from module");
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to unlink collection');
+      toast.error(error.message || "Failed to unlink collection");
     },
   });
 
@@ -307,18 +346,18 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
     if (!assignment.resource.file_path) return;
 
     const { data, error } = await supabase.storage
-      .from('resource-library')
+      .from("resource-library")
       .download(assignment.resource.file_path);
 
     if (error) {
-      toast.error('Failed to download file');
+      toast.error("Failed to download file");
       return;
     }
 
     const url = URL.createObjectURL(data);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = assignment.resource.file_name || 'download';
+    a.download = assignment.resource.file_name || "download";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -326,7 +365,7 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
   };
 
   const formatFileSize = (bytes: number | null) => {
-    if (!bytes) return '';
+    if (!bytes) return "";
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -349,9 +388,7 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
       <CardHeader className="pb-4">
         <div>
           <CardTitle className="text-lg">Module Resources</CardTitle>
-          <CardDescription>
-            Assign resources and collections to this module
-          </CardDescription>
+          <CardDescription>Assign resources and collections to this module</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
@@ -362,19 +399,23 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
                 <FileText className="h-4 w-4" />
                 Resources
                 {assignments && assignments.length > 0 && (
-                  <Badge variant="secondary" className="ml-1">{assignments.length}</Badge>
+                  <Badge variant="secondary" className="ml-1">
+                    {assignments.length}
+                  </Badge>
                 )}
               </TabsTrigger>
               <TabsTrigger value="collections" className="gap-2">
                 <Layers className="h-4 w-4" />
                 Collections
                 {collectionLinks && collectionLinks.length > 0 && (
-                  <Badge variant="secondary" className="ml-1">{collectionLinks.length}</Badge>
+                  <Badge variant="secondary" className="ml-1">
+                    {collectionLinks.length}
+                  </Badge>
                 )}
               </TabsTrigger>
             </TabsList>
 
-            {activeTab === 'resources' && (
+            {activeTab === "resources" && (
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" disabled={unassignedResources.length === 0}>
@@ -443,11 +484,13 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
                     <Button variant="outline" onClick={() => setDialogOpen(false)}>
                       Cancel
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => assignMutation.mutate()}
                       disabled={!selectedResourceId || assignMutation.isPending}
                     >
-                      {assignMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      {assignMutation.isPending && (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      )}
                       Assign
                     </Button>
                   </DialogFooter>
@@ -455,7 +498,7 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
               </Dialog>
             )}
 
-            {activeTab === 'collections' && (
+            {activeTab === "collections" && (
               <Dialog open={collectionDialogOpen} onOpenChange={setCollectionDialogOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" disabled={unlinkedCollections.length === 0}>
@@ -502,11 +545,13 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
                     <Button variant="outline" onClick={() => setCollectionDialogOpen(false)}>
                       Cancel
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => linkCollectionMutation.mutate()}
                       disabled={!selectedCollectionId || linkCollectionMutation.isPending}
                     >
-                      {linkCollectionMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      {linkCollectionMutation.isPending && (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      )}
                       Link
                     </Button>
                   </DialogFooter>
@@ -520,7 +565,9 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
               <div className="text-center py-6 text-muted-foreground">
                 <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
                 <p className="text-sm">No resources assigned yet.</p>
-                <p className="text-xs">Assign resources from the library to make them available to clients.</p>
+                <p className="text-xs">
+                  Assign resources from the library to make them available to clients.
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -535,7 +582,9 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
                         size="icon"
                         className="h-6 w-6"
                         disabled={index === 0}
-                        onClick={() => reorderMutation.mutate({ assignmentId: assignment.id, direction: 'up' })}
+                        onClick={() =>
+                          reorderMutation.mutate({ assignmentId: assignment.id, direction: "up" })
+                        }
                       >
                         <ChevronUp className="h-4 w-4" />
                       </Button>
@@ -545,7 +594,9 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
                         size="icon"
                         className="h-6 w-6"
                         disabled={index === (assignments?.length || 0) - 1}
-                        onClick={() => reorderMutation.mutate({ assignmentId: assignment.id, direction: 'down' })}
+                        onClick={() =>
+                          reorderMutation.mutate({ assignmentId: assignment.id, direction: "down" })
+                        }
                       >
                         <ChevronDown className="h-4 w-4" />
                       </Button>
@@ -558,7 +609,9 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
                           {assignment.resource.resource_type}
                         </Badge>
                         {assignment.is_required && (
-                          <Badge variant="default" className="text-xs">Required</Badge>
+                          <Badge variant="default" className="text-xs">
+                            Required
+                          </Badge>
                         )}
                       </div>
                       {assignment.resource.description && (
@@ -594,12 +647,12 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
                           </Badge>
                         )}
                         {assignment.resource.url && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            asChild
-                          >
-                            <a href={assignment.resource.url} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm" asChild>
+                            <a
+                              href={assignment.resource.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
                               <ExternalLink className="h-3 w-3 mr-1" />
                               Open Link
                             </a>
@@ -612,8 +665,11 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
                       <div className="flex items-center gap-1">
                         <Switch
                           checked={assignment.is_required}
-                          onCheckedChange={(checked) => 
-                            toggleRequiredMutation.mutate({ assignmentId: assignment.id, isRequired: checked })
+                          onCheckedChange={(checked) =>
+                            toggleRequiredMutation.mutate({
+                              assignmentId: assignment.id,
+                              isRequired: checked,
+                            })
                           }
                           id={`required-${assignment.id}`}
                         />
@@ -625,7 +681,7 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
                         variant="ghost"
                         size="icon"
                         onClick={() => {
-                          if (confirm('Remove this resource from the module?')) {
+                          if (confirm("Remove this resource from the module?")) {
                             removeMutation.mutate(assignment.id);
                           }
                         }}
@@ -648,7 +704,9 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
               <div className="text-center py-6 text-muted-foreground">
                 <Layers className="h-10 w-10 mx-auto mb-3 opacity-50" />
                 <p className="text-sm">No collections linked yet.</p>
-                <p className="text-xs">Link collections to dynamically include all their resources.</p>
+                <p className="text-xs">
+                  Link collections to dynamically include all their resources.
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -672,7 +730,7 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
                       variant="ghost"
                       size="icon"
                       onClick={() => {
-                        if (confirm('Unlink this collection from the module?')) {
+                        if (confirm("Unlink this collection from the module?")) {
                           unlinkCollectionMutation.mutate(link.id);
                         }
                       }}

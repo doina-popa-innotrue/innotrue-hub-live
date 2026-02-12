@@ -1,27 +1,41 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, Link as LinkIcon, CheckCircle, XCircle, Crown, Zap, Globe, Clock, Shield } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import { emailChangeSchema, passwordChangeSchema } from '@/lib/validations';
-import { z } from 'zod';
-import { AIPreferencesSection } from '@/components/ai/AIPreferencesSection';
-import { TrackSelector } from '@/components/tracks/TrackSelector';
-import { TimezoneSelect } from '@/components/profile/TimezoneSelect';
-import { MeetingTimesPreference, MeetingTimePreference } from '@/components/profile/MeetingTimesPreference';
-import { SchedulingUrlInput } from '@/components/profile/SchedulingUrlInput';
-import { CoachSharingConsentSection } from '@/components/consent/CoachSharingConsentSection';
-import { OrganizationSharingConsentSection } from '@/components/consent/OrganizationSharingConsentSection';
-import { DataExportSection } from '@/components/gdpr/DataExportSection';
-import { PrivacyPolicyLink, TermsOfServiceLink } from '@/components/gdpr/PrivacyLinks';
-import { AnalyticsOptOut } from '@/components/privacy/AnalyticsOptOut';
-import { usePageView } from '@/hooks/useAnalytics';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Loader2,
+  Upload,
+  Link as LinkIcon,
+  CheckCircle,
+  XCircle,
+  Crown,
+  Zap,
+  Globe,
+  Clock,
+  Shield,
+} from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { emailChangeSchema, passwordChangeSchema } from "@/lib/validations";
+import { z } from "zod";
+import { AIPreferencesSection } from "@/components/ai/AIPreferencesSection";
+import { TrackSelector } from "@/components/tracks/TrackSelector";
+import { TimezoneSelect } from "@/components/profile/TimezoneSelect";
+import {
+  MeetingTimesPreference,
+  MeetingTimePreference,
+} from "@/components/profile/MeetingTimesPreference";
+import { SchedulingUrlInput } from "@/components/profile/SchedulingUrlInput";
+import { CoachSharingConsentSection } from "@/components/consent/CoachSharingConsentSection";
+import { OrganizationSharingConsentSection } from "@/components/consent/OrganizationSharingConsentSection";
+import { DataExportSection } from "@/components/gdpr/DataExportSection";
+import { PrivacyPolicyLink, TermsOfServiceLink } from "@/components/gdpr/PrivacyLinks";
+import { AnalyticsOptOut } from "@/components/privacy/AnalyticsOptOut";
+import { usePageView } from "@/hooks/useAnalytics";
 
 import {
   AlertDialog,
@@ -33,7 +47,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 
 interface NotificationPreferences {
   profile_updates: boolean;
@@ -70,8 +84,8 @@ interface GoogleDriveMapping {
 
 export default function AccountSettings() {
   // Track page view for analytics
-  usePageView('Account Settings');
-  
+  usePageView("Account Settings");
+
   const { user, userRoles, loading: authLoading, organizationMembership } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -81,20 +95,20 @@ export default function AccountSettings() {
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingTimezone, setSavingTimezone] = useState(false);
   const [savingMeetingTimes, setSavingMeetingTimes] = useState(false);
-  
-  const [name, setName] = useState('');
-  const [username, setUsername] = useState('');
-  const [jobTitle, setJobTitle] = useState('');
-  const [organisation, setOrganisation] = useState('');
-  const [tagline, setTagline] = useState('');
+
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [organisation, setOrganisation] = useState("");
+  const [tagline, setTagline] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [newEmail, setNewEmail] = useState('');
-  const [currentEmail, setCurrentEmail] = useState(user?.email || '');
-  const [timezone, setTimezone] = useState('UTC');
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [currentEmail, setCurrentEmail] = useState(user?.email || "");
+  const [timezone, setTimezone] = useState("UTC");
   const [meetingTimes, setMeetingTimes] = useState<MeetingTimePreference[]>([]);
-  const [schedulingUrl, setSchedulingUrl] = useState('');
+  const [schedulingUrl, setSchedulingUrl] = useState("");
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>({
     profile_updates: true,
     password_changes: true,
@@ -118,35 +132,40 @@ export default function AccountSettings() {
   const [currentPlan, setCurrentPlan] = useState<{ name: string; key: string } | null>(null);
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
-  
+
   // External tools state (user-managed)
   const [lucidMapping, setLucidMapping] = useState<ExternalToolMapping | null>(null);
   const [miroMapping, setMiroMapping] = useState<ExternalToolMapping | null>(null);
   const [muralMapping, setMuralMapping] = useState<ExternalToolMapping | null>(null);
-  const [lucidEmail, setLucidEmail] = useState('');
-  const [lucidUrl, setLucidUrl] = useState('');
-  const [miroEmail, setMiroEmail] = useState('');
-  const [miroUrl, setMiroUrl] = useState('');
-  const [muralEmail, setMuralEmail] = useState('');
-  const [muralUrl, setMuralUrl] = useState('');
+  const [lucidEmail, setLucidEmail] = useState("");
+  const [lucidUrl, setLucidUrl] = useState("");
+  const [miroEmail, setMiroEmail] = useState("");
+  const [miroUrl, setMiroUrl] = useState("");
+  const [muralEmail, setMuralEmail] = useState("");
+  const [muralUrl, setMuralUrl] = useState("");
   const [savingLucid, setSavingLucid] = useState(false);
   const [savingMiro, setSavingMiro] = useState(false);
   const [savingMural, setSavingMural] = useState(false);
-  
+
   // Google Drive (admin-assigned, read-only for user)
   const [googleDriveMapping, setGoogleDriveMapping] = useState<GoogleDriveMapping | null>(null);
-  
-  const isAdmin = userRoles.includes('admin');
+
+  const isAdmin = userRoles.includes("admin");
 
   useEffect(() => {
-    console.log('[AccountSettings] Auth state:', { user: !!user, userId: user?.id, authLoading, isUpdatingEmail });
+    console.log("[AccountSettings] Auth state:", {
+      user: !!user,
+      userId: user?.id,
+      authLoading,
+      isUpdatingEmail,
+    });
     if (user && !isUpdatingEmail && !authLoading) {
-      console.log('[AccountSettings] Loading account data for user:', user.id);
+      console.log("[AccountSettings] Loading account data for user:", user.id);
       loadAccountData();
     } else if (!authLoading && !user) {
-      console.log('[AccountSettings] No user found after auth loading completed');
+      console.log("[AccountSettings] No user found after auth loading completed");
       setLoading(false);
-      setLoadError('No authenticated user found');
+      setLoadError("No authenticated user found");
     }
   }, [user, isUpdatingEmail, authLoading]);
 
@@ -161,30 +180,30 @@ export default function AccountSettings() {
     setLoadError(null);
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
         .single();
 
       if (error) throw error;
 
-      setName(data.name || '');
-      setUsername(data.username || '');
-      setJobTitle(data.job_title || '');
-      setOrganisation(data.organisation || '');
-      setTagline(data.tagline || '');
+      setName(data.name || "");
+      setUsername(data.username || "");
+      setJobTitle(data.job_title || "");
+      setOrganisation(data.organisation || "");
+      setTagline(data.tagline || "");
       setAvatarUrl(data.avatar_url || null);
-      setTimezone(data.timezone || 'UTC');
+      setTimezone(data.timezone || "UTC");
       setMeetingTimes((data.preferred_meeting_times as unknown as MeetingTimePreference[]) || []);
-      setSchedulingUrl(data.scheduling_url || '');
+      setSchedulingUrl(data.scheduling_url || "");
 
       // Load billing info from billing_info table
 
       // Load notification preferences
       const { data: prefsData, error: prefsError } = await supabase
-        .from('notification_preferences')
-        .select('*')
-        .eq('user_id', user.id)
+        .from("notification_preferences")
+        .select("*")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (!prefsError && prefsData) {
@@ -204,9 +223,9 @@ export default function AccountSettings() {
 
       // Load Academy mapping
       const { data: academyData, error: academyError } = await supabase
-        .from('talentlms_users')
-        .select('talentlms_user_id, talentlms_username')
-        .eq('user_id', user.id)
+        .from("talentlms_users")
+        .select("talentlms_user_id, talentlms_username")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (!academyError && academyData) {
@@ -215,9 +234,9 @@ export default function AccountSettings() {
 
       // Load Community mapping
       const { data: communityData, error: communityError } = await supabase
-        .from('circle_users')
-        .select('circle_user_id, circle_email')
-        .eq('user_id', user.id)
+        .from("circle_users")
+        .select("circle_user_id, circle_email")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (!communityError && communityData) {
@@ -226,46 +245,46 @@ export default function AccountSettings() {
 
       // Load external tools (user-managed)
       const { data: lucidData } = await supabase
-        .from('lucid_users')
-        .select('lucid_email, lucid_url')
-        .eq('user_id', user.id)
+        .from("lucid_users")
+        .select("lucid_email, lucid_url")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (lucidData) {
         setLucidMapping({ email: lucidData.lucid_email, url: lucidData.lucid_url });
-        setLucidEmail(lucidData.lucid_email || '');
-        setLucidUrl(lucidData.lucid_url || '');
+        setLucidEmail(lucidData.lucid_email || "");
+        setLucidUrl(lucidData.lucid_url || "");
       }
 
       const { data: miroData } = await supabase
-        .from('miro_users')
-        .select('miro_email, miro_url')
-        .eq('user_id', user.id)
+        .from("miro_users")
+        .select("miro_email, miro_url")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (miroData) {
         setMiroMapping({ email: miroData.miro_email, url: miroData.miro_url });
-        setMiroEmail(miroData.miro_email || '');
-        setMiroUrl(miroData.miro_url || '');
+        setMiroEmail(miroData.miro_email || "");
+        setMiroUrl(miroData.miro_url || "");
       }
 
       const { data: muralData } = await supabase
-        .from('mural_users')
-        .select('mural_email, mural_url')
-        .eq('user_id', user.id)
+        .from("mural_users")
+        .select("mural_email, mural_url")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (muralData) {
         setMuralMapping({ email: muralData.mural_email, url: muralData.mural_url });
-        setMuralEmail(muralData.mural_email || '');
-        setMuralUrl(muralData.mural_url || '');
+        setMuralEmail(muralData.mural_email || "");
+        setMuralUrl(muralData.mural_url || "");
       }
 
       // Load Google Drive (admin-assigned, read-only)
       const { data: driveData } = await supabase
-        .from('google_drive_users')
-        .select('folder_url, folder_name')
-        .eq('user_id', user.id)
+        .from("google_drive_users")
+        .select("folder_url, folder_name")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (driveData) {
@@ -275,9 +294,9 @@ export default function AccountSettings() {
       // Load current plan
       if (data.plan_id) {
         const { data: planData } = await supabase
-          .from('plans')
-          .select('name, key')
-          .eq('id', data.plan_id)
+          .from("plans")
+          .select("name, key")
+          .eq("id", data.plan_id)
           .single();
 
         if (planData) {
@@ -285,12 +304,12 @@ export default function AccountSettings() {
         }
       }
     } catch (error: any) {
-      console.error('Error loading account data:', error);
-      setLoadError(error.message || 'Failed to load account data');
+      console.error("Error loading account data:", error);
+      setLoadError(error.message || "Failed to load account data");
       toast({
-        title: 'Error loading account',
+        title: "Error loading account",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -306,13 +325,13 @@ export default function AccountSettings() {
       }
 
       const file = event.target.files[0];
-      
-      const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+      const validImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
       if (!validImageTypes.includes(file.type)) {
         toast({
-          title: 'Invalid file type',
-          description: 'Please upload a valid image file (JPEG, PNG, GIF, or WebP)',
-          variant: 'destructive',
+          title: "Invalid file type",
+          description: "Please upload a valid image file (JPEG, PNG, GIF, or WebP)",
+          variant: "destructive",
         });
         return;
       }
@@ -320,48 +339,46 @@ export default function AccountSettings() {
       const maxSize = 5 * 1024 * 1024;
       if (file.size > maxSize) {
         toast({
-          title: 'File too large',
-          description: 'Please upload an image smaller than 5MB',
-          variant: 'destructive',
+          title: "File too large",
+          description: "Please upload an image smaller than 5MB",
+          variant: "destructive",
         });
         return;
       }
 
-      const fileExt = file.name.split('.').pop();
-      const userId = user?.id ?? 'unknown';
+      const fileExt = file.name.split(".").pop();
+      const userId = user?.id ?? "unknown";
       const fileName = `${userId}/${Math.random()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file);
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(fileName);
 
       setAvatarUrl(publicUrl);
 
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update({ avatar_url: publicUrl })
-        .eq('id', user?.id ?? '');
+        .eq("id", user?.id ?? "");
 
       if (error) throw error;
 
       // Notify other components that profile was updated
-      window.dispatchEvent(new CustomEvent('profile-updated'));
+      window.dispatchEvent(new CustomEvent("profile-updated"));
 
       toast({
-        title: 'Avatar uploaded',
-        description: 'Your profile picture has been updated.',
+        title: "Avatar uploaded",
+        description: "Your profile picture has been updated.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error uploading avatar',
+        title: "Error uploading avatar",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setUploading(false);
@@ -373,29 +390,29 @@ export default function AccountSettings() {
       setSavingName(true);
 
       const { error } = await supabase
-        .from('profiles')
-        .update({ 
+        .from("profiles")
+        .update({
           name,
           job_title: jobTitle || null,
           organisation: organisation || null,
           tagline: tagline || null,
         })
-        .eq('id', user?.id ?? '');
+        .eq("id", user?.id ?? "");
 
       if (error) throw error;
 
       // Notify other components that profile was updated
-      window.dispatchEvent(new CustomEvent('profile-updated'));
+      window.dispatchEvent(new CustomEvent("profile-updated"));
 
       toast({
-        title: 'Profile updated',
-        description: 'Your profile information has been saved successfully.',
+        title: "Profile updated",
+        description: "Your profile information has been saved successfully.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error saving profile',
+        title: "Error saving profile",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setSavingName(false);
@@ -407,21 +424,21 @@ export default function AccountSettings() {
       setSavingTimezone(true);
 
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update({ timezone })
-        .eq('id', user?.id ?? '');
+        .eq("id", user?.id ?? "");
 
       if (error) throw error;
 
       toast({
-        title: 'Timezone updated',
-        description: 'Your timezone has been saved.',
+        title: "Timezone updated",
+        description: "Your timezone has been saved.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error saving timezone',
+        title: "Error saving timezone",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setSavingTimezone(false);
@@ -433,30 +450,29 @@ export default function AccountSettings() {
       setSavingMeetingTimes(true);
 
       const { error } = await supabase
-        .from('profiles')
-        .update({ 
+        .from("profiles")
+        .update({
           preferred_meeting_times: meetingTimes as unknown as any,
-          scheduling_url: schedulingUrl || null
+          scheduling_url: schedulingUrl || null,
         })
-        .eq('id', user?.id ?? '');
+        .eq("id", user?.id ?? "");
 
       if (error) throw error;
 
       toast({
-        title: 'Meeting preferences updated',
-        description: 'Your preferred meeting times and scheduling link have been saved.',
+        title: "Meeting preferences updated",
+        description: "Your preferred meeting times and scheduling link have been saved.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error saving meeting preferences',
+        title: "Error saving meeting preferences",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setSavingMeetingTimes(false);
     }
   };
-
 
   const changeEmail = async () => {
     try {
@@ -466,9 +482,9 @@ export default function AccountSettings() {
 
       if (validated.email === user?.email) {
         toast({
-          title: 'Same email',
-          description: 'This is already your current email address.',
-          variant: 'destructive',
+          title: "Same email",
+          description: "This is already your current email address.",
+          variant: "destructive",
         });
         return;
       }
@@ -484,21 +500,19 @@ export default function AccountSettings() {
       // Hash the token before storing (using SHA-256)
       const encoder = new TextEncoder();
       const data = encoder.encode(verificationToken);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const tokenHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      const tokenHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 
       // Store the email change request with hashed token
-      const { error: requestError } = await supabase
-        .from('email_change_requests')
-        .insert({
-          user_id: user?.id ?? '',
-          old_email: oldEmail!,
-          new_email: newEmailAddress,
-          verification_token: tokenHash, // Store the hash, not the plain token
-          token_hash: tokenHash,
-          expires_at: expiresAt.toISOString(),
-        });
+      const { error: requestError } = await supabase.from("email_change_requests").insert({
+        user_id: user?.id ?? "",
+        old_email: oldEmail!,
+        new_email: newEmailAddress,
+        verification_token: tokenHash, // Store the hash, not the plain token
+        token_hash: tokenHash,
+        expires_at: expiresAt.toISOString(),
+      });
 
       if (requestError) {
         throw requestError;
@@ -506,28 +520,28 @@ export default function AccountSettings() {
 
       // Send confirmation email to new address
       const verificationUrl = `${window.location.origin}/account/verify-email-change?token=${verificationToken}`;
-      
-      const { error: emailError } = await supabase.functions.invoke('send-notification-email', {
+
+      const { error: emailError } = await supabase.functions.invoke("send-notification-email", {
         body: {
           email: newEmailAddress,
           name: name,
-          type: 'email_change_verification',
+          type: "email_change_verification",
           timestamp: new Date().toISOString(),
           verificationUrl,
         },
       });
 
       if (emailError) {
-        console.error('Error sending verification email:', emailError);
+        console.error("Error sending verification email:", emailError);
       }
 
       // Also send notification to old email
       if (notificationPrefs.email_changes && oldEmail) {
-        await supabase.functions.invoke('send-notification-email', {
+        await supabase.functions.invoke("send-notification-email", {
           body: {
             email: oldEmail,
             name: name,
-            type: 'email_change_initiated',
+            type: "email_change_initiated",
             timestamp: new Date().toISOString(),
             programName: newEmailAddress,
           },
@@ -535,29 +549,33 @@ export default function AccountSettings() {
       }
 
       toast({
-        title: 'Verification email sent',
-        description: 'Please check your new email address and click the confirmation link to complete the email change.',
+        title: "Verification email sent",
+        description:
+          "Please check your new email address and click the confirmation link to complete the email change.",
       });
 
-      setNewEmail('');
+      setNewEmail("");
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         toast({
-          title: 'Validation error',
+          title: "Validation error",
           description: error.errors[0].message,
-          variant: 'destructive',
+          variant: "destructive",
         });
-      } else if (error.message?.includes('already registered') || error.message?.includes('already been registered')) {
+      } else if (
+        error.message?.includes("already registered") ||
+        error.message?.includes("already been registered")
+      ) {
         toast({
-          title: 'Email already in use',
-          description: 'This email is already registered. Please use a different email address.',
-          variant: 'destructive',
+          title: "Email already in use",
+          description: "This email is already registered. Please use a different email address.",
+          variant: "destructive",
         });
       } else {
         toast({
-          title: 'Error updating email',
-          description: error.message || 'Please try again later.',
-          variant: 'destructive',
+          title: "Error updating email",
+          description: error.message || "Please try again later.",
+          variant: "destructive",
         });
       }
     } finally {
@@ -572,7 +590,7 @@ export default function AccountSettings() {
         newPassword,
         confirmPassword,
       });
-      
+
       const { error } = await supabase.auth.updateUser({
         password: validated.newPassword,
       });
@@ -580,36 +598,36 @@ export default function AccountSettings() {
       if (error) throw error;
 
       if (notificationPrefs.password_changes) {
-        await supabase.functions.invoke('send-notification-email', {
+        await supabase.functions.invoke("send-notification-email", {
           body: {
             email: user?.email,
             name: name,
-            type: 'password_change',
+            type: "password_change",
             timestamp: new Date().toISOString(),
           },
         });
       }
 
-      setNewPassword('');
-      setConfirmPassword('');
+      setNewPassword("");
+      setConfirmPassword("");
 
       toast({
-        title: 'Password updated',
-        description: 'Your password has been changed successfully.',
+        title: "Password updated",
+        description: "Your password has been changed successfully.",
       });
     } catch (error: any) {
-      console.error('Change password error:', error);
+      console.error("Change password error:", error);
       if (error instanceof z.ZodError) {
         toast({
-          title: 'Validation error',
+          title: "Validation error",
           description: error.errors[0].message,
-          variant: 'destructive',
+          variant: "destructive",
         });
       } else {
         toast({
-          title: 'Error changing password',
-          description: error.message || 'Failed to change password. Please try again.',
-          variant: 'destructive',
+          title: "Error changing password",
+          description: error.message || "Failed to change password. Please try again.",
+          variant: "destructive",
         });
       }
     } finally {
@@ -621,24 +639,22 @@ export default function AccountSettings() {
     try {
       setSavingPrefs(true);
 
-      const { error } = await supabase
-        .from('notification_preferences')
-        .upsert({
-          user_id: user?.id ?? '',
-          ...notificationPrefs,
-        });
+      const { error } = await supabase.from("notification_preferences").upsert({
+        user_id: user?.id ?? "",
+        ...notificationPrefs,
+      });
 
       if (error) throw error;
 
       toast({
-        title: 'Preferences saved',
-        description: 'Your notification preferences have been updated.',
+        title: "Preferences saved",
+        description: "Your notification preferences have been updated.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error saving preferences',
+        title: "Error saving preferences",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setSavingPrefs(false);
@@ -650,23 +666,23 @@ export default function AccountSettings() {
       setDisconnectingAcademy(true);
 
       const { error } = await supabase
-        .from('talentlms_users')
+        .from("talentlms_users")
         .delete()
-        .eq('user_id', user?.id ?? '');
+        .eq("user_id", user?.id ?? "");
 
       if (error) throw error;
 
       setAcademyMapping(null);
 
       toast({
-        title: 'Academy disconnected',
-        description: 'Your InnoTrue Academy account has been disconnected.',
+        title: "Academy disconnected",
+        description: "Your InnoTrue Academy account has been disconnected.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error disconnecting academy',
+        title: "Error disconnecting academy",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setDisconnectingAcademy(false);
@@ -678,23 +694,23 @@ export default function AccountSettings() {
       setDisconnectingCommunity(true);
 
       const { error } = await supabase
-        .from('circle_users')
+        .from("circle_users")
         .delete()
-        .eq('user_id', user?.id ?? '');
+        .eq("user_id", user?.id ?? "");
 
       if (error) throw error;
 
       setCommunityMapping(null);
 
       toast({
-        title: 'Community disconnected',
-        description: 'Your InnoTrue Community account has been disconnected.',
+        title: "Community disconnected",
+        description: "Your InnoTrue Community account has been disconnected.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error disconnecting community',
+        title: "Error disconnecting community",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setDisconnectingCommunity(false);
@@ -705,7 +721,7 @@ export default function AccountSettings() {
     try {
       setAccessingCommunity(true);
 
-      const { data, error } = await supabase.functions.invoke('circle-sso', {
+      const { data, error } = await supabase.functions.invoke("circle-sso", {
         body: {},
       });
 
@@ -716,17 +732,17 @@ export default function AccountSettings() {
       }
 
       if (data?.loginUrl) {
-        window.open(data.loginUrl, '_blank');
+        window.open(data.loginUrl, "_blank");
         toast({
-          title: 'Opening InnoTrue Community',
-          description: 'Opening InnoTrue Community in a new window...',
+          title: "Opening InnoTrue Community",
+          description: "Opening InnoTrue Community in a new window...",
         });
       }
     } catch (error: any) {
       toast({
-        title: 'Error accessing community',
+        title: "Error accessing community",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setAccessingCommunity(false);
@@ -737,11 +753,11 @@ export default function AccountSettings() {
     try {
       setRequestingAcademy(true);
 
-      const response = await supabase.functions.invoke('send-notification-email', {
+      const response = await supabase.functions.invoke("send-notification-email", {
         body: {
           email: user?.email,
           name: name,
-          type: 'academy_connect_request',
+          type: "academy_connect_request",
           timestamp: new Date().toISOString(),
         },
       });
@@ -749,14 +765,14 @@ export default function AccountSettings() {
       if (response.error) throw response.error;
 
       toast({
-        title: 'Request sent',
-        description: 'Your administrator has been notified of your connection request.',
+        title: "Request sent",
+        description: "Your administrator has been notified of your connection request.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error sending request',
+        title: "Error sending request",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setRequestingAcademy(false);
@@ -768,19 +784,17 @@ export default function AccountSettings() {
       setRequestingCommunity(true);
 
       // First, insert into circle_interest_registrations
-      const { error: insertError } = await supabase
-        .from('circle_interest_registrations')
-        .insert({
-          user_id: user?.id ?? '',
-          status: 'pending',
-        });
+      const { error: insertError } = await supabase.from("circle_interest_registrations").insert({
+        user_id: user?.id ?? "",
+        status: "pending",
+      });
 
       if (insertError) {
         // Check if it's a duplicate error
-        if (insertError.code === '23505') {
+        if (insertError.code === "23505") {
           toast({
-            title: 'Already requested',
-            description: 'You have already submitted a connection request.',
+            title: "Already requested",
+            description: "You have already submitted a connection request.",
           });
           return;
         }
@@ -788,11 +802,11 @@ export default function AccountSettings() {
       }
 
       // Then send email notification to admins
-      const response = await supabase.functions.invoke('send-notification-email', {
+      const response = await supabase.functions.invoke("send-notification-email", {
         body: {
           email: user?.email,
           name: name,
-          type: 'circle_connection_request',
+          type: "circle_connection_request",
           timestamp: new Date().toISOString(),
           userName: name,
           userEmail: user?.email,
@@ -802,14 +816,14 @@ export default function AccountSettings() {
       if (response.error) throw response.error;
 
       toast({
-        title: 'Request sent',
-        description: 'Your administrator has been notified of your connection request.',
+        title: "Request sent",
+        description: "Your administrator has been notified of your connection request.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error sending request',
+        title: "Error sending request",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setRequestingCommunity(false);
@@ -820,31 +834,36 @@ export default function AccountSettings() {
   const saveLucid = async () => {
     try {
       setSavingLucid(true);
-      
+
       if (lucidMapping) {
         const { error } = await supabase
-          .from('lucid_users')
+          .from("lucid_users")
           .update({
             lucid_email: lucidEmail.trim() || undefined,
-            lucid_url: lucidUrl.trim() || null
+            lucid_url: lucidUrl.trim() || null,
           })
-          .eq('user_id', user?.id ?? '');
+          .eq("user_id", user?.id ?? "");
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('lucid_users')
-          .insert({
-            user_id: user?.id ?? '',
-            lucid_email: lucidEmail.trim() || '',
-            lucid_url: lucidUrl.trim() || null,
-          });
+        const { error } = await supabase.from("lucid_users").insert({
+          user_id: user?.id ?? "",
+          lucid_email: lucidEmail.trim() || "",
+          lucid_url: lucidUrl.trim() || null,
+        });
         if (error) throw error;
       }
-      
-      setLucidMapping({ email: lucidEmail.trim() || '', url: lucidUrl.trim() || null });
-      toast({ title: 'Lucid settings saved', description: 'Your Lucid connection has been updated.' });
+
+      setLucidMapping({ email: lucidEmail.trim() || "", url: lucidUrl.trim() || null });
+      toast({
+        title: "Lucid settings saved",
+        description: "Your Lucid connection has been updated.",
+      });
     } catch (error: any) {
-      toast({ title: 'Error saving Lucid settings', description: error.message, variant: 'destructive' });
+      toast({
+        title: "Error saving Lucid settings",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
       setSavingLucid(false);
     }
@@ -853,31 +872,36 @@ export default function AccountSettings() {
   const saveMiro = async () => {
     try {
       setSavingMiro(true);
-      
+
       if (miroMapping) {
         const { error } = await supabase
-          .from('miro_users')
+          .from("miro_users")
           .update({
             miro_email: miroEmail.trim() || undefined,
-            miro_url: miroUrl.trim() || null
+            miro_url: miroUrl.trim() || null,
           })
-          .eq('user_id', user?.id ?? '');
+          .eq("user_id", user?.id ?? "");
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('miro_users')
-          .insert({
-            user_id: user?.id ?? '',
-            miro_email: miroEmail.trim() || '',
-            miro_url: miroUrl.trim() || null,
-          });
+        const { error } = await supabase.from("miro_users").insert({
+          user_id: user?.id ?? "",
+          miro_email: miroEmail.trim() || "",
+          miro_url: miroUrl.trim() || null,
+        });
         if (error) throw error;
       }
-      
-      setMiroMapping({ email: miroEmail.trim() || '', url: miroUrl.trim() || null });
-      toast({ title: 'Miro settings saved', description: 'Your Miro connection has been updated.' });
+
+      setMiroMapping({ email: miroEmail.trim() || "", url: miroUrl.trim() || null });
+      toast({
+        title: "Miro settings saved",
+        description: "Your Miro connection has been updated.",
+      });
     } catch (error: any) {
-      toast({ title: 'Error saving Miro settings', description: error.message, variant: 'destructive' });
+      toast({
+        title: "Error saving Miro settings",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
       setSavingMiro(false);
     }
@@ -886,31 +910,36 @@ export default function AccountSettings() {
   const saveMural = async () => {
     try {
       setSavingMural(true);
-      
+
       if (muralMapping) {
         const { error } = await supabase
-          .from('mural_users')
+          .from("mural_users")
           .update({
             mural_email: muralEmail.trim() || undefined,
-            mural_url: muralUrl.trim() || null
+            mural_url: muralUrl.trim() || null,
           })
-          .eq('user_id', user?.id ?? '');
+          .eq("user_id", user?.id ?? "");
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('mural_users')
-          .insert({
-            user_id: user?.id ?? '',
-            mural_email: muralEmail.trim() || '',
-            mural_url: muralUrl.trim() || null,
-          });
+        const { error } = await supabase.from("mural_users").insert({
+          user_id: user?.id ?? "",
+          mural_email: muralEmail.trim() || "",
+          mural_url: muralUrl.trim() || null,
+        });
         if (error) throw error;
       }
-      
-      setMuralMapping({ email: muralEmail.trim() || '', url: muralUrl.trim() || null });
-      toast({ title: 'Mural settings saved', description: 'Your Mural connection has been updated.' });
+
+      setMuralMapping({ email: muralEmail.trim() || "", url: muralUrl.trim() || null });
+      toast({
+        title: "Mural settings saved",
+        description: "Your Mural connection has been updated.",
+      });
     } catch (error: any) {
-      toast({ title: 'Error saving Mural settings', description: error.message, variant: 'destructive' });
+      toast({
+        title: "Error saving Mural settings",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
       setSavingMural(false);
     }
@@ -996,12 +1025,7 @@ export default function AccountSettings() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              value={username}
-              disabled
-              placeholder="your_username"
-            />
+            <Input id="username" value={username} disabled placeholder="your_username" />
           </div>
         </CardContent>
       </Card>
@@ -1014,11 +1038,7 @@ export default function AccountSettings() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Display Name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="tagline">Tagline</Label>
@@ -1087,18 +1107,17 @@ export default function AccountSettings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <MeetingTimesPreference value={meetingTimes} onChange={setMeetingTimes} />
-          
+
           <div className="border-t pt-4">
             <SchedulingUrlInput value={schedulingUrl} onChange={setSchedulingUrl} />
           </div>
-          
+
           <Button onClick={saveMeetingTimes} disabled={savingMeetingTimes}>
             {savingMeetingTimes && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Meeting Preferences
           </Button>
         </CardContent>
       </Card>
-
 
       <Card>
         <CardHeader>
@@ -1148,7 +1167,10 @@ export default function AccountSettings() {
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
           </div>
-          <Button onClick={changePassword} disabled={!newPassword || !confirmPassword || savingPassword}>
+          <Button
+            onClick={changePassword}
+            disabled={!newPassword || !confirmPassword || savingPassword}
+          >
             {savingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Change Password
           </Button>
@@ -1164,41 +1186,57 @@ export default function AccountSettings() {
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Profile Updates</Label>
-              <p className="text-sm text-muted-foreground">Receive emails when your profile is updated</p>
+              <p className="text-sm text-muted-foreground">
+                Receive emails when your profile is updated
+              </p>
             </div>
             <Switch
               checked={notificationPrefs.profile_updates}
-              onCheckedChange={(checked) => setNotificationPrefs({ ...notificationPrefs, profile_updates: checked })}
+              onCheckedChange={(checked) =>
+                setNotificationPrefs({ ...notificationPrefs, profile_updates: checked })
+              }
             />
           </div>
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Password Changes</Label>
-              <p className="text-sm text-muted-foreground">Security notification when password is changed</p>
+              <p className="text-sm text-muted-foreground">
+                Security notification when password is changed
+              </p>
             </div>
             <Switch
               checked={notificationPrefs.password_changes}
-              onCheckedChange={(checked) => setNotificationPrefs({ ...notificationPrefs, password_changes: checked })}
+              onCheckedChange={(checked) =>
+                setNotificationPrefs({ ...notificationPrefs, password_changes: checked })
+              }
             />
           </div>
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Email Changes</Label>
-              <p className="text-sm text-muted-foreground">Security notification when email is changed</p>
+              <p className="text-sm text-muted-foreground">
+                Security notification when email is changed
+              </p>
             </div>
             <Switch
               checked={notificationPrefs.email_changes}
-              onCheckedChange={(checked) => setNotificationPrefs({ ...notificationPrefs, email_changes: checked })}
+              onCheckedChange={(checked) =>
+                setNotificationPrefs({ ...notificationPrefs, email_changes: checked })
+              }
             />
           </div>
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Program Assignments</Label>
-              <p className="text-sm text-muted-foreground">Get notified when assigned to new programs</p>
+              <p className="text-sm text-muted-foreground">
+                Get notified when assigned to new programs
+              </p>
             </div>
             <Switch
               checked={notificationPrefs.program_assignments}
-              onCheckedChange={(checked) => setNotificationPrefs({ ...notificationPrefs, program_assignments: checked })}
+              onCheckedChange={(checked) =>
+                setNotificationPrefs({ ...notificationPrefs, program_assignments: checked })
+              }
             />
           </div>
           <Button onClick={saveNotificationPreferences} disabled={savingPrefs}>
@@ -1214,27 +1252,21 @@ export default function AccountSettings() {
             <div>
               <CardTitle>Subscription Plan</CardTitle>
               <CardDescription>
-                {currentPlan ? `You are on the ${currentPlan.name} plan` : 'No active subscription'}
+                {currentPlan ? `You are on the ${currentPlan.name} plan` : "No active subscription"}
               </CardDescription>
             </div>
-            {currentPlan?.key === 'enterprise' && (
-              <Crown className="h-6 w-6 text-primary" />
-            )}
-            {currentPlan?.key === 'pro' && (
-              <Zap className="h-6 w-6 text-primary" />
-            )}
+            {currentPlan?.key === "enterprise" && <Crown className="h-6 w-6 text-primary" />}
+            {currentPlan?.key === "pro" && <Zap className="h-6 w-6 text-primary" />}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border p-4">
             <div className="min-w-0">
-              <p className="font-medium">{currentPlan?.name || 'Free Plan'}</p>
-              <p className="text-sm text-muted-foreground">
-                View available plans and features
-              </p>
+              <p className="font-medium">{currentPlan?.name || "Free Plan"}</p>
+              <p className="text-sm text-muted-foreground">View available plans and features</p>
             </div>
-            <Button onClick={() => window.location.href = '/subscription'} className="shrink-0">
-              {currentPlan ? 'Manage Subscription' : 'View Plans'}
+            <Button onClick={() => (window.location.href = "/subscription")} className="shrink-0">
+              {currentPlan ? "Manage Subscription" : "View Plans"}
             </Button>
           </div>
         </CardContent>
@@ -1251,7 +1283,10 @@ export default function AccountSettings() {
             <LinkIcon className="h-5 w-5" />
             <div>
               <CardTitle>My External Tools</CardTitle>
-              <CardDescription>Link your personal collaboration workspaces for quick access. These are tools you manage - we'll use these details to help connect you.</CardDescription>
+              <CardDescription>
+                Link your personal collaboration workspaces for quick access. These are tools you
+                manage - we'll use these details to help connect you.
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -1264,7 +1299,9 @@ export default function AccountSettings() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <Label htmlFor="lucid-email" className="text-sm text-muted-foreground">Account Email</Label>
+                <Label htmlFor="lucid-email" className="text-sm text-muted-foreground">
+                  Account Email
+                </Label>
                 <Input
                   id="lucid-email"
                   type="email"
@@ -1274,7 +1311,9 @@ export default function AccountSettings() {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="lucid-url" className="text-sm text-muted-foreground">Workspace URL</Label>
+                <Label htmlFor="lucid-url" className="text-sm text-muted-foreground">
+                  Workspace URL
+                </Label>
                 <Input
                   id="lucid-url"
                   placeholder="https://lucid.app/..."
@@ -1297,7 +1336,9 @@ export default function AccountSettings() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <Label htmlFor="miro-email" className="text-sm text-muted-foreground">Account Email</Label>
+                <Label htmlFor="miro-email" className="text-sm text-muted-foreground">
+                  Account Email
+                </Label>
                 <Input
                   id="miro-email"
                   type="email"
@@ -1307,7 +1348,9 @@ export default function AccountSettings() {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="miro-url" className="text-sm text-muted-foreground">Board/Workspace URL</Label>
+                <Label htmlFor="miro-url" className="text-sm text-muted-foreground">
+                  Board/Workspace URL
+                </Label>
                 <Input
                   id="miro-url"
                   placeholder="https://miro.com/app/board/..."
@@ -1330,7 +1373,9 @@ export default function AccountSettings() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <Label htmlFor="mural-email" className="text-sm text-muted-foreground">Account Email</Label>
+                <Label htmlFor="mural-email" className="text-sm text-muted-foreground">
+                  Account Email
+                </Label>
                 <Input
                   id="mural-email"
                   type="email"
@@ -1340,7 +1385,9 @@ export default function AccountSettings() {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="mural-url" className="text-sm text-muted-foreground">Workspace URL</Label>
+                <Label htmlFor="mural-url" className="text-sm text-muted-foreground">
+                  Workspace URL
+                </Label>
                 <Input
                   id="mural-url"
                   placeholder="https://app.mural.co/..."
@@ -1377,10 +1424,12 @@ export default function AccountSettings() {
               </div>
               <div className="rounded-lg border p-4 bg-muted/50">
                 <p className="text-sm text-muted-foreground mb-1">Folder Name</p>
-                <p className="font-medium">{googleDriveMapping.folder_name || 'InnoTrue Folder'}</p>
+                <p className="font-medium">{googleDriveMapping.folder_name || "InnoTrue Folder"}</p>
               </div>
-              <Button 
-                onClick={() => window.open(googleDriveMapping.folder_url, '_blank', 'noopener,noreferrer')}
+              <Button
+                onClick={() =>
+                  window.open(googleDriveMapping.folder_url, "_blank", "noopener,noreferrer")
+                }
               >
                 Open Google Drive Folder
               </Button>
@@ -1442,9 +1491,7 @@ export default function AccountSettings() {
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={disconnectAcademy}>
-                      Disconnect
-                    </AlertDialogAction>
+                    <AlertDialogAction onClick={disconnectAcademy}>Disconnect</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -1540,12 +1587,12 @@ export default function AccountSettings() {
 
       {/* Organization Sharing - only show if user belongs to an organization */}
       {organizationMembership?.organization_id && (
-        <OrganizationSharingConsentSection 
+        <OrganizationSharingConsentSection
           organizationId={organizationMembership.organization_id}
           organizationName={organizationMembership.organization_name}
         />
       )}
-      
+
       <DataExportSection />
 
       <AnalyticsOptOut />
@@ -1569,9 +1616,9 @@ export default function AccountSettings() {
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">
-            By using InnoTrue Hub, you agree to our terms of service and privacy policy.
-            You can manage your cookie preferences at any time by clicking "Customize" 
-            on the cookie consent banner.
+            By using InnoTrue Hub, you agree to our terms of service and privacy policy. You can
+            manage your cookie preferences at any time by clicking "Customize" on the cookie consent
+            banner.
           </p>
         </CardContent>
       </Card>

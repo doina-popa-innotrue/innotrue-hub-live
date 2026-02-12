@@ -9,8 +9,21 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Edit, Trash2, Loader2, Eye, Lock, Unlock, FileText, Users } from "lucide-react";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -24,7 +37,7 @@ const initialFormData: ScenarioTemplateFormData = {
   title: "",
   description: "",
   capability_assessment_id: "",
-   category_id: "",
+  category_id: "",
   is_protected: true,
   is_active: true,
 };
@@ -33,14 +46,15 @@ export default function ScenarioTemplatesManagement() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { userRole } = useAuth();
-  const isAdmin = userRole === 'admin';
+  const isAdmin = userRole === "admin";
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<ScenarioTemplateFormData>(initialFormData);
 
   const { data: templates, isLoading } = useScenarioTemplates();
-  const { createMutation, updateMutation, lockMutation, deleteMutation } = useScenarioTemplateMutations();
+  const { createMutation, updateMutation, lockMutation, deleteMutation } =
+    useScenarioTemplateMutations();
 
   // Fetch capability assessments for linking
   const { data: assessments } = useQuery({
@@ -56,29 +70,27 @@ export default function ScenarioTemplatesManagement() {
     },
   });
 
-   // Fetch scenario categories
-   const { data: categories } = useQuery({
-     queryKey: ["scenario-categories-list"],
-     queryFn: async () => {
-       const { data, error } = await supabase
-         .from("scenario_categories")
-         .select("id, name, color")
-         .eq("is_active", true)
-         .order("display_order");
-       if (error) throw error;
-       return data;
-     },
-   });
+  // Fetch scenario categories
+  const { data: categories } = useQuery({
+    queryKey: ["scenario-categories-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("scenario_categories")
+        .select("id, name, color")
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Fetch assignment counts
   const { data: assignmentCounts } = useQuery({
     queryKey: ["scenario-assignment-counts"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("scenario_assignments")
-        .select("template_id");
+      const { data, error } = await supabase.from("scenario_assignments").select("template_id");
       if (error) throw error;
-      
+
       const counts: Record<string, number> = {};
       (data || []).forEach((item) => {
         counts[item.template_id] = (counts[item.template_id] || 0) + 1;
@@ -90,18 +102,21 @@ export default function ScenarioTemplatesManagement() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingItem) {
-      updateMutation.mutate({ id: editingItem.id, data: formData }, {
-        onSuccess: () => {
-          setIsDialogOpen(false);
-          resetForm();
-        }
-      });
+      updateMutation.mutate(
+        { id: editingItem.id, data: formData },
+        {
+          onSuccess: () => {
+            setIsDialogOpen(false);
+            resetForm();
+          },
+        },
+      );
     } else {
       createMutation.mutate(formData, {
         onSuccess: () => {
           setIsDialogOpen(false);
           resetForm();
-        }
+        },
       });
     }
   };
@@ -112,7 +127,7 @@ export default function ScenarioTemplatesManagement() {
       title: item.title,
       description: item.description || "",
       capability_assessment_id: item.capability_assessment_id || "",
-       category_id: item.category_id || "",
+      category_id: item.category_id || "",
       is_protected: item.is_protected,
       is_active: item.is_active,
     });
@@ -120,14 +135,22 @@ export default function ScenarioTemplatesManagement() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Delete this scenario template? This will also delete all sections, paragraphs, and assignments.")) {
+    if (
+      confirm(
+        "Delete this scenario template? This will also delete all sections, paragraphs, and assignments.",
+      )
+    ) {
       deleteMutation.mutate(id);
     }
   };
 
   const handleLockToggle = (id: string, currentlyLocked: boolean) => {
     if (!isAdmin) {
-      toast({ title: "Permission denied", description: "Only admins can lock/unlock templates", variant: "destructive" });
+      toast({
+        title: "Permission denied",
+        description: "Only admins can lock/unlock templates",
+        variant: "destructive",
+      });
       return;
     }
     lockMutation.mutate({ id, lock: !currentlyLocked });
@@ -180,34 +203,36 @@ export default function ScenarioTemplatesManagement() {
               />
             </div>
 
-           <div>
-             <Label htmlFor="category_id">Category</Label>
-             <Select
-               value={formData.category_id}
-               onValueChange={(value) => setFormData({ ...formData, category_id: value })}
-             >
-               <SelectTrigger>
-                 <SelectValue placeholder="Select a category..." />
-               </SelectTrigger>
-               <SelectContent>
-                 <SelectItem value="none">None</SelectItem>
-                 {categories?.map((category) => (
-                   <SelectItem key={category.id} value={category.id}>
-                     {category.name}
-                   </SelectItem>
-                 ))}
-               </SelectContent>
-             </Select>
-             <p className="text-xs text-muted-foreground mt-1">
-               Organize scenarios into categories for easier filtering
-             </p>
-           </div>
+            <div>
+              <Label htmlFor="category_id">Category</Label>
+              <Select
+                value={formData.category_id}
+                onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {categories?.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Organize scenarios into categories for easier filtering
+              </p>
+            </div>
 
             <div>
               <Label htmlFor="capability_assessment_id">Link to Capability Assessment</Label>
               <Select
                 value={formData.capability_assessment_id}
-                onValueChange={(value) => setFormData({ ...formData, capability_assessment_id: value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, capability_assessment_id: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select assessment for scoring..." />
@@ -271,7 +296,7 @@ export default function ScenarioTemplatesManagement() {
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
-                 <TableHead>Category</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Assessment</TableHead>
                 <TableHead>Assignments</TableHead>
                 <TableHead>Status</TableHead>
@@ -280,10 +305,7 @@ export default function ScenarioTemplatesManagement() {
             </TableHeader>
             <TableBody>
               {templates.map((template) => (
-                <TableRow 
-                  key={template.id} 
-                  className={template.is_locked ? "bg-muted/50" : ""}
-                >
+                <TableRow key={template.id} className={template.is_locked ? "bg-muted/50" : ""}>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-muted-foreground" />
@@ -297,20 +319,16 @@ export default function ScenarioTemplatesManagement() {
                       </div>
                     </div>
                   </TableCell>
-                   <TableCell>
-                     {template.scenario_categories ? (
-                       <Badge variant="outline">
-                         {template.scenario_categories.name}
-                       </Badge>
-                     ) : (
-                       <span className="text-muted-foreground text-sm">—</span>
-                     )}
-                   </TableCell>
+                  <TableCell>
+                    {template.scenario_categories ? (
+                      <Badge variant="outline">{template.scenario_categories.name}</Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">—</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {template.capability_assessments ? (
-                      <Badge variant="secondary">
-                        {template.capability_assessments.name}
-                      </Badge>
+                      <Badge variant="secondary">{template.capability_assessments.name}</Badge>
                     ) : (
                       <span className="text-muted-foreground text-sm">Not linked</span>
                     )}
@@ -329,9 +347,7 @@ export default function ScenarioTemplatesManagement() {
                           Locked
                         </Badge>
                       )}
-                      {template.is_protected && (
-                        <Badge variant="outline">Protected</Badge>
-                      )}
+                      {template.is_protected && <Badge variant="outline">Protected</Badge>}
                       <Badge variant={template.is_active ? "default" : "secondary"}>
                         {template.is_active ? "Active" : "Inactive"}
                       </Badge>

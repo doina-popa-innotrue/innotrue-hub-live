@@ -1,33 +1,33 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Shield, Building2, BookOpen, Globe, Eye, Calendar, Clock } from 'lucide-react';
-import { format } from 'date-fns';
-import DOMPurify from 'dompurify';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, Shield, Building2, BookOpen, Globe, Eye, Calendar, Clock } from "lucide-react";
+import { format } from "date-fns";
+import DOMPurify from "dompurify";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion';
+} from "@/components/ui/accordion";
 
 interface TermsAcceptance {
   id: string;
   accepted_at: string;
   retention_expires_at: string | null;
   content_hash: string;
-  type: 'platform' | 'program' | 'organization';
+  type: "platform" | "program" | "organization";
   terms: {
     id: string;
     title: string;
@@ -61,8 +61,9 @@ export default function TermsHistory() {
 
       // Load platform terms acceptances (no retention_expires_at - purged with account)
       const { data: platformAcceptances } = await supabase
-        .from('user_platform_terms_acceptance')
-        .select(`
+        .from("user_platform_terms_acceptance")
+        .select(
+          `
           id,
           accepted_at,
           content_hash,
@@ -73,9 +74,10 @@ export default function TermsHistory() {
             content_html,
             effective_from
           )
-        `)
-        .eq('user_id', user.id)
-        .order('accepted_at', { ascending: false });
+        `,
+        )
+        .eq("user_id", user.id)
+        .order("accepted_at", { ascending: false });
 
       if (platformAcceptances) {
         for (const acc of platformAcceptances) {
@@ -85,7 +87,7 @@ export default function TermsHistory() {
               accepted_at: acc.accepted_at,
               retention_expires_at: null, // Platform terms retained indefinitely with account
               content_hash: acc.content_hash,
-              type: 'platform',
+              type: "platform",
               terms: acc.platform_terms as any,
             });
           }
@@ -94,8 +96,9 @@ export default function TermsHistory() {
 
       // Load program terms acceptances
       const { data: programAcceptances } = await supabase
-        .from('user_program_terms_acceptance')
-        .select(`
+        .from("user_program_terms_acceptance")
+        .select(
+          `
           id,
           accepted_at,
           retention_expires_at,
@@ -111,9 +114,10 @@ export default function TermsHistory() {
               name
             )
           )
-        `)
-        .eq('user_id', user.id)
-        .order('accepted_at', { ascending: false });
+        `,
+        )
+        .eq("user_id", user.id)
+        .order("accepted_at", { ascending: false });
 
       if (programAcceptances) {
         for (const acc of programAcceptances) {
@@ -124,7 +128,7 @@ export default function TermsHistory() {
               accepted_at: acc.accepted_at,
               retention_expires_at: acc.retention_expires_at,
               content_hash: acc.content_hash,
-              type: 'program',
+              type: "program",
               terms: {
                 id: terms.id,
                 title: terms.title,
@@ -132,10 +136,12 @@ export default function TermsHistory() {
                 content_html: terms.content_html,
                 effective_from: terms.effective_from,
               },
-              context: terms.program ? {
-                id: terms.program.id,
-                name: terms.program.name,
-              } : undefined,
+              context: terms.program
+                ? {
+                    id: terms.program.id,
+                    name: terms.program.name,
+                  }
+                : undefined,
             });
           }
         }
@@ -143,8 +149,9 @@ export default function TermsHistory() {
 
       // Load organization terms acceptances
       const { data: orgAcceptances } = await supabase
-        .from('user_organization_terms_acceptance' as any)
-        .select(`
+        .from("user_organization_terms_acceptance" as any)
+        .select(
+          `
           id,
           accepted_at,
           retention_expires_at,
@@ -160,9 +167,10 @@ export default function TermsHistory() {
               name
             )
           )
-        `)
-        .eq('user_id', user.id)
-        .order('accepted_at', { ascending: false });
+        `,
+        )
+        .eq("user_id", user.id)
+        .order("accepted_at", { ascending: false });
 
       if (orgAcceptances) {
         for (const acc of orgAcceptances as any[]) {
@@ -173,7 +181,7 @@ export default function TermsHistory() {
               accepted_at: acc.accepted_at,
               retention_expires_at: acc.retention_expires_at,
               content_hash: acc.content_hash,
-              type: 'organization',
+              type: "organization",
               terms: {
                 id: terms.id,
                 title: terms.title,
@@ -181,23 +189,25 @@ export default function TermsHistory() {
                 content_html: terms.content_html,
                 effective_from: terms.effective_from,
               },
-              context: terms.organization ? {
-                id: terms.organization.id,
-                name: terms.organization.name,
-              } : undefined,
+              context: terms.organization
+                ? {
+                    id: terms.organization.id,
+                    name: terms.organization.name,
+                  }
+                : undefined,
             });
           }
         }
       }
 
       // Sort all by acceptance date
-      allAcceptances.sort((a, b) => 
-        new Date(b.accepted_at).getTime() - new Date(a.accepted_at).getTime()
+      allAcceptances.sort(
+        (a, b) => new Date(b.accepted_at).getTime() - new Date(a.accepted_at).getTime(),
       );
 
       setAcceptances(allAcceptances);
     } catch (error) {
-      console.error('Error loading terms history:', error);
+      console.error("Error loading terms history:", error);
     } finally {
       setLoading(false);
     }
@@ -205,11 +215,11 @@ export default function TermsHistory() {
 
   function getTypeIcon(type: string) {
     switch (type) {
-      case 'platform':
+      case "platform":
         return <Globe className="h-4 w-4" />;
-      case 'program':
+      case "program":
         return <BookOpen className="h-4 w-4" />;
-      case 'organization':
+      case "organization":
         return <Building2 className="h-4 w-4" />;
       default:
         return <Shield className="h-4 w-4" />;
@@ -218,14 +228,14 @@ export default function TermsHistory() {
 
   function getTypeBadgeVariant(type: string) {
     switch (type) {
-      case 'platform':
-        return 'default';
-      case 'program':
-        return 'secondary';
-      case 'organization':
-        return 'outline';
+      case "platform":
+        return "default";
+      case "program":
+        return "secondary";
+      case "organization":
+        return "outline";
       default:
-        return 'default';
+        return "default";
     }
   }
 
@@ -238,9 +248,9 @@ export default function TermsHistory() {
   }
 
   const groupedAcceptances = {
-    platform: acceptances.filter(a => a.type === 'platform'),
-    program: acceptances.filter(a => a.type === 'program'),
-    organization: acceptances.filter(a => a.type === 'organization'),
+    platform: acceptances.filter((a) => a.type === "platform"),
+    program: acceptances.filter((a) => a.type === "program"),
+    organization: acceptances.filter((a) => a.type === "organization"),
   };
 
   return (
@@ -260,7 +270,11 @@ export default function TermsHistory() {
           </CardContent>
         </Card>
       ) : (
-        <Accordion type="multiple" defaultValue={['platform', 'program', 'organization']} className="space-y-4">
+        <Accordion
+          type="multiple"
+          defaultValue={["platform", "program", "organization"]}
+          className="space-y-4"
+        >
           {/* Platform Terms */}
           {groupedAcceptances.platform.length > 0 && (
             <AccordionItem value="platform" className="border rounded-lg">
@@ -341,8 +355,8 @@ export default function TermsHistory() {
           <DialogHeader className="shrink-0">
             <DialogTitle>{previewTerms?.terms.title}</DialogTitle>
             <DialogDescription>
-              Version {previewTerms?.terms.version} • 
-              Accepted on {previewTerms && format(new Date(previewTerms.accepted_at), 'PPP')}
+              Version {previewTerms?.terms.version} • Accepted on{" "}
+              {previewTerms && format(new Date(previewTerms.accepted_at), "PPP")}
               {previewTerms?.context && ` • ${previewTerms.context.name}`}
             </DialogDescription>
           </DialogHeader>
@@ -351,7 +365,7 @@ export default function TermsHistory() {
             <div
               className="prose prose-sm max-w-none dark:prose-invert"
               dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(previewTerms?.terms.content_html || ''),
+                __html: DOMPurify.sanitize(previewTerms?.terms.content_html || ""),
               }}
             />
           </ScrollArea>
@@ -361,7 +375,7 @@ export default function TermsHistory() {
               <span>Content hash: {previewTerms?.content_hash?.slice(0, 16)}...</span>
               {previewTerms?.retention_expires_at && (
                 <span>
-                  Retained until: {format(new Date(previewTerms.retention_expires_at), 'PPP')}
+                  Retained until: {format(new Date(previewTerms.retention_expires_at), "PPP")}
                 </span>
               )}
             </div>
@@ -382,27 +396,27 @@ function TermsAcceptanceCard({ acceptance, onPreview }: TermsAcceptanceCardProps
     <div className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
       <div className="flex items-center gap-4">
         <div className="p-2 rounded-md bg-primary/10 text-primary">
-          {acceptance.type === 'platform' && <Globe className="h-4 w-4" />}
-          {acceptance.type === 'program' && <BookOpen className="h-4 w-4" />}
-          {acceptance.type === 'organization' && <Building2 className="h-4 w-4" />}
+          {acceptance.type === "platform" && <Globe className="h-4 w-4" />}
+          {acceptance.type === "program" && <BookOpen className="h-4 w-4" />}
+          {acceptance.type === "organization" && <Building2 className="h-4 w-4" />}
         </div>
         <div>
           <div className="flex items-center gap-2">
             <p className="font-medium">{acceptance.terms.title}</p>
-            <Badge variant="outline" className="text-xs">v{acceptance.terms.version}</Badge>
+            <Badge variant="outline" className="text-xs">
+              v{acceptance.terms.version}
+            </Badge>
           </div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            {acceptance.context && (
-              <span>{acceptance.context.name}</span>
-            )}
+            {acceptance.context && <span>{acceptance.context.name}</span>}
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              {format(new Date(acceptance.accepted_at), 'PP')}
+              {format(new Date(acceptance.accepted_at), "PP")}
             </span>
             {acceptance.retention_expires_at && (
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                Expires {format(new Date(acceptance.retention_expires_at), 'yyyy')}
+                Expires {format(new Date(acceptance.retention_expires_at), "yyyy")}
               </span>
             )}
           </div>

@@ -1,17 +1,54 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { useToast } from '@/hooks/use-toast';
-import { GraduationCap, Search, Filter, MoreHorizontal, Play, Pause, XCircle, CheckCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import {
+  GraduationCap,
+  Search,
+  Filter,
+  MoreHorizontal,
+  Play,
+  Pause,
+  XCircle,
+  CheckCircle,
+} from "lucide-react";
+import { format } from "date-fns";
 
 interface Enrollment {
   id: string;
@@ -39,14 +76,14 @@ export default function OrgEnrollments() {
   if (!organizationMembership) return null;
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [programFilter, setProgramFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [programFilter, setProgramFilter] = useState<string>("all");
   const [programs, setPrograms] = useState<{ id: string; name: string }[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     enrollmentId: string;
-    action: 'pause' | 'resume' | 'cancel' | 'complete';
+    action: "pause" | "resume" | "cancel" | "complete";
     memberName: string;
     programName: string;
   } | null>(null);
@@ -65,12 +102,12 @@ export default function OrgEnrollments() {
 
       // Get organization member user IDs
       const { data: members } = await supabase
-        .from('organization_members')
-        .select('user_id')
-        .eq('organization_id', organizationMembership.organization_id)
-        .eq('is_active', true);
+        .from("organization_members")
+        .select("user_id")
+        .eq("organization_id", organizationMembership.organization_id)
+        .eq("is_active", true);
 
-      const memberUserIds = members?.map(m => m.user_id) || [];
+      const memberUserIds = members?.map((m) => m.user_id) || [];
 
       if (memberUserIds.length === 0) {
         setEnrollments([]);
@@ -80,8 +117,9 @@ export default function OrgEnrollments() {
 
       // Fetch enrollments for org members (using staff_enrollments view to exclude financial data)
       const { data: enrollmentsData, error } = await supabase
-        .from('staff_enrollments')
-        .select(`
+        .from("staff_enrollments")
+        .select(
+          `
           id,
           client_user_id,
           program_id,
@@ -91,23 +129,24 @@ export default function OrgEnrollments() {
           end_date,
           created_at,
           programs (id, name, slug)
-        `)
-        .in('client_user_id', memberUserIds)
-        .order('created_at', { ascending: false });
+        `,
+        )
+        .in("client_user_id", memberUserIds)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
       // Fetch profiles for members
       const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, name')
-        .in('id', memberUserIds);
+        .from("profiles")
+        .select("id, name")
+        .in("id", memberUserIds);
 
       // Combine data
-      const enrichedEnrollments = (enrollmentsData || []).map(enrollment => ({
+      const enrichedEnrollments = (enrollmentsData || []).map((enrollment) => ({
         ...enrollment,
         program: enrollment.programs as { id: string; name: string; slug: string },
-        profile: profiles?.find(p => p.id === enrollment.client_user_id) || null,
+        profile: profiles?.find((p) => p.id === enrollment.client_user_id) || null,
       }));
 
       setEnrollments(enrichedEnrollments as Enrollment[]);
@@ -116,18 +155,17 @@ export default function OrgEnrollments() {
       const uniquePrograms = Array.from(
         new Map(
           enrichedEnrollments
-            .filter(e => e.program)
-            .map(e => [e.program.id, { id: e.program.id, name: e.program.name }])
-        ).values()
+            .filter((e) => e.program)
+            .map((e) => [e.program.id, { id: e.program.id, name: e.program.name }]),
+        ).values(),
       );
       setPrograms(uniquePrograms);
-
     } catch (error) {
-      console.error('Error loading enrollments:', error);
+      console.error("Error loading enrollments:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to load enrollments',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load enrollments",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -136,63 +174,66 @@ export default function OrgEnrollments() {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'default';
-      case 'completed':
-        return 'secondary';
-      case 'paused':
-        return 'outline';
-      case 'cancelled':
-        return 'destructive';
+      case "active":
+        return "default";
+      case "completed":
+        return "secondary";
+      case "paused":
+        return "outline";
+      case "cancelled":
+        return "destructive";
       default:
-        return 'outline';
+        return "outline";
     }
   };
 
-  const handleStatusChange = async (enrollmentId: string, newStatus: 'active' | 'paused' | 'cancelled' | 'completed') => {
+  const handleStatusChange = async (
+    enrollmentId: string,
+    newStatus: "active" | "paused" | "cancelled" | "completed",
+  ) => {
     try {
       // Note: 'cancelled' is not in the DB enum, we'll use 'paused' for cancellations too
       // or we handle it differently. Let's check what statuses are valid.
-      const dbStatus = newStatus === 'cancelled' ? 'paused' : newStatus;
-      
-      const updateData: { 
-        status: 'active' | 'completed' | 'paused'; 
+      const dbStatus = newStatus === "cancelled" ? "paused" : newStatus;
+
+      const updateData: {
+        status: "active" | "completed" | "paused";
         end_date?: string;
-      } = { 
-        status: dbStatus as 'active' | 'completed' | 'paused'
+      } = {
+        status: dbStatus as "active" | "completed" | "paused",
       };
-      
+
       // Set end_date for completed/cancelled
-      if (newStatus === 'completed' || newStatus === 'cancelled') {
-        updateData.end_date = new Date().toISOString().split('T')[0];
+      if (newStatus === "completed" || newStatus === "cancelled") {
+        updateData.end_date = new Date().toISOString().split("T")[0];
       }
 
       const { error } = await supabase
-        .from('client_enrollments')
+        .from("client_enrollments")
         .update(updateData)
-        .eq('id', enrollmentId);
+        .eq("id", enrollmentId);
 
       if (error) throw error;
 
       const actionLabels = {
-        active: 'resumed',
-        paused: 'paused',
-        cancelled: 'cancelled',
-        completed: 'marked as completed',
+        active: "resumed",
+        paused: "paused",
+        cancelled: "cancelled",
+        completed: "marked as completed",
       };
 
       toast({
-        title: 'Enrollment Updated',
+        title: "Enrollment Updated",
         description: `Enrollment has been ${actionLabels[newStatus]}`,
       });
 
       loadEnrollments();
     } catch (error) {
-      console.error('Error updating enrollment:', error);
+      console.error("Error updating enrollment:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to update enrollment status',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update enrollment status",
+        variant: "destructive",
       });
     } finally {
       setConfirmDialog(null);
@@ -201,56 +242,59 @@ export default function OrgEnrollments() {
 
   const getActionLabel = (action: string) => {
     switch (action) {
-      case 'pause': return 'Pause';
-      case 'resume': return 'Resume';
-      case 'cancel': return 'Cancel';
-      case 'complete': return 'Mark Complete';
-      default: return action;
+      case "pause":
+        return "Pause";
+      case "resume":
+        return "Resume";
+      case "cancel":
+        return "Cancel";
+      case "complete":
+        return "Mark Complete";
+      default:
+        return action;
     }
   };
 
   const getActionDescription = (action: string, memberName: string, programName: string) => {
     switch (action) {
-      case 'pause':
+      case "pause":
         return `This will pause ${memberName}'s enrollment in ${programName}. They will temporarily lose access to the program content.`;
-      case 'resume':
+      case "resume":
         return `This will resume ${memberName}'s enrollment in ${programName}. They will regain access to the program content.`;
-      case 'cancel':
+      case "cancel":
         return `This will cancel ${memberName}'s enrollment in ${programName}. This action sets an end date but the enrollment record is preserved.`;
-      case 'complete':
+      case "complete":
         return `This will mark ${memberName}'s enrollment in ${programName} as completed.`;
       default:
-        return '';
+        return "";
     }
   };
 
-  const filteredEnrollments = enrollments.filter(enrollment => {
+  const filteredEnrollments = enrollments.filter((enrollment) => {
     const matchesSearch =
       !searchQuery ||
       enrollment.profile?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       enrollment.program?.name?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus = statusFilter === 'all' || enrollment.status === statusFilter;
-    const matchesProgram = programFilter === 'all' || enrollment.program_id === programFilter;
+    const matchesStatus = statusFilter === "all" || enrollment.status === statusFilter;
+    const matchesProgram = programFilter === "all" || enrollment.program_id === programFilter;
 
     return matchesSearch && matchesStatus && matchesProgram;
   });
 
   const statusCounts = {
     all: enrollments.length,
-    active: enrollments.filter(e => e.status === 'active').length,
-    completed: enrollments.filter(e => e.status === 'completed').length,
-    paused: enrollments.filter(e => e.status === 'paused').length,
-    cancelled: enrollments.filter(e => e.status === 'cancelled').length,
+    active: enrollments.filter((e) => e.status === "active").length,
+    completed: enrollments.filter((e) => e.status === "completed").length,
+    paused: enrollments.filter((e) => e.status === "paused").length,
+    cancelled: enrollments.filter((e) => e.status === "cancelled").length,
   };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">Enrollments</h1>
-        <p className="text-muted-foreground">
-          Track your team's program enrollments and progress
-        </p>
+        <p className="text-muted-foreground">Track your team's program enrollments and progress</p>
       </div>
 
       {/* Stats Cards */}
@@ -331,14 +375,12 @@ export default function OrgEnrollments() {
           </div>
 
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading enrollments...
-            </div>
+            <div className="text-center py-8 text-muted-foreground">Loading enrollments...</div>
           ) : filteredEnrollments.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {enrollments.length === 0
-                ? 'No enrollments found. Enroll your team members in programs to get started.'
-                : 'No enrollments match your filters.'}
+                ? "No enrollments found. Enroll your team members in programs to get started."
+                : "No enrollments match your filters."}
             </div>
           ) : (
             <Table>
@@ -360,15 +402,15 @@ export default function OrgEnrollments() {
                       <div className="flex items-center gap-2">
                         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                           <span className="text-sm font-medium text-primary">
-                            {enrollment.profile?.name?.[0]?.toUpperCase() || '?'}
+                            {enrollment.profile?.name?.[0]?.toUpperCase() || "?"}
                           </span>
                         </div>
                         <span className="font-medium">
-                          {enrollment.profile?.name || 'Unknown User'}
+                          {enrollment.profile?.name || "Unknown User"}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>{enrollment.program?.name || 'Unknown Program'}</TableCell>
+                    <TableCell>{enrollment.program?.name || "Unknown Program"}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(enrollment.status)}>
                         {enrollment.status}
@@ -383,13 +425,13 @@ export default function OrgEnrollments() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {enrollment.start_date
-                        ? format(new Date(enrollment.start_date), 'MMM d, yyyy')
-                        : '-'}
+                        ? format(new Date(enrollment.start_date), "MMM d, yyyy")
+                        : "-"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {enrollment.end_date
-                        ? format(new Date(enrollment.end_date), 'MMM d, yyyy')
-                        : '-'}
+                        ? format(new Date(enrollment.end_date), "MMM d, yyyy")
+                        : "-"}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -399,67 +441,75 @@ export default function OrgEnrollments() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {enrollment.status === 'active' && (
+                          {enrollment.status === "active" && (
                             <>
                               <DropdownMenuItem
-                                onClick={() => setConfirmDialog({
-                                  open: true,
-                                  enrollmentId: enrollment.id,
-                                  action: 'pause',
-                                  memberName: enrollment.profile?.name || 'Unknown',
-                                  programName: enrollment.program?.name || 'Unknown',
-                                })}
+                                onClick={() =>
+                                  setConfirmDialog({
+                                    open: true,
+                                    enrollmentId: enrollment.id,
+                                    action: "pause",
+                                    memberName: enrollment.profile?.name || "Unknown",
+                                    programName: enrollment.program?.name || "Unknown",
+                                  })
+                                }
                               >
                                 <Pause className="h-4 w-4 mr-2" />
                                 Pause
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => setConfirmDialog({
-                                  open: true,
-                                  enrollmentId: enrollment.id,
-                                  action: 'complete',
-                                  memberName: enrollment.profile?.name || 'Unknown',
-                                  programName: enrollment.program?.name || 'Unknown',
-                                })}
+                                onClick={() =>
+                                  setConfirmDialog({
+                                    open: true,
+                                    enrollmentId: enrollment.id,
+                                    action: "complete",
+                                    memberName: enrollment.profile?.name || "Unknown",
+                                    programName: enrollment.program?.name || "Unknown",
+                                  })
+                                }
                               >
                                 <CheckCircle className="h-4 w-4 mr-2" />
                                 Mark Complete
                               </DropdownMenuItem>
                             </>
                           )}
-                          {enrollment.status === 'paused' && (
+                          {enrollment.status === "paused" && (
                             <DropdownMenuItem
-                              onClick={() => setConfirmDialog({
-                                open: true,
-                                enrollmentId: enrollment.id,
-                                action: 'resume',
-                                memberName: enrollment.profile?.name || 'Unknown',
-                                programName: enrollment.program?.name || 'Unknown',
-                              })}
+                              onClick={() =>
+                                setConfirmDialog({
+                                  open: true,
+                                  enrollmentId: enrollment.id,
+                                  action: "resume",
+                                  memberName: enrollment.profile?.name || "Unknown",
+                                  programName: enrollment.program?.name || "Unknown",
+                                })
+                              }
                             >
                               <Play className="h-4 w-4 mr-2" />
                               Resume
                             </DropdownMenuItem>
                           )}
-                          {(enrollment.status === 'active' || enrollment.status === 'paused') && (
+                          {(enrollment.status === "active" || enrollment.status === "paused") && (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className="text-destructive"
-                                onClick={() => setConfirmDialog({
-                                  open: true,
-                                  enrollmentId: enrollment.id,
-                                  action: 'cancel',
-                                  memberName: enrollment.profile?.name || 'Unknown',
-                                  programName: enrollment.program?.name || 'Unknown',
-                                })}
+                                onClick={() =>
+                                  setConfirmDialog({
+                                    open: true,
+                                    enrollmentId: enrollment.id,
+                                    action: "cancel",
+                                    memberName: enrollment.profile?.name || "Unknown",
+                                    programName: enrollment.program?.name || "Unknown",
+                                  })
+                                }
                               >
                                 <XCircle className="h-4 w-4 mr-2" />
                                 Cancel Enrollment
                               </DropdownMenuItem>
                             </>
                           )}
-                          {enrollment.status === 'completed' && (
+                          {enrollment.status === "completed" && (
                             <DropdownMenuItem disabled className="text-muted-foreground">
                               No actions available
                             </DropdownMenuItem>
@@ -476,16 +526,23 @@ export default function OrgEnrollments() {
       </Card>
 
       {/* Confirmation Dialog */}
-      <AlertDialog open={!!confirmDialog?.open} onOpenChange={(open) => !open && setConfirmDialog(null)}>
+      <AlertDialog
+        open={!!confirmDialog?.open}
+        onOpenChange={(open) => !open && setConfirmDialog(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmDialog ? getActionLabel(confirmDialog.action) : ''} Enrollment
+              {confirmDialog ? getActionLabel(confirmDialog.action) : ""} Enrollment
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmDialog 
-                ? getActionDescription(confirmDialog.action, confirmDialog.memberName, confirmDialog.programName)
-                : ''}
+              {confirmDialog
+                ? getActionDescription(
+                    confirmDialog.action,
+                    confirmDialog.memberName,
+                    confirmDialog.programName,
+                  )
+                : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -493,18 +550,23 @@ export default function OrgEnrollments() {
             <AlertDialogAction
               onClick={() => {
                 if (confirmDialog) {
-                  const statusMap: Record<string, 'active' | 'paused' | 'cancelled' | 'completed'> = {
-                    pause: 'paused',
-                    resume: 'active',
-                    cancel: 'cancelled',
-                    complete: 'completed',
-                  };
+                  const statusMap: Record<string, "active" | "paused" | "cancelled" | "completed"> =
+                    {
+                      pause: "paused",
+                      resume: "active",
+                      cancel: "cancelled",
+                      complete: "completed",
+                    };
                   handleStatusChange(confirmDialog.enrollmentId, statusMap[confirmDialog.action]);
                 }
               }}
-              className={confirmDialog?.action === 'cancel' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+              className={
+                confirmDialog?.action === "cancel"
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  : ""
+              }
             >
-              {confirmDialog ? getActionLabel(confirmDialog.action) : 'Confirm'}
+              {confirmDialog ? getActionLabel(confirmDialog.action) : "Confirm"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

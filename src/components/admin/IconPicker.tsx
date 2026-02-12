@@ -1,42 +1,120 @@
-import { useState, type FC, type SVGProps } from 'react';
+import { useState, type FC, type SVGProps } from "react";
 import {
-  Rocket, MessageCircle, Clock, Wrench, Sparkles,
-  Bell, Star, Heart, Zap, Gift,
-  Calendar, CheckCircle, AlertCircle, Info, HelpCircle,
-  Megaphone, PartyPopper, Trophy, Target, Flag,
-  Lightbulb, BookOpen, GraduationCap, Users, Building,
-  Mail, Send, Bookmark, Award, Crown,
-  Flame, TrendingUp, BarChart, PieChart, Activity,
-  Globe, Lock, Unlock, Shield, Key,
-  Plus, Minus, X, Check, ArrowRight,
-  RefreshCw, Settings, Cog, Wrench as ToolIcon, Hammer, Newspaper,
-  type LucideProps
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
+  Rocket,
+  MessageCircle,
+  Clock,
+  Wrench,
+  Sparkles,
+  Bell,
+  Star,
+  Heart,
+  Zap,
+  Gift,
+  Calendar,
+  CheckCircle,
+  AlertCircle,
+  Info,
+  HelpCircle,
+  Megaphone,
+  PartyPopper,
+  Trophy,
+  Target,
+  Flag,
+  Lightbulb,
+  BookOpen,
+  GraduationCap,
+  Users,
+  Building,
+  Mail,
+  Send,
+  Bookmark,
+  Award,
+  Crown,
+  Flame,
+  TrendingUp,
+  BarChart,
+  PieChart,
+  Activity,
+  Globe,
+  Lock,
+  Unlock,
+  Shield,
+  Key,
+  Plus,
+  Minus,
+  X,
+  Check,
+  ArrowRight,
+  RefreshCw,
+  Settings,
+  Cog,
+  Wrench as ToolIcon,
+  Hammer,
+  Newspaper,
+  type LucideProps,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 type IconComponent = FC<LucideProps>;
 
 // Icon map for dynamic rendering
 const iconMap: Record<string, IconComponent> = {
-  Rocket, MessageCircle, Clock, Wrench, Sparkles,
-  Bell, Star, Heart, Zap, Gift,
-  Calendar, CheckCircle, AlertCircle, Info, HelpCircle,
-  Megaphone, PartyPopper, Trophy, Target, Flag,
-  Lightbulb, BookOpen, GraduationCap, Users, Building,
-  Mail, Send, Bookmark, Award, Crown,
-  Flame, TrendingUp, BarChart, PieChart, Activity,
-  Globe, Lock, Unlock, Shield, Key,
-  Plus, Minus, X, Check, ArrowRight,
-  RefreshCw, Settings, Cog, Tool: ToolIcon, Hammer, Newspaper,
+  Rocket,
+  MessageCircle,
+  Clock,
+  Wrench,
+  Sparkles,
+  Bell,
+  Star,
+  Heart,
+  Zap,
+  Gift,
+  Calendar,
+  CheckCircle,
+  AlertCircle,
+  Info,
+  HelpCircle,
+  Megaphone,
+  PartyPopper,
+  Trophy,
+  Target,
+  Flag,
+  Lightbulb,
+  BookOpen,
+  GraduationCap,
+  Users,
+  Building,
+  Mail,
+  Send,
+  Bookmark,
+  Award,
+  Crown,
+  Flame,
+  TrendingUp,
+  BarChart,
+  PieChart,
+  Activity,
+  Globe,
+  Lock,
+  Unlock,
+  Shield,
+  Key,
+  Plus,
+  Minus,
+  X,
+  Check,
+  ArrowRight,
+  RefreshCw,
+  Settings,
+  Cog,
+  Tool: ToolIcon,
+  Hammer,
+  Newspaper,
 };
 
 const commonIcons = Object.keys(iconMap);
@@ -49,20 +127,18 @@ interface IconPickerProps {
   clearLabel?: string;
 }
 
-export function IconPicker({ 
-  value, 
-  onChange, 
-  label = 'Icon',
+export function IconPicker({
+  value,
+  onChange,
+  label = "Icon",
   allowClear = false,
-  clearLabel = 'Use default'
+  clearLabel = "Use default",
 }: IconPickerProps) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
 
   const filteredIcons = search
-    ? commonIcons.filter(icon => 
-        icon.toLowerCase().includes(search.toLowerCase())
-      )
+    ? commonIcons.filter((icon) => icon.toLowerCase().includes(search.toLowerCase()))
     : commonIcons;
 
   const IconComponent = value ? iconMap[value] : null;
@@ -102,9 +178,9 @@ export function IconPicker({
                 size="sm"
                 className="w-full justify-start text-muted-foreground"
                 onClick={() => {
-                  onChange('');
+                  onChange("");
                   setOpen(false);
-                  setSearch('');
+                  setSearch("");
                 }}
               >
                 <X className="h-4 w-4 mr-2" />
@@ -117,7 +193,7 @@ export function IconPicker({
               {filteredIcons.map((iconName) => {
                 const Icon = iconMap[iconName];
                 if (!Icon) return null;
-                
+
                 return (
                   <Button
                     key={iconName}
@@ -125,12 +201,12 @@ export function IconPicker({
                     size="icon"
                     className={cn(
                       "h-10 w-10",
-                      value === iconName && "bg-primary text-primary-foreground"
+                      value === iconName && "bg-primary text-primary-foreground",
                     )}
                     onClick={() => {
                       onChange(iconName);
                       setOpen(false);
-                      setSearch('');
+                      setSearch("");
                     }}
                     title={iconName}
                   >
@@ -140,9 +216,7 @@ export function IconPicker({
               })}
             </div>
             {filteredIcons.length === 0 && (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                No icons found
-              </div>
+              <div className="p-4 text-center text-sm text-muted-foreground">No icons found</div>
             )}
           </ScrollArea>
         </PopoverContent>
@@ -152,13 +226,7 @@ export function IconPicker({
 }
 
 // Helper to render an icon by name
-export function DynamicIcon({ 
-  name, 
-  className = ''
-}: { 
-  name: string; 
-  className?: string;
-}) {
+export function DynamicIcon({ name, className = "" }: { name: string; className?: string }) {
   const Icon = iconMap[name];
   if (!Icon) return <Info className={className} />;
   return <Icon className={className} />;

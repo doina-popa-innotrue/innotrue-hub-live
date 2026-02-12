@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   useScenarioAssignment,
   useScenarioSections,
@@ -12,18 +12,18 @@ import {
   useParagraphQuestionScores,
   useScenarioScoreSummary,
   useScenarioProgress,
-} from '@/hooks/useScenarios';
-import { ScenarioSaveIndicator, SaveStatus } from '@/components/scenarios/ScenarioSaveIndicator';
-import { ScenarioViewModeToggle } from '@/components/scenarios/ScenarioViewModeToggle';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
-import { RichTextDisplay } from '@/components/ui/rich-text-display';
-import { 
+} from "@/hooks/useScenarios";
+import { ScenarioSaveIndicator, SaveStatus } from "@/components/scenarios/ScenarioSaveIndicator";
+import { ScenarioViewModeToggle } from "@/components/scenarios/ScenarioViewModeToggle";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -32,7 +32,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 import {
   ChevronLeft,
   ChevronRight,
@@ -45,10 +45,10 @@ import {
   MessageSquare,
   Star,
   Eye,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { ScenarioSection, SectionParagraph, ParagraphQuestionLink } from '@/types/scenarios';
-import { ScenarioErrorBoundary } from '@/components/scenarios/ScenarioErrorBoundary';
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { ScenarioSection, SectionParagraph, ParagraphQuestionLink } from "@/types/scenarios";
+import { ScenarioErrorBoundary } from "@/components/scenarios/ScenarioErrorBoundary";
 
 function ScenarioDetailContent() {
   const { id } = useParams<{ id: string }>();
@@ -58,13 +58,17 @@ function ScenarioDetailContent() {
   // Core data
   const { data: assignment, isLoading: loadingAssignment } = useScenarioAssignment(id);
   const templateId = assignment?.template_id;
-  const { data: sections, isLoading: loadingSections, isFetching: fetchingSections } = useScenarioSections(templateId);
+  const {
+    data: sections,
+    isLoading: loadingSections,
+    isFetching: fetchingSections,
+  } = useScenarioSections(templateId);
   const { data: responses } = useParagraphResponses(id);
   const { data: evaluations } = useParagraphEvaluations(id);
   const { data: scores } = useParagraphQuestionScores(id);
 
   // Mutations
-  const { upsertMutation } = useParagraphResponseMutations(id || '');
+  const { upsertMutation } = useParagraphResponseMutations(id || "");
   const { updateStatusMutation } = useScenarioAssignmentMutations();
 
   // UI state
@@ -72,14 +76,14 @@ function ScenarioDetailContent() {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [localResponses, setLocalResponses] = useState<Record<string, string>>({});
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const pendingSaves = useRef<Set<string>>(new Set());
 
   const template = assignment?.scenario_templates;
   const isProtected = template?.is_protected ?? false;
-  const isReadOnly = assignment?.status !== 'draft';
-  const isEvaluated = assignment?.status === 'evaluated';
+  const isReadOnly = assignment?.status !== "draft";
+  const isEvaluated = assignment?.status === "evaluated";
 
   const ratingScale = template?.capability_assessments?.rating_scale ?? 5;
   const scoreSummary = useScenarioScoreSummary(id, ratingScale);
@@ -89,7 +93,7 @@ function ScenarioDetailContent() {
   useEffect(() => {
     if (responses) {
       const responseMap: Record<string, string> = {};
-      responses.forEach(r => {
+      responses.forEach((r) => {
         if (r.response_text) {
           responseMap[r.paragraph_id] = r.response_text;
         }
@@ -99,33 +103,36 @@ function ScenarioDetailContent() {
   }, [responses]);
 
   // Auto-save handler with status tracking
-  const handleResponseChange = useCallback((paragraphId: string, value: string) => {
-    setLocalResponses(prev => ({ ...prev, [paragraphId]: value }));
-    pendingSaves.current.add(paragraphId);
+  const handleResponseChange = useCallback(
+    (paragraphId: string, value: string) => {
+      setLocalResponses((prev) => ({ ...prev, [paragraphId]: value }));
+      pendingSaves.current.add(paragraphId);
 
-    // Debounced save
-    if (saveTimeout) clearTimeout(saveTimeout);
-    const timeout = setTimeout(() => {
-      setSaveStatus('saving');
-      upsertMutation.mutate(
-        { paragraphId, responseText: value },
-        {
-          onSuccess: () => {
-            pendingSaves.current.delete(paragraphId);
-            if (pendingSaves.current.size === 0) {
-              setSaveStatus('saved');
-              // Reset to idle after 2 seconds
-              setTimeout(() => setSaveStatus('idle'), 2000);
-            }
+      // Debounced save
+      if (saveTimeout) clearTimeout(saveTimeout);
+      const timeout = setTimeout(() => {
+        setSaveStatus("saving");
+        upsertMutation.mutate(
+          { paragraphId, responseText: value },
+          {
+            onSuccess: () => {
+              pendingSaves.current.delete(paragraphId);
+              if (pendingSaves.current.size === 0) {
+                setSaveStatus("saved");
+                // Reset to idle after 2 seconds
+                setTimeout(() => setSaveStatus("idle"), 2000);
+              }
+            },
+            onError: () => {
+              setSaveStatus("error");
+            },
           },
-          onError: () => {
-            setSaveStatus('error');
-          }
-        }
-      );
-    }, 1000);
-    setSaveTimeout(timeout);
-  }, [saveTimeout, upsertMutation]);
+        );
+      }, 1000);
+      setSaveTimeout(timeout);
+    },
+    [saveTimeout, upsertMutation],
+  );
 
   // Manual save all pending changes
   const handleManualSave = useCallback(() => {
@@ -133,15 +140,15 @@ function ScenarioDetailContent() {
       clearTimeout(saveTimeout);
       setSaveTimeout(null);
     }
-    
+
     const paragraphIds = Object.keys(localResponses);
     if (paragraphIds.length === 0) return;
 
-    setSaveStatus('saving');
+    setSaveStatus("saving");
     let completed = 0;
     let hasError = false;
 
-    paragraphIds.forEach(paragraphId => {
+    paragraphIds.forEach((paragraphId) => {
       const value = localResponses[paragraphId];
       upsertMutation.mutate(
         { paragraphId, responseText: value },
@@ -150,15 +157,15 @@ function ScenarioDetailContent() {
             completed++;
             pendingSaves.current.delete(paragraphId);
             if (completed === paragraphIds.length && !hasError) {
-              setSaveStatus('saved');
-              setTimeout(() => setSaveStatus('idle'), 2000);
+              setSaveStatus("saved");
+              setTimeout(() => setSaveStatus("idle"), 2000);
             }
           },
           onError: () => {
             hasError = true;
-            setSaveStatus('error');
-          }
-        }
+            setSaveStatus("error");
+          },
+        },
       );
     });
   }, [saveTimeout, localResponses, upsertMutation]);
@@ -167,14 +174,14 @@ function ScenarioDetailContent() {
 
   const handleSubmit = () => {
     updateStatusMutation.mutate(
-      { id: id!, status: 'submitted' },
-      { onSuccess: () => setShowSubmitDialog(false) }
+      { id: id!, status: "submitted" },
+      { onSuccess: () => setShowSubmitDialog(false) },
     );
   };
 
   // Show loading if assignment is loading, or if we have a template but sections haven't loaded yet
   const isLoadingSections = loadingSections || fetchingSections || (!!templateId && !sections);
-  
+
   if (loadingAssignment || isLoadingSections) {
     return (
       <div className="container py-6 space-y-6">
@@ -191,7 +198,7 @@ function ScenarioDetailContent() {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FileText className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium">Assignment Not Found</h3>
-            <Button variant="link" onClick={() => navigate('/scenarios')}>
+            <Button variant="link" onClick={() => navigate("/scenarios")}>
               Back to Scenarios
             </Button>
           </CardContent>
@@ -201,11 +208,8 @@ function ScenarioDetailContent() {
   }
 
   return (
-    <div 
-      className={cn(
-        "container py-6 space-y-6",
-        isProtected && "select-none"
-      )}
+    <div
+      className={cn("container py-6 space-y-6", isProtected && "select-none")}
       onContextMenu={isProtected ? (e) => e.preventDefault() : undefined}
     >
       {/* Header */}
@@ -214,14 +218,14 @@ function ScenarioDetailContent() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/scenarios')}
+            onClick={() => navigate("/scenarios")}
             className="mb-2 -ml-2"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back to Scenarios
           </Button>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            {template?.title || 'Untitled Scenario'}
+            {template?.title || "Untitled Scenario"}
             {isProtected && (
               <Badge variant="secondary" className="flex items-center gap-1">
                 <Shield className="h-3 w-3" />
@@ -229,9 +233,7 @@ function ScenarioDetailContent() {
               </Badge>
             )}
           </h1>
-          {template?.description && (
-            <p className="text-muted-foreground">{template.description}</p>
-          )}
+          {template?.description && <p className="text-muted-foreground">{template.description}</p>}
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -239,10 +241,10 @@ function ScenarioDetailContent() {
           {!isReadOnly && (
             <ScenarioViewModeToggle
               isPreviewMode={isPreviewMode}
-              onToggle={() => setIsPreviewMode(prev => !prev)}
+              onToggle={() => setIsPreviewMode((prev) => !prev)}
             />
           )}
-          
+
           {/* Save controls (only for drafts and not in preview mode) */}
           {!isReadOnly && !isPreviewMode && (
             <ScenarioSaveIndicator
@@ -251,7 +253,7 @@ function ScenarioDetailContent() {
               disabled={Object.keys(localResponses).length === 0}
             />
           )}
-          
+
           {!isReadOnly && !isPreviewMode && (
             <Button onClick={() => setShowSubmitDialog(true)}>
               <Send className="h-4 w-4 mr-2" />
@@ -271,7 +273,7 @@ function ScenarioDetailContent() {
       {isProtected && (
         <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center opacity-5">
           <div className="text-6xl font-bold text-foreground rotate-[-30deg] whitespace-nowrap">
-            {user?.email || 'Confidential'}
+            {user?.email || "Confidential"}
           </div>
         </div>
       )}
@@ -309,7 +311,7 @@ function ScenarioDetailContent() {
             </div>
             {scoreSummary.domain_scores.length > 0 && (
               <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-                {scoreSummary.domain_scores.map(ds => (
+                {scoreSummary.domain_scores.map((ds) => (
                   <div key={ds.domain_id} className="p-3 rounded-lg bg-muted/50">
                     <div className="text-sm font-medium">{ds.domain_name}</div>
                     <div className="flex items-center gap-2 mt-1">
@@ -343,7 +345,7 @@ function ScenarioDetailContent() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentSectionIndex(i => Math.max(0, i - 1))}
+                onClick={() => setCurrentSectionIndex((i) => Math.max(0, i - 1))}
                 disabled={currentSectionIndex === 0}
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
@@ -358,7 +360,7 @@ function ScenarioDetailContent() {
                       "w-8 h-8 rounded-full text-sm font-medium transition-colors",
                       idx === currentSectionIndex
                         ? "bg-primary text-primary-foreground"
-                        : "bg-muted hover:bg-muted/80"
+                        : "bg-muted hover:bg-muted/80",
                     )}
                   >
                     {idx + 1}
@@ -368,7 +370,7 @@ function ScenarioDetailContent() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentSectionIndex(i => Math.min(sections.length - 1, i + 1))}
+                onClick={() => setCurrentSectionIndex((i) => Math.min(sections.length - 1, i + 1))}
                 disabled={currentSectionIndex === sections.length - 1}
               >
                 Next
@@ -401,14 +403,13 @@ function ScenarioDetailContent() {
           <AlertDialogHeader>
             <AlertDialogTitle>Submit Scenario?</AlertDialogTitle>
             <AlertDialogDescription>
-              Once submitted, you won't be able to make further changes. Your responses will be sent for evaluation.
+              Once submitted, you won't be able to make further changes. Your responses will be sent
+              for evaluation.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSubmit}>
-              Submit for Evaluation
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleSubmit}>Submit for Evaluation</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -473,12 +474,12 @@ function SectionContent({
             key={paragraph.id}
             paragraph={paragraph}
             index={idx}
-            response={localResponses[paragraph.id] || ''}
+            response={localResponses[paragraph.id] || ""}
             onResponseChange={(value) => onResponseChange(paragraph.id, value)}
             isReadOnly={isReadOnly}
             isProtected={isProtected}
-            evaluation={evaluations?.find(e => e.paragraph_id === paragraph.id)}
-            paragraphScores={scores?.filter(s => s.paragraph_id === paragraph.id)}
+            evaluation={evaluations?.find((e) => e.paragraph_id === paragraph.id)}
+            paragraphScores={scores?.filter((s) => s.paragraph_id === paragraph.id)}
             ratingScale={ratingScale}
             isPreviewMode={isPreviewMode}
           />
@@ -517,12 +518,11 @@ function ParagraphBlock({
   return (
     <div className="space-y-4">
       {index > 0 && <Separator />}
-      
+
       {/* Paragraph Content */}
-      <div className={cn(
-        "prose prose-sm max-w-none dark:prose-invert",
-        isProtected && "select-none"
-      )}>
+      <div
+        className={cn("prose prose-sm max-w-none dark:prose-invert", isProtected && "select-none")}
+      >
         <RichTextDisplay content={paragraph.content} />
       </div>
 
@@ -535,10 +535,12 @@ function ParagraphBlock({
             Your Response
           </div>
           {isReadOnly ? (
-            <div className={cn(
-              "p-3 rounded-lg",
-              isPreviewMode ? "bg-primary/5 border border-primary/20" : "bg-muted/50"
-            )}>
+            <div
+              className={cn(
+                "p-3 rounded-lg",
+                isPreviewMode ? "bg-primary/5 border border-primary/20" : "bg-muted/50",
+              )}
+            >
               {response ? (
                 <RichTextDisplay content={response} />
               ) : (
@@ -570,12 +572,8 @@ function ParagraphBlock({
       {/* Domain Scores (if evaluated) */}
       {paragraphScores && paragraphScores.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-2">
-          {paragraphScores.map(score => (
-            <Badge
-              key={score.id}
-              variant="outline"
-              className="flex items-center gap-1"
-            >
+          {paragraphScores.map((score) => (
+            <Badge key={score.id} variant="outline" className="flex items-center gap-1">
               <span className="font-normal">
                 {score.capability_domain_questions?.capability_domains?.name}:
               </span>

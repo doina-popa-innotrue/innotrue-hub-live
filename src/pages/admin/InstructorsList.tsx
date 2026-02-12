@@ -1,11 +1,25 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useNavigate } from 'react-router-dom';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 interface Instructor {
   user_id: string;
@@ -23,9 +37,9 @@ export default function InstructorsList() {
   async function fetchInstructors() {
     // Get all users with instructor role
     const { data: instructorRoles } = await supabase
-      .from('user_roles')
-      .select('user_id')
-      .eq('role', 'instructor');
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "instructor");
 
     if (!instructorRoles || instructorRoles.length === 0) {
       setInstructors([]);
@@ -36,28 +50,28 @@ export default function InstructorsList() {
     const enrichedInstructors = await Promise.all(
       instructorRoles.map(async (roleEntry) => {
         const { data: profile } = await supabase
-          .from('profiles')
-          .select('name, id, plan_id')
-          .eq('id', roleEntry.user_id)
+          .from("profiles")
+          .select("name, id, plan_id")
+          .eq("id", roleEntry.user_id)
           .single();
 
         let plan: { id: string; name: string } | null = null;
         if (profile?.plan_id) {
           const { data: planData } = await supabase
-            .from('plans')
-            .select('id, name')
-            .eq('id', profile.plan_id)
+            .from("plans")
+            .select("id, name")
+            .eq("id", profile.plan_id)
             .single();
           plan = planData;
         }
 
         // Get email via edge function
-        let email = '';
+        let email = "";
         try {
-          const { data: emailData } = await supabase.functions.invoke('get-user-email', {
-            body: { userId: roleEntry.user_id }
+          const { data: emailData } = await supabase.functions.invoke("get-user-email", {
+            body: { userId: roleEntry.user_id },
           });
-          email = emailData?.email || '';
+          email = emailData?.email || "";
         } catch {
           // Ignore email fetch errors
         }
@@ -65,10 +79,9 @@ export default function InstructorsList() {
         // Count programs where user is instructor
         let programCount = 0;
         try {
-          const result = await (supabase
-            .from('program_instructors') as any)
-            .select('id')
-            .eq('user_id', roleEntry.user_id);
+          const result = await (supabase.from("program_instructors") as any)
+            .select("id")
+            .eq("user_id", roleEntry.user_id);
           programCount = result.data?.length || 0;
         } catch {
           // Ignore count errors
@@ -76,12 +89,12 @@ export default function InstructorsList() {
 
         return {
           user_id: roleEntry.user_id,
-          name: profile?.name || 'Unknown',
+          name: profile?.name || "Unknown",
           email,
           programCount,
           plan,
         };
-      })
+      }),
     );
 
     setInstructors(enrichedInstructors);
@@ -132,7 +145,9 @@ export default function InstructorsList() {
               {instructors.map((instructor) => (
                 <TableRow key={instructor.user_id}>
                   <TableCell className="font-medium">{instructor.name}</TableCell>
-                  <TableCell>{instructor.email || <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell>
+                    {instructor.email || <span className="text-muted-foreground">—</span>}
+                  </TableCell>
                   <TableCell>
                     {instructor.plan ? (
                       <Badge variant="outline">{instructor.plan.name}</Badge>
@@ -142,11 +157,7 @@ export default function InstructorsList() {
                   </TableCell>
                   <TableCell>{instructor.programCount}</TableCell>
                   <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/admin/users`)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/admin/users`)}>
                       View in Users
                     </Button>
                   </TableCell>

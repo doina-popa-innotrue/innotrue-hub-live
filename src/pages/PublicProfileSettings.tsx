@@ -11,7 +11,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Globe, Eye, EyeOff, Link, Check, X, Upload, Trash2, RefreshCw, Clock } from "lucide-react";
+import {
+  Loader2,
+  Globe,
+  Eye,
+  EyeOff,
+  Link,
+  Check,
+  X,
+  Upload,
+  Trash2,
+  RefreshCw,
+  Clock,
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 
@@ -19,17 +31,17 @@ export default function PublicProfileSettings() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { 
-    settings, 
-    publicInterests, 
-    isLoading, 
-    upsertSettings, 
-    togglePublicInterest, 
+  const {
+    settings,
+    publicInterests,
+    isLoading,
+    upsertSettings,
+    togglePublicInterest,
     checkSlugAvailability,
     publishProfile,
     unpublishProfile,
   } = usePublicProfileSettings();
-  
+
   const [slug, setSlug] = useState("");
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
@@ -38,7 +50,9 @@ export default function PublicProfileSettings() {
   const { data: userInterests } = useQuery({
     queryKey: ["user-interests"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("user_interests")
@@ -54,7 +68,9 @@ export default function PublicProfileSettings() {
   const { data: goals } = useQuery({
     queryKey: ["goals-public-settings"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("goals")
@@ -69,7 +85,9 @@ export default function PublicProfileSettings() {
   const { data: enrollments } = useQuery({
     queryKey: ["enrollments-public-settings"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("client_enrollments")
@@ -84,7 +102,9 @@ export default function PublicProfileSettings() {
   const { data: externalCourses } = useQuery({
     queryKey: ["external-courses-public-settings"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("external_courses")
@@ -104,7 +124,7 @@ export default function PublicProfileSettings() {
   const handleSlugChange = async (value: string) => {
     const normalizedSlug = value.toLowerCase().replace(/[^a-z0-9-]/g, "-");
     setSlug(normalizedSlug);
-    
+
     if (normalizedSlug.length >= 3) {
       setCheckingSlug(true);
       const available = await checkSlugAvailability(normalizedSlug);
@@ -155,10 +175,10 @@ export default function PublicProfileSettings() {
   });
 
   const isInterestPublic = (type: string, value: string) => {
-    return publicInterests.some(p => p.interest_type === type && p.item_value === value);
+    return publicInterests.some((p) => p.interest_type === type && p.item_value === value);
   };
 
-  const publicUrl = settings?.custom_slug 
+  const publicUrl = settings?.custom_slug
     ? `${window.location.origin}/p/${settings.custom_slug}`
     : null;
 
@@ -183,7 +203,13 @@ export default function PublicProfileSettings() {
       </div>
 
       {/* Publish Status Card */}
-      <Card className={isPublished ? "border-green-500/50 bg-green-500/5" : "border-orange-500/50 bg-orange-500/5"}>
+      <Card
+        className={
+          isPublished
+            ? "border-green-500/50 bg-green-500/5"
+            : "border-orange-500/50 bg-orange-500/5"
+        }
+      >
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -201,18 +227,17 @@ export default function PublicProfileSettings() {
                   {isPublished ? "Profile Published" : "Profile Not Published"}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {isPublished 
+                  {isPublished
                     ? `Last published ${format(new Date(settings.published_at!), "PPp")}`
-                    : "Configure your settings below and publish when ready"
-                  }
+                    : "Configure your settings below and publish when ready"}
                 </p>
               </div>
             </div>
             <div className="flex gap-2 w-full sm:w-auto">
               {isPublished ? (
                 <>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => publishProfile.mutate()}
                     disabled={publishProfile.isPending}
                     className="flex-1 sm:flex-none"
@@ -224,8 +249,8 @@ export default function PublicProfileSettings() {
                     )}
                     Republish
                   </Button>
-                  <Button 
-                    variant="destructive" 
+                  <Button
+                    variant="destructive"
                     onClick={() => unpublishProfile.mutate()}
                     disabled={unpublishProfile.isPending}
                     className="flex-1 sm:flex-none"
@@ -239,7 +264,7 @@ export default function PublicProfileSettings() {
                   </Button>
                 </>
               ) : (
-                <Button 
+                <Button
                   onClick={() => publishProfile.mutate()}
                   disabled={!canPublish || publishProfile.isPending}
                   className="w-full sm:w-auto"
@@ -258,7 +283,12 @@ export default function PublicProfileSettings() {
             <div className="mt-4 flex items-center gap-2 p-3 bg-background rounded-lg border">
               <Link className="h-4 w-4 shrink-0" />
               <span className="text-sm font-medium shrink-0">Public URL:</span>
-              <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate">
+              <a
+                href={publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-primary hover:underline truncate"
+              >
                 {publicUrl}
               </a>
             </div>
@@ -272,9 +302,7 @@ export default function PublicProfileSettings() {
             <Globe className="h-5 w-5" />
             URL Settings
           </CardTitle>
-          <CardDescription>
-            Set your custom profile URL
-          </CardDescription>
+          <CardDescription>Set your custom profile URL</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -309,7 +337,8 @@ export default function PublicProfileSettings() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Use 3-50 lowercase letters, numbers, and hyphens. Remember to republish after changing.
+              Use 3-50 lowercase letters, numbers, and hyphens. Remember to republish after
+              changing.
             </p>
           </div>
         </CardContent>
@@ -318,9 +347,7 @@ export default function PublicProfileSettings() {
       <Card>
         <CardHeader>
           <CardTitle>Profile Elements</CardTitle>
-          <CardDescription>
-            Choose which parts of your profile to show publicly
-          </CardDescription>
+          <CardDescription>Choose which parts of your profile to show publicly</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4">
@@ -328,15 +355,42 @@ export default function PublicProfileSettings() {
               { key: "show_name", label: "Name", description: "Your display name" },
               { key: "show_avatar", label: "Avatar", description: "Your profile picture" },
               { key: "show_tagline", label: "Tagline", description: "Your personal tagline" },
-              { key: "show_job_title", label: "Current Role", description: "Your current job title" },
-              { key: "show_organisation", label: "Organisation", description: "Your current organisation" },
+              {
+                key: "show_job_title",
+                label: "Current Role",
+                description: "Your current job title",
+              },
+              {
+                key: "show_organisation",
+                label: "Organisation",
+                description: "Your current organisation",
+              },
               { key: "show_bio", label: "Bio", description: "Your biography/about me" },
-              { key: "show_target_role", label: "Target Role", description: "Your desired future career role" },
-              { key: "show_social_links", label: "Social Links", description: "LinkedIn, X, Bluesky" },
-              { key: "show_education", label: "Education", description: "Your educational background" },
-              { key: "show_certifications", label: "Certifications", description: "Your certifications and badges" },
+              {
+                key: "show_target_role",
+                label: "Target Role",
+                description: "Your desired future career role",
+              },
+              {
+                key: "show_social_links",
+                label: "Social Links",
+                description: "LinkedIn, X, Bluesky",
+              },
+              {
+                key: "show_education",
+                label: "Education",
+                description: "Your educational background",
+              },
+              {
+                key: "show_certifications",
+                label: "Certifications",
+                description: "Your certifications and badges",
+              },
             ].map((item) => (
-              <div key={item.key} className="flex items-center justify-between p-3 border rounded-lg">
+              <div
+                key={item.key}
+                className="flex items-center justify-between p-3 border rounded-lg"
+              >
                 <div>
                   <Label>{item.label}</Label>
                   <p className="text-sm text-muted-foreground">{item.description}</p>
@@ -353,10 +407,18 @@ export default function PublicProfileSettings() {
 
       <Tabs defaultValue="interests" className="w-full">
         <TabsList className="flex w-full overflow-x-auto">
-          <TabsTrigger value="interests" className="flex-1 min-w-fit text-xs sm:text-sm">Interests & Values</TabsTrigger>
-          <TabsTrigger value="goals" className="flex-1 min-w-fit text-xs sm:text-sm">Goals</TabsTrigger>
-          <TabsTrigger value="programs" className="flex-1 min-w-fit text-xs sm:text-sm">Programs</TabsTrigger>
-          <TabsTrigger value="external" className="flex-1 min-w-fit text-xs sm:text-sm">External Courses</TabsTrigger>
+          <TabsTrigger value="interests" className="flex-1 min-w-fit text-xs sm:text-sm">
+            Interests & Values
+          </TabsTrigger>
+          <TabsTrigger value="goals" className="flex-1 min-w-fit text-xs sm:text-sm">
+            Goals
+          </TabsTrigger>
+          <TabsTrigger value="programs" className="flex-1 min-w-fit text-xs sm:text-sm">
+            Programs
+          </TabsTrigger>
+          <TabsTrigger value="external" className="flex-1 min-w-fit text-xs sm:text-sm">
+            External Courses
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="interests" className="space-y-4">
@@ -372,13 +434,19 @@ export default function PublicProfileSettings() {
                     key={interest}
                     variant={isInterestPublic("interest", interest) ? "default" : "outline"}
                     className="cursor-pointer"
-                    onClick={() => togglePublicInterest.mutate({
-                      type: "interest",
-                      value: interest,
-                      isPublic: !isInterestPublic("interest", interest),
-                    })}
+                    onClick={() =>
+                      togglePublicInterest.mutate({
+                        type: "interest",
+                        value: interest,
+                        isPublic: !isInterestPublic("interest", interest),
+                      })
+                    }
                   >
-                    {isInterestPublic("interest", interest) ? <Eye className="h-3 w-3 mr-1" /> : <EyeOff className="h-3 w-3 mr-1" />}
+                    {isInterestPublic("interest", interest) ? (
+                      <Eye className="h-3 w-3 mr-1" />
+                    ) : (
+                      <EyeOff className="h-3 w-3 mr-1" />
+                    )}
                     {interest}
                   </Badge>
                 ))}
@@ -401,13 +469,19 @@ export default function PublicProfileSettings() {
                     key={value}
                     variant={isInterestPublic("value", value) ? "default" : "outline"}
                     className="cursor-pointer"
-                    onClick={() => togglePublicInterest.mutate({
-                      type: "value",
-                      value: value,
-                      isPublic: !isInterestPublic("value", value),
-                    })}
+                    onClick={() =>
+                      togglePublicInterest.mutate({
+                        type: "value",
+                        value: value,
+                        isPublic: !isInterestPublic("value", value),
+                      })
+                    }
                   >
-                    {isInterestPublic("value", value) ? <Eye className="h-3 w-3 mr-1" /> : <EyeOff className="h-3 w-3 mr-1" />}
+                    {isInterestPublic("value", value) ? (
+                      <Eye className="h-3 w-3 mr-1" />
+                    ) : (
+                      <EyeOff className="h-3 w-3 mr-1" />
+                    )}
                     {value}
                   </Badge>
                 ))}
@@ -430,13 +504,19 @@ export default function PublicProfileSettings() {
                     key={drive}
                     variant={isInterestPublic("drive", drive) ? "default" : "outline"}
                     className="cursor-pointer"
-                    onClick={() => togglePublicInterest.mutate({
-                      type: "drive",
-                      value: drive,
-                      isPublic: !isInterestPublic("drive", drive),
-                    })}
+                    onClick={() =>
+                      togglePublicInterest.mutate({
+                        type: "drive",
+                        value: drive,
+                        isPublic: !isInterestPublic("drive", drive),
+                      })
+                    }
                   >
-                    {isInterestPublic("drive", drive) ? <Eye className="h-3 w-3 mr-1" /> : <EyeOff className="h-3 w-3 mr-1" />}
+                    {isInterestPublic("drive", drive) ? (
+                      <Eye className="h-3 w-3 mr-1" />
+                    ) : (
+                      <EyeOff className="h-3 w-3 mr-1" />
+                    )}
                     {drive}
                   </Badge>
                 ))}
@@ -457,18 +537,29 @@ export default function PublicProfileSettings() {
             <CardContent>
               <div className="space-y-2">
                 {goals?.map((goal) => (
-                  <div key={goal.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div
+                    key={goal.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
                     <div className="flex items-center gap-3">
                       <Checkbox
                         checked={goal.is_public}
-                        onCheckedChange={(checked) => toggleGoalPublic.mutate({ goalId: goal.id, isPublic: !!checked })}
+                        onCheckedChange={(checked) =>
+                          toggleGoalPublic.mutate({ goalId: goal.id, isPublic: !!checked })
+                        }
                       />
                       <div>
                         <p className="font-medium">{goal.title}</p>
-                        <Badge variant="outline" className="text-xs">{goal.status}</Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {goal.status}
+                        </Badge>
                       </div>
                     </div>
-                    {goal.is_public ? <Eye className="h-4 w-4 text-muted-foreground" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                    {goal.is_public ? (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    )}
                   </div>
                 ))}
                 {(!goals || goals.length === 0) && (
@@ -488,18 +579,32 @@ export default function PublicProfileSettings() {
             <CardContent>
               <div className="space-y-2">
                 {enrollments?.map((enrollment) => (
-                  <div key={enrollment.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div
+                    key={enrollment.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
                     <div className="flex items-center gap-3">
                       <Checkbox
                         checked={enrollment.is_public}
-                        onCheckedChange={(checked) => toggleEnrollmentPublic.mutate({ enrollmentId: enrollment.id, isPublic: !!checked })}
+                        onCheckedChange={(checked) =>
+                          toggleEnrollmentPublic.mutate({
+                            enrollmentId: enrollment.id,
+                            isPublic: !!checked,
+                          })
+                        }
                       />
                       <div>
                         <p className="font-medium">{(enrollment.programs as any)?.name}</p>
-                        <Badge variant="outline" className="text-xs">{enrollment.status}</Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {enrollment.status}
+                        </Badge>
                       </div>
                     </div>
-                    {enrollment.is_public ? <Eye className="h-4 w-4 text-muted-foreground" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                    {enrollment.is_public ? (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    )}
                   </div>
                 ))}
                 {(!enrollments || enrollments.length === 0) && (
@@ -519,19 +624,33 @@ export default function PublicProfileSettings() {
             <CardContent>
               <div className="space-y-2">
                 {externalCourses?.map((course) => (
-                  <div key={course.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div
+                    key={course.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
                     <div className="flex items-center gap-3">
                       <Checkbox
                         checked={course.is_public}
-                        onCheckedChange={(checked) => toggleExternalCoursePublic.mutate({ courseId: course.id, isPublic: !!checked })}
+                        onCheckedChange={(checked) =>
+                          toggleExternalCoursePublic.mutate({
+                            courseId: course.id,
+                            isPublic: !!checked,
+                          })
+                        }
                       />
                       <div>
                         <p className="font-medium">{course.title}</p>
                         <p className="text-sm text-muted-foreground">{course.provider}</p>
-                        <Badge variant="outline" className="text-xs">{course.status}</Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {course.status}
+                        </Badge>
                       </div>
                     </div>
-                    {course.is_public ? <Eye className="h-4 w-4 text-muted-foreground" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                    {course.is_public ? (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    )}
                   </div>
                 ))}
                 {(!externalCourses || externalCourses.length === 0) && (

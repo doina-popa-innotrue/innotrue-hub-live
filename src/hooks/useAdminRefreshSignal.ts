@@ -1,14 +1,14 @@
-import { useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useEffect, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-const LAST_REFRESH_KEY = 'platform_last_refresh_check';
+const LAST_REFRESH_KEY = "platform_last_refresh_check";
 
 /**
  * Hook that listens for admin-triggered refresh signals via Supabase Realtime.
  * Also checks on mount if a refresh occurred while the user was offline.
- * 
+ *
  * @param isAuthenticated - Whether the user is currently authenticated
  */
 export function useAdminRefreshSignal(isAuthenticated: boolean = true) {
@@ -23,9 +23,9 @@ export function useAdminRefreshSignal(isAuthenticated: boolean = true) {
     const checkForMissedRefresh = async () => {
       try {
         const { data, error } = await supabase
-          .from('platform_settings')
-          .select('last_force_refresh')
-          .eq('id', 'default')
+          .from("platform_settings")
+          .select("last_force_refresh")
+          .eq("id", "default")
           .single();
 
         if (error || !data?.last_force_refresh) return;
@@ -39,9 +39,9 @@ export function useAdminRefreshSignal(isAuthenticated: boolean = true) {
 
         // If server timestamp is newer than our last check, trigger refresh
         if (serverTimestamp > lastCheckedTime && lastCheckedTime > 0) {
-          console.log('Detected missed refresh signal, reloading...');
-          toast.info('Updating application...', {
-            description: 'Loading the latest platform updates.',
+          console.log("Detected missed refresh signal, reloading...");
+          toast.info("Updating application...", {
+            description: "Loading the latest platform updates.",
             duration: 2000,
           });
           setTimeout(() => {
@@ -49,7 +49,7 @@ export function useAdminRefreshSignal(isAuthenticated: boolean = true) {
           }, 1500);
         }
       } catch (err) {
-        console.error('Error checking for missed refresh:', err);
+        console.error("Error checking for missed refresh:", err);
       }
     };
 
@@ -60,32 +60,33 @@ export function useAdminRefreshSignal(isAuthenticated: boolean = true) {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    console.log('Setting up admin refresh signal listener...');
-    
+    console.log("Setting up admin refresh signal listener...");
+
     const channel = supabase
-      .channel('admin-refresh-signal')
-      .on('broadcast', { event: 'force-refresh' }, (payload) => {
-        console.log('Received admin refresh signal:', payload);
-        
+      .channel("admin-refresh-signal")
+      .on("broadcast", { event: "force-refresh" }, (payload) => {
+        console.log("Received admin refresh signal:", payload);
+
         // Update local timestamp so we don't trigger again on next mount
         localStorage.setItem(LAST_REFRESH_KEY, Date.now().toString());
-        
-        const refreshType = payload.payload?.type || 'full';
-        const message = payload.payload?.message || 'The application is being refreshed with the latest updates.';
-        
-        if (refreshType === 'cache') {
+
+        const refreshType = payload.payload?.type || "full";
+        const message =
+          payload.payload?.message || "The application is being refreshed with the latest updates.";
+
+        if (refreshType === "cache") {
           // Invalidate all queries to force refetch
           queryClient.invalidateQueries();
-          toast.info('Data refreshed', {
-            description: 'All data has been updated with the latest changes.',
+          toast.info("Data refreshed", {
+            description: "All data has been updated with the latest changes.",
           });
         } else {
           // Full page reload
-          toast.info('Refreshing application...', {
+          toast.info("Refreshing application...", {
             description: message,
             duration: 2000,
           });
-          
+
           // Small delay to show the toast before reload
           setTimeout(() => {
             window.location.reload();
@@ -93,11 +94,11 @@ export function useAdminRefreshSignal(isAuthenticated: boolean = true) {
         }
       })
       .subscribe((status) => {
-        console.log('Admin refresh channel status:', status);
+        console.log("Admin refresh channel status:", status);
       });
 
     return () => {
-      console.log('Cleaning up admin refresh signal listener...');
+      console.log("Cleaning up admin refresh signal listener...");
       supabase.removeChannel(channel);
     };
   }, [queryClient, isAuthenticated]);

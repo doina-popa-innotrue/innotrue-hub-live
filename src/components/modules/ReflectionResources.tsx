@@ -1,13 +1,20 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { ExternalLink, FileText, Image as ImageIcon, Link as LinkIcon, Trash2, Download } from 'lucide-react';
-import { format } from 'date-fns';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import {
+  ExternalLink,
+  FileText,
+  Image as ImageIcon,
+  Link as LinkIcon,
+  Trash2,
+  Download,
+} from "lucide-react";
+import { format } from "date-fns";
 
 interface ReflectionResource {
   id: string;
-  resource_type: 'file' | 'image' | 'link';
+  resource_type: "file" | "image" | "link";
   title: string;
   description: string | null;
   url: string | null;
@@ -32,56 +39,51 @@ export default function ReflectionResources({ reflectionId }: ReflectionResource
   async function fetchResources() {
     try {
       const { data, error } = await supabase
-        .from('module_reflection_resources')
-        .select('*')
-        .eq('module_reflection_id', reflectionId)
-        .order('created_at', { ascending: false });
+        .from("module_reflection_resources")
+        .select("*")
+        .eq("module_reflection_id", reflectionId)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setResources((data as ReflectionResource[]) || []);
     } catch (error) {
-      console.error('Error fetching resources:', error);
+      console.error("Error fetching resources:", error);
     } finally {
       setLoading(false);
     }
   }
 
   async function handleDelete(id: string, filePath: string | null) {
-    if (!confirm('Are you sure you want to delete this resource?')) return;
+    if (!confirm("Are you sure you want to delete this resource?")) return;
 
     try {
       // Delete from storage if it's a file/image
       if (filePath) {
-        await supabase.storage
-          .from('module-reflection-resources')
-          .remove([filePath]);
+        await supabase.storage.from("module-reflection-resources").remove([filePath]);
       }
 
       // Delete database record
-      const { error } = await supabase
-        .from('module_reflection_resources')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from("module_reflection_resources").delete().eq("id", id);
 
       if (error) throw error;
-      toast.success('Resource deleted');
+      toast.success("Resource deleted");
       fetchResources();
     } catch (error) {
-      console.error('Error deleting resource:', error);
-      toast.error('Failed to delete resource');
+      console.error("Error deleting resource:", error);
+      toast.error("Failed to delete resource");
     }
   }
 
   async function handleDownload(filePath: string, title: string) {
     try {
       const { data, error } = await supabase.storage
-        .from('module-reflection-resources')
+        .from("module-reflection-resources")
         .download(filePath);
 
       if (error) throw error;
 
       const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = title;
       document.body.appendChild(a);
@@ -89,18 +91,18 @@ export default function ReflectionResources({ reflectionId }: ReflectionResource
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error downloading file:', error);
-      toast.error('Failed to download file');
+      console.error("Error downloading file:", error);
+      toast.error("Failed to download file");
     }
   }
 
   function getResourceIcon(type: string) {
     switch (type) {
-      case 'image':
+      case "image":
         return <ImageIcon className="h-4 w-4" />;
-      case 'file':
+      case "file":
         return <FileText className="h-4 w-4" />;
-      case 'link':
+      case "link":
         return <LinkIcon className="h-4 w-4" />;
       default:
         return <FileText className="h-4 w-4" />;
@@ -123,27 +125,27 @@ export default function ReflectionResources({ reflectionId }: ReflectionResource
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-sm truncate">{resource.title}</p>
-                  {resource.resource_type === 'link' && resource.url && (
+                  {resource.resource_type === "link" && resource.url && (
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 shrink-0"
-                      onClick={() => window.open(resource.url!, '_blank')}
+                      onClick={() => window.open(resource.url!, "_blank")}
                     >
                       <ExternalLink className="h-3 w-3" />
                     </Button>
                   )}
-                  {resource.resource_type === 'image' && resource.file_path && (
+                  {resource.resource_type === "image" && resource.file_path && (
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 shrink-0"
-                      onClick={() => window.open(resource.url!, '_blank')}
+                      onClick={() => window.open(resource.url!, "_blank")}
                     >
                       <ExternalLink className="h-3 w-3" />
                     </Button>
                   )}
-                  {resource.resource_type === 'file' && resource.file_path && (
+                  {resource.resource_type === "file" && resource.file_path && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -159,7 +161,7 @@ export default function ReflectionResources({ reflectionId }: ReflectionResource
                 )}
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(resource.created_at), 'PP')}
+                    {format(new Date(resource.created_at), "PP")}
                   </p>
                   {resource.file_size && (
                     <p className="text-xs text-muted-foreground">

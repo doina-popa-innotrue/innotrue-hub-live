@@ -7,7 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -22,7 +30,11 @@ export function WebhookLogsCleanup({ onCleanupComplete }: WebhookLogsCleanupProp
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   // Fetch preview of logs to be deleted
-  const { data: preview, isLoading: isLoadingPreview, refetch } = useQuery({
+  const {
+    data: preview,
+    isLoading: isLoadingPreview,
+    refetch,
+  } = useQuery({
     queryKey: ["webhook-logs-cleanup-preview", retentionDays],
     queryFn: async () => {
       const cutoffDate = subDays(new Date(), retentionDays).toISOString();
@@ -51,7 +63,7 @@ export function WebhookLogsCleanup({ onCleanupComplete }: WebhookLogsCleanupProp
       if (eventError) throw eventError;
 
       const eventMap = new Map<string, number>();
-      eventData?.forEach(e => {
+      eventData?.forEach((e) => {
         const type = e.event_type || "unknown";
         eventMap.set(type, (eventMap.get(type) || 0) + 1);
       });
@@ -94,7 +106,9 @@ export function WebhookLogsCleanup({ onCleanupComplete }: WebhookLogsCleanupProp
       onCleanupComplete?.();
     },
     onError: (error) => {
-      toast.error("Failed to delete logs: " + (error instanceof Error ? error.message : "Unknown error"));
+      toast.error(
+        "Failed to delete logs: " + (error instanceof Error ? error.message : "Unknown error"),
+      );
     },
   });
 
@@ -119,7 +133,8 @@ export function WebhookLogsCleanup({ onCleanupComplete }: WebhookLogsCleanupProp
         <Alert>
           <Clock className="h-4 w-4" />
           <AlertDescription>
-            <strong>Auto-cleanup enabled:</strong> Logs older than 30 days are automatically deleted daily at 3 AM UTC.
+            <strong>Auto-cleanup enabled:</strong> Logs older than 30 days are automatically deleted
+            daily at 3 AM UTC.
           </AlertDescription>
         </Alert>
 

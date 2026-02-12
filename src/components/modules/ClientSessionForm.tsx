@@ -78,12 +78,10 @@ export function ClientSessionForm({
         session_date: params.sessionDate,
         meeting_url: params.meetingUrl || null,
         client_response: "accepted" as const,
-        timezone: params.timezone || 'UTC',
+        timezone: params.timezone || "UTC",
       };
 
-      const { error } = await supabase
-        .from("module_sessions")
-        .insert(sessionData);
+      const { error } = await supabase.from("module_sessions").insert(sessionData);
 
       if (error) throw error;
     },
@@ -143,7 +141,8 @@ export function ClientSessionForm({
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="text-sm text-muted-foreground">
-            Session duration: <span className="font-medium text-foreground">{defaultDuration} minutes</span>
+            Session duration:{" "}
+            <span className="font-medium text-foreground">{defaultDuration} minutes</span>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -178,10 +177,7 @@ export function ClientSessionForm({
           {/* Timezone Selection */}
           <div className="space-y-2">
             <Label>Timezone</Label>
-            <TimezoneSelect 
-              value={selectedTimezone || ''} 
-              onChange={setSelectedTimezone} 
-            />
+            <TimezoneSelect value={selectedTimezone || ""} onChange={setSelectedTimezone} />
           </div>
 
           <div className="space-y-2">

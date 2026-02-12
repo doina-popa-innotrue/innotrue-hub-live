@@ -1,26 +1,35 @@
-import { ReactNode, useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useSessionTimeout } from '@/hooks/useSessionTimeout';
-import { supabase } from '@/integrations/supabase/client';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
-import { SkipLink } from '@/components/accessibility';
-import { UserDropdown } from '@/components/UserDropdown';
-import { RoleSwitcher } from '@/components/sidebar/RoleSwitcher';
-import { RoleBadges } from '@/components/sidebar/RoleBadges';
-import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
-import { NavLink } from '@/components/NavLink';
-import { 
-  LayoutDashboard, 
-  Users, 
-  BookOpen, 
-  Settings, 
+import { ReactNode, useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSessionTimeout } from "@/hooks/useSessionTimeout";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarHeader,
+  SidebarFooter,
+} from "@/components/ui/sidebar";
+import { SkipLink } from "@/components/accessibility";
+import { UserDropdown } from "@/components/UserDropdown";
+import { RoleSwitcher } from "@/components/sidebar/RoleSwitcher";
+import { RoleBadges } from "@/components/sidebar/RoleBadges";
+import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
+import { NavLink } from "@/components/NavLink";
+import {
+  LayoutDashboard,
+  Users,
+  BookOpen,
+  Settings,
   Building2,
   GraduationCap,
   BarChart3,
   HelpCircle,
   CreditCard,
-  Shield
-} from 'lucide-react';
+  Shield,
+} from "lucide-react";
 
 interface OrgAdminLayoutProps {
   children: ReactNode;
@@ -28,8 +37,8 @@ interface OrgAdminLayoutProps {
 
 export function OrgAdminLayout({ children }: OrgAdminLayoutProps) {
   const { user, organizationMembership } = useAuth();
-  const [profileName, setProfileName] = useState<string>('');
-  const [avatarUrl, setAvatarUrl] = useState<string>('');
+  const [profileName, setProfileName] = useState<string>("");
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
 
   useSessionTimeout();
 
@@ -43,50 +52,50 @@ export function OrgAdminLayout({ children }: OrgAdminLayoutProps) {
     const handleProfileUpdate = () => {
       loadUserProfile();
     };
-    
-    window.addEventListener('profile-updated', handleProfileUpdate);
+
+    window.addEventListener("profile-updated", handleProfileUpdate);
     return () => {
-      window.removeEventListener('profile-updated', handleProfileUpdate);
+      window.removeEventListener("profile-updated", handleProfileUpdate);
     };
   }, []);
 
   const loadUserProfile = async () => {
     if (!user) return;
-    
+
     try {
       const { data } = await supabase
-        .from('profiles')
-        .select('name, avatar_url')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("name, avatar_url")
+        .eq("id", user.id)
         .single();
-      
+
       if (data) {
-        setProfileName(data.name || '');
-        setAvatarUrl(data.avatar_url || '');
+        setProfileName(data.name || "");
+        setAvatarUrl(data.avatar_url || "");
       }
     } catch (error) {
-      console.error('Error loading profile:', error);
+      console.error("Error loading profile:", error);
     }
   };
 
-  const orgName = organizationMembership?.organization_name || 'Organization';
+  const orgName = organizationMembership?.organization_name || "Organization";
 
   const navigationItems = [
-    { to: '/org-admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
-    { to: '/org-admin/members', icon: Users, label: 'Members', end: false },
-    { to: '/org-admin/programs', icon: BookOpen, label: 'Programs', end: false },
-    { to: '/org-admin/enrollments', icon: GraduationCap, label: 'Enrollments', end: false },
-    { to: '/org-admin/billing', icon: CreditCard, label: 'Billing & Credits', end: false },
-    { to: '/org-admin/analytics', icon: BarChart3, label: 'Analytics', end: false },
-    { to: '/org-admin/terms', icon: Shield, label: 'Terms & Conditions', end: false },
-    { to: '/org-admin/settings', icon: Settings, label: 'Settings', end: false },
+    { to: "/org-admin", icon: LayoutDashboard, label: "Dashboard", end: true },
+    { to: "/org-admin/members", icon: Users, label: "Members", end: false },
+    { to: "/org-admin/programs", icon: BookOpen, label: "Programs", end: false },
+    { to: "/org-admin/enrollments", icon: GraduationCap, label: "Enrollments", end: false },
+    { to: "/org-admin/billing", icon: CreditCard, label: "Billing & Credits", end: false },
+    { to: "/org-admin/analytics", icon: BarChart3, label: "Analytics", end: false },
+    { to: "/org-admin/terms", icon: Shield, label: "Terms & Conditions", end: false },
+    { to: "/org-admin/settings", icon: Settings, label: "Settings", end: false },
   ];
 
   return (
     <SidebarProvider>
       <SkipLink targetId="main-content">Skip to main content</SkipLink>
       <SkipLink targetId="sidebar">Skip to sidebar</SkipLink>
-      
+
       <div className="flex min-h-screen w-full bg-background">
         <Sidebar id="sidebar" className="border-r border-border">
           <SidebarHeader className="p-4 border-b border-border">
@@ -138,29 +147,25 @@ export function OrgAdminLayout({ children }: OrgAdminLayoutProps) {
         <div className="flex-1 flex flex-col min-w-0">
           <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-background px-6">
             <div className="flex items-center gap-3">
-              <img 
-                src="/assets/bef0efe8-8bee-45e0-a7b2-9067b165d1e8.png" 
-                alt="InnoTrue Hub" 
+              <img
+                src="/assets/bef0efe8-8bee-45e0-a7b2-9067b165d1e8.png"
+                alt="InnoTrue Hub"
                 className="h-8 w-auto"
               />
               <span className="font-semibold text-foreground hidden sm:inline">InnoTrue Hub</span>
             </div>
-            
+
             <div className="flex items-center gap-4">
-              <UserDropdown 
-                profileName={profileName}
-                avatarUrl={avatarUrl}
-                email={user?.email}
-              />
+              <UserDropdown profileName={profileName} avatarUrl={avatarUrl} email={user?.email} />
             </div>
           </header>
-          
+
           <main id="main-content" className="flex-1 overflow-y-auto p-6">
             {children}
           </main>
         </div>
       </div>
-      
+
       <OnboardingTour />
     </SidebarProvider>
   );

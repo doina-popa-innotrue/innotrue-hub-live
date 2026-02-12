@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Mail, User, Users } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Mail, User, Users } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface TeamMember {
   id: string;
   name: string;
   avatar_url: string | null;
-  role: 'instructor' | 'coach';
+  role: "instructor" | "coach";
 }
 
 interface ModuleTeamContactProps {
@@ -29,89 +29,97 @@ export function ModuleTeamContact({ moduleId, programId }: ModuleTeamContactProp
 
       // First try to fetch module-specific instructors
       const { data: moduleInstructorsData } = await supabase
-        .from('module_instructors')
-        .select(`
+        .from("module_instructors")
+        .select(
+          `
           instructor_id,
           profiles!module_instructors_instructor_id_fkey (
             id,
             name,
             avatar_url
           )
-        `)
-        .eq('module_id', moduleId);
+        `,
+        )
+        .eq("module_id", moduleId);
 
       // Then try module-specific coaches
       const { data: moduleCoachesData } = await supabase
-        .from('module_coaches')
-        .select(`
+        .from("module_coaches")
+        .select(
+          `
           coach_id,
           profiles!module_coaches_coach_id_fkey (
             id,
             name,
             avatar_url
           )
-        `)
-        .eq('module_id', moduleId);
+        `,
+        )
+        .eq("module_id", moduleId);
 
       let finalInstructors: TeamMember[] = [];
       let finalCoaches: TeamMember[] = [];
 
       // Use module-level assignments if available, otherwise fall back to program-level
       if (moduleInstructorsData && moduleInstructorsData.length > 0) {
-        finalInstructors = moduleInstructorsData.map(i => ({
+        finalInstructors = moduleInstructorsData.map((i) => ({
           id: i.instructor_id,
-          name: (i.profiles as any)?.name || 'Instructor',
+          name: (i.profiles as any)?.name || "Instructor",
           avatar_url: (i.profiles as any)?.avatar_url,
-          role: 'instructor' as const,
+          role: "instructor" as const,
         }));
       } else {
         // Fallback to program instructors
         const { data: programInstructorsData } = await supabase
-          .from('program_instructors')
-          .select(`
+          .from("program_instructors")
+          .select(
+            `
             instructor_id,
             profiles!program_instructors_instructor_id_fkey (
               id,
               name,
               avatar_url
             )
-          `)
-          .eq('program_id', programId);
+          `,
+          )
+          .eq("program_id", programId);
 
-        finalInstructors = (programInstructorsData || []).map(i => ({
+        finalInstructors = (programInstructorsData || []).map((i) => ({
           id: i.instructor_id,
-          name: (i.profiles as any)?.name || 'Instructor',
+          name: (i.profiles as any)?.name || "Instructor",
           avatar_url: (i.profiles as any)?.avatar_url,
-          role: 'instructor' as const,
+          role: "instructor" as const,
         }));
       }
 
       if (moduleCoachesData && moduleCoachesData.length > 0) {
-        finalCoaches = moduleCoachesData.map(c => ({
+        finalCoaches = moduleCoachesData.map((c) => ({
           id: c.coach_id,
-          name: (c.profiles as any)?.name || 'Coach',
+          name: (c.profiles as any)?.name || "Coach",
           avatar_url: (c.profiles as any)?.avatar_url,
-          role: 'coach' as const,
+          role: "coach" as const,
         }));
       } else {
         // Fallback to program coaches
         const { data: programCoachesData } = await supabase
-          .from('program_coaches')
-          .select(`
+          .from("program_coaches")
+          .select(
+            `
             coach_id,
             profiles!program_coaches_coach_id_fkey (
               id,
               name,
               avatar_url
             )
-          `)
-          .eq('program_id', programId);
+          `,
+          )
+          .eq("program_id", programId);
 
-        finalCoaches = (programCoachesData || []).map(c => ({
+        finalCoaches = (programCoachesData || []).map((c) => ({
           id: c.coach_id,
-          name: (c.profiles as any)?.name || 'Coach',
+          name: (c.profiles as any)?.name || "Coach",
           avatar_url: (c.profiles as any)?.avatar_url,
-          role: 'coach' as const,
+          role: "coach" as const,
         }));
       }
 
@@ -125,8 +133,8 @@ export function ModuleTeamContact({ moduleId, programId }: ModuleTeamContactProp
 
   const handleContact = async (userId: string, name: string, role: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('get-user-email', {
-        body: { userId }
+      const { data, error } = await supabase.functions.invoke("get-user-email", {
+        body: { userId },
       });
 
       if (error || !data?.email) {
@@ -165,8 +173,11 @@ export function ModuleTeamContact({ moduleId, programId }: ModuleTeamContactProp
         <span>Your Team:</span>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {instructors.map(member => (
-          <div key={member.id} className="flex items-center gap-2 bg-background rounded-full pl-1 pr-2 py-1 border">
+        {instructors.map((member) => (
+          <div
+            key={member.id}
+            className="flex items-center gap-2 bg-background rounded-full pl-1 pr-2 py-1 border"
+          >
             <Avatar className="h-6 w-6">
               <AvatarImage src={member.avatar_url || undefined} />
               <AvatarFallback className="text-xs">
@@ -174,19 +185,24 @@ export function ModuleTeamContact({ moduleId, programId }: ModuleTeamContactProp
               </AvatarFallback>
             </Avatar>
             <span className="text-sm font-medium">{member.name}</span>
-            <Badge variant="outline" className="text-xs px-1.5 py-0">Instructor</Badge>
+            <Badge variant="outline" className="text-xs px-1.5 py-0">
+              Instructor
+            </Badge>
             <Button
               variant="ghost"
               size="sm"
               className="h-6 w-6 p-0"
-              onClick={() => handleContact(member.id, member.name, 'Instructor')}
+              onClick={() => handleContact(member.id, member.name, "Instructor")}
             >
               <Mail className="h-3 w-3" />
             </Button>
           </div>
         ))}
-        {coaches.map(member => (
-          <div key={member.id} className="flex items-center gap-2 bg-background rounded-full pl-1 pr-2 py-1 border">
+        {coaches.map((member) => (
+          <div
+            key={member.id}
+            className="flex items-center gap-2 bg-background rounded-full pl-1 pr-2 py-1 border"
+          >
             <Avatar className="h-6 w-6">
               <AvatarImage src={member.avatar_url || undefined} />
               <AvatarFallback className="text-xs">
@@ -194,12 +210,14 @@ export function ModuleTeamContact({ moduleId, programId }: ModuleTeamContactProp
               </AvatarFallback>
             </Avatar>
             <span className="text-sm font-medium">{member.name}</span>
-            <Badge variant="secondary" className="text-xs px-1.5 py-0">Coach</Badge>
+            <Badge variant="secondary" className="text-xs px-1.5 py-0">
+              Coach
+            </Badge>
             <Button
               variant="ghost"
               size="sm"
               className="h-6 w-6 p-0"
-              onClick={() => handleContact(member.id, member.name, 'Coach')}
+              onClick={() => handleContact(member.id, member.name, "Coach")}
             >
               <Mail className="h-3 w-3" />
             </Button>

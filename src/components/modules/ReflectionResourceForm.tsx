@@ -1,13 +1,13 @@
-import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { toast } from 'sonner';
-import { Loader2, Upload, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { toast } from "sonner";
+import { Loader2, Upload, Link as LinkIcon, Image as ImageIcon } from "lucide-react";
 
 interface ReflectionResourceFormProps {
   reflectionId: string;
@@ -21,10 +21,10 @@ export default function ReflectionResourceForm({
   onCancel,
 }: ReflectionResourceFormProps) {
   const { user } = useAuth();
-  const [resourceType, setResourceType] = useState<'file' | 'image' | 'link'>('link');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [url, setUrl] = useState('');
+  const [resourceType, setResourceType] = useState<"file" | "image" | "link">("link");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [url, setUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -49,17 +49,17 @@ export default function ReflectionResourceForm({
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile) {
       // Auto-detect resource type based on file
-      if (droppedFile.type.startsWith('image/')) {
-        setResourceType('image');
+      if (droppedFile.type.startsWith("image/")) {
+        setResourceType("image");
       } else {
-        setResourceType('file');
+        setResourceType("file");
       }
-      
+
       setFile(droppedFile);
-      
+
       // Auto-populate title from filename if empty
       if (!title) {
-        const fileName = droppedFile.name.replace(/\.[^/.]+$/, '');
+        const fileName = droppedFile.name.replace(/\.[^/.]+$/, "");
         setTitle(fileName);
       }
     }
@@ -77,12 +77,12 @@ export default function ReflectionResourceForm({
       let finalUrl = url;
 
       // Handle file upload
-      if ((resourceType === 'file' || resourceType === 'image') && file) {
-        const fileExt = file.name.split('.').pop();
+      if ((resourceType === "file" || resourceType === "image") && file) {
+        const fileExt = file.name.split(".").pop();
         const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-        
+
         const { error: uploadError } = await supabase.storage
-          .from('module-reflection-resources')
+          .from("module-reflection-resources")
           .upload(fileName, file);
 
         if (uploadError) throw uploadError;
@@ -91,35 +91,33 @@ export default function ReflectionResourceForm({
         fileSize = file.size;
         mimeType = file.type;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('module-reflection-resources')
-          .getPublicUrl(fileName);
-        
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("module-reflection-resources").getPublicUrl(fileName);
+
         finalUrl = publicUrl;
       }
 
       // Insert resource record
-      const { error: insertError } = await supabase
-        .from('module_reflection_resources')
-        .insert({
-          module_reflection_id: reflectionId,
-          user_id: user.id,
-          resource_type: resourceType,
-          title: title.trim(),
-          description: description.trim() || null,
-          url: finalUrl || null,
-          file_path: filePath,
-          file_size: fileSize,
-          mime_type: mimeType,
-        });
+      const { error: insertError } = await supabase.from("module_reflection_resources").insert({
+        module_reflection_id: reflectionId,
+        user_id: user.id,
+        resource_type: resourceType,
+        title: title.trim(),
+        description: description.trim() || null,
+        url: finalUrl || null,
+        file_path: filePath,
+        file_size: fileSize,
+        mime_type: mimeType,
+      });
 
       if (insertError) throw insertError;
 
-      toast.success('Resource added successfully');
+      toast.success("Resource added successfully");
       onSuccess();
     } catch (error) {
-      console.error('Error adding resource:', error);
-      toast.error('Failed to add resource');
+      console.error("Error adding resource:", error);
+      toast.error("Failed to add resource");
     } finally {
       setUploading(false);
     }
@@ -182,7 +180,7 @@ export default function ReflectionResourceForm({
         />
       </div>
 
-      {resourceType === 'link' && (
+      {resourceType === "link" && (
         <div className="space-y-2">
           <Label htmlFor="url">URL *</Label>
           <Input
@@ -196,40 +194,36 @@ export default function ReflectionResourceForm({
         </div>
       )}
 
-      {(resourceType === 'file' || resourceType === 'image') && (
+      {(resourceType === "file" || resourceType === "image") && (
         <div className="space-y-2">
           <Label htmlFor="file">
-            {resourceType === 'image' ? 'Upload Image' : 'Upload File'} *
+            {resourceType === "image" ? "Upload Image" : "Upload File"} *
           </Label>
-          
+
           {/* Drag and drop zone */}
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              isDragging
-                ? 'border-primary bg-primary/5'
-                : 'border-border hover:border-primary/50'
+              isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
             }`}
           >
             <Upload className="h-8 w-8 mx-auto mb-4 text-muted-foreground" />
             <p className="text-sm font-medium mb-1">
-              {isDragging ? 'Drop file here' : 'Drag and drop file here'}
+              {isDragging ? "Drop file here" : "Drag and drop file here"}
             </p>
-            <p className="text-xs text-muted-foreground mb-4">
-              or click to browse
-            </p>
+            <p className="text-xs text-muted-foreground mb-4">or click to browse</p>
             <Input
               id="file"
               type="file"
-              accept={resourceType === 'image' ? 'image/*' : '*'}
+              accept={resourceType === "image" ? "image/*" : "*"}
               onChange={(e) => setFile(e.target.files?.[0] || null)}
               className="max-w-xs mx-auto cursor-pointer"
               required={!file}
             />
           </div>
-          
+
           {file && (
             <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/50">
               <Upload className="h-4 w-4 text-muted-foreground" />
@@ -239,12 +233,7 @@ export default function ReflectionResourceForm({
                   {(file.size / 1024 / 1024).toFixed(2)} MB
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setFile(null)}
-              >
+              <Button type="button" variant="ghost" size="sm" onClick={() => setFile(null)}>
                 Remove
               </Button>
             </div>

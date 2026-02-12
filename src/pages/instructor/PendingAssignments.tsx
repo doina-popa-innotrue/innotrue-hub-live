@@ -1,16 +1,32 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Search, Filter, ClipboardCheck, Clock, User, BookOpen, Calendar, CheckCircle } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
-import { ClientFilterCombobox } from '@/components/instructor/ClientFilterCombobox';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Loader2,
+  Search,
+  Filter,
+  ClipboardCheck,
+  Clock,
+  User,
+  BookOpen,
+  Calendar,
+  CheckCircle,
+} from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { formatDistanceToNow } from "date-fns";
+import { ClientFilterCombobox } from "@/components/instructor/ClientFilterCombobox";
 import {
   Table,
   TableBody,
@@ -18,7 +34,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 
 interface Assignment {
   id: string;
@@ -43,7 +59,7 @@ interface Assignment {
   days_pending: number;
 }
 
-type TabType = 'pending' | 'scored';
+type TabType = "pending" | "scored";
 
 export default function PendingAssignments() {
   const { user, userRole, userRoles } = useAuth();
@@ -51,24 +67,26 @@ export default function PendingAssignments() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>(
-    (searchParams.get('tab') as TabType) || 'pending'
+    (searchParams.get("tab") as TabType) || "pending",
   );
-  
+
   // Pending assignments state
   const [pendingAssignments, setPendingAssignments] = useState<Assignment[]>([]);
   const [filteredPendingAssignments, setFilteredPendingAssignments] = useState<Assignment[]>([]);
-  
+
   // Scored assignments state
   const [scoredAssignments, setScoredAssignments] = useState<Assignment[]>([]);
   const [filteredScoredAssignments, setFilteredScoredAssignments] = useState<Assignment[]>([]);
   const [loadingScored, setLoadingScored] = useState(false);
-  
+
   // Filter state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [programFilter, setProgramFilter] = useState<string>('all');
-  const [clientFilter, setClientFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'date' | 'client' | 'program'>('date');
-  const [scoredTimeFilter, setScoredTimeFilter] = useState<'7days' | '30days' | '90days' | 'all'>('30days');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [programFilter, setProgramFilter] = useState<string>("all");
+  const [clientFilter, setClientFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"date" | "client" | "program">("date");
+  const [scoredTimeFilter, setScoredTimeFilter] = useState<"7days" | "30days" | "90days" | "all">(
+    "30days",
+  );
 
   useEffect(() => {
     if (user) {
@@ -77,14 +95,23 @@ export default function PendingAssignments() {
   }, [user, userRole]);
 
   useEffect(() => {
-    if (activeTab === 'scored' && scoredAssignments.length === 0 && !loadingScored) {
+    if (activeTab === "scored" && scoredAssignments.length === 0 && !loadingScored) {
       loadScoredAssignments();
     }
   }, [activeTab]);
 
   useEffect(() => {
     filterAndSortAssignments();
-  }, [pendingAssignments, scoredAssignments, searchQuery, programFilter, clientFilter, sortBy, scoredTimeFilter, activeTab]);
+  }, [
+    pendingAssignments,
+    scoredAssignments,
+    searchQuery,
+    programFilter,
+    clientFilter,
+    sortBy,
+    scoredTimeFilter,
+    activeTab,
+  ]);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab as TabType);
@@ -92,24 +119,28 @@ export default function PendingAssignments() {
   };
 
   const getModuleIdsForUser = async () => {
-    const showInstructor = userRole === 'instructor';
-    const showCoach = userRole === 'coach';
+    const showInstructor = userRole === "instructor";
+    const showCoach = userRole === "coach";
 
-    const programInstructorPromise = showInstructor && userRoles.includes('instructor') && user
-      ? supabase.from('program_instructors').select('program_id').eq('instructor_id', user.id)
-      : Promise.resolve({ data: [], error: null });
+    const programInstructorPromise =
+      showInstructor && userRoles.includes("instructor") && user
+        ? supabase.from("program_instructors").select("program_id").eq("instructor_id", user.id)
+        : Promise.resolve({ data: [], error: null });
 
-    const programCoachPromise = showCoach && userRoles.includes('coach') && user
-      ? supabase.from('program_coaches').select('program_id').eq('coach_id', user.id)
-      : Promise.resolve({ data: [], error: null });
+    const programCoachPromise =
+      showCoach && userRoles.includes("coach") && user
+        ? supabase.from("program_coaches").select("program_id").eq("coach_id", user.id)
+        : Promise.resolve({ data: [], error: null });
 
-    const moduleInstructorPromise = showInstructor && userRoles.includes('instructor') && user
-      ? supabase.from('module_instructors').select('module_id').eq('instructor_id', user.id)
-      : Promise.resolve({ data: [], error: null });
+    const moduleInstructorPromise =
+      showInstructor && userRoles.includes("instructor") && user
+        ? supabase.from("module_instructors").select("module_id").eq("instructor_id", user.id)
+        : Promise.resolve({ data: [], error: null });
 
-    const moduleCoachPromise = showCoach && userRoles.includes('coach') && user
-      ? supabase.from('module_coaches').select('module_id').eq('coach_id', user.id)
-      : Promise.resolve({ data: [], error: null });
+    const moduleCoachPromise =
+      showCoach && userRoles.includes("coach") && user
+        ? supabase.from("module_coaches").select("module_id").eq("coach_id", user.id)
+        : Promise.resolve({ data: [], error: null });
 
     const [instructorPrograms, coachPrograms, instructorModules, coachModules] = await Promise.all([
       programInstructorPromise,
@@ -119,13 +150,13 @@ export default function PendingAssignments() {
     ]);
 
     const programIds = new Set([
-      ...(instructorPrograms.data || []).map(p => p.program_id),
-      ...(coachPrograms.data || []).map(p => p.program_id),
+      ...(instructorPrograms.data || []).map((p) => p.program_id),
+      ...(coachPrograms.data || []).map((p) => p.program_id),
     ]);
 
     const moduleIds = new Set([
-      ...(instructorModules.data || []).map(m => m.module_id),
-      ...(coachModules.data || []).map(m => m.module_id),
+      ...(instructorModules.data || []).map((m) => m.module_id),
+      ...(coachModules.data || []).map((m) => m.module_id),
     ]);
 
     if (programIds.size === 0 && moduleIds.size === 0) {
@@ -135,12 +166,12 @@ export default function PendingAssignments() {
     let allModuleIds = new Set(moduleIds);
     if (programIds.size > 0) {
       const { data: programModules } = await supabase
-        .from('program_modules')
-        .select('id')
-        .in('program_id', Array.from(programIds))
-        .eq('is_active', true);
-      
-      programModules?.forEach(m => allModuleIds.add(m.id));
+        .from("program_modules")
+        .select("id")
+        .in("program_id", Array.from(programIds))
+        .eq("is_active", true);
+
+      programModules?.forEach((m) => allModuleIds.add(m.id));
     }
 
     return allModuleIds.size > 0 ? allModuleIds : null;
@@ -158,8 +189,9 @@ export default function PendingAssignments() {
       }
 
       const { data: moduleProgressData } = await supabase
-        .from('module_progress')
-        .select(`
+        .from("module_progress")
+        .select(
+          `
           id,
           enrollment_id,
           module_id,
@@ -172,8 +204,9 @@ export default function PendingAssignments() {
             title,
             program_id
           )
-        `)
-        .in('module_id', Array.from(allModuleIds));
+        `,
+        )
+        .in("module_id", Array.from(allModuleIds));
 
       if (!moduleProgressData || moduleProgressData.length === 0) {
         setPendingAssignments([]);
@@ -181,11 +214,12 @@ export default function PendingAssignments() {
         return;
       }
 
-      const progressIds = moduleProgressData.map(mp => mp.id);
+      const progressIds = moduleProgressData.map((mp) => mp.id);
 
       const { data: assignmentData, error: assignmentError } = await supabase
-        .from('module_assignments')
-        .select(`
+        .from("module_assignments")
+        .select(
+          `
           id,
           module_progress_id,
           assignment_type_id,
@@ -193,9 +227,10 @@ export default function PendingAssignments() {
           created_at,
           updated_at,
           module_assignment_types(name)
-        `)
-        .in('module_progress_id', progressIds)
-        .in('status', ['submitted']);
+        `,
+        )
+        .in("module_progress_id", progressIds)
+        .in("status", ["submitted"]);
 
       if (assignmentError) throw assignmentError;
 
@@ -210,7 +245,7 @@ export default function PendingAssignments() {
 
       setPendingAssignments(assignmentsList);
     } catch (error) {
-      console.error('Error loading pending assignments:', error);
+      console.error("Error loading pending assignments:", error);
     } finally {
       setLoading(false);
     }
@@ -228,8 +263,9 @@ export default function PendingAssignments() {
       }
 
       const { data: moduleProgressData } = await supabase
-        .from('module_progress')
-        .select(`
+        .from("module_progress")
+        .select(
+          `
           id,
           enrollment_id,
           module_id,
@@ -242,8 +278,9 @@ export default function PendingAssignments() {
             title,
             program_id
           )
-        `)
-        .in('module_id', Array.from(allModuleIds));
+        `,
+        )
+        .in("module_id", Array.from(allModuleIds));
 
       if (!moduleProgressData || moduleProgressData.length === 0) {
         setScoredAssignments([]);
@@ -251,12 +288,13 @@ export default function PendingAssignments() {
         return;
       }
 
-      const progressIds = moduleProgressData.map(mp => mp.id);
+      const progressIds = moduleProgressData.map((mp) => mp.id);
 
       // Get scored assignments (reviewed status with scored_at)
       const { data: assignmentData, error: assignmentError } = await supabase
-        .from('module_assignments')
-        .select(`
+        .from("module_assignments")
+        .select(
+          `
           id,
           module_progress_id,
           assignment_type_id,
@@ -267,11 +305,12 @@ export default function PendingAssignments() {
           scored_by,
           overall_score,
           module_assignment_types(name)
-        `)
-        .in('module_progress_id', progressIds)
-        .eq('status', 'reviewed')
-        .not('scored_at', 'is', null)
-        .order('scored_at', { ascending: false })
+        `,
+        )
+        .in("module_progress_id", progressIds)
+        .eq("status", "reviewed")
+        .not("scored_at", "is", null)
+        .order("scored_at", { ascending: false })
         .limit(200);
 
       if (assignmentError) throw assignmentError;
@@ -285,7 +324,7 @@ export default function PendingAssignments() {
       const assignmentsList = await enrichAssignments(assignmentData, moduleProgressData, true);
       setScoredAssignments(assignmentsList);
     } catch (error) {
-      console.error('Error loading scored assignments:', error);
+      console.error("Error loading scored assignments:", error);
     } finally {
       setLoadingScored(false);
     }
@@ -294,16 +333,16 @@ export default function PendingAssignments() {
   const enrichAssignments = async (
     assignmentData: any[],
     moduleProgressData: any[],
-    includeScorer: boolean
+    includeScorer: boolean,
   ): Promise<Assignment[]> => {
     const assignmentsList: Assignment[] = [];
 
     // Get unique client IDs and scorer IDs
     const clientIds = new Set<string>();
     const scorerIds = new Set<string>();
-    
+
     for (const assignment of assignmentData) {
-      const mp = moduleProgressData.find(m => m.id === assignment.module_progress_id);
+      const mp = moduleProgressData.find((m) => m.id === assignment.module_progress_id);
       if (mp) {
         const enrollment = mp.client_enrollments as any;
         clientIds.add(enrollment.client_user_id);
@@ -315,14 +354,14 @@ export default function PendingAssignments() {
 
     // Batch fetch all profiles
     const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, name, username')
-      .in('id', [...clientIds, ...scorerIds]);
+      .from("profiles")
+      .select("id, name, username")
+      .in("id", [...clientIds, ...scorerIds]);
 
-    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+    const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
 
     for (const assignment of assignmentData) {
-      const mp = moduleProgressData.find(m => m.id === assignment.module_progress_id);
+      const mp = moduleProgressData.find((m) => m.id === assignment.module_progress_id);
       if (!mp) continue;
 
       const enrollment = mp.client_enrollments as any;
@@ -338,7 +377,7 @@ export default function PendingAssignments() {
         id: assignment.id,
         module_progress_id: assignment.module_progress_id,
         assignment_type_id: assignment.assignment_type_id,
-        assignment_type_name: (assignment.module_assignment_types as any)?.name || 'Unknown',
+        assignment_type_name: (assignment.module_assignment_types as any)?.name || "Unknown",
         status: assignment.status,
         created_at: assignment.created_at,
         updated_at: assignment.updated_at,
@@ -346,12 +385,12 @@ export default function PendingAssignments() {
         scored_by: assignment.scored_by || null,
         scorer_name: scorer?.name || null,
         overall_score: assignment.overall_score ?? null,
-        client_name: profile?.name || 'Unknown',
-        client_email: profile?.username || '',
+        client_name: profile?.name || "Unknown",
+        client_email: profile?.username || "",
         client_user_id: enrollment.client_user_id,
         module_title: module.title,
         module_id: mp.module_id,
-        program_name: enrollment.programs?.name || 'Unknown',
+        program_name: enrollment.programs?.name || "Unknown",
         program_id: enrollment.program_id,
         enrollment_id: mp.enrollment_id,
         days_pending: daysPending,
@@ -362,68 +401,69 @@ export default function PendingAssignments() {
   };
 
   const filterAndSortAssignments = () => {
-    const sourceAssignments = activeTab === 'pending' ? pendingAssignments : scoredAssignments;
+    const sourceAssignments = activeTab === "pending" ? pendingAssignments : scoredAssignments;
     let filtered = [...sourceAssignments];
 
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        a => a.client_name.toLowerCase().includes(query) ||
-             a.module_title.toLowerCase().includes(query) ||
-             a.program_name.toLowerCase().includes(query) ||
-             a.assignment_type_name.toLowerCase().includes(query)
+        (a) =>
+          a.client_name.toLowerCase().includes(query) ||
+          a.module_title.toLowerCase().includes(query) ||
+          a.program_name.toLowerCase().includes(query) ||
+          a.assignment_type_name.toLowerCase().includes(query),
       );
     }
 
     // Program filter
-    if (programFilter !== 'all') {
-      filtered = filtered.filter(a => a.program_id === programFilter);
+    if (programFilter !== "all") {
+      filtered = filtered.filter((a) => a.program_id === programFilter);
     }
 
     // Client filter
-    if (clientFilter !== 'all') {
-      filtered = filtered.filter(a => a.client_user_id === clientFilter);
+    if (clientFilter !== "all") {
+      filtered = filtered.filter((a) => a.client_user_id === clientFilter);
     }
 
     // Time filter for scored assignments
-    if (activeTab === 'scored' && scoredTimeFilter !== 'all') {
+    if (activeTab === "scored" && scoredTimeFilter !== "all") {
       const now = new Date();
       let cutoff: Date;
       switch (scoredTimeFilter) {
-        case '7days':
+        case "7days":
           cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
           break;
-        case '30days':
+        case "30days":
           cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
           break;
-        case '90days':
+        case "90days":
           cutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
           break;
         default:
           cutoff = new Date(0);
       }
-      filtered = filtered.filter(a => a.scored_at && new Date(a.scored_at) >= cutoff);
+      filtered = filtered.filter((a) => a.scored_at && new Date(a.scored_at) >= cutoff);
     }
 
     // Sort
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'date':
-          if (activeTab === 'scored') {
+        case "date":
+          if (activeTab === "scored") {
             return new Date(b.scored_at || 0).getTime() - new Date(a.scored_at || 0).getTime();
           }
           return b.days_pending - a.days_pending;
-        case 'client':
+        case "client":
           return a.client_name.localeCompare(b.client_name);
-        case 'program':
+        case "program":
           return a.program_name.localeCompare(b.program_name);
         default:
           return 0;
       }
     });
 
-    if (activeTab === 'pending') {
+    if (activeTab === "pending") {
       setFilteredPendingAssignments(filtered);
     } else {
       setFilteredScoredAssignments(filtered);
@@ -431,15 +471,15 @@ export default function PendingAssignments() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-      submitted: 'default',
-      reviewed: 'secondary',
+    const variants: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+      submitted: "default",
+      reviewed: "secondary",
     };
     const labels: Record<string, string> = {
-      submitted: 'Submitted',
-      reviewed: 'Reviewed',
+      submitted: "Submitted",
+      reviewed: "Reviewed",
     };
-    return <Badge variant={variants[status] || 'default'}>{labels[status] || status}</Badge>;
+    return <Badge variant={variants[status] || "default"}>{labels[status] || status}</Badge>;
   };
 
   const getUrgencyBadge = (days: number) => {
@@ -450,7 +490,11 @@ export default function PendingAssignments() {
       return <Badge variant="default">{days} days</Badge>;
     }
     if (days >= 1) {
-      return <Badge variant="secondary">{days} day{days > 1 ? 's' : ''}</Badge>;
+      return (
+        <Badge variant="secondary">
+          {days} day{days > 1 ? "s" : ""}
+        </Badge>
+      );
     }
     return <Badge variant="outline">Today</Badge>;
   };
@@ -465,13 +509,18 @@ export default function PendingAssignments() {
 
   const allAssignments = [...pendingAssignments, ...scoredAssignments];
   const uniquePrograms = Array.from(
-    new Map(allAssignments.map(a => [a.program_id, { id: a.program_id, name: a.program_name }])).values()
+    new Map(
+      allAssignments.map((a) => [a.program_id, { id: a.program_id, name: a.program_name }]),
+    ).values(),
   );
   const uniqueClients = Array.from(
-    new Map(allAssignments.map(a => [a.client_user_id, { id: a.client_user_id, name: a.client_name }])).values()
+    new Map(
+      allAssignments.map((a) => [a.client_user_id, { id: a.client_user_id, name: a.client_name }]),
+    ).values(),
   ).sort((a, b) => a.name.localeCompare(b.name));
 
-  const currentAssignments = activeTab === 'pending' ? filteredPendingAssignments : filteredScoredAssignments;
+  const currentAssignments =
+    activeTab === "pending" ? filteredPendingAssignments : filteredScoredAssignments;
 
   return (
     <div className="container mx-auto py-8 space-y-8">
@@ -509,9 +558,7 @@ export default function PendingAssignments() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{pendingAssignments.length}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Assignments awaiting review
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">Assignments awaiting review</p>
               </CardContent>
             </Card>
 
@@ -522,11 +569,9 @@ export default function PendingAssignments() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-destructive">
-                  {pendingAssignments.filter(a => a.days_pending >= 7).length}
+                  {pendingAssignments.filter((a) => a.days_pending >= 7).length}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Need immediate attention
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">Need immediate attention</p>
               </CardContent>
             </Card>
 
@@ -537,11 +582,12 @@ export default function PendingAssignments() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-amber-600">
-                  {pendingAssignments.filter(a => a.days_pending >= 3 && a.days_pending < 7).length}
+                  {
+                    pendingAssignments.filter((a) => a.days_pending >= 3 && a.days_pending < 7)
+                      .length
+                  }
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Review soon
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">Review soon</p>
               </CardContent>
             </Card>
 
@@ -552,11 +598,9 @@ export default function PendingAssignments() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
-                  {pendingAssignments.filter(a => a.days_pending < 3).length}
+                  {pendingAssignments.filter((a) => a.days_pending < 3).length}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Recently submitted
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">Recently submitted</p>
               </CardContent>
             </Card>
           </div>
@@ -593,7 +637,7 @@ export default function PendingAssignments() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Programs</SelectItem>
-                    {uniquePrograms.map(program => (
+                    {uniquePrograms.map((program) => (
                       <SelectItem key={program.id} value={program.id}>
                         {program.name}
                       </SelectItem>
@@ -619,14 +663,12 @@ export default function PendingAssignments() {
           <Card>
             <CardHeader>
               <CardTitle>Pending Assignments ({filteredPendingAssignments.length})</CardTitle>
-              <CardDescription>
-                Click on an assignment to review and score it
-              </CardDescription>
+              <CardDescription>Click on an assignment to review and score it</CardDescription>
             </CardHeader>
             <CardContent>
               {filteredPendingAssignments.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  {pendingAssignments.length === 0 
+                  {pendingAssignments.length === 0
                     ? "No pending assignments. All caught up!"
                     : "No assignments match your filters"}
                 </div>
@@ -653,7 +695,9 @@ export default function PendingAssignments() {
                               <User className="h-4 w-4 text-muted-foreground" />
                               <div>
                                 <div className="font-medium">{assignment.client_name}</div>
-                                <div className="text-sm text-muted-foreground">{assignment.client_email}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {assignment.client_email}
+                                </div>
                               </div>
                             </div>
                           </TableCell>
@@ -672,21 +716,21 @@ export default function PendingAssignments() {
                               <span className="text-sm">{assignment.program_name}</span>
                             </div>
                           </TableCell>
-                          <TableCell>
-                            {getStatusBadge(assignment.status)}
-                          </TableCell>
-                          <TableCell>
-                            {getUrgencyBadge(assignment.days_pending)}
-                          </TableCell>
+                          <TableCell>{getStatusBadge(assignment.status)}</TableCell>
+                          <TableCell>{getUrgencyBadge(assignment.days_pending)}</TableCell>
                           <TableCell>
                             <span className="text-sm text-muted-foreground">
                               {new Date(assignment.created_at).toLocaleDateString()}
                             </span>
                           </TableCell>
                           <TableCell>
-                            <Button 
-                              size="sm" 
-                              onClick={() => navigate(`/teaching/students/${assignment.enrollment_id}?moduleId=${assignment.module_id}&moduleProgressId=${assignment.module_progress_id}`)}
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                navigate(
+                                  `/teaching/students/${assignment.enrollment_id}?moduleId=${assignment.module_id}&moduleProgressId=${assignment.module_progress_id}`,
+                                )
+                              }
                             >
                               Review
                             </Button>
@@ -734,7 +778,7 @@ export default function PendingAssignments() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Programs</SelectItem>
-                    {uniquePrograms.map(program => (
+                    {uniquePrograms.map((program) => (
                       <SelectItem key={program.id} value={program.id}>
                         {program.name}
                       </SelectItem>
@@ -742,7 +786,10 @@ export default function PendingAssignments() {
                   </SelectContent>
                 </Select>
 
-                <Select value={scoredTimeFilter} onValueChange={(value: any) => setScoredTimeFilter(value)}>
+                <Select
+                  value={scoredTimeFilter}
+                  onValueChange={(value: any) => setScoredTimeFilter(value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Time Period" />
                   </SelectTrigger>
@@ -772,9 +819,7 @@ export default function PendingAssignments() {
           <Card>
             <CardHeader>
               <CardTitle>Scored Assignments ({filteredScoredAssignments.length})</CardTitle>
-              <CardDescription>
-                Previously reviewed and scored assignments
-              </CardDescription>
+              <CardDescription>Previously reviewed and scored assignments</CardDescription>
             </CardHeader>
             <CardContent>
               {loadingScored ? (
@@ -783,7 +828,7 @@ export default function PendingAssignments() {
                 </div>
               ) : filteredScoredAssignments.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  {scoredAssignments.length === 0 
+                  {scoredAssignments.length === 0
                     ? "No scored assignments found"
                     : "No assignments match your filters"}
                 </div>
@@ -810,7 +855,9 @@ export default function PendingAssignments() {
                               <User className="h-4 w-4 text-muted-foreground" />
                               <div>
                                 <div className="font-medium">{assignment.client_name}</div>
-                                <div className="text-sm text-muted-foreground">{assignment.client_email}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {assignment.client_email}
+                                </div>
                               </div>
                             </div>
                           </TableCell>
@@ -837,20 +884,26 @@ export default function PendingAssignments() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm">{assignment.scorer_name || 'Unknown'}</span>
+                            <span className="text-sm">{assignment.scorer_name || "Unknown"}</span>
                           </TableCell>
                           <TableCell>
                             <span className="text-sm text-muted-foreground">
-                              {assignment.scored_at 
-                                ? formatDistanceToNow(new Date(assignment.scored_at), { addSuffix: true })
-                                : '—'}
+                              {assignment.scored_at
+                                ? formatDistanceToNow(new Date(assignment.scored_at), {
+                                    addSuffix: true,
+                                  })
+                                : "—"}
                             </span>
                           </TableCell>
                           <TableCell>
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               variant="outline"
-                              onClick={() => navigate(`/teaching/students/${assignment.enrollment_id}?moduleId=${assignment.module_id}&moduleProgressId=${assignment.module_progress_id}`)}
+                              onClick={() =>
+                                navigate(
+                                  `/teaching/students/${assignment.enrollment_id}?moduleId=${assignment.module_id}&moduleProgressId=${assignment.module_progress_id}`,
+                                )
+                              }
                             >
                               View
                             </Button>

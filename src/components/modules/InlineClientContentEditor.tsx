@@ -1,20 +1,34 @@
-import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-import { FileText, Upload, Link, X, Paperclip, Download, ExternalLink, Save, Trash2, Library, Video, Image as ImageIcon, ClipboardList } from 'lucide-react';
-import { ResourcePickerDialog } from './ResourcePickerDialog';
-import { ScenarioPickerDialog } from './ScenarioPickerDialog';
+import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import {
+  FileText,
+  Upload,
+  Link,
+  X,
+  Paperclip,
+  Download,
+  ExternalLink,
+  Save,
+  Trash2,
+  Library,
+  Video,
+  Image as ImageIcon,
+  ClipboardList,
+} from "lucide-react";
+import { ResourcePickerDialog } from "./ResourcePickerDialog";
+import { ScenarioPickerDialog } from "./ScenarioPickerDialog";
 
 interface Attachment {
   id?: string;
   title: string;
-  attachment_type: 'file' | 'link' | 'image';
+  attachment_type: "file" | "link" | "image";
   file_path?: string;
   url?: string;
   description?: string;
@@ -86,8 +100,12 @@ interface InlineClientContentEditorProps {
   clientName: string;
 }
 
-export function InlineClientContentEditor({ moduleId, clientUserId, clientName }: InlineClientContentEditorProps) {
-  const [content, setContent] = useState('');
+export function InlineClientContentEditor({
+  moduleId,
+  clientUserId,
+  clientName,
+}: InlineClientContentEditorProps) {
+  const [content, setContent] = useState("");
   const [existingContent, setExistingContent] = useState<ClientContent | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [newAttachments, setNewAttachments] = useState<Attachment[]>([]);
@@ -107,10 +125,10 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('module_client_content')
-        .select('*, module_client_content_attachments(*)')
-        .eq('module_id', moduleId)
-        .eq('user_id', clientUserId)
+        .from("module_client_content")
+        .select("*, module_client_content_attachments(*)")
+        .eq("module_id", moduleId)
+        .eq("user_id", clientUserId)
         .maybeSingle();
 
       if (error) throw error;
@@ -127,14 +145,16 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
 
         // Fetch assigned resources
         const { data: resourcesData } = await supabase
-          .from('module_client_content_resources')
-          .select(`
+          .from("module_client_content_resources")
+          .select(
+            `
             id,
             resource_id,
             notes,
             resource:resource_id(id, canonical_id, title, description, resource_type, url, file_path)
-          `)
-          .eq('module_client_content_id', data.id);
+          `,
+          )
+          .eq("module_client_content_id", data.id);
 
         if (resourcesData) {
           setAssignedResources(resourcesData as unknown as AssignedResource[]);
@@ -142,8 +162,9 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
 
         // Fetch assigned scenarios
         const { data: scenariosData } = await supabase
-          .from('module_client_content_scenarios')
-          .select(`
+          .from("module_client_content_scenarios")
+          .select(
+            `
             id,
             scenario_template_id,
             notes,
@@ -154,15 +175,16 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
               is_protected,
               capability_assessments(id, name)
             )
-          `)
-          .eq('module_client_content_id', data.id);
+          `,
+          )
+          .eq("module_client_content_id", data.id);
 
         if (scenariosData) {
           setAssignedScenarios(scenariosData as unknown as AssignedScenario[]);
         }
       } else {
         setExistingContent(null);
-        setContent('');
+        setContent("");
         setAttachments([]);
         setAssignedResources([]);
         setAssignedScenarios([]);
@@ -170,7 +192,7 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
       setPendingResources([]);
       setPendingScenarios([]);
     } catch (error) {
-      console.error('Error fetching content:', error);
+      console.error("Error fetching content:", error);
     } finally {
       setLoading(false);
     }
@@ -178,23 +200,26 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
 
   async function handleSave() {
     if (!content.trim()) {
-      toast.error('Please enter content');
+      toast.error("Please enter content");
       return;
     }
 
     setSaving(true);
     try {
       const currentUser = (await supabase.auth.getUser()).data.user;
-      
+
       const { data: savedContent, error } = await supabase
-        .from('module_client_content')
-        .upsert({
-          id: existingContent?.id,
-          module_id: moduleId,
-          user_id: clientUserId,
-          content: content.trim(),
-          assigned_by: currentUser?.id || '',
-        }, { onConflict: 'module_id,user_id' })
+        .from("module_client_content")
+        .upsert(
+          {
+            id: existingContent?.id,
+            module_id: moduleId,
+            user_id: clientUserId,
+            content: content.trim(),
+            assigned_by: currentUser?.id || "",
+          },
+          { onConflict: "module_id,user_id" },
+        )
         .select()
         .single();
 
@@ -205,15 +230,15 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
         if (attachment.file) {
           const filePath = `${clientUserId}/${moduleId}/${Date.now()}_${attachment.file.name}`;
           const { error: uploadError } = await supabase.storage
-            .from('module-client-content')
+            .from("module-client-content")
             .upload(filePath, attachment.file);
 
           if (uploadError) {
-            console.error('Upload error:', uploadError);
+            console.error("Upload error:", uploadError);
             continue;
           }
 
-          await supabase.from('module_client_content_attachments').insert({
+          await supabase.from("module_client_content_attachments").insert({
             module_client_content_id: savedContent.id,
             title: attachment.title,
             attachment_type: attachment.attachment_type,
@@ -223,7 +248,7 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
             description: attachment.description,
           });
         } else if (attachment.url) {
-          await supabase.from('module_client_content_attachments').insert({
+          await supabase.from("module_client_content_attachments").insert({
             module_client_content_id: savedContent.id,
             title: attachment.title,
             attachment_type: attachment.attachment_type,
@@ -235,7 +260,7 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
 
       // Save pending resources
       for (const resource of pendingResources) {
-        await supabase.from('module_client_content_resources').insert({
+        await supabase.from("module_client_content_resources").insert({
           module_client_content_id: savedContent.id,
           resource_id: resource.id,
           assigned_by: currentUser?.id,
@@ -244,21 +269,21 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
 
       // Save pending scenarios
       for (const scenario of pendingScenarios) {
-        await supabase.from('module_client_content_scenarios').insert({
+        await supabase.from("module_client_content_scenarios").insert({
           module_client_content_id: savedContent.id,
           scenario_template_id: scenario.id,
           assigned_by: currentUser?.id,
         });
       }
 
-      toast.success('Content saved for ' + clientName);
+      toast.success("Content saved for " + clientName);
       setNewAttachments([]);
       setPendingResources([]);
       setPendingScenarios([]);
       fetchContent();
     } catch (error) {
-      console.error('Save error:', error);
-      toast.error('Failed to save content');
+      console.error("Save error:", error);
+      toast.error("Failed to save content");
     } finally {
       setSaving(false);
     }
@@ -266,33 +291,33 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
 
   async function handleDeleteAttachment(attachment: Attachment) {
     if (!attachment.id) return;
-    
+
     try {
       if (attachment.file_path) {
-        await supabase.storage.from('module-client-content').remove([attachment.file_path]);
+        await supabase.storage.from("module-client-content").remove([attachment.file_path]);
       }
-      await supabase.from('module_client_content_attachments').delete().eq('id', attachment.id);
-      toast.success('Attachment deleted');
+      await supabase.from("module_client_content_attachments").delete().eq("id", attachment.id);
+      toast.success("Attachment deleted");
       fetchContent();
     } catch (error) {
-      toast.error('Failed to delete attachment');
+      toast.error("Failed to delete attachment");
     }
   }
 
   async function handleDownload(attachment: Attachment) {
     if (!attachment.file_path) return;
-    
+
     const { data, error } = await supabase.storage
-      .from('module-client-content')
+      .from("module-client-content")
       .download(attachment.file_path);
-    
+
     if (error || !data) {
-      toast.error('Failed to download file');
+      toast.error("Failed to download file");
       return;
     }
-    
+
     const url = URL.createObjectURL(data);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = attachment.title;
     a.click();
@@ -302,20 +327,20 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files) return;
-    
-    const fileAttachments: Attachment[] = Array.from(files).map(file => ({
+
+    const fileAttachments: Attachment[] = Array.from(files).map((file) => ({
       title: file.name,
-      attachment_type: file.type.startsWith('image/') ? 'image' : 'file',
+      attachment_type: file.type.startsWith("image/") ? "image" : "file",
       file,
       file_size: file.size,
     }));
-    
+
     setNewAttachments([...newAttachments, ...fileAttachments]);
-    e.target.value = '';
+    e.target.value = "";
   }
 
   function addLinkAttachment() {
-    setNewAttachments([...newAttachments, { title: '', attachment_type: 'link', url: '' }]);
+    setNewAttachments([...newAttachments, { title: "", attachment_type: "link", url: "" }]);
   }
 
   function updateNewAttachment(index: number, field: keyof Attachment, value: string) {
@@ -338,11 +363,11 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
 
   async function handleDeleteResource(resourceId: string) {
     try {
-      await supabase.from('module_client_content_resources').delete().eq('id', resourceId);
-      toast.success('Resource removed');
+      await supabase.from("module_client_content_resources").delete().eq("id", resourceId);
+      toast.success("Resource removed");
       fetchContent();
     } catch (error) {
-      toast.error('Failed to remove resource');
+      toast.error("Failed to remove resource");
     }
   }
 
@@ -356,19 +381,19 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
 
   async function handleDeleteScenario(scenarioLinkId: string) {
     try {
-      await supabase.from('module_client_content_scenarios').delete().eq('id', scenarioLinkId);
-      toast.success('Scenario removed');
+      await supabase.from("module_client_content_scenarios").delete().eq("id", scenarioLinkId);
+      toast.success("Scenario removed");
       fetchContent();
     } catch (error) {
-      toast.error('Failed to remove scenario');
+      toast.error("Failed to remove scenario");
     }
   }
 
   function getResourceIcon(type: string) {
     switch (type) {
-      case 'video':
+      case "video":
         return <Video className="h-4 w-4 text-muted-foreground" />;
-      case 'image':
+      case "image":
         return <ImageIcon className="h-4 w-4 text-muted-foreground" />;
       default:
         return <Library className="h-4 w-4 text-muted-foreground" />;
@@ -376,7 +401,7 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
   }
 
   function formatFileSize(bytes?: number) {
-    if (!bytes) return '';
+    if (!bytes) return "";
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -384,14 +409,14 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
 
   // Combine already assigned and pending resource IDs for the picker's exclusion list
   const excludeResourceIds = [
-    ...assignedResources.map(r => r.resource_id),
-    ...pendingResources.map(r => r.id),
+    ...assignedResources.map((r) => r.resource_id),
+    ...pendingResources.map((r) => r.id),
   ];
 
   // Combine already assigned and pending scenario IDs for the picker's exclusion list
   const excludeScenarioIds = [
-    ...assignedScenarios.map(s => s.scenario_template_id),
-    ...pendingScenarios.map(s => s.id),
+    ...assignedScenarios.map((s) => s.scenario_template_id),
+    ...pendingScenarios.map((s) => s.id),
   ];
 
   if (loading) {
@@ -437,12 +462,17 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
             <Label>Current Attachments</Label>
             <div className="space-y-2">
               {attachments.map((att) => (
-                <div key={att.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+                <div
+                  key={att.id}
+                  className="flex items-center justify-between p-3 border rounded-lg bg-muted/50"
+                >
                   <div className="flex items-center gap-2">
                     <Paperclip className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">{att.title}</span>
                     {att.file_size && (
-                      <span className="text-xs text-muted-foreground">({formatFileSize(att.file_size)})</span>
+                      <span className="text-xs text-muted-foreground">
+                        ({formatFileSize(att.file_size)})
+                      </span>
                     )}
                   </div>
                   <div className="flex items-center gap-1">
@@ -473,7 +503,10 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
             <Label>Assigned Resources</Label>
             <div className="space-y-2">
               {assignedResources.map((res) => (
-                <div key={res.id} className="flex items-center justify-between p-3 border rounded-lg bg-primary/5">
+                <div
+                  key={res.id}
+                  className="flex items-center justify-between p-3 border rounded-lg bg-primary/5"
+                >
                   <div className="flex items-center gap-2">
                     {getResourceIcon(res.resource.resource_type)}
                     <span className="text-sm font-medium">{res.resource.title}</span>
@@ -505,7 +538,10 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
             <Label>Assigned Scenarios</Label>
             <div className="space-y-2">
               {assignedScenarios.map((scen) => (
-                <div key={scen.id} className="flex items-center justify-between p-3 border rounded-lg bg-accent/30 border-accent">
+                <div
+                  key={scen.id}
+                  className="flex items-center justify-between p-3 border rounded-lg bg-accent/30 border-accent"
+                >
                   <div className="flex items-center gap-2">
                     <ClipboardList className="h-4 w-4 text-accent-foreground" />
                     <span className="text-sm font-medium">{scen.scenario_template.title}</span>
@@ -515,7 +551,9 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
                       </Badge>
                     )}
                     {scen.scenario_template.is_protected && (
-                      <Badge variant="outline" className="text-xs">Protected</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Protected
+                      </Badge>
                     )}
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => handleDeleteScenario(scen.id)}>
@@ -532,13 +570,18 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
           <div className="flex items-center justify-between flex-wrap gap-2">
             <Label>Add Content</Label>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+              >
                 <Upload className="h-4 w-4 mr-1" /> Upload File
               </Button>
               <Button type="button" variant="outline" size="sm" onClick={addLinkAttachment}>
                 <Link className="h-4 w-4 mr-1" /> Add Link
               </Button>
-              <ResourcePickerDialog 
+              <ResourcePickerDialog
                 excludeResourceIds={excludeResourceIds}
                 onSelect={handleAddResource}
               />
@@ -547,23 +590,29 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
                 onSelect={handleAddScenario}
               />
             </div>
-            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileSelect}
+            />
           </div>
 
           {newAttachments.map((att, index) => (
             <div key={index} className="flex items-start gap-2 p-3 border rounded-lg">
-              {att.attachment_type === 'link' ? (
+              {att.attachment_type === "link" ? (
                 <div className="flex-1 space-y-2">
                   <Input
                     placeholder="Link title"
                     value={att.title}
-                    onChange={(e) => updateNewAttachment(index, 'title', e.target.value)}
+                    onChange={(e) => updateNewAttachment(index, "title", e.target.value)}
                   />
                   <Input
                     type="url"
                     placeholder="https://..."
-                    value={att.url || ''}
-                    onChange={(e) => updateNewAttachment(index, 'url', e.target.value)}
+                    value={att.url || ""}
+                    onChange={(e) => updateNewAttachment(index, "url", e.target.value)}
                   />
                 </div>
               ) : (
@@ -571,11 +620,18 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
                   <FileText className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">{att.title}</span>
                   {att.file_size && (
-                    <span className="text-xs text-muted-foreground">({formatFileSize(att.file_size)})</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({formatFileSize(att.file_size)})
+                    </span>
                   )}
                 </div>
               )}
-              <Button type="button" variant="ghost" size="icon" onClick={() => removeNewAttachment(index)}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => removeNewAttachment(index)}
+              >
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -583,14 +639,24 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
 
           {/* Pending resources (to be saved) */}
           {pendingResources.map((res, index) => (
-            <div key={res.id} className="flex items-center gap-2 p-3 border rounded-lg border-primary/30 bg-primary/5">
+            <div
+              key={res.id}
+              className="flex items-center gap-2 p-3 border rounded-lg border-primary/30 bg-primary/5"
+            >
               {getResourceIcon(res.resource_type)}
               <span className="text-sm font-medium flex-1">{res.title}</span>
               <Badge variant="secondary" className="text-xs capitalize">
                 {res.resource_type}
               </Badge>
-              <Badge variant="outline" className="text-xs">New</Badge>
-              <Button type="button" variant="ghost" size="icon" onClick={() => removePendingResource(index)}>
+              <Badge variant="outline" className="text-xs">
+                New
+              </Badge>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => removePendingResource(index)}
+              >
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -598,7 +664,10 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
 
           {/* Pending scenarios (to be saved) */}
           {pendingScenarios.map((scen, index) => (
-            <div key={scen.id} className="flex items-center gap-2 p-3 border rounded-lg border-accent bg-accent/20">
+            <div
+              key={scen.id}
+              className="flex items-center gap-2 p-3 border rounded-lg border-accent bg-accent/20"
+            >
               <ClipboardList className="h-4 w-4 text-accent-foreground" />
               <span className="text-sm font-medium flex-1">{scen.title}</span>
               {scen.capability_assessments && (
@@ -606,8 +675,15 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
                   {scen.capability_assessments.name}
                 </Badge>
               )}
-              <Badge variant="outline" className="text-xs">New</Badge>
-              <Button type="button" variant="ghost" size="icon" onClick={() => removePendingScenario(index)}>
+              <Badge variant="outline" className="text-xs">
+                New
+              </Badge>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => removePendingScenario(index)}
+              >
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -617,7 +693,7 @@ export function InlineClientContentEditor({ moduleId, clientUserId, clientName }
         <div className="pt-2">
           <Button onClick={handleSave} disabled={saving || !content.trim()}>
             <Save className="h-4 w-4 mr-2" />
-            {saving ? 'Saving...' : existingContent ? 'Update Content' : 'Save Content'}
+            {saving ? "Saving..." : existingContent ? "Update Content" : "Save Content"}
           </Button>
         </div>
       </CardContent>

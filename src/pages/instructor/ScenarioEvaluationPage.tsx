@@ -8,10 +8,19 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { 
-  ArrowLeft, User, FileText, CheckCircle, Clock, Send, 
-  MessageSquare, Star, Loader2, ChevronLeft, ChevronRight,
-  AlertTriangle
+import {
+  ArrowLeft,
+  User,
+  FileText,
+  CheckCircle,
+  Clock,
+  Send,
+  MessageSquare,
+  Star,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdminLoadingState } from "@/components/admin";
@@ -43,7 +52,9 @@ export default function ScenarioEvaluationPage() {
   const [overallNotes, setOverallNotes] = useState("");
 
   const { data: assignment, isLoading: assignmentLoading } = useScenarioAssignment(id);
-  const { data: sections, isLoading: sectionsLoading } = useScenarioSections(assignment?.template_id);
+  const { data: sections, isLoading: sectionsLoading } = useScenarioSections(
+    assignment?.template_id,
+  );
   const { data: responses } = useParagraphResponses(id);
   const { data: evaluations } = useParagraphEvaluations(id);
   const { data: scores } = useParagraphQuestionScores(id);
@@ -85,8 +96,8 @@ export default function ScenarioEvaluationPage() {
         onSuccess: () => {
           toast({ description: "Evaluation completed!" });
           navigate("/teaching/scenarios");
-        }
-      }
+        },
+      },
     );
   };
 
@@ -96,8 +107,8 @@ export default function ScenarioEvaluationPage() {
       {
         onSuccess: () => {
           toast({ description: "Notes saved" });
-        }
-      }
+        },
+      },
     );
   };
 
@@ -126,7 +137,11 @@ export default function ScenarioEvaluationPage() {
               <User className="h-4 w-4" />
               <span>{assignment.profiles?.name}</span>
               <span>•</span>
-              <span>Submitted {assignment.submitted_at && format(new Date(assignment.submitted_at), "MMM d, yyyy")}</span>
+              <span>
+                Submitted{" "}
+                {assignment.submitted_at &&
+                  format(new Date(assignment.submitted_at), "MMM d, yyyy")}
+              </span>
             </div>
           </div>
         </div>
@@ -155,7 +170,9 @@ export default function ScenarioEvaluationPage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium">Overall Score</span>
-                  <span className="text-xl font-bold">{scoreSummary.overall_percentage.toFixed(1)}%</span>
+                  <span className="text-xl font-bold">
+                    {scoreSummary.overall_percentage.toFixed(1)}%
+                  </span>
                 </div>
                 <Progress value={scoreSummary.overall_percentage} className="h-3" />
               </div>
@@ -163,7 +180,10 @@ export default function ScenarioEvaluationPage() {
                 <div className="grid gap-2 mt-4">
                   <p className="text-sm font-medium text-muted-foreground">By Domain</p>
                   {scoreSummary.domain_scores.map((domain) => (
-                    <div key={domain.domain_id} className="flex items-center justify-between text-sm">
+                    <div
+                      key={domain.domain_id}
+                      className="flex items-center justify-between text-sm"
+                    >
                       <span>{domain.domain_name}</span>
                       <div className="flex items-center gap-2">
                         <Progress value={domain.percentage} className="w-24 h-2" />
@@ -202,7 +222,9 @@ export default function ScenarioEvaluationPage() {
                 onClick={handleSaveOverallNotes}
                 disabled={updateStatusMutation.isPending}
               >
-                {updateStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {updateStatusMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
                 Save Notes
               </Button>
             </div>
@@ -239,7 +261,9 @@ export default function ScenarioEvaluationPage() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setCurrentSectionIndex(Math.min((sections?.length || 1) - 1, currentSectionIndex + 1))}
+            onClick={() =>
+              setCurrentSectionIndex(Math.min((sections?.length || 1) - 1, currentSectionIndex + 1))
+            }
             disabled={currentSectionIndex === (sections?.length || 1) - 1}
           >
             <ChevronRight className="h-4 w-4" />
@@ -291,9 +315,7 @@ function SectionEvaluationView({
     <Card>
       <CardHeader>
         <CardTitle>{section.title}</CardTitle>
-        {section.instructions && (
-          <CardDescription>{section.instructions}</CardDescription>
-        )}
+        {section.instructions && <CardDescription>{section.instructions}</CardDescription>}
       </CardHeader>
       <CardContent className="space-y-6">
         {paragraphs?.map((paragraph, index) => (
@@ -302,9 +324,9 @@ function SectionEvaluationView({
             paragraph={paragraph}
             paragraphNumber={index + 1}
             assignmentId={assignmentId}
-            response={responses.find(r => r.paragraph_id === paragraph.id)}
-            evaluation={evaluations.find(e => e.paragraph_id === paragraph.id)}
-            existingScores={scores.filter(s => s.paragraph_id === paragraph.id)}
+            response={responses.find((r) => r.paragraph_id === paragraph.id)}
+            evaluation={evaluations.find((e) => e.paragraph_id === paragraph.id)}
+            existingScores={scores.filter((s) => s.paragraph_id === paragraph.id)}
             ratingScale={ratingScale}
             sectionId={section.id}
           />
@@ -340,7 +362,7 @@ function ParagraphEvaluationItem({
   const [feedback, setFeedback] = useState(evaluation?.feedback || "");
   const [localScores, setLocalScores] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
-    existingScores.forEach(s => {
+    existingScores.forEach((s) => {
       initial[s.question_id] = s.score;
     });
     return initial;
@@ -356,7 +378,7 @@ function ParagraphEvaluationItem({
   };
 
   const handleScoreChange = (questionId: string, score: number) => {
-    setLocalScores(prev => ({ ...prev, [questionId]: score }));
+    setLocalScores((prev) => ({ ...prev, [questionId]: score }));
     scoreMutation.mutate({ paragraphId: paragraph.id, questionId, score });
   };
 
@@ -402,7 +424,10 @@ function ParagraphEvaluationItem({
           </div>
           <div className="space-y-3">
             {questionLinks.map((link) => (
-              <div key={link.id} className="flex items-center justify-between gap-4 bg-muted/30 p-3 rounded">
+              <div
+                key={link.id}
+                className="flex items-center justify-between gap-4 bg-muted/30 p-3 rounded"
+              >
                 <div className="flex-1">
                   <p className="text-xs text-muted-foreground">
                     [{link.capability_domain_questions?.capability_domains?.name}]

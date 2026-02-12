@@ -3,11 +3,24 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Bell, Check, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -44,7 +57,9 @@ export function DecisionReminders({ decisionId }: DecisionRemindersProps) {
 
   const createReminder = useMutation({
     mutationFn: async (data: any) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { error } = await supabase.from("decision_reminders").insert({
@@ -128,8 +143,8 @@ export function DecisionReminders({ decisionId }: DecisionRemindersProps) {
     }
   };
 
-  const pendingReminders = reminders?.filter(r => !r.is_completed) || [];
-  const completedReminders = reminders?.filter(r => r.is_completed) || [];
+  const pendingReminders = reminders?.filter((r) => !r.is_completed) || [];
+  const completedReminders = reminders?.filter((r) => r.is_completed) || [];
 
   return (
     <div className="space-y-6">
@@ -163,7 +178,9 @@ export function DecisionReminders({ decisionId }: DecisionRemindersProps) {
                       <Calendar className="h-3 w-3" />
                       {format(new Date(reminder.reminder_date), "MMMM d, yyyy")}
                       {reminder.email_sent && (
-                        <Badge variant="secondary" className="text-xs">Email Sent</Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          Email Sent
+                        </Badge>
                       )}
                     </CardDescription>
                   </div>
@@ -212,7 +229,9 @@ export function DecisionReminders({ decisionId }: DecisionRemindersProps) {
                     <CardDescription className="flex items-center gap-2 mt-1">
                       <Calendar className="h-3 w-3" />
                       {format(new Date(reminder.reminder_date), "MMMM d, yyyy")}
-                      <Badge variant="outline" className="text-xs">Completed</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Completed
+                      </Badge>
                     </CardDescription>
                   </div>
                   <Button
@@ -297,12 +316,14 @@ export function DecisionReminders({ decisionId }: DecisionRemindersProps) {
               Cancel
             </Button>
             <Button
-              onClick={() => createReminder.mutate({
-                title: newReminder.title,
-                description: newReminder.description,
-                reminder_date: newReminder.reminderDate,
-                reminder_type: reminderType,
-              })}
+              onClick={() =>
+                createReminder.mutate({
+                  title: newReminder.title,
+                  description: newReminder.description,
+                  reminder_date: newReminder.reminderDate,
+                  reminder_type: reminderType,
+                })
+              }
               disabled={!newReminder.title || !newReminder.reminderDate || createReminder.isPending}
             >
               Create Reminder

@@ -1,14 +1,21 @@
-import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, User, Calendar, ArrowLeft } from 'lucide-react';
-import { format } from 'date-fns';
-import { RichTextDisplay } from '@/components/ui/rich-text-display';
+import { useParams, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Skeleton } from "@/components/ui/skeleton";
+import { FileText, User, Calendar, ArrowLeft } from "lucide-react";
+import { format } from "date-fns";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
 
 interface NoteWithProfile {
   id: string;
@@ -26,21 +33,21 @@ export default function GroupNoteDetail() {
   if (!groupId || !noteId) return null;
 
   const { data: note, isLoading } = useQuery<NoteWithProfile | null>({
-    queryKey: ['group-note', noteId],
+    queryKey: ["group-note", noteId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('group_notes')
-        .select('*')
-        .eq('id', noteId)
+        .from("group_notes")
+        .select("*")
+        .eq("id", noteId)
         .single();
       if (error) throw error;
 
       // Fetch author profile
       if (data.created_by) {
         const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, name, avatar_url')
-          .eq('id', data.created_by)
+          .from("profiles")
+          .select("id, name, avatar_url")
+          .eq("id", data.created_by)
           .single();
         return { ...data, profile } as NoteWithProfile;
       }
@@ -50,12 +57,12 @@ export default function GroupNoteDetail() {
   });
 
   const { data: group } = useQuery({
-    queryKey: ['group-basic', groupId],
+    queryKey: ["group-basic", groupId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('groups')
-        .select('id, name')
-        .eq('id', groupId)
+        .from("groups")
+        .select("id, name")
+        .eq("id", groupId)
         .single();
       if (error) throw error;
       return data;
@@ -92,11 +99,15 @@ export default function GroupNoteDetail() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild><Link to="/groups">Groups</Link></BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to="/groups">Groups</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink asChild><Link to={`/groups/${groupId}`}>{group?.name || 'Group'}</Link></BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to={`/groups/${groupId}`}>{group?.name || "Group"}</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -120,7 +131,7 @@ export default function GroupNoteDetail() {
                 <FileText className="h-5 w-5 text-muted-foreground" />
                 <CardTitle>{note.title}</CardTitle>
               </div>
-              <Badge variant="outline">{note.note_type || 'note'}</Badge>
+              <Badge variant="outline">{note.note_type || "note"}</Badge>
             </div>
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground mt-4">
@@ -132,7 +143,7 @@ export default function GroupNoteDetail() {
             )}
             <div className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
-              <span>{format(new Date(note.created_at), 'PPP p')}</span>
+              <span>{format(new Date(note.created_at), "PPP p")}</span>
             </div>
           </div>
         </CardHeader>

@@ -1,20 +1,20 @@
-import { useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useOnboardingTour } from '@/hooks/useOnboardingTour';
-import { TourOverlay } from './TourOverlay';
-import { adminTourSteps, instructorTourSteps, clientTourSteps } from '@/data/tourSteps';
+import { useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useOnboardingTour } from "@/hooks/useOnboardingTour";
+import { TourOverlay } from "./TourOverlay";
+import { adminTourSteps, instructorTourSteps, clientTourSteps } from "@/data/tourSteps";
 
 export function OnboardingTour() {
   const { userRole, userRoles } = useAuth();
 
   // Determine which tour to show based on primary role
   const getTourConfig = () => {
-    if (userRole === 'admin') {
-      return { id: 'admin-tour', steps: adminTourSteps };
-    } else if (userRole === 'instructor' || userRole === 'coach') {
-      return { id: 'instructor-tour', steps: instructorTourSteps };
+    if (userRole === "admin") {
+      return { id: "admin-tour", steps: adminTourSteps };
+    } else if (userRole === "instructor" || userRole === "coach") {
+      return { id: "instructor-tour", steps: instructorTourSteps };
     } else {
-      return { id: 'client-tour', steps: clientTourSteps };
+      return { id: "client-tour", steps: clientTourSteps };
     }
   };
 

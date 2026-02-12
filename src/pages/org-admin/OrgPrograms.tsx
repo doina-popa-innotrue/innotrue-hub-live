@@ -1,17 +1,24 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@/hooks/use-toast';
-import { BookOpen, Users, UserPlus, GraduationCap, Coins, AlertCircle } from 'lucide-react';
-import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useOrgCreditBatches, formatCredits } from '@/hooks/useCreditBatches';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+import { BookOpen, Users, UserPlus, GraduationCap, Coins, AlertCircle } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useOrgCreditBatches, formatCredits } from "@/hooks/useCreditBatches";
 
 interface Program {
   id: string;
@@ -43,8 +50,10 @@ export default function OrgPrograms() {
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [enrolling, setEnrolling] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
-  
-  const { summary: creditSummary, refetch: refetchCredits } = useOrgCreditBatches(organizationMembership?.organization_id);
+
+  const { summary: creditSummary, refetch: refetchCredits } = useOrgCreditBatches(
+    organizationMembership?.organization_id,
+  );
 
   useEffect(() => {
     if (organizationMembership?.organization_id) {
@@ -57,20 +66,21 @@ export default function OrgPrograms() {
 
     try {
       setLoading(true);
-      
+
       // Get organization member user IDs
       const { data: members } = await supabase
-        .from('organization_members')
-        .select('user_id')
-        .eq('organization_id', organizationMembership.organization_id)
-        .eq('is_active', true);
+        .from("organization_members")
+        .select("user_id")
+        .eq("organization_id", organizationMembership.organization_id)
+        .eq("is_active", true);
 
-      const memberUserIds = members?.map(m => m.user_id) || [];
+      const memberUserIds = members?.map((m) => m.user_id) || [];
 
       // Fetch licensed programs for this organization
       const { data: licensedPrograms, error: licenseError } = await supabase
-        .from('organization_programs')
-        .select(`
+        .from("organization_programs")
+        .select(
+          `
           id,
           program_id,
           max_enrollments,
@@ -84,15 +94,16 @@ export default function OrgPrograms() {
             is_active,
             credit_cost
           )
-        `)
-        .eq('organization_id', organizationMembership.organization_id)
-        .eq('is_active', true);
+        `,
+        )
+        .eq("organization_id", organizationMembership.organization_id)
+        .eq("is_active", true);
 
       if (licenseError) throw licenseError;
 
       // Filter out expired licenses and inactive programs
       const now = new Date();
-      const validLicenses = (licensedPrograms || []).filter(lp => {
+      const validLicenses = (licensedPrograms || []).filter((lp) => {
         const program = lp.programs as any;
         const isExpired = lp.expires_at && new Date(lp.expires_at) < now;
         return program?.is_active && !isExpired;
@@ -102,34 +113,34 @@ export default function OrgPrograms() {
       const programsWithCounts = await Promise.all(
         validLicenses.map(async (license) => {
           const program = license.programs as any;
-          
+
           let enrolledCount = 0;
           if (memberUserIds.length > 0) {
             const { count } = await supabase
-              .from('client_enrollments')
-              .select('*', { count: 'exact', head: true })
-              .eq('program_id', program.id)
-              .in('client_user_id', memberUserIds)
-              .in('status', ['active', 'completed']);
+              .from("client_enrollments")
+              .select("*", { count: "exact", head: true })
+              .eq("program_id", program.id)
+              .in("client_user_id", memberUserIds)
+              .in("status", ["active", "completed"]);
             enrolledCount = count || 0;
           }
 
-          return { 
-            ...program, 
+          return {
+            ...program,
             enrolledCount,
             maxEnrollments: license.max_enrollments,
             credit_cost: program.credit_cost,
           };
-        })
+        }),
       );
 
       setPrograms(programsWithCounts);
     } catch (error) {
-      console.error('Error loading programs:', error);
+      console.error("Error loading programs:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to load programs',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load programs",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -143,48 +154,46 @@ export default function OrgPrograms() {
     try {
       // Get org members with their profile names
       const { data: members } = await supabase
-        .from('organization_members')
-        .select('id, user_id')
-        .eq('organization_id', organizationMembership.organization_id)
-        .eq('is_active', true);
+        .from("organization_members")
+        .select("id, user_id")
+        .eq("organization_id", organizationMembership.organization_id)
+        .eq("is_active", true);
 
       if (!members || members.length === 0) {
         setOrgMembers([]);
         return;
       }
 
-      const memberUserIds = members.map(m => m.user_id);
+      const memberUserIds = members.map((m) => m.user_id);
 
       // Get profiles for these members
       const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, name')
-        .in('id', memberUserIds);
+        .from("profiles")
+        .select("id, name")
+        .in("id", memberUserIds);
 
       // Check existing enrollments for this program
       const { data: enrollments } = await supabase
-        .from('client_enrollments')
-        .select('client_user_id')
-        .eq('program_id', programId)
-        .in('client_user_id', memberUserIds)
-        .in('status', ['active', 'completed']);
+        .from("client_enrollments")
+        .select("client_user_id")
+        .eq("program_id", programId)
+        .in("client_user_id", memberUserIds)
+        .in("status", ["active", "completed"]);
 
-      const enrolledUserIds = new Set(enrollments?.map(e => e.client_user_id) || []);
+      const enrolledUserIds = new Set(enrollments?.map((e) => e.client_user_id) || []);
 
-      const membersWithEnrollment = members.map(member => ({
+      const membersWithEnrollment = members.map((member) => ({
         id: member.id,
         user_id: member.user_id,
-        name: profiles?.find(p => p.id === member.user_id)?.name || null,
+        name: profiles?.find((p) => p.id === member.user_id)?.name || null,
         isEnrolled: enrolledUserIds.has(member.user_id),
       }));
 
       setOrgMembers(membersWithEnrollment);
       // Pre-select unenrolled members
-      setSelectedMembers(
-        membersWithEnrollment.filter(m => !m.isEnrolled).map(m => m.user_id)
-      );
+      setSelectedMembers(membersWithEnrollment.filter((m) => !m.isEnrolled).map((m) => m.user_id));
     } catch (error) {
-      console.error('Error loading members:', error);
+      console.error("Error loading members:", error);
     } finally {
       setLoadingMembers(false);
     }
@@ -197,12 +206,18 @@ export default function OrgPrograms() {
   };
 
   const handleBulkEnroll = async () => {
-    if (!selectedProgram || selectedMembers.length === 0 || !organizationMembership?.organization_id || !user) return;
+    if (
+      !selectedProgram ||
+      selectedMembers.length === 0 ||
+      !organizationMembership?.organization_id ||
+      !user
+    )
+      return;
 
     setEnrolling(true);
     try {
       // Use the credit consumption RPC for enrollment
-      const { data, error } = await supabase.rpc('consume_enrollment_credits', {
+      const { data, error } = await supabase.rpc("consume_enrollment_credits", {
         p_organization_id: organizationMembership.organization_id,
         p_program_id: selectedProgram.id,
         p_user_ids: selectedMembers,
@@ -210,10 +225,10 @@ export default function OrgPrograms() {
       });
 
       if (error) throw error;
-      
-      const result = data as { 
-        success: boolean; 
-        error?: string; 
+
+      const result = data as {
+        success: boolean;
+        error?: string;
         credits_consumed?: number;
         enrolled_count?: number;
         free_enrollment?: boolean;
@@ -222,24 +237,24 @@ export default function OrgPrograms() {
       };
 
       if (!result.success) {
-        if (result.error === 'insufficient_credits') {
+        if (result.error === "insufficient_credits") {
           toast({
-            title: 'Insufficient Credits',
+            title: "Insufficient Credits",
             description: `This enrollment requires ${result.required} credits, but you only have ${result.available} available.`,
-            variant: 'destructive',
+            variant: "destructive",
           });
         } else {
-          throw new Error(result.error || 'Enrollment failed');
+          throw new Error(result.error || "Enrollment failed");
         }
         return;
       }
 
-      const message = result.free_enrollment 
+      const message = result.free_enrollment
         ? `Successfully enrolled ${result.enrolled_count} member(s) in ${selectedProgram.name}`
         : `Enrolled ${result.enrolled_count} member(s) using ${result.credits_consumed} credits`;
 
       toast({
-        title: 'Members Enrolled',
+        title: "Members Enrolled",
         description: message,
       });
 
@@ -249,11 +264,11 @@ export default function OrgPrograms() {
       loadPrograms();
       refetchCredits();
     } catch (error) {
-      console.error('Error enrolling members:', error);
+      console.error("Error enrolling members:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to enroll members',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to enroll members",
+        variant: "destructive",
       });
     } finally {
       setEnrolling(false);
@@ -261,15 +276,13 @@ export default function OrgPrograms() {
   };
 
   const toggleMemberSelection = (userId: string) => {
-    setSelectedMembers(prev =>
-      prev.includes(userId)
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
+    setSelectedMembers((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
     );
   };
 
   const selectAllUnenrolled = () => {
-    setSelectedMembers(orgMembers.filter(m => !m.isEnrolled).map(m => m.user_id));
+    setSelectedMembers(orgMembers.filter((m) => !m.isEnrolled).map((m) => m.user_id));
   };
 
   const deselectAll = () => {
@@ -286,17 +299,15 @@ export default function OrgPrograms() {
       </div>
 
       {loading ? (
-        <div className="text-center py-8 text-muted-foreground">
-          Loading programs...
-        </div>
+        <div className="text-center py-8 text-muted-foreground">Loading programs...</div>
       ) : programs.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p className="font-medium mb-2">No programs available</p>
             <p className="text-sm">
-              Your organization doesn't have access to any programs yet.
-              Contact your platform administrator to get programs licensed.
+              Your organization doesn't have access to any programs yet. Contact your platform
+              administrator to get programs licensed.
             </p>
           </CardContent>
         </Card>
@@ -318,9 +329,7 @@ export default function OrgPrograms() {
                   </div>
                 </div>
                 {program.description && (
-                  <CardDescription className="line-clamp-2">
-                    {program.description}
-                  </CardDescription>
+                  <CardDescription className="line-clamp-2">{program.description}</CardDescription>
                 )}
               </CardHeader>
               <CardContent className="mt-auto pt-0">
@@ -345,9 +354,7 @@ export default function OrgPrograms() {
               <GraduationCap className="h-5 w-5" />
               Enroll Members in {selectedProgram?.name}
             </DialogTitle>
-            <DialogDescription>
-              Select team members to enroll in this program
-            </DialogDescription>
+            <DialogDescription>Select team members to enroll in this program</DialogDescription>
           </DialogHeader>
 
           {/* Credit Cost Info */}
@@ -364,20 +371,22 @@ export default function OrgPrograms() {
               </AlertDescription>
             </Alert>
           )}
-          
+
           {selectedProgram?.credit_cost && selectedMembers.length > 0 && (
             <div className="text-sm text-muted-foreground text-center">
-              Total cost: <strong>{formatCredits(selectedProgram.credit_cost * selectedMembers.length)} credits</strong>
-              {(creditSummary?.total_available ?? 0) < selectedProgram.credit_cost * selectedMembers.length && (
+              Total cost:{" "}
+              <strong>
+                {formatCredits(selectedProgram.credit_cost * selectedMembers.length)} credits
+              </strong>
+              {(creditSummary?.total_available ?? 0) <
+                selectedProgram.credit_cost * selectedMembers.length && (
                 <span className="text-destructive ml-2">(Insufficient credits)</span>
               )}
             </div>
           )}
 
           {loadingMembers ? (
-            <div className="py-8 text-center text-muted-foreground">
-              Loading members...
-            </div>
+            <div className="py-8 text-center text-muted-foreground">Loading members...</div>
           ) : orgMembers.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
               No members in your organization yet.
@@ -403,7 +412,7 @@ export default function OrgPrograms() {
                     <div
                       key={member.id}
                       className={`flex items-center justify-between p-2 rounded-md ${
-                        member.isEnrolled ? 'bg-muted/50' : 'hover:bg-muted'
+                        member.isEnrolled ? "bg-muted/50" : "hover:bg-muted"
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -412,8 +421,8 @@ export default function OrgPrograms() {
                           onCheckedChange={() => toggleMemberSelection(member.user_id)}
                           disabled={member.isEnrolled}
                         />
-                        <span className={member.isEnrolled ? 'text-muted-foreground' : ''}>
-                          {member.name || 'Unknown User'}
+                        <span className={member.isEnrolled ? "text-muted-foreground" : ""}>
+                          {member.name || "Unknown User"}
                         </span>
                       </div>
                       {member.isEnrolled && (
@@ -432,11 +441,8 @@ export default function OrgPrograms() {
             <Button variant="outline" onClick={() => setEnrollDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={handleBulkEnroll}
-              disabled={enrolling || selectedMembers.length === 0}
-            >
-              {enrolling ? 'Enrolling...' : `Enroll ${selectedMembers.length} Member(s)`}
+            <Button onClick={handleBulkEnroll} disabled={enrolling || selectedMembers.length === 0}>
+              {enrolling ? "Enrolling..." : `Enroll ${selectedMembers.length} Member(s)`}
             </Button>
           </DialogFooter>
         </DialogContent>

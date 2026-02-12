@@ -10,12 +10,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  ArrowLeft, Plus, Edit, Trash2, Loader2, ChevronDown, ChevronRight, 
-  FileText, GripVertical, Link2, Unlink, Lock, AlertTriangle 
+import {
+  ArrowLeft,
+  Plus,
+  Edit,
+  Trash2,
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  GripVertical,
+  Link2,
+  Unlink,
+  Lock,
+  AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdminLoadingState } from "@/components/admin";
@@ -38,7 +55,7 @@ export default function ScenarioTemplateDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { userRole } = useAuth();
-  const isAdmin = userRole === 'admin';
+  const isAdmin = userRole === "admin";
 
   const { data: template, isLoading: templateLoading } = useScenarioTemplate(id);
   const { data: sections, isLoading: sectionsLoading } = useScenarioSections(id);
@@ -53,7 +70,11 @@ export default function ScenarioTemplateDetail() {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">Template not found</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate("/admin/scenario-templates")}>
+        <Button
+          variant="outline"
+          className="mt-4"
+          onClick={() => navigate("/admin/scenario-templates")}
+        >
           Back to Templates
         </Button>
       </div>
@@ -85,7 +106,8 @@ export default function ScenarioTemplateDetail() {
         </div>
         {template.capability_assessments && (
           <Badge variant="secondary" className="text-sm">
-            Linked: {template.capability_assessments.name} (0-{template.capability_assessments.rating_scale})
+            Linked: {template.capability_assessments.name} (0-
+            {template.capability_assessments.rating_scale})
           </Badge>
         )}
       </div>
@@ -103,9 +125,7 @@ export default function ScenarioTemplateDetail() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Sections</h2>
-          {!isLocked && (
-            <AddSectionDialog templateId={id!} existingSections={sections || []} />
-          )}
+          {!isLocked && <AddSectionDialog templateId={id!} existingSections={sections || []} />}
         </div>
 
         {!sections || sections.length === 0 ? (
@@ -113,9 +133,7 @@ export default function ScenarioTemplateDetail() {
             <CardContent className="py-12 text-center">
               <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">No sections yet</p>
-              {!isLocked && (
-                <AddSectionDialog templateId={id!} existingSections={[]} asButton />
-              )}
+              {!isLocked && <AddSectionDialog templateId={id!} existingSections={[]} asButton />}
             </CardContent>
           </Card>
         ) : (
@@ -165,9 +183,12 @@ function SectionCard({
   const { updateMutation, deleteMutation } = useScenarioSectionMutations(templateId);
 
   const handleSave = () => {
-    updateMutation.mutate({ id: section.id, data: editData }, {
-      onSuccess: () => setIsEditing(false)
-    });
+    updateMutation.mutate(
+      { id: section.id, data: editData },
+      {
+        onSuccess: () => setIsEditing(false),
+      },
+    );
   };
 
   const handleDelete = () => {
@@ -192,7 +213,12 @@ function SectionCard({
                 <Button variant="ghost" size="icon" onClick={() => setIsEditing(!isEditing)}>
                   <Edit className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={handleDelete} disabled={deleteMutation.isPending}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
@@ -249,7 +275,10 @@ function SectionCard({
                   />
                 ))}
                 {!isLocked && (
-                  <AddParagraphDialog sectionId={section.id} existingCount={paragraphs?.length || 0} />
+                  <AddParagraphDialog
+                    sectionId={section.id}
+                    existingCount={paragraphs?.length || 0}
+                  />
                 )}
               </div>
             )}
@@ -287,9 +316,12 @@ function ParagraphItem({
   const { updateMutation, deleteMutation } = useSectionParagraphMutations(sectionId);
 
   const handleSave = () => {
-    updateMutation.mutate({ id: paragraph.id, data: editData }, {
-      onSuccess: () => setIsEditing(false)
-    });
+    updateMutation.mutate(
+      { id: paragraph.id, data: editData },
+      {
+        onSuccess: () => setIsEditing(false),
+      },
+    );
   };
 
   const handleDelete = () => {
@@ -307,11 +339,11 @@ function ParagraphItem({
           <GripVertical className="h-4 w-4 text-muted-foreground mt-1 cursor-grab" />
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                ¶{paragraphNumber}
-              </span>
+              <span className="text-xs font-medium text-muted-foreground">¶{paragraphNumber}</span>
               {paragraph.requires_response && (
-                <Badge variant="outline" className="text-xs">Response Required</Badge>
+                <Badge variant="outline" className="text-xs">
+                  Response Required
+                </Badge>
               )}
               {linkedQuestions.length > 0 && (
                 <Badge variant="secondary" className="text-xs">
@@ -330,7 +362,9 @@ function ParagraphItem({
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={editData.requires_response}
-                    onCheckedChange={(checked) => setEditData({ ...editData, requires_response: checked })}
+                    onCheckedChange={(checked) =>
+                      setEditData({ ...editData, requires_response: checked })
+                    }
                   />
                   <Label className="text-sm">Requires response</Label>
                 </div>
@@ -353,7 +387,10 @@ function ParagraphItem({
                 <p className="text-xs font-medium text-muted-foreground mb-1">Linked Questions:</p>
                 <div className="space-y-1">
                   {linkedQuestions.map((link) => (
-                    <div key={link.id} className="flex items-center justify-between text-xs bg-background rounded px-2 py-1">
+                    <div
+                      key={link.id}
+                      className="flex items-center justify-between text-xs bg-background rounded px-2 py-1"
+                    >
                       <span>
                         <span className="text-muted-foreground">
                           [{link.capability_domain_questions?.capability_domains?.name}]
@@ -361,7 +398,11 @@ function ParagraphItem({
                         {link.capability_domain_questions?.question_text}
                       </span>
                       {!isLocked && (
-                        <UnlinkQuestionButton linkId={link.id} paragraphId={paragraph.id} sectionId={sectionId} />
+                        <UnlinkQuestionButton
+                          linkId={link.id}
+                          paragraphId={paragraph.id}
+                          sectionId={sectionId}
+                        />
                       )}
                     </div>
                   ))}
@@ -373,7 +414,11 @@ function ParagraphItem({
         {!isLocked && !isEditing && (
           <div className="flex items-center gap-1">
             {assessmentId && (
-              <Button variant="ghost" size="icon" onClick={() => setShowQuestionLink(!showQuestionLink)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowQuestionLink(!showQuestionLink)}
+              >
                 <Link2 className="h-4 w-4" />
               </Button>
             )}
@@ -424,11 +469,13 @@ function LinkQuestionPanel({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("capability_domains")
-        .select(`
+        .select(
+          `
           id,
           name,
           capability_domain_questions(id, question_text)
-        `)
+        `,
+        )
         .eq("assessment_id", assessmentId)
         .order("order_index");
       if (error) throw error;
@@ -438,7 +485,7 @@ function LinkQuestionPanel({
 
   const { addLinkMutation } = useQuestionLinkMutations(paragraphId, sectionId);
 
-  const existingQuestionIds = new Set(existingLinks.map(l => l.question_id));
+  const existingQuestionIds = new Set(existingLinks.map((l) => l.question_id));
 
   if (isLoading) {
     return <div className="text-sm text-muted-foreground">Loading questions...</div>;
@@ -448,7 +495,9 @@ function LinkQuestionPanel({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">Link Questions from Assessment</p>
-        <Button variant="ghost" size="sm" onClick={onClose}>Done</Button>
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          Done
+        </Button>
       </div>
       <ScrollArea className="h-[200px]">
         <div className="space-y-3">
@@ -457,13 +506,15 @@ function LinkQuestionPanel({
               <p className="text-xs font-medium text-muted-foreground mb-1">{domain.name}</p>
               <div className="space-y-1">
                 {(domain.capability_domain_questions as any[])?.map((question: any) => (
-                  <div 
-                    key={question.id} 
+                  <div
+                    key={question.id}
                     className="flex items-center justify-between text-sm p-2 rounded hover:bg-muted"
                   >
                     <span className="flex-1 truncate">{question.question_text}</span>
                     {existingQuestionIds.has(question.id) ? (
-                      <Badge variant="secondary" className="text-xs">Linked</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Linked
+                      </Badge>
                     ) : (
                       <Button
                         variant="outline"
@@ -533,15 +584,18 @@ function AddSectionDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMutation.mutate({
-      ...formData,
-      order_index: existingSections.length,
-    }, {
-      onSuccess: () => {
-        setOpen(false);
-        setFormData({ title: "", instructions: "" });
-      }
-    });
+    createMutation.mutate(
+      {
+        ...formData,
+        order_index: existingSections.length,
+      },
+      {
+        onSuccess: () => {
+          setOpen(false);
+          setFormData({ title: "", instructions: "" });
+        },
+      },
+    );
   };
 
   return (
@@ -614,15 +668,18 @@ function AddParagraphDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMutation.mutate({
-      ...formData,
-      order_index: existingCount,
-    }, {
-      onSuccess: () => {
-        setOpen(false);
-        setFormData({ content: "", requires_response: true });
-      }
-    });
+    createMutation.mutate(
+      {
+        ...formData,
+        order_index: existingCount,
+      },
+      {
+        onSuccess: () => {
+          setOpen(false);
+          setFormData({ content: "", requires_response: true });
+        },
+      },
+    );
   };
 
   return (
@@ -649,7 +706,9 @@ function AddParagraphDialog({
           <div className="flex items-center gap-2">
             <Switch
               checked={formData.requires_response}
-              onCheckedChange={(checked) => setFormData({ ...formData, requires_response: checked })}
+              onCheckedChange={(checked) =>
+                setFormData({ ...formData, requires_response: checked })
+              }
             />
             <Label>Requires response from client</Label>
           </div>

@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from "react-router-dom";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -6,9 +6,9 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import { Home } from 'lucide-react';
-import { Fragment } from 'react';
+} from "@/components/ui/breadcrumb";
+import { Home } from "lucide-react";
+import { Fragment } from "react";
 
 interface BreadcrumbItem {
   label: string;
@@ -26,7 +26,7 @@ interface AdminBreadcrumbProps {
 
 /**
  * Standardized breadcrumb navigation for admin pages.
- * 
+ *
  * @example
  * ```tsx
  * <AdminBreadcrumb
@@ -40,7 +40,7 @@ interface AdminBreadcrumbProps {
 export function AdminBreadcrumb({
   items,
   showHome = true,
-  homePath = '/admin',
+  homePath = "/admin",
 }: AdminBreadcrumbProps) {
   return (
     <Breadcrumb className="mb-4">
@@ -58,10 +58,10 @@ export function AdminBreadcrumb({
             <BreadcrumbSeparator />
           </>
         )}
-        
+
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
-          
+
           return (
             <Fragment key={index}>
               <BreadcrumbItem>
@@ -88,21 +88,18 @@ export function AdminBreadcrumb({
  */
 export function useAutoBreadcrumb(
   labelMap?: Record<string, string>,
-  basePath = '/admin'
+  basePath = "/admin",
 ): BreadcrumbItem[] {
   const location = useLocation();
-  const pathSegments = location.pathname
-    .replace(basePath, '')
-    .split('/')
-    .filter(Boolean);
+  const pathSegments = location.pathname.replace(basePath, "").split("/").filter(Boolean);
 
   return pathSegments.map((segment, index) => {
-    const href = `${basePath}/${pathSegments.slice(0, index + 1).join('/')}`;
+    const href = `${basePath}/${pathSegments.slice(0, index + 1).join("/")}`;
     const isLast = index === pathSegments.length - 1;
-    
+
     // Try to get label from map, otherwise format the segment
     const label = labelMap?.[segment] ?? formatSegmentLabel(segment);
-    
+
     return {
       label,
       href: isLast ? undefined : href,
@@ -113,12 +110,12 @@ export function useAutoBreadcrumb(
 function formatSegmentLabel(segment: string): string {
   // Handle UUIDs - return "Detail" for likely IDs
   if (segment.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-    return 'Detail';
+    return "Detail";
   }
-  
+
   // Convert kebab-case to Title Case
   return segment
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }

@@ -9,7 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Camera, History, Share2, FileEdit, Trash2, User, UserCheck } from "lucide-react";
 import { format } from "date-fns";
@@ -41,7 +47,7 @@ export default function CapabilityAssessmentDetail() {
   const [activeTab, setActiveTab] = useState<string>("current");
 
   // Check for snapshotId in URL params to auto-open the form or view
-  const urlSnapshotId = searchParams.get('snapshotId');
+  const urlSnapshotId = searchParams.get("snapshotId");
 
   // Fetch assessment with domains and questions
   const { data: assessment, isLoading: assessmentLoading } = useQuery({
@@ -49,7 +55,8 @@ export default function CapabilityAssessmentDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("capability_assessments")
-        .select(`
+        .select(
+          `
           *,
           capability_domains (
             id,
@@ -63,22 +70,25 @@ export default function CapabilityAssessmentDetail() {
               order_index
             )
           )
-        `)
+        `,
+        )
         .eq("id", id)
         .single();
 
       if (error) throw error;
-      
+
       // Sort domains and questions by order_index
       if (data.capability_domains) {
         data.capability_domains.sort((a: any, b: any) => a.order_index - b.order_index);
         data.capability_domains.forEach((domain: any) => {
           if (domain.capability_domain_questions) {
-            domain.capability_domain_questions.sort((a: any, b: any) => a.order_index - b.order_index);
+            domain.capability_domain_questions.sort(
+              (a: any, b: any) => a.order_index - b.order_index,
+            );
           }
         });
       }
-      
+
       return data;
     },
     enabled: !!id,
@@ -89,10 +99,11 @@ export default function CapabilityAssessmentDetail() {
     queryKey: ["capability-snapshots", id],
     queryFn: async () => {
       if (!user) return [];
-      
+
       const { data, error } = await supabase
         .from("capability_snapshots")
-        .select(`
+        .select(
+          `
           *,
           capability_snapshot_ratings (
             id,
@@ -111,13 +122,14 @@ export default function CapabilityAssessmentDetail() {
             question_id,
             content
           )
-        `)
+        `,
+        )
         .eq("assessment_id", id)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      
+
       // Fetch evaluator names for non-self assessments
       const snapshotsWithEvaluators = await Promise.all(
         data.map(async (s: any) => {
@@ -130,9 +142,9 @@ export default function CapabilityAssessmentDetail() {
             return { ...s, evaluator_name: evaluator?.name || null };
           }
           return { ...s, evaluator_name: null };
-        })
+        }),
       );
-      
+
       return snapshotsWithEvaluators;
     },
     enabled: !!id && !!user,
@@ -158,7 +170,7 @@ export default function CapabilityAssessmentDetail() {
   // Handle snapshotId URL parameter - show view mode for completed, form for drafts
   useEffect(() => {
     if (urlSnapshotId && urlTargetSnapshot) {
-      if (urlTargetSnapshot.status === 'completed') {
+      if (urlTargetSnapshot.status === "completed") {
         // For completed snapshots, show in view mode (history tab)
         setShowForm(false);
         setSelectedSnapshotId(urlSnapshotId);
@@ -195,11 +207,8 @@ export default function CapabilityAssessmentDetail() {
       await supabase.from("capability_snapshot_ratings").delete().eq("snapshot_id", snapshotId);
       await supabase.from("capability_domain_notes").delete().eq("snapshot_id", snapshotId);
       await supabase.from("capability_question_notes").delete().eq("snapshot_id", snapshotId);
-      
-      const { error } = await supabase
-        .from("capability_snapshots")
-        .delete()
-        .eq("id", snapshotId);
+
+      const { error } = await supabase.from("capability_snapshots").delete().eq("id", snapshotId);
 
       if (error) throw error;
     },
@@ -215,23 +224,43 @@ export default function CapabilityAssessmentDetail() {
     },
   });
 
-  const completedSnapshots = snapshots?.filter((s) => s.status === 'completed') || [];
-  const draftSnapshot = snapshots?.find((s) => s.status === 'draft');
+  const completedSnapshots = snapshots?.filter((s) => s.status === "completed") || [];
+  const draftSnapshot = snapshots?.find((s) => s.status === "draft");
   const latestSnapshot = completedSnapshots[0];
 
   // Filter snapshots for history tab
   const filteredHistorySnapshots = useMemo(() => {
     if (historyFilter === "all") return completedSnapshots;
     if (historyFilter === "self") return completedSnapshots.filter((s) => s.is_self_assessment);
-    if (historyFilter === "peer") return completedSnapshots.filter((s) => !s.is_self_assessment && s.evaluation_relationship === 'peer');
+    if (historyFilter === "peer")
+      return completedSnapshots.filter(
+        (s) => !s.is_self_assessment && s.evaluation_relationship === "peer",
+      );
     // instructor filter: non-self, non-peer (instructor or coach)
-    return completedSnapshots.filter((s) => !s.is_self_assessment && s.evaluation_relationship !== 'peer');
+    return completedSnapshots.filter(
+      (s) => !s.is_self_assessment && s.evaluation_relationship !== "peer",
+    );
   }, [completedSnapshots, historyFilter]);
 
   // Separate self, peer, and instructor snapshots for evolution chart filtering
-  const selfSnapshots = useMemo(() => completedSnapshots.filter((s) => s.is_self_assessment), [completedSnapshots]);
-  const peerSnapshots = useMemo(() => completedSnapshots.filter((s) => !s.is_self_assessment && s.evaluation_relationship === 'peer'), [completedSnapshots]);
-  const instructorSnapshots = useMemo(() => completedSnapshots.filter((s) => !s.is_self_assessment && s.evaluation_relationship !== 'peer'), [completedSnapshots]);
+  const selfSnapshots = useMemo(
+    () => completedSnapshots.filter((s) => s.is_self_assessment),
+    [completedSnapshots],
+  );
+  const peerSnapshots = useMemo(
+    () =>
+      completedSnapshots.filter(
+        (s) => !s.is_self_assessment && s.evaluation_relationship === "peer",
+      ),
+    [completedSnapshots],
+  );
+  const instructorSnapshots = useMemo(
+    () =>
+      completedSnapshots.filter(
+        (s) => !s.is_self_assessment && s.evaluation_relationship !== "peer",
+      ),
+    [completedSnapshots],
+  );
 
   if (assessmentLoading || snapshotsLoading) {
     return (
@@ -280,8 +309,8 @@ export default function CapabilityAssessmentDetail() {
               <FileEdit className="mr-2 h-4 w-4" />
               Resume Draft
             </Button>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="icon"
               onClick={() => {
                 if (confirm("Delete this draft? This cannot be undone.")) {
@@ -305,7 +334,8 @@ export default function CapabilityAssessmentDetail() {
         <CapabilitySnapshotForm
           assessment={{
             ...assessment,
-            assessment_mode: (assessment.assessment_mode as 'self' | 'evaluator' | 'both') || 'both'
+            assessment_mode:
+              (assessment.assessment_mode as "self" | "evaluator" | "both") || "both",
           }}
           existingDraftId={urlSnapshotId ?? draftSnapshot?.id}
           onCancel={() => setShowForm(false)}
@@ -332,9 +362,12 @@ export default function CapabilityAssessmentDetail() {
                 evaluatorName={(latestSnapshot as any).evaluator_name}
                 canAddDevelopmentItems={true}
                 forUserId={user?.id}
-                onToggleShare={latestSnapshot.is_self_assessment ? (shared) =>
-                  toggleShareMutation.mutate({ snapshotId: latestSnapshot.id, shared })
-                : undefined}
+                onToggleShare={
+                  latestSnapshot.is_self_assessment
+                    ? (shared) =>
+                        toggleShareMutation.mutate({ snapshotId: latestSnapshot.id, shared })
+                    : undefined
+                }
               />
             ) : (
               <Card>
@@ -342,7 +375,8 @@ export default function CapabilityAssessmentDetail() {
                   <Camera className="h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium">No Snapshots Yet</h3>
                   <p className="text-muted-foreground mt-2 max-w-md">
-                    Take your first snapshot to assess your capabilities across each domain and question.
+                    Take your first snapshot to assess your capabilities across each domain and
+                    question.
                   </p>
                   <Button className="mt-4" onClick={() => setShowForm(true)}>
                     <Plus className="mr-2 h-4 w-4" />
@@ -379,7 +413,10 @@ export default function CapabilityAssessmentDetail() {
             {/* Filter controls */}
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Filter by:</span>
-              <Select value={historyFilter} onValueChange={(v) => setHistoryFilter(v as SnapshotTypeFilter)}>
+              <Select
+                value={historyFilter}
+                onValueChange={(v) => setHistoryFilter(v as SnapshotTypeFilter)}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -398,10 +435,9 @@ export default function CapabilityAssessmentDetail() {
             {filteredHistorySnapshots.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
-                  {completedSnapshots.length === 0 
+                  {completedSnapshots.length === 0
                     ? "No completed snapshots yet."
-                    : `No ${historyFilter === "self" ? "self-evaluation" : historyFilter === "peer" ? "peer review" : "instructor/coach graded"} snapshots found.`
-                  }
+                    : `No ${historyFilter === "self" ? "self-evaluation" : historyFilter === "peer" ? "peer review" : "instructor/coach graded"} snapshots found.`}
                 </CardContent>
               </Card>
             ) : (
@@ -409,18 +445,21 @@ export default function CapabilityAssessmentDetail() {
                 <Card
                   key={snapshot.id}
                   className={`cursor-pointer transition-colors ${
-                    selectedSnapshotId === snapshot.id ? "border-primary" : "hover:border-primary/50"
+                    selectedSnapshotId === snapshot.id
+                      ? "border-primary"
+                      : "hover:border-primary/50"
                   }`}
-                  onClick={() => setSelectedSnapshotId(
-                    selectedSnapshotId === snapshot.id ? null : snapshot.id
-                  )}
+                  onClick={() =>
+                    setSelectedSnapshotId(selectedSnapshotId === snapshot.id ? null : snapshot.id)
+                  }
                 >
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div>
                           <CardTitle className="text-base flex items-center gap-2">
-                            {snapshot.title || format(new Date(snapshot.completed_at!), "MMMM d, yyyy")}
+                            {snapshot.title ||
+                              format(new Date(snapshot.completed_at!), "MMMM d, yyyy")}
                             {/* Type badge */}
                             {snapshot.is_self_assessment ? (
                               <Badge variant="outline" className="flex items-center gap-1 text-xs">
@@ -428,9 +467,15 @@ export default function CapabilityAssessmentDetail() {
                                 Self
                               </Badge>
                             ) : (
-                              <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                              <Badge
+                                variant="secondary"
+                                className="flex items-center gap-1 text-xs"
+                              >
                                 <UserCheck className="h-3 w-3" />
-                                Evaluator{(snapshot as any).evaluator_name ? `: ${(snapshot as any).evaluator_name}` : ""}
+                                Evaluator
+                                {(snapshot as any).evaluator_name
+                                  ? `: ${(snapshot as any).evaluator_name}`
+                                  : ""}
                               </Badge>
                             )}
                           </CardTitle>
@@ -442,11 +487,16 @@ export default function CapabilityAssessmentDetail() {
                       <div className="flex items-center gap-4">
                         {snapshot.is_self_assessment && (
                           <div className="flex items-center gap-2">
-                            <Share2 className={`h-4 w-4 ${snapshot.shared_with_coach ? "text-primary" : "text-muted-foreground"}`} />
+                            <Share2
+                              className={`h-4 w-4 ${snapshot.shared_with_coach ? "text-primary" : "text-muted-foreground"}`}
+                            />
                             <Switch
                               checked={snapshot.shared_with_coach}
                               onCheckedChange={(checked) => {
-                                toggleShareMutation.mutate({ snapshotId: snapshot.id, shared: checked });
+                                toggleShareMutation.mutate({
+                                  snapshotId: snapshot.id,
+                                  shared: checked,
+                                });
                               }}
                               onClick={(e) => e.stopPropagation()}
                             />
@@ -463,7 +513,9 @@ export default function CapabilityAssessmentDetail() {
                             className="h-8 w-8 text-muted-foreground hover:text-destructive"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (confirm("Delete this assessment instance? This cannot be undone.")) {
+                              if (
+                                confirm("Delete this assessment instance? This cannot be undone.")
+                              ) {
                                 deleteSnapshotMutation.mutate(snapshot.id);
                               }
                             }}
@@ -485,9 +537,12 @@ export default function CapabilityAssessmentDetail() {
                         evaluatorName={(snapshot as any).evaluator_name}
                         canAddDevelopmentItems={true}
                         forUserId={user?.id}
-                        onToggleShare={snapshot.is_self_assessment ? (shared: boolean) =>
-                          toggleShareMutation.mutate({ snapshotId: snapshot.id, shared })
-                        : undefined}
+                        onToggleShare={
+                          snapshot.is_self_assessment
+                            ? (shared: boolean) =>
+                                toggleShareMutation.mutate({ snapshotId: snapshot.id, shared })
+                            : undefined
+                        }
                       />
                     </CardContent>
                   )}

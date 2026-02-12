@@ -1,27 +1,37 @@
-import { useEffect, useState, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Target, Flag, CheckSquare, Calendar, Clock, Filter, Loader2, Home, GitBranch } from 'lucide-react';
-import { TimelineProgressSection } from '@/components/timeline/TimelineProgressSection';
-import { format, parseISO, isBefore, startOfDay } from 'date-fns';
-import { FeatureGate } from '@/components/FeatureGate';
-import { useCategoryLookup } from '@/hooks/useWheelCategories';
-import { toast } from 'sonner';
+import { useEffect, useState, useMemo } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import {
+  Target,
+  Flag,
+  CheckSquare,
+  Calendar,
+  Clock,
+  Filter,
+  Loader2,
+  Home,
+  GitBranch,
+} from "lucide-react";
+import { TimelineProgressSection } from "@/components/timeline/TimelineProgressSection";
+import { format, parseISO, isBefore, startOfDay } from "date-fns";
+import { FeatureGate } from "@/components/FeatureGate";
+import { useCategoryLookup } from "@/hooks/useWheelCategories";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -29,7 +39,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+} from "@/components/ui/breadcrumb";
 
 interface Goal {
   id: string;
@@ -67,7 +77,7 @@ interface Task {
 
 interface TimelineItem {
   id: string;
-  type: 'goal' | 'milestone' | 'task';
+  type: "goal" | "milestone" | "task";
   title: string;
   description: string | null;
   date: string | null;
@@ -85,20 +95,20 @@ const TYPE_ICONS = {
 };
 
 const TYPE_COLORS = {
-  goal: 'bg-primary/15 text-primary',
-  milestone: 'bg-chart-2/15 text-chart-2',
-  task: 'bg-chart-4/15 text-chart-4',
+  goal: "bg-primary/15 text-primary",
+  milestone: "bg-chart-2/15 text-chart-2",
+  task: "bg-chart-4/15 text-chart-4",
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  not_started: 'bg-secondary text-secondary-foreground',
-  in_progress: 'bg-primary/15 text-primary',
-  completed: 'bg-success/15 text-success',
-  paused: 'bg-warning/15 text-warning',
-  done: 'bg-success/15 text-success',
-  active: 'bg-primary/15 text-primary',
-  'on-hold': 'bg-warning/15 text-warning',
-  retired: 'bg-muted text-muted-foreground',
+  not_started: "bg-secondary text-secondary-foreground",
+  in_progress: "bg-primary/15 text-primary",
+  completed: "bg-success/15 text-success",
+  paused: "bg-warning/15 text-warning",
+  done: "bg-success/15 text-success",
+  active: "bg-primary/15 text-primary",
+  "on-hold": "bg-warning/15 text-warning",
+  retired: "bg-muted text-muted-foreground",
 };
 
 export default function DevelopmentTimeline() {
@@ -113,8 +123,8 @@ export default function DevelopmentTimeline() {
   const [showGoals, setShowGoals] = useState(true);
   const [showMilestones, setShowMilestones] = useState(true);
   const [showTasks, setShowTasks] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
   useEffect(() => {
     if (user) {
@@ -124,32 +134,34 @@ export default function DevelopmentTimeline() {
 
   const fetchData = async () => {
     if (!user) return;
-    
+
     try {
       setLoading(true);
 
       // Fetch goals
       const { data: goalsData, error: goalsError } = await supabase
-        .from('goals')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('target_date', { ascending: true, nullsFirst: false });
+        .from("goals")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("target_date", { ascending: true, nullsFirst: false });
 
       if (goalsError) throw goalsError;
       setGoals(goalsData || []);
 
       // Fetch milestones with goal info
       const { data: milestonesData, error: milestonesError } = await supabase
-        .from('goal_milestones')
-        .select(`
+        .from("goal_milestones")
+        .select(
+          `
           *,
           goals!inner(title, category, user_id)
-        `)
-        .eq('goals.user_id', user.id)
-        .order('due_date', { ascending: true, nullsFirst: false });
+        `,
+        )
+        .eq("goals.user_id", user.id)
+        .order("due_date", { ascending: true, nullsFirst: false });
 
       if (milestonesError) throw milestonesError;
-      const formattedMilestones = (milestonesData || []).map(m => ({
+      const formattedMilestones = (milestonesData || []).map((m) => ({
         ...m,
         goal_title: m.goals?.title,
         goal_category: m.goals?.category,
@@ -158,24 +170,26 @@ export default function DevelopmentTimeline() {
 
       // Fetch tasks with goal info
       const { data: tasksData, error: tasksError } = await supabase
-        .from('tasks')
-        .select(`
+        .from("tasks")
+        .select(
+          `
           *,
           goals(title, category)
-        `)
-        .eq('user_id', user.id)
-        .order('due_date', { ascending: true, nullsFirst: false });
+        `,
+        )
+        .eq("user_id", user.id)
+        .order("due_date", { ascending: true, nullsFirst: false });
 
       if (tasksError) throw tasksError;
-      const formattedTasks = (tasksData || []).map(t => ({
+      const formattedTasks = (tasksData || []).map((t) => ({
         ...t,
         goal_title: t.goals?.title,
         goal_category: t.goals?.category,
       }));
       setTasks(formattedTasks);
     } catch (error) {
-      console.error('Error fetching timeline data:', error);
-      toast.error('Failed to load timeline data');
+      console.error("Error fetching timeline data:", error);
+      toast.error("Failed to load timeline data");
     } finally {
       setLoading(false);
     }
@@ -186,10 +200,10 @@ export default function DevelopmentTimeline() {
     const items: TimelineItem[] = [];
 
     if (showGoals) {
-      goals.forEach(goal => {
+      goals.forEach((goal) => {
         items.push({
           id: goal.id,
-          type: 'goal',
+          type: "goal",
           title: goal.title,
           description: goal.description,
           date: goal.target_date,
@@ -201,10 +215,10 @@ export default function DevelopmentTimeline() {
     }
 
     if (showMilestones) {
-      milestones.forEach(milestone => {
+      milestones.forEach((milestone) => {
         items.push({
           id: milestone.id,
-          type: 'milestone',
+          type: "milestone",
           title: milestone.title,
           description: milestone.description,
           date: milestone.due_date,
@@ -218,10 +232,10 @@ export default function DevelopmentTimeline() {
     }
 
     if (showTasks) {
-      tasks.forEach(task => {
+      tasks.forEach((task) => {
         items.push({
           id: task.id,
-          type: 'task',
+          type: "task",
           title: task.title,
           description: task.description,
           date: task.due_date,
@@ -239,17 +253,17 @@ export default function DevelopmentTimeline() {
 
   // Apply filters
   const filteredItems = useMemo(() => {
-    return timelineItems.filter(item => {
+    return timelineItems.filter((item) => {
       // Category filter
-      if (selectedCategory !== 'all' && item.category !== selectedCategory) {
+      if (selectedCategory !== "all" && item.category !== selectedCategory) {
         return false;
       }
       // Status filter
-      if (selectedStatus !== 'all') {
-        if (selectedStatus === 'active' && ['completed', 'done', 'retired'].includes(item.status)) {
+      if (selectedStatus !== "all") {
+        if (selectedStatus === "active" && ["completed", "done", "retired"].includes(item.status)) {
           return false;
         }
-        if (selectedStatus === 'completed' && !['completed', 'done'].includes(item.status)) {
+        if (selectedStatus === "completed" && !["completed", "done"].includes(item.status)) {
           return false;
         }
       }
@@ -259,8 +273,8 @@ export default function DevelopmentTimeline() {
 
   // Split into dated and undated
   const { datedItems, undatedItems } = useMemo(() => {
-    const dated = filteredItems.filter(item => item.date);
-    const undated = filteredItems.filter(item => !item.date);
+    const dated = filteredItems.filter((item) => item.date);
+    const undated = filteredItems.filter((item) => !item.date);
 
     // Sort dated items by date
     dated.sort((a, b) => {
@@ -275,12 +289,12 @@ export default function DevelopmentTimeline() {
   const groupedByMonth = useMemo(() => {
     const groups: Record<string, TimelineItem[]> = {};
     const today = startOfDay(new Date());
-    
-    datedItems.forEach(item => {
+
+    datedItems.forEach((item) => {
       if (!item.date) return;
       const date = parseISO(item.date);
-      const monthKey = format(date, 'MMMM yyyy');
-      
+      const monthKey = format(date, "MMMM yyyy");
+
       if (!groups[monthKey]) {
         groups[monthKey] = [];
       }
@@ -292,16 +306,16 @@ export default function DevelopmentTimeline() {
   const { labels: categoryLabels, categories: wheelCategories } = useCategoryLookup();
 
   const getCategoryLabel = (category: string | null) => {
-    if (!category) return 'Uncategorized';
+    if (!category) return "Uncategorized";
     return categoryLabels[category] || category;
   };
 
   const handleItemClick = (item: TimelineItem) => {
-    if (item.type === 'goal') {
+    if (item.type === "goal") {
       navigate(`/goals/${item.id}`);
-    } else if (item.type === 'milestone' && item.parentId) {
+    } else if (item.type === "milestone" && item.parentId) {
       navigate(`/goals/${item.parentId}`);
-    } else if (item.type === 'task') {
+    } else if (item.type === "task") {
       navigate(`/tasks/${item.id}`);
     }
   };
@@ -315,7 +329,10 @@ export default function DevelopmentTimeline() {
   }
 
   return (
-    <FeatureGate featureKey="goals" fallback={<div className="p-6">Goals feature is not available on your plan.</div>}>
+    <FeatureGate
+      featureKey="goals"
+      fallback={<div className="p-6">Goals feature is not available on your plan.</div>}
+    >
       <div className="space-y-6">
         <Breadcrumb className="mb-4">
           <BreadcrumbList>
@@ -342,7 +359,9 @@ export default function DevelopmentTimeline() {
             <GitBranch className="h-8 w-8 text-primary" />
             <div>
               <h1 className="text-3xl font-bold">Development Timeline</h1>
-              <p className="text-muted-foreground">View your goals, milestones, and tasks over time</p>
+              <p className="text-muted-foreground">
+                View your goals, milestones, and tasks over time
+              </p>
             </div>
           </div>
         </div>
@@ -370,7 +389,10 @@ export default function DevelopmentTimeline() {
                       checked={showGoals}
                       onCheckedChange={(checked) => setShowGoals(checked === true)}
                     />
-                    <Label htmlFor="show-goals" className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Label
+                      htmlFor="show-goals"
+                      className="flex items-center gap-2 text-sm cursor-pointer"
+                    >
                       <Target className="h-4 w-4 text-primary" />
                       Goals
                     </Label>
@@ -381,7 +403,10 @@ export default function DevelopmentTimeline() {
                       checked={showMilestones}
                       onCheckedChange={(checked) => setShowMilestones(checked === true)}
                     />
-                    <Label htmlFor="show-milestones" className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Label
+                      htmlFor="show-milestones"
+                      className="flex items-center gap-2 text-sm cursor-pointer"
+                    >
                       <Flag className="h-4 w-4 text-chart-2" />
                       Milestones
                     </Label>
@@ -392,7 +417,10 @@ export default function DevelopmentTimeline() {
                       checked={showTasks}
                       onCheckedChange={(checked) => setShowTasks(checked === true)}
                     />
-                    <Label htmlFor="show-tasks" className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Label
+                      htmlFor="show-tasks"
+                      className="flex items-center gap-2 text-sm cursor-pointer"
+                    >
                       <CheckSquare className="h-4 w-4 text-chart-3" />
                       Tasks
                     </Label>
@@ -411,11 +439,13 @@ export default function DevelopmentTimeline() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    {(wheelCategories || []).filter(c => !c.is_legacy).map(cat => (
-                      <SelectItem key={cat.key} value={cat.key}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
+                    {(wheelCategories || [])
+                      .filter((c) => !c.is_legacy)
+                      .map((cat) => (
+                        <SelectItem key={cat.key} value={cat.key}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -441,7 +471,9 @@ export default function DevelopmentTimeline() {
               <Separator />
               <div className="text-sm text-muted-foreground">
                 <p>Showing {filteredItems.length} items</p>
-                <p>{datedItems.length} with dates, {undatedItems.length} unplanned</p>
+                <p>
+                  {datedItems.length} with dates, {undatedItems.length} unplanned
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -467,21 +499,28 @@ export default function DevelopmentTimeline() {
                             {month}
                           </h3>
                           <div className="space-y-3 pl-4 border-l-2 border-border">
-                            {items.map(item => {
+                            {items.map((item) => {
                               const Icon = TYPE_ICONS[item.type];
-                              const isPast = item.date && isBefore(parseISO(item.date), startOfDay(new Date()));
-                              const isCompleted = ['completed', 'done'].includes(item.status);
-                              
+                              const isPast =
+                                item.date && isBefore(parseISO(item.date), startOfDay(new Date()));
+                              const isCompleted = ["completed", "done"].includes(item.status);
+
                               return (
                                 <div
                                   key={`${item.type}-${item.id}`}
                                   className="relative pl-6 pb-3 cursor-pointer hover:bg-accent/50 rounded-lg p-3 -ml-4 transition-colors"
                                   onClick={() => handleItemClick(item)}
                                 >
-                                  <div className={`absolute left-0 top-4 w-3 h-3 rounded-full -translate-x-[7px] ${
-                                    isCompleted ? 'bg-green-500' : isPast ? 'bg-destructive' : 'bg-primary'
-                                  }`} />
-                                  
+                                  <div
+                                    className={`absolute left-0 top-4 w-3 h-3 rounded-full -translate-x-[7px] ${
+                                      isCompleted
+                                        ? "bg-green-500"
+                                        : isPast
+                                          ? "bg-destructive"
+                                          : "bg-primary"
+                                    }`}
+                                  />
+
                                   <div className="flex items-start justify-between gap-4">
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center gap-2 mb-1">
@@ -489,8 +528,11 @@ export default function DevelopmentTimeline() {
                                           <Icon className="h-3 w-3 mr-1" />
                                           {item.type}
                                         </Badge>
-                                        <Badge variant="outline" className={STATUS_COLORS[item.status] || 'bg-secondary'}>
-                                          {item.status.replace('_', ' ')}
+                                        <Badge
+                                          variant="outline"
+                                          className={STATUS_COLORS[item.status] || "bg-secondary"}
+                                        >
+                                          {item.status.replace("_", " ")}
                                         </Badge>
                                       </div>
                                       <h4 className="font-medium truncate">{item.title}</h4>
@@ -506,7 +548,7 @@ export default function DevelopmentTimeline() {
                                       )}
                                     </div>
                                     <div className="text-right text-sm text-muted-foreground whitespace-nowrap">
-                                      {item.date && format(parseISO(item.date), 'MMM d')}
+                                      {item.date && format(parseISO(item.date), "MMM d")}
                                     </div>
                                   </div>
                                 </div>
@@ -535,7 +577,7 @@ export default function DevelopmentTimeline() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    {undatedItems.map(item => {
+                    {undatedItems.map((item) => {
                       const Icon = TYPE_ICONS[item.type];
                       return (
                         <div
@@ -548,8 +590,11 @@ export default function DevelopmentTimeline() {
                               <Icon className="h-3 w-3 mr-1" />
                               {item.type}
                             </Badge>
-                            <Badge variant="outline" className={STATUS_COLORS[item.status] || 'bg-secondary'}>
-                              {item.status.replace('_', ' ')}
+                            <Badge
+                              variant="outline"
+                              className={STATUS_COLORS[item.status] || "bg-secondary"}
+                            >
+                              {item.status.replace("_", " ")}
                             </Badge>
                           </div>
                           <h4 className="font-medium text-sm truncate">{item.title}</h4>
@@ -583,9 +628,7 @@ export default function DevelopmentTimeline() {
                       : "No items match your current filters."}
                   </p>
                   {timelineItems.length === 0 && (
-                    <Button onClick={() => navigate('/goals')}>
-                      Create a Goal
-                    </Button>
+                    <Button onClick={() => navigate("/goals")}>Create a Goal</Button>
                   )}
                 </CardContent>
               </Card>

@@ -1,6 +1,6 @@
-import { NotificationPreferences } from '@/components/notifications/NotificationPreferences';
-import { CalendarSyncSettings } from '@/components/notifications/CalendarSyncSettings';
-import { BackButton } from '@/components/navigation/BackButton';
+import { NotificationPreferences } from "@/components/notifications/NotificationPreferences";
+import { CalendarSyncSettings } from "@/components/notifications/CalendarSyncSettings";
+import { BackButton } from "@/components/navigation/BackButton";
 
 export default function NotificationSettings() {
   return (

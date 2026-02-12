@@ -1,16 +1,26 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // ============================================================================
 // Common field schemas
 // ============================================================================
 
-export const nameSchema = z.string().min(1, 'Name is required').max(100, 'Name is too long');
-export const slugSchema = z.string()
-  .min(1, 'Slug is required')
-  .max(50, 'Slug is too long')
-  .regex(/^[a-z0-9-]+$/, 'Slug must be lowercase letters, numbers, and hyphens only');
-export const descriptionSchema = z.string().max(1000, 'Description is too long').optional().nullable();
-export const optionalUrlSchema = z.string().url('Must be a valid URL').optional().nullable().or(z.literal(''));
+export const nameSchema = z.string().min(1, "Name is required").max(100, "Name is too long");
+export const slugSchema = z
+  .string()
+  .min(1, "Slug is required")
+  .max(50, "Slug is too long")
+  .regex(/^[a-z0-9-]+$/, "Slug must be lowercase letters, numbers, and hyphens only");
+export const descriptionSchema = z
+  .string()
+  .max(1000, "Description is too long")
+  .optional()
+  .nullable();
+export const optionalUrlSchema = z
+  .string()
+  .url("Must be a valid URL")
+  .optional()
+  .nullable()
+  .or(z.literal(""));
 
 // ============================================================================
 // Assessment schemas
@@ -38,7 +48,7 @@ export const capabilityAssessmentSchema = z.object({
   name: nameSchema,
   slug: slugSchema,
   description: descriptionSchema,
-  instructions: z.string().max(5000, 'Instructions are too long').optional().nullable(),
+  instructions: z.string().max(5000, "Instructions are too long").optional().nullable(),
   rating_scale: z.number().int().min(3).max(10).default(5),
   is_active: z.boolean().default(true),
   is_public: z.boolean().default(false),
@@ -50,7 +60,7 @@ export const capabilityAssessmentSchema = z.object({
   allow_instructor_eval: z.boolean().default(false),
   pass_fail_enabled: z.boolean().default(false),
   pass_fail_threshold: z.number().min(0).max(100).optional().nullable(),
-  pass_fail_mode: z.enum(['percentage', 'score']).optional().nullable(),
+  pass_fail_mode: z.enum(["percentage", "score"]).optional().nullable(),
 });
 
 export type CapabilityAssessmentFormData = z.infer<typeof capabilityAssessmentSchema>;
@@ -65,7 +75,7 @@ export const programSchema = z.object({
   description: descriptionSchema,
   is_active: z.boolean().default(true),
   is_discoverable: z.boolean().default(true),
-  program_type: z.enum(['certification', 'course', 'workshop', 'coaching']).default('course'),
+  program_type: z.enum(["certification", "course", "workshop", "coaching"]).default("course"),
   duration_weeks: z.number().int().min(1).optional().nullable(),
   category: z.string().optional().nullable(),
 });
@@ -73,7 +83,7 @@ export const programSchema = z.object({
 export type ProgramFormData = z.infer<typeof programSchema>;
 
 export const moduleSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200, 'Title is too long'),
+  title: z.string().min(1, "Title is required").max(200, "Title is too long"),
   description: descriptionSchema,
   content: z.string().optional().nullable(),
   order_index: z.number().int().min(0).default(0),
@@ -92,9 +102,18 @@ export type ModuleFormData = z.infer<typeof moduleSchema>;
 export const sessionTypeSchema = z.object({
   name: nameSchema,
   description: descriptionSchema,
-  duration_minutes: z.number().int().min(5, 'Duration must be at least 5 minutes').max(480, 'Duration cannot exceed 8 hours').default(60),
+  duration_minutes: z
+    .number()
+    .int()
+    .min(5, "Duration must be at least 5 minutes")
+    .max(480, "Duration cannot exceed 8 hours")
+    .default(60),
   is_active: z.boolean().default(true),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Must be a valid hex color').optional().nullable(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Must be a valid hex color")
+    .optional()
+    .nullable(),
   icon: z.string().max(50).optional().nullable(),
 });
 
@@ -127,7 +146,7 @@ export const planSchema = z.object({
   slug: slugSchema,
   description: descriptionSchema,
   price_cents: z.number().int().min(0).default(0),
-  billing_period: z.enum(['monthly', 'yearly', 'one_time', 'lifetime']).default('monthly'),
+  billing_period: z.enum(["monthly", "yearly", "one_time", "lifetime"]).default("monthly"),
   is_active: z.boolean().default(true),
   is_public: z.boolean().default(true),
   trial_days: z.number().int().min(0).default(0),
@@ -140,7 +159,7 @@ export type PlanFormData = z.infer<typeof planSchema>;
 export const programPlanSchema = z.object({
   name: nameSchema,
   description: descriptionSchema,
-  tier: z.string().min(1, 'Tier is required'),
+  tier: z.string().min(1, "Tier is required"),
   price_cents: z.number().int().min(0).default(0),
   is_active: z.boolean().default(true),
   features: z.array(z.string()).optional(),
@@ -154,10 +173,11 @@ export type ProgramPlanFormData = z.infer<typeof programPlanSchema>;
 
 export const featureSchema = z.object({
   name: nameSchema,
-  key: z.string()
-    .min(1, 'Key is required')
-    .max(50, 'Key is too long')
-    .regex(/^[a-z_]+$/, 'Key must be lowercase letters and underscores only'),
+  key: z
+    .string()
+    .min(1, "Key is required")
+    .max(50, "Key is too long")
+    .regex(/^[a-z_]+$/, "Key must be lowercase letters and underscores only"),
   description: descriptionSchema,
   is_active: z.boolean().default(true),
   category: z.string().optional().nullable(),
@@ -167,10 +187,11 @@ export type FeatureFormData = z.infer<typeof featureSchema>;
 
 export const addOnSchema = z.object({
   name: nameSchema,
-  key: z.string()
-    .min(1, 'Key is required')
-    .max(50, 'Key is too long')
-    .regex(/^[a-z_]+$/, 'Key must be lowercase letters and underscores only'),
+  key: z
+    .string()
+    .min(1, "Key is required")
+    .max(50, "Key is too long")
+    .regex(/^[a-z_]+$/, "Key must be lowercase letters and underscores only"),
   description: descriptionSchema,
   price_cents: z.number().int().min(0).default(0),
   is_active: z.boolean().default(true),
@@ -189,7 +210,11 @@ export const trackSchema = z.object({
   slug: slugSchema,
   description: descriptionSchema,
   is_active: z.boolean().default(true),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Must be a valid hex color').optional().nullable(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Must be a valid hex color")
+    .optional()
+    .nullable(),
   icon: z.string().max(50).optional().nullable(),
 });
 
@@ -213,7 +238,11 @@ export const skillCategorySchema = z.object({
   name: nameSchema,
   key: slugSchema,
   description: descriptionSchema,
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Must be a valid hex color').optional().nullable(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Must be a valid hex color")
+    .optional()
+    .nullable(),
   icon: z.string().max(50).optional().nullable(),
   order_index: z.number().int().default(0),
   is_active: z.boolean().default(true),
@@ -226,10 +255,10 @@ export type SkillCategoryFormData = z.infer<typeof skillCategorySchema>;
 // ============================================================================
 
 export const resourceSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200, 'Title is too long'),
+  title: z.string().min(1, "Title is required").max(200, "Title is too long"),
   description: descriptionSchema,
-  resource_type: z.enum(['pdf', 'video', 'link', 'document', 'image', 'audio']).default('link'),
-  url: z.string().url('Must be a valid URL').optional().nullable(),
+  resource_type: z.enum(["pdf", "video", "link", "document", "image", "audio"]).default("link"),
+  url: z.string().url("Must be a valid URL").optional().nullable(),
   is_active: z.boolean().default(true),
   is_premium: z.boolean().default(false),
   order_index: z.number().int().min(0).default(0),
@@ -242,13 +271,13 @@ export type ResourceFormData = z.infer<typeof resourceSchema>;
 // ============================================================================
 
 export const userRoleSchema = z.object({
-  role: z.enum(['client', 'instructor', 'coach', 'admin']),
+  role: z.enum(["client", "instructor", "coach", "admin"]),
 });
 
 export type UserRoleFormData = z.infer<typeof userRoleSchema>;
 
 export const clientProfileSchema = z.object({
-  status: z.enum(['active', 'inactive', 'pending']).default('active'),
+  status: z.enum(["active", "inactive", "pending"]).default("active"),
   notes: z.string().max(5000).optional().nullable(),
   status_marker: z.string().optional().nullable(),
 });
@@ -260,8 +289,8 @@ export type ClientProfileFormData = z.infer<typeof clientProfileSchema>;
 // ============================================================================
 
 export const decisionCapabilitySettingSchema = z.object({
-  capability: z.string().min(1, 'Capability is required'),
-  feature_key: z.enum(['decision_toolkit_basic', 'decision_toolkit_advanced']),
+  capability: z.string().min(1, "Capability is required"),
+  feature_key: z.enum(["decision_toolkit_basic", "decision_toolkit_advanced"]),
 });
 
 export type DecisionCapabilitySettingFormData = z.infer<typeof decisionCapabilitySettingSchema>;
@@ -272,7 +301,7 @@ export type DecisionCapabilitySettingFormData = z.infer<typeof decisionCapabilit
 
 /**
  * Validates form data against a schema and returns typed result.
- * 
+ *
  * @example
  * ```tsx
  * const result = validateForm(assessmentFamilySchema, formData);
@@ -287,19 +316,19 @@ export type DecisionCapabilitySettingFormData = z.infer<typeof decisionCapabilit
  */
 export function validateForm<T extends z.ZodSchema>(
   schema: T,
-  data: unknown
+  data: unknown,
 ): { success: true; data: z.infer<T> } | { success: false; errors: Record<string, string> } {
   const result = schema.safeParse(data);
-  
+
   if (result.success) {
     return { success: true, data: result.data };
   }
-  
+
   const errors: Record<string, string> = {};
   for (const issue of result.error.issues) {
-    const path = issue.path.join('.');
+    const path = issue.path.join(".");
     errors[path] = issue.message;
   }
-  
+
   return { success: false, errors };
 }

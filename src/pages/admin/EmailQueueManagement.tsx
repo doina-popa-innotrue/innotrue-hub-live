@@ -7,12 +7,34 @@ import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { RefreshCw, Trash2, Send, Search, AlertCircle, CheckCircle, Clock, XCircle } from "lucide-react";
+import {
+  RefreshCw,
+  Trash2,
+  Send,
+  Search,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  XCircle,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,12 +45,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface EmailQueueItem {
   id: string;
@@ -56,64 +73,61 @@ export default function EmailQueueManagement() {
   const [selectedItem, setSelectedItem] = useState<EmailQueueItem | null>(null);
 
   const { data: queueItems, isLoading } = useQuery({
-    queryKey: ['email-queue', statusFilter],
+    queryKey: ["email-queue", statusFilter],
     queryFn: async () => {
       let query = supabase
-        .from('email_queue')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from("email_queue")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
       }
 
       const { data, error } = await query.limit(200);
       if (error) throw error;
       return data as EmailQueueItem[];
-    }
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('email_queue')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from("email_queue").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['email-queue'] });
+      queryClient.invalidateQueries({ queryKey: ["email-queue"] });
       toast.success("Email removed from queue");
       setDeleteId(null);
     },
     onError: (error) => {
       toast.error("Failed to delete: " + error.message);
-    }
+    },
   });
 
   const retryMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('email_queue')
-        .update({ 
-          status: 'pending', 
+        .from("email_queue")
+        .update({
+          status: "pending",
           attempts: 0,
           error_message: null,
-          last_attempt_at: null
+          last_attempt_at: null,
         })
-        .eq('id', id);
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['email-queue'] });
+      queryClient.invalidateQueries({ queryKey: ["email-queue"] });
       toast.success("Email queued for retry");
     },
     onError: (error) => {
       toast.error("Failed to retry: " + error.message);
-    }
+    },
   });
 
-  const filteredItems = queueItems?.filter(item => {
+  const filteredItems = queueItems?.filter((item) => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
@@ -125,13 +139,13 @@ export default function EmailQueueManagement() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'sent':
+      case "sent":
         return <CheckCircle className="h-4 w-4 text-chart-2" />;
-      case 'failed':
+      case "failed":
         return <XCircle className="h-4 w-4 text-destructive" />;
-      case 'pending':
+      case "pending":
         return <Clock className="h-4 w-4 text-chart-4" />;
-      case 'processing':
+      case "processing":
         return <RefreshCw className="h-4 w-4 text-chart-1 animate-spin" />;
       default:
         return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
@@ -140,13 +154,17 @@ export default function EmailQueueManagement() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'sent':
-        return <Badge variant="default" className="bg-chart-2">{status}</Badge>;
-      case 'failed':
+      case "sent":
+        return (
+          <Badge variant="default" className="bg-chart-2">
+            {status}
+          </Badge>
+        );
+      case "failed":
         return <Badge variant="destructive">{status}</Badge>;
-      case 'pending':
+      case "pending":
         return <Badge variant="secondary">{status}</Badge>;
-      case 'processing':
+      case "processing":
         return <Badge variant="outline">{status}</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
@@ -159,10 +177,7 @@ export default function EmailQueueManagement() {
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader
-        title="Email Queue"
-        description="Monitor and manage outgoing email queue"
-      />
+      <AdminPageHeader title="Email Queue" description="Monitor and manage outgoing email queue" />
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -188,7 +203,7 @@ export default function EmailQueueManagement() {
         </Select>
         <Button
           variant="outline"
-          onClick={() => queryClient.invalidateQueries({ queryKey: ['email-queue'] })}
+          onClick={() => queryClient.invalidateQueries({ queryKey: ["email-queue"] })}
         >
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
@@ -227,7 +242,7 @@ export default function EmailQueueManagement() {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{item.recipient_name || 'N/A'}</div>
+                        <div className="font-medium">{item.recipient_name || "N/A"}</div>
                         <div className="text-sm text-muted-foreground">{item.recipient_email}</div>
                       </div>
                     </TableCell>
@@ -238,21 +253,17 @@ export default function EmailQueueManagement() {
                       {item.attempts} / {item.max_attempts}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {format(new Date(item.created_at), 'MMM d, HH:mm')}
+                      {format(new Date(item.created_at), "MMM d, HH:mm")}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      {item.sent_at ? format(new Date(item.sent_at), 'MMM d, HH:mm') : '-'}
+                      {item.sent_at ? format(new Date(item.sent_at), "MMM d, HH:mm") : "-"}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedItem(item)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedItem(item)}>
                           View
                         </Button>
-                        {item.status === 'failed' && (
+                        {item.status === "failed" && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -262,11 +273,7 @@ export default function EmailQueueManagement() {
                             <RefreshCw className="h-4 w-4" />
                           </Button>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteId(item.id)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => setDeleteId(item.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -321,37 +328,47 @@ export default function EmailQueueManagement() {
                   <p className="font-mono">{selectedItem.template_key}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Recipient Name</label>
-                  <p>{selectedItem.recipient_name || 'N/A'}</p>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Recipient Name
+                  </label>
+                  <p>{selectedItem.recipient_name || "N/A"}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Recipient Email</label>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Recipient Email
+                  </label>
                   <p>{selectedItem.recipient_email}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Attempts</label>
-                  <p>{selectedItem.attempts} / {selectedItem.max_attempts}</p>
+                  <p>
+                    {selectedItem.attempts} / {selectedItem.max_attempts}
+                  </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Created At</label>
-                  <p>{format(new Date(selectedItem.created_at), 'PPpp')}</p>
+                  <p>{format(new Date(selectedItem.created_at), "PPpp")}</p>
                 </div>
                 {selectedItem.scheduled_for && (
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Scheduled For</label>
-                    <p>{format(new Date(selectedItem.scheduled_for), 'PPpp')}</p>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Scheduled For
+                    </label>
+                    <p>{format(new Date(selectedItem.scheduled_for), "PPpp")}</p>
                   </div>
                 )}
                 {selectedItem.sent_at && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Sent At</label>
-                    <p>{format(new Date(selectedItem.sent_at), 'PPpp')}</p>
+                    <p>{format(new Date(selectedItem.sent_at), "PPpp")}</p>
                   </div>
                 )}
                 {selectedItem.last_attempt_at && (
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Last Attempt</label>
-                    <p>{format(new Date(selectedItem.last_attempt_at), 'PPpp')}</p>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Last Attempt
+                    </label>
+                    <p>{format(new Date(selectedItem.last_attempt_at), "PPpp")}</p>
                   </div>
                 )}
               </div>

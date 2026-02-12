@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Target, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Target, Calendar } from "lucide-react";
+import { format } from "date-fns";
 
 interface Goal {
   id: string;
@@ -23,25 +23,25 @@ interface ClientGoalsSectionProps {
   clientId: string;
 }
 
-import { CATEGORY_LABELS } from '@/lib/wheelOfLifeCategories';
+import { CATEGORY_LABELS } from "@/lib/wheelOfLifeCategories";
 
 const TIMEFRAME_LABELS: Record<string, string> = {
-  short: 'Short-term',
-  medium: 'Medium-term',
-  long: 'Long-term',
+  short: "Short-term",
+  medium: "Medium-term",
+  long: "Long-term",
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  not_started: 'bg-secondary',
-  in_progress: 'bg-blue-500',
-  completed: 'bg-green-500',
-  paused: 'bg-yellow-500',
+  not_started: "bg-secondary",
+  in_progress: "bg-blue-500",
+  completed: "bg-green-500",
+  paused: "bg-yellow-500",
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  low: 'bg-gray-500',
-  medium: 'bg-blue-500',
-  high: 'bg-red-500',
+  low: "bg-gray-500",
+  medium: "bg-blue-500",
+  high: "bg-red-500",
 };
 
 export default function ClientGoalsSection({ clientId }: ClientGoalsSectionProps) {
@@ -55,15 +55,15 @@ export default function ClientGoalsSection({ clientId }: ClientGoalsSectionProps
   const fetchGoals = async () => {
     try {
       const { data, error } = await supabase
-        .from('goals')
-        .select('*')
-        .eq('user_id', clientId)
-        .order('created_at', { ascending: false });
+        .from("goals")
+        .select("*")
+        .eq("user_id", clientId)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setGoals(data || []);
     } catch (error: any) {
-      console.error('Error fetching goals:', error);
+      console.error("Error fetching goals:", error);
     } finally {
       setLoading(false);
     }
@@ -103,13 +103,13 @@ export default function ClientGoalsSection({ clientId }: ClientGoalsSectionProps
           </div>
         ) : (
           <div className="space-y-4">
-            {goals.map(goal => (
+            {goals.map((goal) => (
               <div key={goal.id} className="border rounded-lg p-4 space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <Badge className={STATUS_COLORS[goal.status]}>
-                        {goal.status.replace('_', ' ')}
+                        {goal.status.replace("_", " ")}
                       </Badge>
                       <Badge className={PRIORITY_COLORS[goal.priority]} variant="outline">
                         {goal.priority}
@@ -141,7 +141,7 @@ export default function ClientGoalsSection({ clientId }: ClientGoalsSectionProps
                   {goal.target_date && (
                     <div className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      <span>Target: {format(new Date(goal.target_date), 'MMM d, yyyy')}</span>
+                      <span>Target: {format(new Date(goal.target_date), "MMM d, yyyy")}</span>
                     </div>
                   )}
                 </div>

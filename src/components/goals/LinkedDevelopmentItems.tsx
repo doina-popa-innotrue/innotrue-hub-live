@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { FileText, BookOpen, Target, StickyNote, Plus, Sparkles, ChevronRight } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { FileText, BookOpen, Target, StickyNote, Plus, Sparkles, ChevronRight } from "lucide-react";
+import { format, parseISO } from "date-fns";
 
 interface DevelopmentItem {
   id: string;
@@ -55,9 +55,9 @@ export default function LinkedDevelopmentItems({ goalId }: LinkedDevelopmentItem
     try {
       // First get the linked item IDs
       const { data: links, error: linksError } = await supabase
-        .from('development_item_goal_links')
-        .select('development_item_id')
-        .eq('goal_id', goalId);
+        .from("development_item_goal_links")
+        .select("development_item_id")
+        .eq("goal_id", goalId);
 
       if (linksError) throw linksError;
 
@@ -67,23 +67,23 @@ export default function LinkedDevelopmentItems({ goalId }: LinkedDevelopmentItem
         return;
       }
 
-      const itemIds = links.map(l => l.development_item_id);
+      const itemIds = links.map((l) => l.development_item_id);
 
       // Then fetch the development items
       const { data: itemsData, error: itemsError } = await supabase
-        .from('development_items')
-        .select('id, item_type, title, content, created_at')
-        .in('id', itemIds)
-        .order('created_at', { ascending: false });
+        .from("development_items")
+        .select("id, item_type, title, content, created_at")
+        .in("id", itemIds)
+        .order("created_at", { ascending: false });
 
       if (itemsError) throw itemsError;
       setItems((itemsData || []) as DevelopmentItem[]);
     } catch (error: any) {
-      console.error('Error fetching linked development items:', error);
+      console.error("Error fetching linked development items:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to load development items',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load development items",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -113,7 +113,7 @@ export default function LinkedDevelopmentItems({ goalId }: LinkedDevelopmentItem
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate('/development-items')}
+            onClick={() => navigate("/development-items")}
             className="w-full sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -140,7 +140,7 @@ export default function LinkedDevelopmentItems({ goalId }: LinkedDevelopmentItem
                 <div
                   key={item.id}
                   className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => navigate('/development-items')}
+                  onClick={() => navigate("/development-items")}
                 >
                   <div className={`p-2 rounded-lg shrink-0 ${TYPE_COLORS[item.item_type]}`}>
                     <Icon className="h-4 w-4" />
@@ -152,7 +152,8 @@ export default function LinkedDevelopmentItems({ goalId }: LinkedDevelopmentItem
                       </Badge>
                     </div>
                     <p className="text-sm font-medium line-clamp-1">
-                      {item.title || (item.content ? item.content.substring(0, 50) + "..." : "Untitled")}
+                      {item.title ||
+                        (item.content ? item.content.substring(0, 50) + "..." : "Untitled")}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {format(parseISO(item.created_at), "MMM d, yyyy")}

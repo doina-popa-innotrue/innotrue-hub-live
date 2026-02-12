@@ -1,13 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Calendar, ArrowRight, BookOpen, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { useQuery } from "@tanstack/react-query";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Users, Calendar, ArrowRight, BookOpen, Loader2 } from "lucide-react";
+import { format } from "date-fns";
 
 interface Group {
   id: string;
@@ -27,12 +27,13 @@ export default function InstructorGroups() {
   const navigate = useNavigate();
 
   const { data: groups, isLoading } = useQuery({
-    queryKey: ['instructor-groups', user?.id, userRole],
+    queryKey: ["instructor-groups", user?.id, userRole],
     queryFn: async () => {
       // Get groups where user is a leader (typically instructors/coaches)
       const { data: leaderGroups, error: leaderError } = await supabase
-        .from('group_memberships')
-        .select(`
+        .from("group_memberships")
+        .select(
+          `
           group_id,
           role,
           groups (
@@ -46,30 +47,27 @@ export default function InstructorGroups() {
             program_id,
             programs (name)
           )
-        `)
-        .eq('user_id', user?.id ?? '')
-        .eq('role', 'leader')
-        .eq('status', 'active');
+        `,
+        )
+        .eq("user_id", user?.id ?? "")
+        .eq("role", "leader")
+        .eq("status", "active");
 
       if (leaderError) throw leaderError;
 
       // Also get groups for programs where user is instructor/coach
-      const showInstructor = userRole === 'instructor';
-      const showCoach = userRole === 'coach';
+      const showInstructor = userRole === "instructor";
+      const showCoach = userRole === "coach";
 
-      const programInstructorPromise = showInstructor && userRoles.includes('instructor') && user
-        ? supabase
-            .from('program_instructors')
-            .select('program_id')
-            .eq('instructor_id', user.id)
-        : Promise.resolve({ data: [], error: null });
+      const programInstructorPromise =
+        showInstructor && userRoles.includes("instructor") && user
+          ? supabase.from("program_instructors").select("program_id").eq("instructor_id", user.id)
+          : Promise.resolve({ data: [], error: null });
 
-      const programCoachPromise = showCoach && userRoles.includes('coach') && user
-        ? supabase
-            .from('program_coaches')
-            .select('program_id')
-            .eq('coach_id', user.id)
-        : Promise.resolve({ data: [], error: null });
+      const programCoachPromise =
+        showCoach && userRoles.includes("coach") && user
+          ? supabase.from("program_coaches").select("program_id").eq("coach_id", user.id)
+          : Promise.resolve({ data: [], error: null });
 
       const [instructorPrograms, coachPrograms] = await Promise.all([
         programInstructorPromise,
@@ -77,15 +75,16 @@ export default function InstructorGroups() {
       ]);
 
       const programIds = new Set([
-        ...(instructorPrograms.data || []).map(p => p.program_id),
-        ...(coachPrograms.data || []).map(p => p.program_id),
+        ...(instructorPrograms.data || []).map((p) => p.program_id),
+        ...(coachPrograms.data || []).map((p) => p.program_id),
       ]);
 
       let programGroups: any[] = [];
       if (programIds.size > 0) {
         const { data, error } = await supabase
-          .from('groups')
-          .select(`
+          .from("groups")
+          .select(
+            `
             id,
             name,
             description,
@@ -95,9 +94,10 @@ export default function InstructorGroups() {
             status,
             program_id,
             programs (name)
-          `)
-          .in('program_id', Array.from(programIds))
-          .eq('status', 'active');
+          `,
+          )
+          .in("program_id", Array.from(programIds))
+          .eq("status", "active");
 
         if (!error && data) {
           programGroups = data;
@@ -106,7 +106,7 @@ export default function InstructorGroups() {
 
       // Combine and deduplicate groups
       const allGroupsMap = new Map<string, Group>();
-      
+
       (leaderGroups || []).forEach((m: any) => {
         if (m.groups) {
           allGroupsMap.set(m.groups.id, {
@@ -129,15 +129,18 @@ export default function InstructorGroups() {
       const groupIds = Array.from(allGroupsMap.keys());
       if (groupIds.length > 0) {
         const { data: memberCounts } = await supabase
-          .from('group_memberships')
-          .select('group_id')
-          .in('group_id', groupIds)
-          .eq('status', 'active');
+          .from("group_memberships")
+          .select("group_id")
+          .in("group_id", groupIds)
+          .eq("status", "active");
 
-        const counts = (memberCounts || []).reduce((acc, m) => {
-          acc[m.group_id] = (acc[m.group_id] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
+        const counts = (memberCounts || []).reduce(
+          (acc, m) => {
+            acc[m.group_id] = (acc[m.group_id] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>,
+        );
 
         allGroupsMap.forEach((group, id) => {
           group.member_count = counts[id] || 0;
@@ -150,13 +153,13 @@ export default function InstructorGroups() {
   });
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-      active: 'default',
-      draft: 'outline',
-      completed: 'secondary',
-      archived: 'destructive',
+    const variants: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+      active: "default",
+      draft: "outline",
+      completed: "secondary",
+      archived: "destructive",
     };
-    return <Badge variant={variants[status] || 'outline'}>{status}</Badge>;
+    return <Badge variant={variants[status] || "outline"}>{status}</Badge>;
   };
 
   if (isLoading) {
@@ -173,9 +176,7 @@ export default function InstructorGroups() {
     <div className="container mx-auto py-8 space-y-8">
       <div>
         <h1 className="text-3xl font-bold mb-2">Groups</h1>
-        <p className="text-muted-foreground">
-          Manage and view groups from your assigned programs
-        </p>
+        <p className="text-muted-foreground">Manage and view groups from your assigned programs</p>
       </div>
 
       {!groups || groups.length === 0 ? (
@@ -223,9 +224,9 @@ export default function InstructorGroups() {
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
                     <span>
-                      {group.start_date && format(new Date(group.start_date), 'MMM d, yyyy')}
-                      {group.start_date && group.end_date && ' - '}
-                      {group.end_date && format(new Date(group.end_date), 'MMM d, yyyy')}
+                      {group.start_date && format(new Date(group.start_date), "MMM d, yyyy")}
+                      {group.start_date && group.end_date && " - "}
+                      {group.end_date && format(new Date(group.end_date), "MMM d, yyyy")}
                     </span>
                   </div>
                 )}

@@ -6,14 +6,42 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Video, Edit2, Trash2, Plus, User, Users, CheckSquare, Repeat, AlertCircle, ExternalLink, Filter, RefreshCw } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Video,
+  Edit2,
+  Trash2,
+  Plus,
+  User,
+  Users,
+  CheckSquare,
+  Repeat,
+  AlertCircle,
+  ExternalLink,
+  Filter,
+  RefreshCw,
+} from "lucide-react";
 import { format, isBefore, isAfter } from "date-fns";
 import { generateRecurringDates as generateRecurringDatesLib } from "@/lib/recurringDates";
 import { useRecurrenceSettings } from "@/hooks/useRecurrenceSettings";
@@ -74,12 +102,12 @@ interface ModuleSessionManagerProps {
   showGroupSessions?: boolean; // Show group sessions for this module
 }
 
-export function ModuleSessionManager({ 
-  moduleId, 
+export function ModuleSessionManager({
+  moduleId,
   programId,
-  enrollmentId, 
+  enrollmentId,
   clientName,
-  showGroupSessions = true 
+  showGroupSessions = true,
 }: ModuleSessionManagerProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -89,16 +117,16 @@ export function ModuleSessionManager({
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [useCalcomUrl, setUseCalcomUrl] = useState(true);
   const [selectedCohortFilter, setSelectedCohortFilter] = useState<string>("all");
-  
+
   // Get user's timezone with fallback
   const { timezone: userTimezone } = useUserTimezone();
   const [selectedTimezone, setSelectedTimezone] = useState(userTimezone);
-  
+
   // Update selected timezone when user timezone loads
   useEffect(() => {
     setSelectedTimezone(userTimezone);
   }, [userTimezone]);
-  
+
   const [formData, setFormData] = useState({
     session_type: "individual" as "individual" | "group",
     title: "",
@@ -175,7 +203,7 @@ export function ModuleSessionManager({
     queryKey: ["enrolled-clients", programId, moduleId],
     queryFn: async () => {
       if (!programId) return [];
-      
+
       // First get all active enrollments with cohort info
       const { data: enrollments, error } = await supabase
         .from("client_enrollments")
@@ -188,17 +216,20 @@ export function ModuleSessionManager({
       // Fetch profiles for enrolled clients
       const clientUserIds = enrollments.map((e: any) => e.client_user_id).filter(Boolean);
       let profilesMap: Record<string, string> = {};
-      
+
       if (clientUserIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
           .select("id, name")
           .in("id", clientUserIds);
-        
-        profilesMap = (profiles || []).reduce((acc, p) => {
-          acc[p.id] = p.name || "Unknown Client";
-          return acc;
-        }, {} as Record<string, string>);
+
+        profilesMap = (profiles || []).reduce(
+          (acc, p) => {
+            acc[p.id] = p.name || "Unknown Client";
+            return acc;
+          },
+          {} as Record<string, string>,
+        );
       }
 
       // Get completed module progress for this module
@@ -210,7 +241,9 @@ export function ModuleSessionManager({
         .eq("status", "completed")
         .in("enrollment_id", enrollmentIds);
 
-      const completedEnrollmentIds = new Set((completedProgress || []).map((p: any) => p.enrollment_id));
+      const completedEnrollmentIds = new Set(
+        (completedProgress || []).map((p: any) => p.enrollment_id),
+      );
 
       // Filter out clients who have completed the module
       return enrollments
@@ -297,14 +330,17 @@ export function ModuleSessionManager({
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const isGroup = data.session_type === "group";
-      
+
       if (isGroup && !programId) throw new Error("Program ID required for group sessions");
-      if (!isGroup && !enrollmentId) throw new Error("Enrollment ID required for individual sessions");
-      if (isGroup && selectedParticipants.length === 0) throw new Error("Please select at least one participant for group sessions");
-      
-      const sessionDateTime = data.session_date && data.session_time 
-        ? new Date(`${data.session_date}T${data.session_time}`).toISOString()
-        : null;
+      if (!isGroup && !enrollmentId)
+        throw new Error("Enrollment ID required for individual sessions");
+      if (isGroup && selectedParticipants.length === 0)
+        throw new Error("Please select at least one participant for group sessions");
+
+      const sessionDateTime =
+        data.session_date && data.session_time
+          ? new Date(`${data.session_date}T${data.session_time}`).toISOString()
+          : null;
 
       // For hybrid Cal.com flow, we'll set status to pending_booking and not include meeting URL yet
       // The webhook will update with meeting link and final time when Cal.com booking is made
@@ -321,15 +357,27 @@ export function ModuleSessionManager({
         session_date: sessionDateTime, // May be null for hybrid flow - Cal.com will provide the final time
         duration_minutes: data.duration_minutes,
         location: data.location || null,
-        meeting_url: isHybridCalcomFlow ? null : (data.meeting_url || null), // Will be set by webhook
+        meeting_url: isHybridCalcomFlow ? null : data.meeting_url || null, // Will be set by webhook
         status: isHybridCalcomFlow ? "pending_booking" : data.status,
         instructor_id: user?.id,
         notes: data.notes || null,
         is_recurring: isHybridCalcomFlow ? false : data.is_recurring, // Recurrence not supported with Cal.com hybrid flow
-        recurrence_pattern: isHybridCalcomFlow ? null : (data.is_recurring ? data.recurrence_pattern : null),
-        recurrence_end_date: isHybridCalcomFlow ? null : (data.is_recurring && data.recurrence_end_type === "date" ? data.recurrence_end_date : null),
-        recurrence_count: isHybridCalcomFlow ? null : (data.is_recurring && data.recurrence_end_type === "count" ? data.recurrence_count : null),
-        timezone: selectedTimezone || 'UTC',
+        recurrence_pattern: isHybridCalcomFlow
+          ? null
+          : data.is_recurring
+            ? data.recurrence_pattern
+            : null,
+        recurrence_end_date: isHybridCalcomFlow
+          ? null
+          : data.is_recurring && data.recurrence_end_type === "date"
+            ? data.recurrence_end_date
+            : null,
+        recurrence_count: isHybridCalcomFlow
+          ? null
+          : data.is_recurring && data.recurrence_end_type === "count"
+            ? data.recurrence_count
+            : null,
+        timezone: selectedTimezone || "UTC",
       };
 
       let masterId: string;
@@ -351,9 +399,9 @@ export function ModuleSessionManager({
           status: data.status,
           instructor_id: user?.id,
           notes: data.notes || null,
-          timezone: selectedTimezone || 'UTC',
+          timezone: selectedTimezone || "UTC",
         };
-        
+
         const { error } = await supabase
           .from("module_sessions")
           .update(updatePayload)
@@ -367,8 +415,13 @@ export function ModuleSessionManager({
           .select("id")
           .single();
         if (error) {
-          if (error.code === "23505" && error.message?.includes("module_sessions_unique_individual")) {
-            throw new Error("An individual session already exists for this module. Please edit the existing session instead.");
+          if (
+            error.code === "23505" &&
+            error.message?.includes("module_sessions_unique_individual")
+          ) {
+            throw new Error(
+              "An individual session already exists for this module. Please edit the existing session instead.",
+            );
           }
           throw error;
         }
@@ -411,10 +464,7 @@ export function ModuleSessionManager({
       // Handle participants for group sessions
       if (isGroup) {
         // Delete existing participants
-        await supabase
-          .from("module_session_participants")
-          .delete()
-          .eq("session_id", masterId);
+        await supabase.from("module_session_participants").delete().eq("session_id", masterId);
 
         // Insert new participants
         const participantRecords = selectedParticipants.map((userId) => {
@@ -438,14 +488,14 @@ export function ModuleSessionManager({
       if (isHybridCalcomFlow && calcomMapping?.calcom_event_type_id && sessionDateTime) {
         // Get attendee info for the booking
         let attendees: Array<{ email: string; name: string; timeZone: string }> = [];
-        
+
         if (isGroup) {
           // Get emails for all selected participants
           const { data: profiles } = await supabase
             .from("profiles")
             .select("id, email, name")
             .in("id", selectedParticipants);
-          
+
           if (profiles && profiles.length > 0) {
             attendees = profiles.map((p: any) => ({
               email: p.email || `user-${p.id}@placeholder.com`,
@@ -460,35 +510,40 @@ export function ModuleSessionManager({
             .select("client_user_id, profiles:client_user_id(email, name)")
             .eq("id", enrollmentId)
             .single();
-          
+
           if (enrollment) {
             const profile = enrollment.profiles as any;
-            attendees = [{
-              email: profile?.email || `user-${enrollment.client_user_id}@placeholder.com`,
-              name: profile?.name || clientName || "Client",
-              timeZone: selectedTimezone || "UTC",
-            }];
+            attendees = [
+              {
+                email: profile?.email || `user-${enrollment.client_user_id}@placeholder.com`,
+                name: profile?.name || clientName || "Client",
+                timeZone: selectedTimezone || "UTC",
+              },
+            ];
           }
         }
 
         if (attendees.length > 0) {
           console.log("Creating Cal.com booking via API...");
-          const { data: bookingResult, error: bookingError } = await supabase.functions.invoke("calcom-create-booking", {
-            body: {
-              eventTypeId: calcomMapping.calcom_event_type_id,
-              startTime: sessionDateTime,
-              attendees,
-              sessionId: masterId,
-              sessionType: "module_session",
-              title: data.title,
-              description: data.description || undefined,
-              metadata: {
-                module_id: moduleId,
-                enrollment_id: isGroup ? undefined : enrollmentId,
-                session_type: isGroup ? "group" : "individual",
+          const { data: bookingResult, error: bookingError } = await supabase.functions.invoke(
+            "calcom-create-booking",
+            {
+              body: {
+                eventTypeId: calcomMapping.calcom_event_type_id,
+                startTime: sessionDateTime,
+                attendees,
+                sessionId: masterId,
+                sessionType: "module_session",
+                title: data.title,
+                description: data.description || undefined,
+                metadata: {
+                  module_id: moduleId,
+                  enrollment_id: isGroup ? undefined : enrollmentId,
+                  session_type: isGroup ? "group" : "individual",
+                },
               },
             },
-          });
+          );
 
           if (bookingError) {
             console.error("Cal.com booking creation failed:", bookingError);
@@ -500,18 +555,22 @@ export function ModuleSessionManager({
       }
 
       // For non-Cal.com flow, send notifications immediately
-      if (!isHybridCalcomFlow && (isNewSession || data.status === 'scheduled')) {
+      if (!isHybridCalcomFlow && (isNewSession || data.status === "scheduled")) {
         const siteUrl = window.location.origin;
         const deepLinkUrl = `${siteUrl}/modules/${moduleId}?session_id=${masterId}`;
-        
+
         // Get module name for the notification
         const moduleResult = await supabase
           .from("modules" as any)
           .select("title, program_id, programs!inner(title)")
           .eq("id", moduleId)
           .single();
-        const moduleData = moduleResult.data as unknown as { title: string; program_id: string; programs: { title: string } } | null;
-        
+        const moduleData = moduleResult.data as unknown as {
+          title: string;
+          program_id: string;
+          programs: { title: string };
+        } | null;
+
         // Get instructor name
         const { data: instructorProfile } = await supabase
           .from("profiles")
@@ -539,7 +598,7 @@ export function ModuleSessionManager({
               .select("name")
               .eq("id", userId)
               .single();
-            
+
             try {
               await supabase.functions.invoke("send-notification-email", {
                 body: {
@@ -559,7 +618,7 @@ export function ModuleSessionManager({
             .select("client_user_id, profiles:client_user_id(name)")
             .eq("id", enrollmentId)
             .single();
-          
+
           if (enrollment?.client_user_id) {
             try {
               await supabase.functions.invoke("send-notification-email", {
@@ -581,16 +640,16 @@ export function ModuleSessionManager({
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["module-sessions", moduleId] });
       queryClient.invalidateQueries({ queryKey: ["session-participants"] });
-      
+
       if (result?.isHybridCalcomFlow) {
-        toast({ 
-          title: "Session scheduled with Cal.com", 
-          description: "Meeting link and calendar invites have been sent to participants."
+        toast({
+          title: "Session scheduled with Cal.com",
+          description: "Meeting link and calendar invites have been sent to participants.",
         });
       } else {
         toast({ title: editingSession ? "Session updated" : "Session scheduled" });
       }
-      
+
       resetForm();
       setDialogOpen(false);
     },
@@ -603,16 +662,16 @@ export function ModuleSessionManager({
     mutationFn: async ({ sessionId, deleteAll }: { sessionId: string; deleteAll?: boolean }) => {
       if (deleteAll) {
         // Delete all sessions in the series (children with this parent, or the parent itself)
-        const session = sessions?.find(s => s.id === sessionId);
+        const session = sessions?.find((s) => s.id === sessionId);
         const masterId = session?.parent_session_id || sessionId;
-        
+
         // Delete children first
         const { error: childError } = await supabase
           .from("module_sessions")
           .delete()
           .eq("parent_session_id", masterId);
         if (childError) throw childError;
-        
+
         // Delete the master
         const { error: masterError } = await supabase
           .from("module_sessions")
@@ -629,7 +688,11 @@ export function ModuleSessionManager({
       toast({ title: deleteAll ? "All sessions in series deleted" : "Session deleted" });
     },
     onError: (error) => {
-      toast({ title: "Error deleting session", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error deleting session",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -644,13 +707,14 @@ export function ModuleSessionManager({
         .single();
 
       // For external bookings, use session_date; for requests, use preferred_date if available
-      const sessionDate = session.source === "client_external" 
-        ? session.session_date 
-        : (session.preferred_date || session.session_date);
+      const sessionDate =
+        session.source === "client_external"
+          ? session.session_date
+          : session.preferred_date || session.session_date;
 
       const { error } = await supabase
         .from("module_sessions")
-        .update({ 
+        .update({
           status: "scheduled",
           enrollment_id: enrollment?.id || null,
           instructor_id: user?.id,
@@ -670,7 +734,11 @@ export function ModuleSessionManager({
           .select("title, program_id, programs!inner(title)")
           .eq("id", moduleId)
           .single();
-        const moduleData = moduleResult.data as unknown as { title: string; program_id: string; programs: { title: string } } | null;
+        const moduleData = moduleResult.data as unknown as {
+          title: string;
+          program_id: string;
+          programs: { title: string };
+        } | null;
 
         // Get instructor name
         const { data: instructorProfile } = await supabase
@@ -710,13 +778,23 @@ export function ModuleSessionManager({
     onSuccess: (_, session) => {
       queryClient.invalidateQueries({ queryKey: ["module-sessions", moduleId] });
       if (session.source === "client_external") {
-        toast({ title: "Booking confirmed", description: "The external booking has been confirmed." });
+        toast({
+          title: "Booking confirmed",
+          description: "The external booking has been confirmed.",
+        });
       } else {
-        toast({ title: "Request accepted", description: "The session has been scheduled. You can edit details if needed." });
+        toast({
+          title: "Request accepted",
+          description: "The session has been scheduled. You can edit details if needed.",
+        });
       }
     },
     onError: (error) => {
-      toast({ title: "Error accepting request", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error accepting request",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -745,11 +823,12 @@ export function ModuleSessionManager({
   };
 
   // Filter clients by cohort
-  const filteredClients = enrolledClients?.filter((client) => {
-    if (selectedCohortFilter === "all") return true;
-    if (selectedCohortFilter === "no-cohort") return !client.cohort_id;
-    return client.cohort_id === selectedCohortFilter;
-  }) || [];
+  const filteredClients =
+    enrolledClients?.filter((client) => {
+      if (selectedCohortFilter === "all") return true;
+      if (selectedCohortFilter === "no-cohort") return !client.cohort_id;
+      return client.cohort_id === selectedCohortFilter;
+    }) || [];
 
   const handleSelectAll = () => {
     if (selectedParticipants.length === filteredClients.length) {
@@ -761,7 +840,7 @@ export function ModuleSessionManager({
 
   const toggleParticipant = (userId: string) => {
     setSelectedParticipants((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
     );
   };
 
@@ -790,10 +869,10 @@ export function ModuleSessionManager({
 
   const handleDelete = (session: ModuleSession) => {
     const isPartOfSeries = session.is_recurring || session.parent_session_id;
-    
+
     if (isPartOfSeries) {
       const choice = window.confirm(
-        "This session is part of a recurring series.\n\nClick OK to delete ALL sessions in the series, or Cancel to keep them."
+        "This session is part of a recurring series.\n\nClick OK to delete ALL sessions in the series, or Cancel to keep them.",
       );
       if (choice) {
         deleteMutation.mutate({ sessionId: session.id, deleteAll: true });
@@ -807,11 +886,16 @@ export function ModuleSessionManager({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed": return "default";
-      case "cancelled": return "destructive";
-      case "rescheduled": return "secondary";
-      case "requested": return "secondary";
-      default: return "outline";
+      case "completed":
+        return "default";
+      case "cancelled":
+        return "destructive";
+      case "rescheduled":
+        return "secondary";
+      case "requested":
+        return "secondary";
+      default:
+        return "outline";
     }
   };
 
@@ -831,7 +915,8 @@ export function ModuleSessionManager({
           <span className="font-medium">Sessions not configured for this module type.</span>
           <br />
           <span className="text-sm text-muted-foreground">
-            To enable session scheduling for "{moduleData.module_type}" modules, add an Event Type Mapping in the Admin → Integrations → Cal.com settings.
+            To enable session scheduling for "{moduleData.module_type}" modules, add an Event Type
+            Mapping in the Admin → Integrations → Cal.com settings.
           </span>
         </AlertDescription>
       </Alert>
@@ -851,7 +936,13 @@ export function ModuleSessionManager({
           <h3 className="font-semibold text-lg">Module Sessions</h3>
         </div>
         {(enrollmentId || programId) && (
-          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+          <Dialog
+            open={dialogOpen}
+            onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) resetForm();
+            }}
+          >
             <DialogTrigger asChild>
               <Button size="sm" variant="outline">
                 <Plus className="h-4 w-4 mr-1" /> Schedule Session
@@ -867,7 +958,9 @@ export function ModuleSessionManager({
                     <Label>Session Type</Label>
                     <Select
                       value={formData.session_type}
-                      onValueChange={(v: "individual" | "group") => setFormData({ ...formData, session_type: v })}
+                      onValueChange={(v: "individual" | "group") =>
+                        setFormData({ ...formData, session_type: v })
+                      }
                       disabled={!!editingSession}
                     >
                       <SelectTrigger>
@@ -889,89 +982,94 @@ export function ModuleSessionManager({
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {formData.session_type === "group" 
-                        ? "Select which clients should attend this session" 
+                      {formData.session_type === "group"
+                        ? "Select which clients should attend this session"
                         : "Only this specific client will see this session"}
                     </p>
                   </div>
                 )}
-                
+
                 {/* Participant Selection for Group Sessions */}
-                {formData.session_type === "group" && enrolledClients && enrolledClients.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label>Participants *</Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleSelectAll}
-                        className="h-7 text-xs"
-                      >
-                        <CheckSquare className="h-3 w-3 mr-1" />
-                        {selectedParticipants.length === filteredClients.length ? "Deselect All" : "Select All"}
-                      </Button>
-                    </div>
-                    
-                    {/* Cohort Filter */}
-                    {programCohorts && programCohorts.length > 0 && (
-                      <div className="flex items-center gap-2">
-                        <Filter className="h-4 w-4 text-muted-foreground" />
-                        <Select
-                          value={selectedCohortFilter}
-                          onValueChange={setSelectedCohortFilter}
+                {formData.session_type === "group" &&
+                  enrolledClients &&
+                  enrolledClients.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label>Participants *</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleSelectAll}
+                          className="h-7 text-xs"
                         >
-                          <SelectTrigger className="h-8 w-48">
-                            <SelectValue placeholder="Filter by cohort" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All participants</SelectItem>
-                            <SelectItem value="no-cohort">No cohort assigned</SelectItem>
-                            {programCohorts.map((cohort) => (
-                              <SelectItem key={cohort.id} value={cohort.id}>
-                                {cohort.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          <CheckSquare className="h-3 w-3 mr-1" />
+                          {selectedParticipants.length === filteredClients.length
+                            ? "Deselect All"
+                            : "Select All"}
+                        </Button>
                       </div>
-                    )}
-                    
-                    <ScrollArea className="h-40 rounded-md border p-2">
-                      <div className="space-y-2">
-                        {filteredClients.map((client) => (
-                          <div key={client.user_id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={client.user_id}
-                              checked={selectedParticipants.includes(client.user_id)}
-                              onCheckedChange={() => toggleParticipant(client.user_id)}
-                            />
-                            <label
-                              htmlFor={client.user_id}
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex items-center gap-2"
-                            >
-                              {client.full_name}
-                              {client.cohort_name && (
-                                <Badge variant="outline" className="text-xs font-normal">
-                                  {client.cohort_name}
-                                </Badge>
-                              )}
-                            </label>
-                          </div>
-                        ))}
-                        {filteredClients.length === 0 && (
-                          <p className="text-sm text-muted-foreground py-2 text-center">
-                            No participants match the filter
-                          </p>
-                        )}
-                      </div>
-                    </ScrollArea>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedParticipants.length} selected
-                      {selectedCohortFilter !== "all" && ` (showing ${filteredClients.length} of ${enrolledClients.length})`}
-                    </p>
-                  </div>
-                )}
+
+                      {/* Cohort Filter */}
+                      {programCohorts && programCohorts.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <Filter className="h-4 w-4 text-muted-foreground" />
+                          <Select
+                            value={selectedCohortFilter}
+                            onValueChange={setSelectedCohortFilter}
+                          >
+                            <SelectTrigger className="h-8 w-48">
+                              <SelectValue placeholder="Filter by cohort" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All participants</SelectItem>
+                              <SelectItem value="no-cohort">No cohort assigned</SelectItem>
+                              {programCohorts.map((cohort) => (
+                                <SelectItem key={cohort.id} value={cohort.id}>
+                                  {cohort.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      <ScrollArea className="h-40 rounded-md border p-2">
+                        <div className="space-y-2">
+                          {filteredClients.map((client) => (
+                            <div key={client.user_id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={client.user_id}
+                                checked={selectedParticipants.includes(client.user_id)}
+                                onCheckedChange={() => toggleParticipant(client.user_id)}
+                              />
+                              <label
+                                htmlFor={client.user_id}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex items-center gap-2"
+                              >
+                                {client.full_name}
+                                {client.cohort_name && (
+                                  <Badge variant="outline" className="text-xs font-normal">
+                                    {client.cohort_name}
+                                  </Badge>
+                                )}
+                              </label>
+                            </div>
+                          ))}
+                          {filteredClients.length === 0 && (
+                            <p className="text-sm text-muted-foreground py-2 text-center">
+                              No participants match the filter
+                            </p>
+                          )}
+                        </div>
+                      </ScrollArea>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedParticipants.length} selected
+                        {selectedCohortFilter !== "all" &&
+                          ` (showing ${filteredClients.length} of ${enrolledClients.length})`}
+                      </p>
+                    </div>
+                  )}
                 <div>
                   <Label>Title *</Label>
                   <Input
@@ -1008,10 +1106,7 @@ export function ModuleSessionManager({
                 </div>
 
                 {/* Timezone Selection */}
-                <TimezoneSelect
-                  value={selectedTimezone}
-                  onChange={setSelectedTimezone}
-                />
+                <TimezoneSelect value={selectedTimezone} onChange={setSelectedTimezone} />
 
                 {/* Recurrence Options - Only for new sessions */}
                 {!editingSession && (
@@ -1020,7 +1115,7 @@ export function ModuleSessionManager({
                       <Checkbox
                         id="is_recurring"
                         checked={formData.is_recurring}
-                        onCheckedChange={(checked) => 
+                        onCheckedChange={(checked) =>
                           setFormData({ ...formData, is_recurring: !!checked })
                         }
                       />
@@ -1039,7 +1134,7 @@ export function ModuleSessionManager({
                           <Label>Repeat</Label>
                           <Select
                             value={formData.recurrence_pattern}
-                            onValueChange={(v: RecurrencePattern) => 
+                            onValueChange={(v: RecurrencePattern) =>
                               setFormData({ ...formData, recurrence_pattern: v })
                             }
                           >
@@ -1059,7 +1154,7 @@ export function ModuleSessionManager({
                           <Label>Ends</Label>
                           <Select
                             value={formData.recurrence_end_type}
-                            onValueChange={(v: "count" | "date") => 
+                            onValueChange={(v: "count" | "date") =>
                               setFormData({ ...formData, recurrence_end_type: v })
                             }
                           >
@@ -1084,9 +1179,9 @@ export function ModuleSessionManager({
                               onChange={(e) => {
                                 const val = parseInt(e.target.value) || 2;
                                 const max = maxRecurrenceLimit || 20;
-                                setFormData({ 
-                                  ...formData, 
-                                  recurrence_count: Math.min(Math.max(val, 2), max) 
+                                setFormData({
+                                  ...formData,
+                                  recurrence_count: Math.min(Math.max(val, 2), max),
                                 });
                               }}
                             />
@@ -1103,10 +1198,13 @@ export function ModuleSessionManager({
                               type="date"
                               value={formData.recurrence_end_date}
                               min={formData.session_date}
-                              onChange={(e) => setFormData({ ...formData, recurrence_end_date: e.target.value })}
+                              onChange={(e) =>
+                                setFormData({ ...formData, recurrence_end_date: e.target.value })
+                              }
                             />
                             <p className="text-xs text-muted-foreground mt-1">
-                              Sessions will be created up to this date (max {maxRecurrenceLimit || 20} occurrences or 3 months)
+                              Sessions will be created up to this date (max{" "}
+                              {maxRecurrenceLimit || 20} occurrences or 3 months)
                             </p>
                           </div>
                         )}
@@ -1114,10 +1212,9 @@ export function ModuleSessionManager({
                         <Alert variant="default" className="bg-primary/5">
                           <AlertCircle className="h-4 w-4" />
                           <AlertDescription className="text-xs">
-                            {formData.recurrence_end_type === "count" 
+                            {formData.recurrence_end_type === "count"
                               ? `${formData.recurrence_count} sessions will be created (including this one).`
-                              : "Sessions will be pre-generated until the end date or limit is reached."
-                            }
+                              : "Sessions will be pre-generated until the end date or limit is reached."}
                           </AlertDescription>
                         </Alert>
                       </div>
@@ -1130,7 +1227,9 @@ export function ModuleSessionManager({
                   <Input
                     type="number"
                     value={formData.duration_minutes}
-                    onChange={(e) => setFormData({ ...formData, duration_minutes: parseInt(e.target.value) || 60 })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, duration_minutes: parseInt(e.target.value) || 60 })
+                    }
                   />
                 </div>
                 <div>
@@ -1144,7 +1243,7 @@ export function ModuleSessionManager({
                 {/* Meeting URL / Cal.com URL */}
                 <div className="space-y-3">
                   <Label>Meeting URL</Label>
-                  
+
                   {/* Cal.com toggle - only show if mapping exists */}
                   {calcomMapping?.scheduling_url && (
                     <div className="flex items-start space-x-2">
@@ -1166,7 +1265,7 @@ export function ModuleSessionManager({
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Manual URL input - show when not using Cal.com or no Cal.com configured */}
                   {(!calcomMapping?.scheduling_url || !useCalcomUrl) && (
                     <Input
@@ -1175,7 +1274,7 @@ export function ModuleSessionManager({
                       placeholder="https://meet.google.com/..."
                     />
                   )}
-                  
+
                   {/* Info when Cal.com is enabled */}
                   {calcomMapping?.scheduling_url && useCalcomUrl && (
                     <p className="text-xs text-muted-foreground">
@@ -1209,7 +1308,13 @@ export function ModuleSessionManager({
                   />
                 </div>
                 <div className="flex gap-2 justify-end pt-2">
-                  <Button variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setDialogOpen(false);
+                      resetForm();
+                    }}
+                  >
                     Cancel
                   </Button>
                   <Button
@@ -1228,7 +1333,14 @@ export function ModuleSessionManager({
       {sessions && sessions.length > 0 ? (
         <div className="space-y-3">
           {sessions.map((session) => (
-            <Card key={session.id} className={session.status === "requested" ? "bg-yellow-500/10 border-yellow-500/30" : "bg-muted/50"}>
+            <Card
+              key={session.id}
+              className={
+                session.status === "requested"
+                  ? "bg-yellow-500/10 border-yellow-500/30"
+                  : "bg-muted/50"
+              }
+            >
               <CardContent className="pt-4">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
@@ -1236,9 +1348,15 @@ export function ModuleSessionManager({
                       <span className="font-medium">{session.title}</span>
                       <Badge variant={session.session_type === "group" ? "secondary" : "outline"}>
                         {session.session_type === "group" ? (
-                          <><Users className="h-3 w-3 mr-1" />Group</>
+                          <>
+                            <Users className="h-3 w-3 mr-1" />
+                            Group
+                          </>
                         ) : (
-                          <><User className="h-3 w-3 mr-1" />1:1</>
+                          <>
+                            <User className="h-3 w-3 mr-1" />
+                            1:1
+                          </>
                         )}
                       </Badge>
                       {(session.is_recurring || session.parent_session_id) && (
@@ -1248,18 +1366,23 @@ export function ModuleSessionManager({
                         </Badge>
                       )}
                       <Badge variant={getStatusColor(session.status)}>
-                        {session.status === "requested" 
-                          ? (session.source === "client_external" ? "External - Pending Confirmation" : "Pending Request")
+                        {session.status === "requested"
+                          ? session.source === "client_external"
+                            ? "External - Pending Confirmation"
+                            : "Pending Request"
                           : session.status}
                       </Badge>
                     </div>
                     {session.status === "requested" && session.requester_name && (
                       <div className="flex items-center gap-2 flex-wrap">
-                         <p className="text-sm font-medium text-warning">
+                        <p className="text-sm font-medium text-warning">
                           Requested by: {session.requester_name}
                         </p>
                         {session.source === "client_external" && (
-                          <Badge variant="outline" className="text-primary border-primary/30 bg-primary/10">
+                          <Badge
+                            variant="outline"
+                            className="text-primary border-primary/30 bg-primary/10"
+                          >
                             External Booking
                           </Badge>
                         )}
@@ -1271,10 +1394,14 @@ export function ModuleSessionManager({
                       </p>
                     )}
                     {session.status === "requested" && session.request_notes && (
-                      <p className="text-sm text-muted-foreground italic">"{session.request_notes}"</p>
+                      <p className="text-sm text-muted-foreground italic">
+                        "{session.request_notes}"
+                      </p>
                     )}
                     {session.status === "requested" && session.request_message && (
-                      <p className="text-sm text-muted-foreground italic">"{session.request_message}"</p>
+                      <p className="text-sm text-muted-foreground italic">
+                        "{session.request_message}"
+                      </p>
                     )}
                     {session.description && session.status !== "requested" && (
                       <p className="text-sm text-muted-foreground">{session.description}</p>
@@ -1316,7 +1443,11 @@ export function ModuleSessionManager({
                         {/* Cal.com reschedule for sessions with booking UID */}
                         {session.calcom_booking_uid ? (
                           <a
-                            href={buildCalcomRescheduleUrl(session.calcom_booking_uid, undefined, window.location.href)}
+                            href={buildCalcomRescheduleUrl(
+                              session.calcom_booking_uid,
+                              undefined,
+                              window.location.href,
+                            )}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
@@ -1348,15 +1479,17 @@ export function ModuleSessionManager({
                         ) : null}
                       </>
                     )}
-                    
+
                     {session.status === "requested" && programId && (
-                      <Button 
-                        variant="default" 
+                      <Button
+                        variant="default"
                         size="sm"
                         onClick={() => acceptRequestMutation.mutate(session)}
                         disabled={acceptRequestMutation.isPending}
                       >
-                        {session.source === "client_external" ? "Confirm Booking" : "Accept & Schedule"}
+                        {session.source === "client_external"
+                          ? "Confirm Booking"
+                          : "Accept & Schedule"}
                       </Button>
                     )}
                     {(enrollmentId || (programId && session.status !== "requested")) && (

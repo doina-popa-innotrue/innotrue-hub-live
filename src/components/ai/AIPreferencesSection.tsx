@@ -1,10 +1,10 @@
-import { useAIPreferences } from '@/hooks/useAIPreferences';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
-import { AIPrivacyNotice } from './AIPrivacyNotice';
-import { Sparkles, Brain, BookOpen } from 'lucide-react';
+import { useAIPreferences } from "@/hooks/useAIPreferences";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AIPrivacyNotice } from "./AIPrivacyNotice";
+import { Sparkles, Brain, BookOpen } from "lucide-react";
 
 export function AIPreferencesSection() {
   const { preferences, isLoading, updatePreference } = useAIPreferences();
@@ -37,7 +37,7 @@ export function AIPreferencesSection() {
       </CardHeader>
       <CardContent className="space-y-6">
         <AIPrivacyNotice />
-        
+
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-start gap-3">
@@ -47,14 +47,15 @@ export function AIPreferencesSection() {
                   Decision AI Insights
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Get AI-powered analysis of your decision-making patterns and personalized recommendations.
+                  Get AI-powered analysis of your decision-making patterns and personalized
+                  recommendations.
                 </p>
               </div>
             </div>
             <Switch
               id="ai-insights"
               checked={preferences?.ai_insights_enabled ?? false}
-              onCheckedChange={(checked) => updatePreference('ai_insights_enabled', checked)}
+              onCheckedChange={(checked) => updatePreference("ai_insights_enabled", checked)}
             />
           </div>
 
@@ -66,21 +67,23 @@ export function AIPreferencesSection() {
                   Course Recommendations
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Receive personalized learning path suggestions based on your progress and interests.
+                  Receive personalized learning path suggestions based on your progress and
+                  interests.
                 </p>
               </div>
             </div>
             <Switch
               id="ai-recommendations"
               checked={preferences?.ai_recommendations_enabled ?? false}
-              onCheckedChange={(checked) => updatePreference('ai_recommendations_enabled', checked)}
+              onCheckedChange={(checked) => updatePreference("ai_recommendations_enabled", checked)}
             />
           </div>
         </div>
 
         {preferences?.consent_given_at && (
           <p className="text-xs text-muted-foreground text-center">
-            AI features consent given on {new Date(preferences.consent_given_at).toLocaleDateString()}
+            AI features consent given on{" "}
+            {new Date(preferences.consent_given_at).toLocaleDateString()}
           </p>
         )}
       </CardContent>

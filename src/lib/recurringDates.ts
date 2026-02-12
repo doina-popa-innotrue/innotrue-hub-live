@@ -1,11 +1,11 @@
-import { addDays, addWeeks, addMonths, isAfter } from 'date-fns';
+import { addDays, addWeeks, addMonths, isAfter } from "date-fns";
 
-export type RecurrencePattern = 'daily' | 'weekly' | 'bi-weekly' | 'monthly';
+export type RecurrencePattern = "daily" | "weekly" | "bi-weekly" | "monthly";
 
 export interface RecurrenceConfig {
   startDate: Date;
   pattern: RecurrencePattern | string;
-  endType?: 'count' | 'date';
+  endType?: "count" | "date";
   count?: number;
   endDate?: string | null;
   maxLimit: number;
@@ -16,13 +16,13 @@ export interface RecurrenceConfig {
  */
 export function getNextRecurringDate(date: Date, pattern: string): Date {
   switch (pattern.toLowerCase()) {
-    case 'daily':
+    case "daily":
       return addDays(date, 1);
-    case 'weekly':
+    case "weekly":
       return addWeeks(date, 1);
-    case 'bi-weekly':
+    case "bi-weekly":
       return addWeeks(date, 2);
-    case 'monthly':
+    case "monthly":
       return addMonths(date, 1);
     default:
       return addWeeks(date, 1);
@@ -32,32 +32,32 @@ export function getNextRecurringDate(date: Date, pattern: string): Date {
 /**
  * Generate an array of recurring dates based on the configuration.
  * Does NOT include the start date (master session) - only generates child dates.
- * 
+ *
  * @param config - The recurrence configuration
  * @returns Array of Date objects for each recurring instance
  */
 export function generateRecurringDates(config: RecurrenceConfig): Date[] {
-  const { startDate, pattern, endType = 'count', count = 4, endDate, maxLimit } = config;
-  
+  const { startDate, pattern, endType = "count", count = 4, endDate, maxLimit } = config;
+
   const dates: Date[] = [];
   let currentDate = startDate;
-  
+
   // Max 6 months ahead as a safety limit
   const maxEndDate = addMonths(startDate, 6);
-  
+
   // Determine effective end date based on configuration
   const effectiveEndDate = endDate ? new Date(endDate) : maxEndDate;
-  const effectiveMax = endType === 'count' ? Math.min(count, maxLimit) : maxLimit;
+  const effectiveMax = endType === "count" ? Math.min(count, maxLimit) : maxLimit;
 
   // Generate instances (not including the first one which is the master)
   while (dates.length < effectiveMax - 1) {
     currentDate = getNextRecurringDate(currentDate, pattern);
-    
+
     // Check against end date or 6-month limit
     if (isAfter(currentDate, effectiveEndDate) || isAfter(currentDate, maxEndDate)) {
       break;
     }
-    
+
     dates.push(new Date(currentDate));
   }
 
@@ -71,12 +71,12 @@ export function generateRecurringDatesSimple(
   startDate: Date,
   pattern: string,
   endDate: string | null,
-  maxLimit: number
+  maxLimit: number,
 ): Date[] {
   return generateRecurringDates({
     startDate,
     pattern,
-    endType: 'date',
+    endType: "date",
     endDate,
     maxLimit,
   });

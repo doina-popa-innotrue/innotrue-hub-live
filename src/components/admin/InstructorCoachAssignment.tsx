@@ -1,11 +1,24 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { X, UserPlus } from 'lucide-react';
-import { toast } from 'sonner';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { X, UserPlus } from "lucide-react";
+import { toast } from "sonner";
 
 interface User {
   id: string;
@@ -15,20 +28,26 @@ interface User {
 }
 
 interface InstructorCoachAssignmentProps {
-  entityType: 'program' | 'module';
+  entityType: "program" | "module";
   entityId: string;
   moduleTypeName?: string;
   onUpdate?: () => void;
   readOnly?: boolean;
 }
 
-export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName, onUpdate, readOnly = false }: InstructorCoachAssignmentProps) {
+export function InstructorCoachAssignment({
+  entityType,
+  entityId,
+  moduleTypeName,
+  onUpdate,
+  readOnly = false,
+}: InstructorCoachAssignmentProps) {
   const [instructors, setInstructors] = useState<User[]>([]);
   const [coaches, setCoaches] = useState<User[]>([]);
   const [availableInstructors, setAvailableInstructors] = useState<User[]>([]);
   const [availableCoaches, setAvailableCoaches] = useState<User[]>([]);
-  const [selectedInstructor, setSelectedInstructor] = useState('');
-  const [selectedCoach, setSelectedCoach] = useState('');
+  const [selectedInstructor, setSelectedInstructor] = useState("");
+  const [selectedCoach, setSelectedCoach] = useState("");
   const [openInstructor, setOpenInstructor] = useState(false);
   const [openCoach, setOpenCoach] = useState(false);
 
@@ -40,17 +59,17 @@ export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName
   async function fetchAssignments() {
     // Fetch instructors
     let instructorData;
-    if (entityType === 'program') {
+    if (entityType === "program") {
       const result = await supabase
-        .from('program_instructors')
-        .select('instructor_id')
-        .eq('program_id', entityId);
+        .from("program_instructors")
+        .select("instructor_id")
+        .eq("program_id", entityId);
       instructorData = result.data;
     } else {
       const result = await supabase
-        .from('module_instructors')
-        .select('instructor_id')
-        .eq('module_id', entityId);
+        .from("module_instructors")
+        .select("instructor_id")
+        .eq("module_id", entityId);
       instructorData = result.data;
     }
 
@@ -58,35 +77,35 @@ export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName
       const instructorUsers = await Promise.all(
         instructorData.map(async (item) => {
           const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, name, username')
-            .eq('id', item.instructor_id)
+            .from("profiles")
+            .select("id, name, username")
+            .eq("id", item.instructor_id)
             .single();
 
           return {
             id: item.instructor_id,
-            name: profile?.name || 'Unknown',
-            email: profile?.username || 'N/A',
+            name: profile?.name || "Unknown",
+            email: profile?.username || "N/A",
             qualifications: [] as string[],
           };
-        })
+        }),
       );
       setInstructors(instructorUsers);
     }
 
     // Fetch coaches
     let coachData;
-    if (entityType === 'program') {
+    if (entityType === "program") {
       const result = await supabase
-        .from('program_coaches')
-        .select('coach_id')
-        .eq('program_id', entityId);
+        .from("program_coaches")
+        .select("coach_id")
+        .eq("program_id", entityId);
       coachData = result.data;
     } else {
       const result = await supabase
-        .from('module_coaches')
-        .select('coach_id')
-        .eq('module_id', entityId);
+        .from("module_coaches")
+        .select("coach_id")
+        .eq("module_id", entityId);
       coachData = result.data;
     }
 
@@ -94,18 +113,18 @@ export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName
       const coachUsers = await Promise.all(
         coachData.map(async (item) => {
           const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, name, username')
-            .eq('id', item.coach_id)
+            .from("profiles")
+            .select("id, name, username")
+            .eq("id", item.coach_id)
             .single();
 
           return {
             id: item.coach_id,
-            name: profile?.name || 'Unknown',
-            email: profile?.username || 'N/A',
+            name: profile?.name || "Unknown",
+            email: profile?.username || "N/A",
             qualifications: [] as string[],
           };
-        })
+        }),
       );
       setCoaches(coachUsers);
     }
@@ -114,40 +133,41 @@ export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName
   async function fetchAvailableUsers() {
     // Fetch users with instructor role
     const { data: instructorRoles } = await supabase
-      .from('user_roles')
-      .select('user_id')
-      .eq('role', 'instructor');
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "instructor");
 
     if (instructorRoles) {
       const instructorUsers = await Promise.all(
         instructorRoles.map(async (role) => {
           const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, name, username')
-            .eq('id', role.user_id)
+            .from("profiles")
+            .select("id, name, username")
+            .eq("id", role.user_id)
             .single();
 
           // Fetch qualifications
           const { data: qualifications } = await supabase
-            .from('user_qualifications')
-            .select('module_type_id, module_types(name)')
-            .eq('user_id', role.user_id);
+            .from("user_qualifications")
+            .select("module_type_id, module_types(name)")
+            .eq("user_id", role.user_id);
 
-          const qualNames = qualifications?.map(q => (q.module_types as any)?.name).filter(Boolean) || [];
+          const qualNames =
+            qualifications?.map((q) => (q.module_types as any)?.name).filter(Boolean) || [];
 
           return {
             id: role.user_id,
-            name: profile?.name || 'Unknown',
-            email: profile?.username || 'N/A',
+            name: profile?.name || "Unknown",
+            email: profile?.username || "N/A",
             qualifications: qualNames,
           };
-        })
+        }),
       );
 
       // Filter by qualifications if module type is specified
-      if (moduleTypeName && entityType === 'module') {
-        const filtered = instructorUsers.filter(u => 
-          u.qualifications.length === 0 || u.qualifications.includes(moduleTypeName)
+      if (moduleTypeName && entityType === "module") {
+        const filtered = instructorUsers.filter(
+          (u) => u.qualifications.length === 0 || u.qualifications.includes(moduleTypeName),
         );
         setAvailableInstructors(filtered);
       } else {
@@ -157,40 +177,41 @@ export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName
 
     // Fetch users with coach role
     const { data: coachRoles } = await supabase
-      .from('user_roles')
-      .select('user_id')
-      .eq('role', 'coach');
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "coach");
 
     if (coachRoles) {
       const coachUsers = await Promise.all(
         coachRoles.map(async (role) => {
           const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, name, username')
-            .eq('id', role.user_id)
+            .from("profiles")
+            .select("id, name, username")
+            .eq("id", role.user_id)
             .single();
 
           // Fetch qualifications
           const { data: qualifications } = await supabase
-            .from('user_qualifications')
-            .select('module_type_id, module_types(name)')
-            .eq('user_id', role.user_id);
+            .from("user_qualifications")
+            .select("module_type_id, module_types(name)")
+            .eq("user_id", role.user_id);
 
-          const qualNames = qualifications?.map(q => (q.module_types as any)?.name).filter(Boolean) || [];
+          const qualNames =
+            qualifications?.map((q) => (q.module_types as any)?.name).filter(Boolean) || [];
 
           return {
             id: role.user_id,
-            name: profile?.name || 'Unknown',
-            email: profile?.username || 'N/A',
+            name: profile?.name || "Unknown",
+            email: profile?.username || "N/A",
             qualifications: qualNames,
           };
-        })
+        }),
       );
 
       // Filter by qualifications if module type is specified
-      if (moduleTypeName && entityType === 'module') {
-        const filtered = coachUsers.filter(u => 
-          u.qualifications.length === 0 || u.qualifications.includes(moduleTypeName)
+      if (moduleTypeName && entityType === "module") {
+        const filtered = coachUsers.filter(
+          (u) => u.qualifications.length === 0 || u.qualifications.includes(moduleTypeName),
         );
         setAvailableCoaches(filtered);
       } else {
@@ -204,29 +225,25 @@ export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName
 
     try {
       let error;
-      if (entityType === 'program') {
-        const result = await supabase
-          .from('program_instructors')
-          .insert({
-            program_id: entityId,
-            instructor_id: selectedInstructor,
-          });
+      if (entityType === "program") {
+        const result = await supabase.from("program_instructors").insert({
+          program_id: entityId,
+          instructor_id: selectedInstructor,
+        });
         error = result.error;
       } else {
-        const result = await supabase
-          .from('module_instructors')
-          .insert({
-            module_id: entityId,
-            instructor_id: selectedInstructor,
-          });
+        const result = await supabase.from("module_instructors").insert({
+          module_id: entityId,
+          instructor_id: selectedInstructor,
+        });
         error = result.error;
       }
 
       if (error) throw error;
 
-      toast.success('Instructor assigned successfully');
+      toast.success("Instructor assigned successfully");
       setOpenInstructor(false);
-      setSelectedInstructor('');
+      setSelectedInstructor("");
       fetchAssignments();
       onUpdate?.();
     } catch (error: any) {
@@ -239,29 +256,25 @@ export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName
 
     try {
       let error;
-      if (entityType === 'program') {
-        const result = await supabase
-          .from('program_coaches')
-          .insert({
-            program_id: entityId,
-            coach_id: selectedCoach,
-          });
+      if (entityType === "program") {
+        const result = await supabase.from("program_coaches").insert({
+          program_id: entityId,
+          coach_id: selectedCoach,
+        });
         error = result.error;
       } else {
-        const result = await supabase
-          .from('module_coaches')
-          .insert({
-            module_id: entityId,
-            coach_id: selectedCoach,
-          });
+        const result = await supabase.from("module_coaches").insert({
+          module_id: entityId,
+          coach_id: selectedCoach,
+        });
         error = result.error;
       }
 
       if (error) throw error;
 
-      toast.success('Coach assigned successfully');
+      toast.success("Coach assigned successfully");
       setOpenCoach(false);
-      setSelectedCoach('');
+      setSelectedCoach("");
       fetchAssignments();
       onUpdate?.();
     } catch (error: any) {
@@ -272,25 +285,25 @@ export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName
   async function removeInstructor(instructorId: string) {
     try {
       let error;
-      if (entityType === 'program') {
+      if (entityType === "program") {
         const result = await supabase
-          .from('program_instructors')
+          .from("program_instructors")
           .delete()
-          .eq('program_id', entityId)
-          .eq('instructor_id', instructorId);
+          .eq("program_id", entityId)
+          .eq("instructor_id", instructorId);
         error = result.error;
       } else {
         const result = await supabase
-          .from('module_instructors')
+          .from("module_instructors")
           .delete()
-          .eq('module_id', entityId)
-          .eq('instructor_id', instructorId);
+          .eq("module_id", entityId)
+          .eq("instructor_id", instructorId);
         error = result.error;
       }
 
       if (error) throw error;
 
-      toast.success('Instructor removed');
+      toast.success("Instructor removed");
       fetchAssignments();
       onUpdate?.();
     } catch (error: any) {
@@ -301,25 +314,25 @@ export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName
   async function removeCoach(coachId: string) {
     try {
       let error;
-      if (entityType === 'program') {
+      if (entityType === "program") {
         const result = await supabase
-          .from('program_coaches')
+          .from("program_coaches")
           .delete()
-          .eq('program_id', entityId)
-          .eq('coach_id', coachId);
+          .eq("program_id", entityId)
+          .eq("coach_id", coachId);
         error = result.error;
       } else {
         const result = await supabase
-          .from('module_coaches')
+          .from("module_coaches")
           .delete()
-          .eq('module_id', entityId)
-          .eq('coach_id', coachId);
+          .eq("module_id", entityId)
+          .eq("coach_id", coachId);
         error = result.error;
       }
 
       if (error) throw error;
 
-      toast.success('Coach removed');
+      toast.success("Coach removed");
       fetchAssignments();
       onUpdate?.();
     } catch (error: any) {
@@ -354,7 +367,7 @@ export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName
                     </SelectTrigger>
                     <SelectContent>
                       {availableInstructors
-                        .filter(u => !instructors.find(i => i.id === u.id))
+                        .filter((u) => !instructors.find((i) => i.id === u.id))
                         .map((user) => (
                           <SelectItem key={user.id} value={user.id}>
                             {user.name} ({user.email})
@@ -372,7 +385,7 @@ export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName
         </div>
         <div className="flex gap-2 flex-wrap">
           {instructors.length > 0 ? (
-            instructors.map(instructor => (
+            instructors.map((instructor) => (
               <Badge key={instructor.id} variant="default" className="flex items-center gap-1">
                 {instructor.name}
                 {!readOnly && (
@@ -414,7 +427,7 @@ export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName
                     </SelectTrigger>
                     <SelectContent>
                       {availableCoaches
-                        .filter(u => !coaches.find(c => c.id === u.id))
+                        .filter((u) => !coaches.find((c) => c.id === u.id))
                         .map((user) => (
                           <SelectItem key={user.id} value={user.id}>
                             {user.name} ({user.email})
@@ -432,14 +445,11 @@ export function InstructorCoachAssignment({ entityType, entityId, moduleTypeName
         </div>
         <div className="flex gap-2 flex-wrap">
           {coaches.length > 0 ? (
-            coaches.map(coach => (
+            coaches.map((coach) => (
               <Badge key={coach.id} variant="secondary" className="flex items-center gap-1">
                 {coach.name}
                 {!readOnly && (
-                  <X
-                    className="h-3 w-3 cursor-pointer"
-                    onClick={() => removeCoach(coach.id)}
-                  />
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => removeCoach(coach.id)} />
                 )}
               </Badge>
             ))

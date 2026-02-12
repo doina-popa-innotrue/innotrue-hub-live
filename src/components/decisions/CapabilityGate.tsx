@@ -1,11 +1,11 @@
-import { ReactNode } from 'react';
-import { useDecisionFeatureAccess } from '@/hooks/useDecisionFeatureAccess';
-import { DecisionCapability, getFeatureKeyForCapability } from '@/lib/decisionFeatureConfig';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Lock, Zap } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ReactNode } from "react";
+import { useDecisionFeatureAccess } from "@/hooks/useDecisionFeatureAccess";
+import { DecisionCapability, getFeatureKeyForCapability } from "@/lib/decisionFeatureConfig";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Lock, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CapabilityGateProps {
   capability: DecisionCapability;
@@ -19,9 +19,9 @@ interface CapabilityGateProps {
  * Gates content based on decision toolkit capabilities.
  * Uses the centralized config to determine which feature key is required.
  */
-export function CapabilityGate({ 
-  capability, 
-  children, 
+export function CapabilityGate({
+  capability,
+  children,
   fallback,
   showUpgrade = true,
   hideWhenLocked = false,
@@ -48,18 +48,16 @@ export function CapabilityGate({
     }
 
     const featureKey = getFeatureKeyForCapability(capability);
-    const tierName = featureKey === 'decision_toolkit_advanced' ? 'Advanced' : 'Basic';
+    const tierName = featureKey === "decision_toolkit_advanced" ? "Advanced" : "Basic";
 
     return (
       <Alert>
         <Lock className="h-4 w-4" />
         <AlertTitle>{tierName} Feature</AlertTitle>
         <AlertDescription className="mt-2 space-y-4">
-          <p>
-            This feature requires the {tierName} Decision Toolkit.
-          </p>
+          <p>This feature requires the {tierName} Decision Toolkit.</p>
           {showUpgrade && (
-            <Button onClick={() => navigate('/subscription')} size="sm">
+            <Button onClick={() => navigate("/subscription")} size="sm">
               <Zap className="mr-2 h-4 w-4" />
               Upgrade Plan
             </Button>

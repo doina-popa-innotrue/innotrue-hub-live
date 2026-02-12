@@ -1,17 +1,48 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useToast } from '@/hooks/use-toast';
-import { Building2, BookOpen, Plus, Trash2, Search } from 'lucide-react';
-import { format } from 'date-fns';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+import { Building2, BookOpen, Plus, Trash2, Search } from "lucide-react";
+import { format } from "date-fns";
 
 interface Organization {
   id: string;
@@ -46,14 +77,14 @@ export default function OrganizationProgramsManagement() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [orgFilter, setOrgFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [orgFilter, setOrgFilter] = useState<string>("all");
 
   // Form state
-  const [selectedOrg, setSelectedOrg] = useState<string>('');
-  const [selectedProgram, setSelectedProgram] = useState<string>('');
-  const [maxEnrollments, setMaxEnrollments] = useState<string>('');
-  const [expiresAt, setExpiresAt] = useState<string>('');
+  const [selectedOrg, setSelectedOrg] = useState<string>("");
+  const [selectedProgram, setSelectedProgram] = useState<string>("");
+  const [maxEnrollments, setMaxEnrollments] = useState<string>("");
+  const [expiresAt, setExpiresAt] = useState<string>("");
 
   useEffect(() => {
     loadData();
@@ -65,26 +96,27 @@ export default function OrganizationProgramsManagement() {
 
       // Load organizations
       const { data: orgsData } = await supabase
-        .from('organizations')
-        .select('id, name, slug')
-        .eq('is_active', true)
-        .order('name');
+        .from("organizations")
+        .select("id, name, slug")
+        .eq("is_active", true)
+        .order("name");
 
       setOrganizations(orgsData || []);
 
       // Load programs
       const { data: programsData } = await supabase
-        .from('programs')
-        .select('id, name, slug, category')
-        .eq('is_active', true)
-        .order('name');
+        .from("programs")
+        .select("id, name, slug, category")
+        .eq("is_active", true)
+        .order("name");
 
       setPrograms(programsData || []);
 
       // Load existing licenses
       const { data: licensesData, error } = await supabase
-        .from('organization_programs')
-        .select(`
+        .from("organization_programs")
+        .select(
+          `
           id,
           organization_id,
           program_id,
@@ -94,12 +126,13 @@ export default function OrganizationProgramsManagement() {
           expires_at,
           organizations (id, name, slug),
           programs (id, name, slug, category)
-        `)
-        .order('licensed_at', { ascending: false });
+        `,
+        )
+        .order("licensed_at", { ascending: false });
 
       if (error) throw error;
 
-      const enrichedLicenses = (licensesData || []).map(license => ({
+      const enrichedLicenses = (licensesData || []).map((license) => ({
         ...license,
         organization: license.organizations as unknown as Organization,
         program: license.programs as unknown as Program,
@@ -107,11 +140,11 @@ export default function OrganizationProgramsManagement() {
 
       setLicenses(enrichedLicenses as OrganizationProgram[]);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error("Error loading data:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to load data',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load data",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -123,36 +156,34 @@ export default function OrganizationProgramsManagement() {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('organization_programs')
-        .insert({
-          organization_id: selectedOrg,
-          program_id: selectedProgram,
-          max_enrollments: maxEnrollments ? parseInt(maxEnrollments) : null,
-          expires_at: expiresAt || null,
-        });
+      const { error } = await supabase.from("organization_programs").insert({
+        organization_id: selectedOrg,
+        program_id: selectedProgram,
+        max_enrollments: maxEnrollments ? parseInt(maxEnrollments) : null,
+        expires_at: expiresAt || null,
+      });
 
       if (error) {
-        if (error.code === '23505') {
-          throw new Error('This program is already licensed to this organization');
+        if (error.code === "23505") {
+          throw new Error("This program is already licensed to this organization");
         }
         throw error;
       }
 
       toast({
-        title: 'License Added',
-        description: 'Program has been licensed to the organization',
+        title: "License Added",
+        description: "Program has been licensed to the organization",
       });
 
       setDialogOpen(false);
       resetForm();
       loadData();
     } catch (error: any) {
-      console.error('Error adding license:', error);
+      console.error("Error adding license:", error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to add license',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to add license",
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -161,24 +192,21 @@ export default function OrganizationProgramsManagement() {
 
   const handleRemoveLicense = async (licenseId: string) => {
     try {
-      const { error } = await supabase
-        .from('organization_programs')
-        .delete()
-        .eq('id', licenseId);
+      const { error } = await supabase.from("organization_programs").delete().eq("id", licenseId);
 
       if (error) throw error;
 
       toast({
-        title: 'License Removed',
-        description: 'Program license has been removed',
+        title: "License Removed",
+        description: "Program license has been removed",
       });
       loadData();
     } catch (error) {
-      console.error('Error removing license:', error);
+      console.error("Error removing license:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to remove license',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to remove license",
+        variant: "destructive",
       });
     }
   };
@@ -186,41 +214,41 @@ export default function OrganizationProgramsManagement() {
   const handleToggleActive = async (licenseId: string, currentActive: boolean) => {
     try {
       const { error } = await supabase
-        .from('organization_programs')
+        .from("organization_programs")
         .update({ is_active: !currentActive })
-        .eq('id', licenseId);
+        .eq("id", licenseId);
 
       if (error) throw error;
 
       toast({
-        title: currentActive ? 'License Deactivated' : 'License Activated',
-        description: `Program license has been ${currentActive ? 'deactivated' : 'activated'}`,
+        title: currentActive ? "License Deactivated" : "License Activated",
+        description: `Program license has been ${currentActive ? "deactivated" : "activated"}`,
       });
       loadData();
     } catch (error) {
-      console.error('Error toggling license:', error);
+      console.error("Error toggling license:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to update license',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update license",
+        variant: "destructive",
       });
     }
   };
 
   const resetForm = () => {
-    setSelectedOrg('');
-    setSelectedProgram('');
-    setMaxEnrollments('');
-    setExpiresAt('');
+    setSelectedOrg("");
+    setSelectedProgram("");
+    setMaxEnrollments("");
+    setExpiresAt("");
   };
 
-  const filteredLicenses = licenses.filter(license => {
+  const filteredLicenses = licenses.filter((license) => {
     const matchesSearch =
       !searchQuery ||
       license.organization?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       license.program?.name?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesOrg = orgFilter === 'all' || license.organization_id === orgFilter;
+    const matchesOrg = orgFilter === "all" || license.organization_id === orgFilter;
 
     return matchesSearch && matchesOrg;
   });
@@ -244,9 +272,7 @@ export default function OrganizationProgramsManagement() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>License Program to Organization</DialogTitle>
-              <DialogDescription>
-                Grant an organization access to a program
-              </DialogDescription>
+              <DialogDescription>Grant an organization access to a program</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
@@ -298,9 +324,7 @@ export default function OrganizationProgramsManagement() {
                   value={expiresAt}
                   onChange={(e) => setExpiresAt(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Leave empty for no expiration
-                </p>
+                <p className="text-xs text-muted-foreground">Leave empty for no expiration</p>
               </div>
             </div>
             <DialogFooter>
@@ -311,7 +335,7 @@ export default function OrganizationProgramsManagement() {
                 onClick={handleAddLicense}
                 disabled={saving || !selectedOrg || !selectedProgram}
               >
-                {saving ? 'Adding...' : 'Add License'}
+                {saving ? "Adding..." : "Add License"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -324,9 +348,7 @@ export default function OrganizationProgramsManagement() {
             <BookOpen className="h-5 w-5" />
             Program Licenses
           </CardTitle>
-          <CardDescription>
-            {licenses.length} total licenses
-          </CardDescription>
+          <CardDescription>{licenses.length} total licenses</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-4">
@@ -356,14 +378,12 @@ export default function OrganizationProgramsManagement() {
           </div>
 
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading...
-            </div>
+            <div className="text-center py-8 text-muted-foreground">Loading...</div>
           ) : filteredLicenses.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {licenses.length === 0
-                ? 'No program licenses yet. Add one to get started.'
-                : 'No licenses match your filters.'}
+                ? "No program licenses yet. Add one to get started."
+                : "No licenses match your filters."}
             </div>
           ) : (
             <Table>
@@ -385,18 +405,18 @@ export default function OrganizationProgramsManagement() {
                       <div className="flex items-center gap-2">
                         <Building2 className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">
-                          {license.organization?.name || 'Unknown'}
+                          {license.organization?.name || "Unknown"}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>{license.program?.name || 'Unknown'}</TableCell>
+                    <TableCell>{license.program?.name || "Unknown"}</TableCell>
                     <TableCell>
                       <Badge
-                        variant={license.is_active ? 'default' : 'secondary'}
+                        variant={license.is_active ? "default" : "secondary"}
                         className="cursor-pointer"
                         onClick={() => handleToggleActive(license.id, license.is_active)}
                       >
-                        {license.is_active ? 'Active' : 'Inactive'}
+                        {license.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -406,13 +426,13 @@ export default function OrganizationProgramsManagement() {
                     </TableCell>
                     <TableCell>
                       {license.expires_at ? (
-                        format(new Date(license.expires_at), 'MMM d, yyyy')
+                        format(new Date(license.expires_at), "MMM d, yyyy")
                       ) : (
                         <span className="text-muted-foreground">Never</span>
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {format(new Date(license.licensed_at), 'MMM d, yyyy')}
+                      {format(new Date(license.licensed_at), "MMM d, yyyy")}
                     </TableCell>
                     <TableCell className="text-right">
                       <AlertDialog>
@@ -425,8 +445,8 @@ export default function OrganizationProgramsManagement() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Remove License</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to remove this program license?
-                              The organization will no longer be able to enroll members in this program.
+                              Are you sure you want to remove this program license? The organization
+                              will no longer be able to enroll members in this program.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

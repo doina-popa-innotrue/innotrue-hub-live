@@ -57,16 +57,18 @@ export default function CoachingTasks() {
       // Get tasks shared by these clients
       const { data, error } = await supabase
         .from("tasks")
-        .select(`
+        .select(
+          `
           *,
           profiles!tasks_user_id_fkey (name)
-        `)
+        `,
+        )
         .eq("shared_with_coach", true)
         .in("user_id", clientIds)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setTasks(data as any || []);
+      setTasks((data as any) || []);
     } catch (error: any) {
       toast({
         title: "Error fetching shared tasks",
@@ -79,14 +81,16 @@ export default function CoachingTasks() {
   }
 
   const filteredTasks = tasks.filter((task) =>
-    task.title.toLowerCase().includes(searchQuery.toLowerCase())
+    task.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const tasksByQuadrant = {
     important_urgent: filteredTasks.filter((t) => t.quadrant === "important_urgent"),
     important_not_urgent: filteredTasks.filter((t) => t.quadrant === "important_not_urgent"),
     not_important_urgent: filteredTasks.filter((t) => t.quadrant === "not_important_urgent"),
-    not_important_not_urgent: filteredTasks.filter((t) => t.quadrant === "not_important_not_urgent"),
+    not_important_not_urgent: filteredTasks.filter(
+      (t) => t.quadrant === "not_important_not_urgent",
+    ),
   };
 
   if (loading) {
@@ -195,7 +199,9 @@ function QuadrantCard({
             </div>
           ))}
           {tasks.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">No tasks in this quadrant</p>
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No tasks in this quadrant
+            </p>
           )}
         </div>
       </CardContent>

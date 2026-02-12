@@ -1,15 +1,21 @@
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Repeat } from 'lucide-react';
-import { RecurrencePattern } from '@/lib/recurringDates';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Repeat } from "lucide-react";
+import { RecurrencePattern } from "@/lib/recurringDates";
 
 export interface RecurringSessionData {
   is_recurring: boolean;
   recurrence_pattern: RecurrencePattern | string;
   recurrence_end_date: string;
-  recurrence_end_type?: 'count' | 'date';
+  recurrence_end_type?: "count" | "date";
   recurrence_count?: number;
 }
 
@@ -64,7 +70,7 @@ export function RecurringSessionFields({
             </Select>
           </div>
 
-          {showEndTypeToggle && data.recurrence_end_type === 'count' ? (
+          {showEndTypeToggle && data.recurrence_end_type === "count" ? (
             <div className="space-y-2">
               <Label>Number of occurrences</Label>
               <Input
@@ -89,8 +95,10 @@ export function RecurringSessionFields({
           {showEndTypeToggle && (
             <div className="col-span-2">
               <Select
-                value={data.recurrence_end_type || 'count'}
-                onValueChange={(value: 'count' | 'date') => onChange({ recurrence_end_type: value })}
+                value={data.recurrence_end_type || "count"}
+                onValueChange={(value: "count" | "date") =>
+                  onChange({ recurrence_end_type: value })
+                }
               >
                 <SelectTrigger className="w-48">
                   <SelectValue />

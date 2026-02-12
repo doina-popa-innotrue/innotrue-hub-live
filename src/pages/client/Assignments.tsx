@@ -1,15 +1,30 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Search, ClipboardList, Clock, BookOpen, Send, CheckCircle, ChevronRight } from 'lucide-react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { formatDistanceToNow, format } from 'date-fns';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Loader2,
+  Search,
+  ClipboardList,
+  Clock,
+  BookOpen,
+  Send,
+  CheckCircle,
+  ChevronRight,
+} from "lucide-react";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { formatDistanceToNow, format } from "date-fns";
 import {
   Table,
   TableBody,
@@ -17,7 +32,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 
 interface Assignment {
   id: string;
@@ -33,11 +48,11 @@ interface Assignment {
   program_name: string;
   program_id: string;
   enrollment_id: string;
-  type: 'module' | 'scenario';
+  type: "module" | "scenario";
   scenario_assignment_id?: string;
 }
 
-type TabType = 'pending' | 'submitted' | 'reviewed';
+type TabType = "pending" | "submitted" | "reviewed";
 
 export default function ClientAssignments() {
   const { user } = useAuth();
@@ -46,15 +61,15 @@ export default function ClientAssignments() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>(
-    (searchParams.get('tab') as TabType) || 'pending'
+    (searchParams.get("tab") as TabType) || "pending",
   );
-  
+
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [filteredAssignments, setFilteredAssignments] = useState<Assignment[]>([]);
-  
+
   // Filter state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [programFilter, setProgramFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [programFilter, setProgramFilter] = useState<string>("all");
 
   useEffect(() => {
     if (user) {
@@ -77,14 +92,16 @@ export default function ClientAssignments() {
 
       // Get the user's enrollments
       const { data: enrollments, error: enrollmentError } = await supabase
-        .from('client_enrollments')
-        .select(`
+        .from("client_enrollments")
+        .select(
+          `
           id,
           program_id,
           programs(name)
-        `)
-        .eq('client_user_id', user?.id)
-        .eq('status', 'active');
+        `,
+        )
+        .eq("client_user_id", user?.id)
+        .eq("status", "active");
 
       if (enrollmentError) throw enrollmentError;
       if (!enrollments || enrollments.length === 0) {
@@ -93,18 +110,20 @@ export default function ClientAssignments() {
         return;
       }
 
-      const enrollmentIds = enrollments.map(e => e.id);
+      const enrollmentIds = enrollments.map((e) => e.id);
 
       // Get module progress for these enrollments
       const { data: progressData, error: progressError } = await supabase
-        .from('module_progress')
-        .select(`
+        .from("module_progress")
+        .select(
+          `
           id,
           enrollment_id,
           module_id,
           program_modules(title, program_id)
-        `)
-        .in('enrollment_id', enrollmentIds);
+        `,
+        )
+        .in("enrollment_id", enrollmentIds);
 
       if (progressError) throw progressError;
       if (!progressData || progressData.length === 0) {
@@ -113,12 +132,13 @@ export default function ClientAssignments() {
         return;
       }
 
-      const progressIds = progressData.map(p => p.id);
+      const progressIds = progressData.map((p) => p.id);
 
       // Get all assignments for these progress records
       const { data: assignmentData, error: assignmentError } = await supabase
-        .from('module_assignments')
-        .select(`
+        .from("module_assignments")
+        .select(
+          `
           id,
           module_progress_id,
           assignment_type_id,
@@ -128,40 +148,42 @@ export default function ClientAssignments() {
           scored_at,
           overall_score,
           module_assignment_types(name)
-        `)
-        .in('module_progress_id', progressIds)
-        .order('updated_at', { ascending: false });
+        `,
+        )
+        .in("module_progress_id", progressIds)
+        .order("updated_at", { ascending: false });
 
       if (assignmentError) throw assignmentError;
 
       // Combine the module assignment data
-      const moduleAssignmentsList: Assignment[] = (assignmentData || []).map(assignment => {
-        const progress = progressData.find(p => p.id === assignment.module_progress_id);
-        const enrollment = enrollments.find(e => e.id === progress?.enrollment_id);
+      const moduleAssignmentsList: Assignment[] = (assignmentData || []).map((assignment) => {
+        const progress = progressData.find((p) => p.id === assignment.module_progress_id);
+        const enrollment = enrollments.find((e) => e.id === progress?.enrollment_id);
         const module = progress?.program_modules as any;
 
         return {
           id: assignment.id,
           module_progress_id: assignment.module_progress_id,
-          assignment_type_name: (assignment.module_assignment_types as any)?.name || 'Assignment',
+          assignment_type_name: (assignment.module_assignment_types as any)?.name || "Assignment",
           status: assignment.status,
           created_at: assignment.created_at,
           updated_at: assignment.updated_at,
           scored_at: assignment.scored_at,
           overall_score: assignment.overall_score ?? null,
-          module_title: module?.title || 'Unknown Module',
-          module_id: progress?.module_id || '',
-          program_name: (enrollment?.programs as any)?.name || 'Unknown Program',
-          program_id: enrollment?.program_id || '',
-          enrollment_id: progress?.enrollment_id || '',
-          type: 'module' as const,
+          module_title: module?.title || "Unknown Module",
+          module_id: progress?.module_id || "",
+          program_name: (enrollment?.programs as any)?.name || "Unknown Program",
+          program_id: enrollment?.program_id || "",
+          enrollment_id: progress?.enrollment_id || "",
+          type: "module" as const,
         };
       });
 
       // Fetch scenario assignments for this user
       const { data: scenarioAssignments, error: scenarioError } = await supabase
-        .from('scenario_assignments')
-        .select(`
+        .from("scenario_assignments")
+        .select(
+          `
           id,
           template_id,
           status,
@@ -170,36 +192,37 @@ export default function ClientAssignments() {
           evaluated_at,
           enrollment_id,
           scenario_templates(title)
-        `)
-        .eq('user_id', user?.id)
-        .order('updated_at', { ascending: false });
+        `,
+        )
+        .eq("user_id", user?.id)
+        .order("updated_at", { ascending: false });
 
       if (scenarioError) {
-        console.error('Error loading scenario assignments:', scenarioError);
+        console.error("Error loading scenario assignments:", scenarioError);
       }
 
       // Map scenario assignments to the common Assignment interface
-      const scenarioAssignmentsList: Assignment[] = (scenarioAssignments || []).map(sa => {
-        const enrollment = enrollments.find(e => e.id === sa.enrollment_id);
+      const scenarioAssignmentsList: Assignment[] = (scenarioAssignments || []).map((sa) => {
+        const enrollment = enrollments.find((e) => e.id === sa.enrollment_id);
         // Map scenario status to module assignment status for consistency
         let mappedStatus = sa.status;
-        if (sa.status === 'evaluated') mappedStatus = 'reviewed';
-        
+        if (sa.status === "evaluated") mappedStatus = "reviewed";
+
         return {
           id: sa.id,
-          module_progress_id: '',
-          assignment_type_name: 'Scenario',
+          module_progress_id: "",
+          assignment_type_name: "Scenario",
           status: mappedStatus,
           created_at: sa.created_at,
           updated_at: sa.updated_at,
           scored_at: sa.evaluated_at,
           overall_score: null as number | null,
-          module_title: (sa.scenario_templates as any)?.title || 'Untitled Scenario',
-          module_id: '',
-          program_name: (enrollment?.programs as any)?.name || 'Unknown Program',
-          program_id: enrollment?.program_id || '',
-          enrollment_id: sa.enrollment_id || '',
-          type: 'scenario' as const,
+          module_title: (sa.scenario_templates as any)?.title || "Untitled Scenario",
+          module_id: "",
+          program_name: (enrollment?.programs as any)?.name || "Unknown Program",
+          program_id: enrollment?.program_id || "",
+          enrollment_id: sa.enrollment_id || "",
+          type: "scenario" as const,
           scenario_assignment_id: sa.id,
         };
       });
@@ -207,11 +230,13 @@ export default function ClientAssignments() {
       // Combine both lists
       const allAssignments = [...moduleAssignmentsList, ...scenarioAssignmentsList];
       // Sort by updated_at descending
-      allAssignments.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      allAssignments.sort(
+        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+      );
 
       setAssignments(allAssignments);
     } catch (error) {
-      console.error('Error loading assignments:', error);
+      console.error("Error loading assignments:", error);
     } finally {
       setLoading(false);
     }
@@ -222,14 +247,14 @@ export default function ClientAssignments() {
 
     // Filter by tab status
     switch (activeTab) {
-      case 'pending':
-        filtered = filtered.filter(a => a.status === 'draft' || a.status === 'in_progress');
+      case "pending":
+        filtered = filtered.filter((a) => a.status === "draft" || a.status === "in_progress");
         break;
-      case 'submitted':
-        filtered = filtered.filter(a => a.status === 'submitted');
+      case "submitted":
+        filtered = filtered.filter((a) => a.status === "submitted");
         break;
-      case 'reviewed':
-        filtered = filtered.filter(a => a.status === 'reviewed');
+      case "reviewed":
+        filtered = filtered.filter((a) => a.status === "reviewed");
         break;
     }
 
@@ -237,28 +262,40 @@ export default function ClientAssignments() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        a => a.module_title.toLowerCase().includes(query) ||
-             a.program_name.toLowerCase().includes(query) ||
-             a.assignment_type_name.toLowerCase().includes(query)
+        (a) =>
+          a.module_title.toLowerCase().includes(query) ||
+          a.program_name.toLowerCase().includes(query) ||
+          a.assignment_type_name.toLowerCase().includes(query),
       );
     }
 
     // Program filter
-    if (programFilter !== 'all') {
-      filtered = filtered.filter(a => a.program_id === programFilter);
+    if (programFilter !== "all") {
+      filtered = filtered.filter((a) => a.program_id === programFilter);
     }
 
     setFilteredAssignments(filtered);
   };
 
   const getStatusBadge = (status: string) => {
-    const config: Record<string, { variant: 'default' | 'secondary' | 'outline'; label: string; icon: React.ReactNode }> = {
-      draft: { variant: 'outline', label: 'Draft', icon: <Clock className="h-3 w-3" /> },
-      in_progress: { variant: 'secondary', label: 'In Progress', icon: <Clock className="h-3 w-3" /> },
-      submitted: { variant: 'default', label: 'Submitted', icon: <Send className="h-3 w-3" /> },
-      reviewed: { variant: 'secondary', label: 'Reviewed', icon: <CheckCircle className="h-3 w-3" /> },
+    const config: Record<
+      string,
+      { variant: "default" | "secondary" | "outline"; label: string; icon: React.ReactNode }
+    > = {
+      draft: { variant: "outline", label: "Draft", icon: <Clock className="h-3 w-3" /> },
+      in_progress: {
+        variant: "secondary",
+        label: "In Progress",
+        icon: <Clock className="h-3 w-3" />,
+      },
+      submitted: { variant: "default", label: "Submitted", icon: <Send className="h-3 w-3" /> },
+      reviewed: {
+        variant: "secondary",
+        label: "Reviewed",
+        icon: <CheckCircle className="h-3 w-3" />,
+      },
     };
-    const c = config[status] || { variant: 'outline' as const, label: status, icon: null };
+    const c = config[status] || { variant: "outline" as const, label: status, icon: null };
     return (
       <Badge variant={c.variant} className="flex items-center gap-1">
         {c.icon}
@@ -276,12 +313,16 @@ export default function ClientAssignments() {
   }
 
   const uniquePrograms = Array.from(
-    new Map(assignments.map(a => [a.program_id, { id: a.program_id, name: a.program_name }])).values()
+    new Map(
+      assignments.map((a) => [a.program_id, { id: a.program_id, name: a.program_name }]),
+    ).values(),
   );
 
-  const pendingCount = assignments.filter(a => a.status === 'draft' || a.status === 'in_progress').length;
-  const submittedCount = assignments.filter(a => a.status === 'submitted').length;
-  const reviewedCount = assignments.filter(a => a.status === 'reviewed').length;
+  const pendingCount = assignments.filter(
+    (a) => a.status === "draft" || a.status === "in_progress",
+  ).length;
+  const submittedCount = assignments.filter((a) => a.status === "submitted").length;
+  const reviewedCount = assignments.filter((a) => a.status === "reviewed").length;
 
   return (
     <div className="container mx-auto py-8 space-y-8">
@@ -338,8 +379,10 @@ export default function ClientAssignments() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Programs</SelectItem>
-                    {uniquePrograms.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    {uniquePrograms.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -354,14 +397,14 @@ export default function ClientAssignments() {
             <CardContent className="py-12 text-center">
               <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">
-                {activeTab === 'pending' && 'No Pending Assignments'}
-                {activeTab === 'submitted' && 'No Submitted Assignments'}
-                {activeTab === 'reviewed' && 'No Reviewed Assignments'}
+                {activeTab === "pending" && "No Pending Assignments"}
+                {activeTab === "submitted" && "No Submitted Assignments"}
+                {activeTab === "reviewed" && "No Reviewed Assignments"}
               </h3>
               <p className="text-muted-foreground">
-                {activeTab === 'pending' && 'You have no assignments waiting to be completed.'}
-                {activeTab === 'submitted' && 'You have no assignments awaiting review.'}
-                {activeTab === 'reviewed' && 'No assignments have been reviewed yet.'}
+                {activeTab === "pending" && "You have no assignments waiting to be completed."}
+                {activeTab === "submitted" && "You have no assignments awaiting review."}
+                {activeTab === "reviewed" && "No assignments have been reviewed yet."}
               </p>
             </CardContent>
           </Card>
@@ -374,33 +417,33 @@ export default function ClientAssignments() {
                   <TableHead>Module</TableHead>
                   <TableHead>Program</TableHead>
                   <TableHead>Status</TableHead>
-                  {activeTab === 'reviewed' && <TableHead>Score</TableHead>}
+                  {activeTab === "reviewed" && <TableHead>Score</TableHead>}
                   <TableHead className="text-right">Updated</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredAssignments.map((assignment) => (
-                  <TableRow 
+                  <TableRow
                     key={`${assignment.type}-${assignment.id}`}
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => {
-                      if (assignment.type === 'scenario' && assignment.scenario_assignment_id) {
+                      if (assignment.type === "scenario" && assignment.scenario_assignment_id) {
                         navigate(`/scenarios/${assignment.scenario_assignment_id}`);
                       } else {
-                        navigate(`/programs/${assignment.program_id}/modules/${assignment.module_id}`);
+                        navigate(
+                          `/programs/${assignment.program_id}/modules/${assignment.module_id}`,
+                        );
                       }
                     }}
                   >
-                    <TableCell className="font-medium">
-                      {assignment.assignment_type_name}
-                    </TableCell>
+                    <TableCell className="font-medium">{assignment.assignment_type_name}</TableCell>
                     <TableCell>{assignment.module_title}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{assignment.program_name}</Badge>
                     </TableCell>
                     <TableCell>{getStatusBadge(assignment.status)}</TableCell>
-                    {activeTab === 'reviewed' && (
+                    {activeTab === "reviewed" && (
                       <TableCell>
                         {assignment.overall_score !== null ? (
                           <Badge variant="secondary">{assignment.overall_score}%</Badge>

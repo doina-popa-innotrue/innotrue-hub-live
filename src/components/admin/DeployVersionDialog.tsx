@@ -101,7 +101,7 @@ export function DeployVersionDialog({
       toast.success(
         `Version deployed to ${selectedClients.length} client${
           selectedClients.length !== 1 ? "s" : ""
-        }`
+        }`,
       );
       onOpenChange(false);
       setSelectedClients([]);
@@ -125,7 +125,7 @@ export function DeployVersionDialog({
     setSelectedClients((prev) =>
       prev.includes(enrollmentId)
         ? prev.filter((id) => id !== enrollmentId)
-        : [...prev, enrollmentId]
+        : [...prev, enrollmentId],
     );
   };
 
@@ -171,9 +171,7 @@ export function DeployVersionDialog({
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                       >
                         {profile?.name || "Unknown User"}
-                        <span className="text-muted-foreground ml-2">
-                          ({enrollment.status})
-                        </span>
+                        <span className="text-muted-foreground ml-2">({enrollment.status})</span>
                       </label>
                     </div>
                   );
@@ -202,8 +200,8 @@ export function DeployVersionDialog({
           </div>
           {resetProgress && (
             <p className="text-sm text-muted-foreground">
-              This will clear all module completion data and start fresh progress tracking for
-              the new version.
+              This will clear all module completion data and start fresh progress tracking for the
+              new version.
             </p>
           )}
         </div>

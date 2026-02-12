@@ -58,16 +58,18 @@ export default function CoachingDecisions() {
       // Get decisions shared by these clients
       const { data, error } = await supabase
         .from("decisions")
-        .select(`
+        .select(
+          `
           *,
           profiles!decisions_user_id_fkey (name)
-        `)
+        `,
+        )
         .eq("shared_with_coach", true)
         .in("user_id", clientIds)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setDecisions(data as any || []);
+      setDecisions((data as any) || []);
     } catch (error: any) {
       toast({
         title: "Error fetching shared decisions",
@@ -80,7 +82,7 @@ export default function CoachingDecisions() {
   }
 
   const filteredDecisions = decisions.filter((decision) =>
-    decision.title.toLowerCase().includes(searchQuery.toLowerCase())
+    decision.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   function getImportanceBadgeColor(importance: string | null) {
@@ -148,7 +150,10 @@ export default function CoachingDecisions() {
                   {decision.status.replace("_", " ")}
                 </Badge>
                 {decision.importance && (
-                  <Badge variant={getImportanceBadgeColor(decision.importance) as any} className="capitalize">
+                  <Badge
+                    variant={getImportanceBadgeColor(decision.importance) as any}
+                    className="capitalize"
+                  >
                     {decision.importance}
                   </Badge>
                 )}
@@ -178,9 +183,7 @@ export default function CoachingDecisions() {
         {filteredDecisions.length === 0 && (
           <div className="col-span-full text-center py-12 text-muted-foreground">
             <p>No shared decisions to display</p>
-            <p className="text-sm mt-1">
-              Your clients haven't shared any decisions with you yet
-            </p>
+            <p className="text-sm mt-1">Your clients haven't shared any decisions with you yet</p>
           </div>
         )}
       </div>

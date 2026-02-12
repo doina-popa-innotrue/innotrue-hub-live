@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 export interface NotificationCategory {
   id: string;
@@ -46,14 +46,14 @@ export function useNotificationPreferences() {
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
-    queryKey: ['notification-categories'],
+    queryKey: ["notification-categories"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('notification_categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('order_index');
-      
+        .from("notification_categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("order_index");
+
       if (error) throw error;
       return data as NotificationCategory[];
     },
@@ -61,14 +61,14 @@ export function useNotificationPreferences() {
 
   // Fetch notification types
   const { data: types = [] } = useQuery({
-    queryKey: ['notification-types'],
+    queryKey: ["notification-types"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('notification_types')
-        .select('*')
-        .eq('is_active', true)
-        .order('order_index');
-      
+        .from("notification_types")
+        .select("*")
+        .eq("is_active", true)
+        .order("order_index");
+
       if (error) throw error;
       return data as NotificationType[];
     },
@@ -76,15 +76,15 @@ export function useNotificationPreferences() {
 
   // Fetch user preferences
   const { data: userPreferences = [], isLoading } = useQuery({
-    queryKey: ['user-notification-preferences', user?.id],
+    queryKey: ["user-notification-preferences", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      
+
       const { data, error } = await supabase
-        .from('user_notification_preferences')
-        .select('*')
-        .eq('user_id', user.id);
-      
+        .from("user_notification_preferences")
+        .select("*")
+        .eq("user_id", user.id);
+
       if (error) throw error;
       return data as UserPreference[];
     },
@@ -92,8 +92,8 @@ export function useNotificationPreferences() {
   });
 
   // Merge types with user preferences
-  const typesWithPreferences: NotificationTypeWithPreference[] = types.map(type => {
-    const userPref = userPreferences.find(p => p.notification_type_id === type.id);
+  const typesWithPreferences: NotificationTypeWithPreference[] = types.map((type) => {
+    const userPref = userPreferences.find((p) => p.notification_type_id === type.id);
     return {
       ...type,
       email_enabled: userPref ? userPref.email_enabled : type.default_email_enabled,
@@ -103,9 +103,9 @@ export function useNotificationPreferences() {
   });
 
   // Group by category
-  const typesByCategory = categories.map(category => ({
+  const typesByCategory = categories.map((category) => ({
     ...category,
-    types: typesWithPreferences.filter(t => t.category_id === category.id),
+    types: typesWithPreferences.filter((t) => t.category_id === category.id),
   }));
 
   // Update preference mutation
@@ -119,29 +119,30 @@ export function useNotificationPreferences() {
       emailEnabled: boolean;
       inAppEnabled: boolean;
     }) => {
-      if (!user?.id) throw new Error('Not authenticated');
+      if (!user?.id) throw new Error("Not authenticated");
 
-      const { error } = await supabase
-        .from('user_notification_preferences')
-        .upsert({
+      const { error } = await supabase.from("user_notification_preferences").upsert(
+        {
           user_id: user.id,
           notification_type_id: typeId,
           email_enabled: emailEnabled,
           in_app_enabled: inAppEnabled,
-        }, {
-          onConflict: 'user_id,notification_type_id',
-        });
-      
+        },
+        {
+          onConflict: "user_id,notification_type_id",
+        },
+      );
+
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-notification-preferences'] });
+      queryClient.invalidateQueries({ queryKey: ["user-notification-preferences"] });
     },
     onError: (error) => {
       toast({
-        title: 'Error updating preference',
+        title: "Error updating preference",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
@@ -157,46 +158,48 @@ export function useNotificationPreferences() {
       emailEnabled?: boolean;
       inAppEnabled?: boolean;
     }) => {
-      if (!user?.id) throw new Error('Not authenticated');
+      if (!user?.id) throw new Error("Not authenticated");
 
-      const categoryTypes = types.filter(t => t.category_id === categoryId && !t.is_critical);
-      
+      const categoryTypes = types.filter((t) => t.category_id === categoryId && !t.is_critical);
+
       for (const type of categoryTypes) {
-        const currentPref = userPreferences.find(p => p.notification_type_id === type.id);
-        
-        await supabase
-          .from('user_notification_preferences')
-          .upsert({
+        const currentPref = userPreferences.find((p) => p.notification_type_id === type.id);
+
+        await supabase.from("user_notification_preferences").upsert(
+          {
             user_id: user.id,
             notification_type_id: type.id,
             email_enabled: emailEnabled ?? currentPref?.email_enabled ?? type.default_email_enabled,
-            in_app_enabled: inAppEnabled ?? currentPref?.in_app_enabled ?? type.default_in_app_enabled,
-          }, {
-            onConflict: 'user_id,notification_type_id',
-          });
+            in_app_enabled:
+              inAppEnabled ?? currentPref?.in_app_enabled ?? type.default_in_app_enabled,
+          },
+          {
+            onConflict: "user_id,notification_type_id",
+          },
+        );
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-notification-preferences'] });
-      toast({ title: 'Preferences updated' });
+      queryClient.invalidateQueries({ queryKey: ["user-notification-preferences"] });
+      toast({ title: "Preferences updated" });
     },
   });
 
   // Reset to defaults
   const resetToDefaultsMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id) throw new Error('Not authenticated');
+      if (!user?.id) throw new Error("Not authenticated");
 
       const { error } = await supabase
-        .from('user_notification_preferences')
+        .from("user_notification_preferences")
         .delete()
-        .eq('user_id', user.id);
-      
+        .eq("user_id", user.id);
+
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-notification-preferences'] });
-      toast({ title: 'Preferences reset to defaults' });
+      queryClient.invalidateQueries({ queryKey: ["user-notification-preferences"] });
+      toast({ title: "Preferences reset to defaults" });
     },
   });
 

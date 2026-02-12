@@ -1,15 +1,21 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
-import type { Database } from '@/integrations/supabase/types';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+import type { Database } from "@/integrations/supabase/types";
 
-type MilestoneStatus = Database['public']['Enums']['milestone_status'];
+type MilestoneStatus = Database["public"]["Enums"]["milestone_status"];
 
 interface Milestone {
   id: string;
@@ -29,7 +35,13 @@ interface MilestoneFormProps {
   onCancel: () => void;
 }
 
-export default function MilestoneForm({ goalId, orderIndex, milestone, onSuccess, onCancel }: MilestoneFormProps) {
+export default function MilestoneForm({
+  goalId,
+  orderIndex,
+  milestone,
+  onSuccess,
+  onCancel,
+}: MilestoneFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<{
@@ -39,10 +51,10 @@ export default function MilestoneForm({ goalId, orderIndex, milestone, onSuccess
     due_date: string;
     is_private: boolean;
   }>({
-    title: '',
-    description: '',
-    status: 'not_started' as MilestoneStatus,
-    due_date: '',
+    title: "",
+    description: "",
+    status: "not_started" as MilestoneStatus,
+    due_date: "",
     is_private: false,
   });
 
@@ -52,9 +64,9 @@ export default function MilestoneForm({ goalId, orderIndex, milestone, onSuccess
     if (milestone) {
       setFormData({
         title: milestone.title,
-        description: milestone.description || '',
+        description: milestone.description || "",
         status: milestone.status as MilestoneStatus,
-        due_date: milestone.due_date || '',
+        due_date: milestone.due_date || "",
         is_private: milestone.is_private || false,
       });
     }
@@ -67,7 +79,7 @@ export default function MilestoneForm({ goalId, orderIndex, milestone, onSuccess
     try {
       if (isEditing) {
         const { error } = await supabase
-          .from('goal_milestones')
+          .from("goal_milestones")
           .update({
             title: formData.title,
             description: formData.description || null,
@@ -75,18 +87,17 @@ export default function MilestoneForm({ goalId, orderIndex, milestone, onSuccess
             due_date: formData.due_date || null,
             is_private: formData.is_private,
           })
-          .eq('id', milestone.id);
+          .eq("id", milestone.id);
 
         if (error) throw error;
 
         toast({
-          title: 'Success',
-          description: 'Milestone updated successfully',
+          title: "Success",
+          description: "Milestone updated successfully",
         });
       } else {
-        const { error } = await supabase
-          .from('goal_milestones')
-          .insert([{
+        const { error } = await supabase.from("goal_milestones").insert([
+          {
             goal_id: goalId,
             title: formData.title,
             description: formData.description || null,
@@ -94,22 +105,23 @@ export default function MilestoneForm({ goalId, orderIndex, milestone, onSuccess
             due_date: formData.due_date || null,
             order_index: orderIndex,
             is_private: formData.is_private,
-          }]);
+          },
+        ]);
 
         if (error) throw error;
 
         toast({
-          title: 'Success',
-          description: 'Milestone created successfully',
+          title: "Success",
+          description: "Milestone created successfully",
         });
       }
 
       onSuccess();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: isEditing ? 'Failed to update milestone' : 'Failed to create milestone',
-        variant: 'destructive',
+        title: "Error",
+        description: isEditing ? "Failed to update milestone" : "Failed to create milestone",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -143,7 +155,12 @@ export default function MilestoneForm({ goalId, orderIndex, milestone, onSuccess
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="status">Status</Label>
-          <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as MilestoneStatus })}>
+          <Select
+            value={formData.status}
+            onValueChange={(value) =>
+              setFormData({ ...formData, status: value as MilestoneStatus })
+            }
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -169,9 +186,7 @@ export default function MilestoneForm({ goalId, orderIndex, milestone, onSuccess
       <div className="flex items-center justify-between rounded-lg border p-4">
         <div className="space-y-1">
           <Label htmlFor="is_private">Private Milestone</Label>
-          <p className="text-xs text-muted-foreground">
-            Only visible to you and admins
-          </p>
+          <p className="text-xs text-muted-foreground">Only visible to you and admins</p>
         </div>
         <Switch
           id="is_private"
@@ -185,7 +200,13 @@ export default function MilestoneForm({ goalId, orderIndex, milestone, onSuccess
           Cancel
         </Button>
         <Button type="submit" disabled={loading}>
-          {loading ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update Milestone' : 'Create Milestone')}
+          {loading
+            ? isEditing
+              ? "Updating..."
+              : "Creating..."
+            : isEditing
+              ? "Update Milestone"
+              : "Create Milestone"}
         </Button>
       </div>
     </form>

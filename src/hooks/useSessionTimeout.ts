@@ -1,6 +1,6 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { useEffect, useRef, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const WARNING_BEFORE_TIMEOUT = 2 * 60 * 1000; // 2 minutes warning
@@ -31,14 +31,14 @@ export function useSessionTimeout() {
 
   const handleTimeout = useCallback(async () => {
     clearTimers();
-    toast.error('Session expired due to inactivity');
+    toast.error("Session expired due to inactivity");
     await signOutRef.current();
   }, [clearTimers]);
 
   const showWarning = useCallback(() => {
     if (!hasWarnedRef.current) {
       hasWarnedRef.current = true;
-      toast.warning('Your session will expire in 2 minutes due to inactivity', {
+      toast.warning("Your session will expire in 2 minutes due to inactivity", {
         duration: 10000,
       });
     }
@@ -67,7 +67,7 @@ export function useSessionTimeout() {
       return;
     }
 
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
+    const events = ["mousedown", "keydown", "scroll", "touchstart", "mousemove"];
 
     // Throttle the reset to avoid excessive timer resets
     let lastResetTime = 0;

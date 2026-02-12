@@ -1,22 +1,43 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format, formatDistanceToNow } from 'date-fns';
-import { 
-  Bell, Trash2, Search, Filter, Users, 
-  AlertTriangle, CheckSquare, Square, Loader2,
-  Settings, Clock, Zap, Calendar
-} from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AdminPageHeader, AdminLoadingState, AdminEmptyState, AdminTable } from '@/components/admin';
-import { Separator } from '@/components/ui/separator';
-import { Label } from '@/components/ui/label';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format, formatDistanceToNow } from "date-fns";
+import {
+  Bell,
+  Trash2,
+  Search,
+  Filter,
+  Users,
+  AlertTriangle,
+  CheckSquare,
+  Square,
+  Loader2,
+  Settings,
+  Clock,
+  Zap,
+  Calendar,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AdminPageHeader,
+  AdminLoadingState,
+  AdminEmptyState,
+  AdminTable,
+} from "@/components/admin";
+import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,12 +47,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+} from "@/components/ui/alert-dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface NotificationWithUser {
   id: string;
@@ -56,35 +73,36 @@ interface NotificationWithUser {
 export default function NotificationsManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
-  const [retentionDays, setRetentionDays] = useState<string>('90');
+  const [retentionDays, setRetentionDays] = useState<string>("90");
   const [isCleanupSettingsOpen, setIsCleanupSettingsOpen] = useState(false);
 
   // Fetch retention setting
   const { data: retentionSetting } = useQuery({
-    queryKey: ['notification-retention-setting'],
+    queryKey: ["notification-retention-setting"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('system_settings')
-        .select('value')
-        .eq('key', 'notification_retention_days')
+        .from("system_settings")
+        .select("value")
+        .eq("key", "notification_retention_days")
         .single();
-      if (error && error.code !== 'PGRST116') throw error;
-      return data?.value || '90';
+      if (error && error.code !== "PGRST116") throw error;
+      return data?.value || "90";
     },
   });
 
   // Fetch notifications with user info
   const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ['admin-notifications', searchTerm, categoryFilter],
+    queryKey: ["admin-notifications", searchTerm, categoryFilter],
     queryFn: async () => {
       let query = supabase
-        .from('notifications')
-        .select(`
+        .from("notifications")
+        .select(
+          `
           id,
           title,
           message,
@@ -97,8 +115,9 @@ export default function NotificationsManagement() {
             name,
             notification_categories (name)
           )
-        `)
-        .order('created_at', { ascending: false })
+        `,
+        )
+        .order("created_at", { ascending: false })
         .limit(500);
 
       if (searchTerm) {
@@ -107,28 +126,28 @@ export default function NotificationsManagement() {
 
       const { data, error } = await query;
       if (error) throw error;
-      
+
       let result = data as unknown as NotificationWithUser[];
-      
-      if (categoryFilter !== 'all') {
-        result = result.filter(n => 
-          n.notification_types?.notification_categories?.name === categoryFilter
+
+      if (categoryFilter !== "all") {
+        result = result.filter(
+          (n) => n.notification_types?.notification_categories?.name === categoryFilter,
         );
       }
-      
+
       return result;
     },
   });
 
   // Fetch categories for filter
   const { data: categories = [] } = useQuery({
-    queryKey: ['notification-categories'],
+    queryKey: ["notification-categories"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('notification_categories')
-        .select('id, name')
-        .eq('is_active', true)
-        .order('order_index');
+        .from("notification_categories")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("order_index");
       if (error) throw error;
       return data;
     },
@@ -137,26 +156,26 @@ export default function NotificationsManagement() {
   // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { data, error } = await supabase.rpc('admin_bulk_delete_notifications', {
-        notification_ids: ids
+      const { data, error } = await supabase.rpc("admin_bulk_delete_notifications", {
+        notification_ids: ids,
       });
       if (error) throw error;
       return data;
     },
     onSuccess: (deletedCount) => {
       toast({
-        title: 'Notifications deleted',
+        title: "Notifications deleted",
         description: `Successfully deleted ${deletedCount} notifications.`,
       });
-      queryClient.invalidateQueries({ queryKey: ['admin-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ["admin-notifications"] });
       setSelectedIds(new Set());
       setShowDeleteDialog(false);
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error',
+        title: "Error",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
@@ -164,23 +183,23 @@ export default function NotificationsManagement() {
   // Manual cleanup mutation
   const cleanupMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('cleanup-notifications');
+      const { data, error } = await supabase.functions.invoke("cleanup-notifications");
       if (error) throw error;
       return data;
     },
     onSuccess: (data) => {
       toast({
-        title: 'Cleanup complete',
+        title: "Cleanup complete",
         description: `Successfully cleaned up ${data.deleted_count} old notifications.`,
       });
-      queryClient.invalidateQueries({ queryKey: ['admin-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ["admin-notifications"] });
       setShowCleanupDialog(false);
     },
     onError: (error: Error) => {
       toast({
-        title: 'Cleanup failed',
+        title: "Cleanup failed",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
@@ -188,27 +207,28 @@ export default function NotificationsManagement() {
   // Update retention setting mutation
   const updateRetentionMutation = useMutation({
     mutationFn: async (days: string) => {
-      const { error } = await supabase
-        .from('system_settings')
-        .upsert({ 
-          key: 'notification_retention_days', 
+      const { error } = await supabase.from("system_settings").upsert(
+        {
+          key: "notification_retention_days",
           value: days,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'key' });
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "key" },
+      );
       if (error) throw error;
     },
     onSuccess: () => {
       toast({
-        title: 'Setting updated',
+        title: "Setting updated",
         description: `Notification retention period set to ${retentionDays} days.`,
       });
-      queryClient.invalidateQueries({ queryKey: ['notification-retention-setting'] });
+      queryClient.invalidateQueries({ queryKey: ["notification-retention-setting"] });
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error',
+        title: "Error",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
@@ -227,7 +247,7 @@ export default function NotificationsManagement() {
     if (selectedIds.size === notifications.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(notifications.map(n => n.id)));
+      setSelectedIds(new Set(notifications.map((n) => n.id)));
     }
   };
 
@@ -272,7 +292,7 @@ export default function NotificationsManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {notifications.filter(n => !n.is_read).length}
+              {notifications.filter((n) => !n.is_read).length}
             </div>
           </CardContent>
         </Card>
@@ -297,7 +317,7 @@ export default function NotificationsManagement() {
               </div>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm">
-                  {isCleanupSettingsOpen ? 'Hide' : 'Show'}
+                  {isCleanupSettingsOpen ? "Hide" : "Show"}
                 </Button>
               </CollapsibleTrigger>
             </div>
@@ -319,11 +339,13 @@ export default function NotificationsManagement() {
                   </p>
                   <div className="flex items-center gap-3">
                     <div className="flex-1 max-w-[200px]">
-                      <Label htmlFor="retention-days" className="sr-only">Retention days</Label>
-                      <Select 
-                        value={retentionDays} 
+                      <Label htmlFor="retention-days" className="sr-only">
+                        Retention days
+                      </Label>
+                      <Select
+                        value={retentionDays}
                         onValueChange={setRetentionDays}
-                        defaultValue={retentionSetting || '90'}
+                        defaultValue={retentionSetting || "90"}
                       >
                         <SelectTrigger id="retention-days">
                           <SelectValue placeholder="Select days" />
@@ -337,8 +359,8 @@ export default function NotificationsManagement() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button 
-                      variant="secondary" 
+                    <Button
+                      variant="secondary"
                       onClick={handleSaveRetention}
                       disabled={updateRetentionMutation.isPending}
                     >
@@ -349,7 +371,7 @@ export default function NotificationsManagement() {
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Current setting: {retentionSetting || '90'} days
+                    Current setting: {retentionSetting || "90"} days
                   </p>
                 </div>
 
@@ -362,14 +384,12 @@ export default function NotificationsManagement() {
                   <p className="text-sm text-muted-foreground">
                     Immediately delete all notifications older than the retention period.
                   </p>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => setShowCleanupDialog(true)}
                     disabled={cleanupMutation.isPending}
                   >
-                    {cleanupMutation.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
+                    {cleanupMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <Trash2 className="h-4 w-4 mr-2" />
                     Run Cleanup Now
                   </Button>
@@ -413,14 +433,12 @@ export default function NotificationsManagement() {
               </Select>
             </div>
             {selectedIds.size > 0 && (
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={handleBulkDelete}
                 disabled={bulkDeleteMutation.isPending}
               >
-                {bulkDeleteMutation.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
+                {bulkDeleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete Selected ({selectedIds.size})
               </Button>
@@ -441,7 +459,9 @@ export default function NotificationsManagement() {
                   <tr className="border-b bg-muted/50">
                     <th className="p-3 text-left w-10">
                       <Checkbox
-                        checked={selectedIds.size === notifications.length && notifications.length > 0}
+                        checked={
+                          selectedIds.size === notifications.length && notifications.length > 0
+                        }
                         onCheckedChange={toggleSelectAll}
                       />
                     </th>
@@ -473,22 +493,23 @@ export default function NotificationsManagement() {
                       </td>
                       <td className="p-3 hidden md:table-cell">
                         <div className="text-sm">
-                          <p>{notification.profiles?.name || 'Unknown'}</p>
+                          <p>{notification.profiles?.name || "Unknown"}</p>
                           <p className="text-muted-foreground">{notification.profiles?.email}</p>
                         </div>
                       </td>
                       <td className="p-3 hidden lg:table-cell">
                         <Badge variant="outline">
-                          {notification.notification_types?.notification_categories?.name || 'General'}
+                          {notification.notification_types?.notification_categories?.name ||
+                            "General"}
                         </Badge>
                       </td>
                       <td className="p-3">
-                        <Badge variant={notification.is_read ? 'secondary' : 'default'}>
-                          {notification.is_read ? 'Read' : 'Unread'}
+                        <Badge variant={notification.is_read ? "secondary" : "default"}>
+                          {notification.is_read ? "Read" : "Unread"}
                         </Badge>
                       </td>
                       <td className="p-3 text-sm text-muted-foreground">
-                        {format(new Date(notification.created_at), 'MMM d, yyyy HH:mm')}
+                        {format(new Date(notification.created_at), "MMM d, yyyy HH:mm")}
                       </td>
                     </tr>
                   ))}
@@ -508,8 +529,8 @@ export default function NotificationsManagement() {
               Delete Notifications
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {selectedIds.size} selected notification(s)?
-              This action cannot be undone.
+              Are you sure you want to delete {selectedIds.size} selected notification(s)? This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -533,8 +554,8 @@ export default function NotificationsManagement() {
               Run Notification Cleanup
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete all notifications older than {retentionSetting || '90'} days.
-              This action cannot be undone.
+              This will permanently delete all notifications older than {retentionSetting || "90"}{" "}
+              days. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -543,9 +564,7 @@ export default function NotificationsManagement() {
               onClick={() => cleanupMutation.mutate()}
               disabled={cleanupMutation.isPending}
             >
-              {cleanupMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
+              {cleanupMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Run Cleanup
             </AlertDialogAction>
           </AlertDialogFooter>

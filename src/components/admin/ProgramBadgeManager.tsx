@@ -1,21 +1,21 @@
-import { useState, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { toast } from 'sonner';
-import { Upload, Trash2, Plus, Award, ExternalLink, Loader2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { useState, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
+import { Upload, Trash2, Plus, Award, ExternalLink, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,8 +25,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+} from "@/components/ui/alert-dialog";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface ProgramBadge {
   id: string;
@@ -59,33 +59,37 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
+    name: "",
+    description: "",
     is_active: true,
   });
 
-  const [credentials, setCredentials] = useState<Array<{
-    service_name: string;
-    service_display_name: string;
-    credential_template_url: string;
-  }>>([]);
+  const [credentials, setCredentials] = useState<
+    Array<{
+      service_name: string;
+      service_display_name: string;
+      credential_template_url: string;
+    }>
+  >([]);
 
   const [newCredential, setNewCredential] = useState({
-    service_name: '',
-    service_display_name: '',
-    credential_template_url: '',
+    service_name: "",
+    service_display_name: "",
+    credential_template_url: "",
   });
 
   const { data: badge, isLoading } = useQuery({
-    queryKey: ['program-badge', programId],
+    queryKey: ["program-badge", programId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('program_badges')
-        .select(`
+        .from("program_badges")
+        .select(
+          `
           *,
           program_badge_credentials (*)
-        `)
-        .eq('program_id', programId)
+        `,
+        )
+        .eq("program_id", programId)
         .maybeSingle();
 
       if (error) throw error;
@@ -96,7 +100,7 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
   const createBadgeMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const { data: newBadge, error } = await supabase
-        .from('program_badges')
+        .from("program_badges")
         .insert({
           program_id: programId,
           name: data.name,
@@ -110,16 +114,14 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
 
       // Add credentials if any
       if (credentials.length > 0) {
-        const { error: credError } = await supabase
-          .from('program_badge_credentials')
-          .insert(
-            credentials.map((cred) => ({
-              program_badge_id: newBadge.id,
-              service_name: cred.service_name,
-              service_display_name: cred.service_display_name || null,
-              credential_template_url: cred.credential_template_url || null,
-            }))
-          );
+        const { error: credError } = await supabase.from("program_badge_credentials").insert(
+          credentials.map((cred) => ({
+            program_badge_id: newBadge.id,
+            service_name: cred.service_name,
+            service_display_name: cred.service_display_name || null,
+            credential_template_url: cred.credential_template_url || null,
+          })),
+        );
 
         if (credError) throw credError;
       }
@@ -127,8 +129,8 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
       return newBadge;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['program-badge', programId] });
-      toast.success('Badge created successfully');
+      queryClient.invalidateQueries({ queryKey: ["program-badge", programId] });
+      toast.success("Badge created successfully");
       setIsDialogOpen(false);
       resetForm();
     },
@@ -142,40 +144,35 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
       if (!badge) return;
 
       const { error } = await supabase
-        .from('program_badges')
+        .from("program_badges")
         .update({
           name: data.name,
           description: data.description || null,
           is_active: data.is_active,
         })
-        .eq('id', badge.id);
+        .eq("id", badge.id);
 
       if (error) throw error;
 
       // Update credentials - delete existing and insert new
-      await supabase
-        .from('program_badge_credentials')
-        .delete()
-        .eq('program_badge_id', badge.id);
+      await supabase.from("program_badge_credentials").delete().eq("program_badge_id", badge.id);
 
       if (credentials.length > 0) {
-        const { error: credError } = await supabase
-          .from('program_badge_credentials')
-          .insert(
-            credentials.map((cred) => ({
-              program_badge_id: badge.id,
-              service_name: cred.service_name,
-              service_display_name: cred.service_display_name || null,
-              credential_template_url: cred.credential_template_url || null,
-            }))
-          );
+        const { error: credError } = await supabase.from("program_badge_credentials").insert(
+          credentials.map((cred) => ({
+            program_badge_id: badge.id,
+            service_name: cred.service_name,
+            service_display_name: cred.service_display_name || null,
+            credential_template_url: cred.credential_template_url || null,
+          })),
+        );
 
         if (credError) throw credError;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['program-badge', programId] });
-      toast.success('Badge updated successfully');
+      queryClient.invalidateQueries({ queryKey: ["program-badge", programId] });
+      toast.success("Badge updated successfully");
       setIsDialogOpen(false);
     },
     onError: (error: any) => {
@@ -189,19 +186,16 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
 
       // Delete image from storage if exists
       if (badge.image_path) {
-        await supabase.storage.from('program-logos').remove([badge.image_path]);
+        await supabase.storage.from("program-logos").remove([badge.image_path]);
       }
 
-      const { error } = await supabase
-        .from('program_badges')
-        .delete()
-        .eq('id', badge.id);
+      const { error } = await supabase.from("program_badges").delete().eq("id", badge.id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['program-badge', programId] });
-      toast.success('Badge deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ["program-badge", programId] });
+      toast.success("Badge deleted successfully");
       setShowDeleteDialog(false);
     },
     onError: (error: any) => {
@@ -210,24 +204,24 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
   });
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', is_active: true });
+    setFormData({ name: "", description: "", is_active: true });
     setCredentials([]);
-    setNewCredential({ service_name: '', service_display_name: '', credential_template_url: '' });
+    setNewCredential({ service_name: "", service_display_name: "", credential_template_url: "" });
   };
 
   const handleEditOpen = () => {
     if (badge) {
       setFormData({
         name: badge.name,
-        description: badge.description || '',
+        description: badge.description || "",
         is_active: badge.is_active,
       });
       setCredentials(
         badge.program_badge_credentials.map((c) => ({
           service_name: c.service_name,
-          service_display_name: c.service_display_name || '',
-          credential_template_url: c.credential_template_url || '',
-        }))
+          service_display_name: c.service_display_name || "",
+          credential_template_url: c.credential_template_url || "",
+        })),
       );
     }
     setIsDialogOpen(true);
@@ -240,11 +234,11 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
 
   const addCredential = () => {
     if (!newCredential.service_name.trim()) {
-      toast.error('Please enter a service name');
+      toast.error("Please enter a service name");
       return;
     }
     setCredentials([...credentials, { ...newCredential }]);
-    setNewCredential({ service_name: '', service_display_name: '', credential_template_url: '' });
+    setNewCredential({ service_name: "", service_display_name: "", credential_template_url: "" });
   };
 
   const removeCredential = (index: number) => {
@@ -254,7 +248,7 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      toast.error('Please enter a badge name');
+      toast.error("Please enter a badge name");
       return;
     }
 
@@ -269,13 +263,13 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
     const file = e.target.files?.[0];
     if (!file || !badge) return;
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      toast.error('Image must be less than 2MB');
+      toast.error("Image must be less than 2MB");
       return;
     }
 
@@ -284,36 +278,36 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
     try {
       // Delete old image if exists
       if (badge.image_path) {
-        await supabase.storage.from('program-logos').remove([badge.image_path]);
+        await supabase.storage.from("program-logos").remove([badge.image_path]);
       }
 
       // Upload new image
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split(".").pop();
       const fileName = `badge-${Date.now()}.${fileExt}`;
       const filePath = `${programId}/badges/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('program-logos')
+        .from("program-logos")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       // Update badge with image path
       const { error: updateError } = await supabase
-        .from('program_badges')
+        .from("program_badges")
         .update({ image_path: filePath })
-        .eq('id', badge.id);
+        .eq("id", badge.id);
 
       if (updateError) throw updateError;
 
-      toast.success('Badge image uploaded successfully');
-      queryClient.invalidateQueries({ queryKey: ['program-badge', programId] });
+      toast.success("Badge image uploaded successfully");
+      queryClient.invalidateQueries({ queryKey: ["program-badge", programId] });
     } catch (error: any) {
       toast.error(`Failed to upload image: ${error.message}`);
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
     }
   };
@@ -322,24 +316,24 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
     if (!badge?.image_path) return;
 
     try {
-      await supabase.storage.from('program-logos').remove([badge.image_path]);
+      await supabase.storage.from("program-logos").remove([badge.image_path]);
 
       const { error } = await supabase
-        .from('program_badges')
+        .from("program_badges")
         .update({ image_path: null })
-        .eq('id', badge.id);
+        .eq("id", badge.id);
 
       if (error) throw error;
 
-      toast.success('Badge image removed');
-      queryClient.invalidateQueries({ queryKey: ['program-badge', programId] });
+      toast.success("Badge image removed");
+      queryClient.invalidateQueries({ queryKey: ["program-badge", programId] });
     } catch (error: any) {
       toast.error(`Failed to remove image: ${error.message}`);
     }
   };
 
   const getPublicUrl = (path: string) => {
-    const { data } = supabase.storage.from('program-logos').getPublicUrl(path);
+    const { data } = supabase.storage.from("program-logos").getPublicUrl(path);
     return data.publicUrl;
   };
 
@@ -362,9 +356,7 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
           <Award className="h-5 w-5" />
           Program Badge
         </CardTitle>
-        <CardDescription>
-          Configure a completion badge for this program
-        </CardDescription>
+        <CardDescription>Configure a completion badge for this program</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {badge ? (
@@ -437,7 +429,7 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
                 ) : (
                   <Upload className="h-4 w-4 mr-2" />
                 )}
-                {badge.image_path ? 'Change Image' : 'Upload Image'}
+                {badge.image_path ? "Change Image" : "Upload Image"}
               </Button>
               <Button variant="outline" size="sm" onClick={handleEditOpen}>
                 Edit Badge
@@ -467,9 +459,7 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>
-                {badge ? 'Edit Badge' : 'Create Badge'}
-              </DialogTitle>
+              <DialogTitle>{badge ? "Edit Badge" : "Create Badge"}</DialogTitle>
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -515,11 +505,18 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
                 {credentials.length > 0 && (
                   <div className="space-y-2">
                     {credentials.map((cred, index) => (
-                      <div key={index} className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg"
+                      >
                         <div className="flex-1">
-                          <p className="font-medium text-sm">{cred.service_display_name || cred.service_name}</p>
+                          <p className="font-medium text-sm">
+                            {cred.service_display_name || cred.service_name}
+                          </p>
                           {cred.credential_template_url && (
-                            <p className="text-xs text-muted-foreground truncate">{cred.credential_template_url}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {cred.credential_template_url}
+                            </p>
                           )}
                         </div>
                         <Button
@@ -542,7 +539,9 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
                       <Input
                         id="service_name"
                         value={newCredential.service_name}
-                        onChange={(e) => setNewCredential({ ...newCredential, service_name: e.target.value })}
+                        onChange={(e) =>
+                          setNewCredential({ ...newCredential, service_name: e.target.value })
+                        }
                         placeholder="e.g., credly, accredible"
                       />
                     </div>
@@ -551,7 +550,12 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
                       <Input
                         id="service_display_name"
                         value={newCredential.service_display_name}
-                        onChange={(e) => setNewCredential({ ...newCredential, service_display_name: e.target.value })}
+                        onChange={(e) =>
+                          setNewCredential({
+                            ...newCredential,
+                            service_display_name: e.target.value,
+                          })
+                        }
                         placeholder="e.g., Credly"
                       />
                     </div>
@@ -560,7 +564,12 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
                       <Input
                         id="credential_url"
                         value={newCredential.credential_template_url}
-                        onChange={(e) => setNewCredential({ ...newCredential, credential_template_url: e.target.value })}
+                        onChange={(e) =>
+                          setNewCredential({
+                            ...newCredential,
+                            credential_template_url: e.target.value,
+                          })
+                        }
                         placeholder="https://..."
                       />
                     </div>
@@ -576,11 +585,14 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createBadgeMutation.isPending || updateBadgeMutation.isPending}>
+                <Button
+                  type="submit"
+                  disabled={createBadgeMutation.isPending || updateBadgeMutation.isPending}
+                >
                   {(createBadgeMutation.isPending || updateBadgeMutation.isPending) && (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   )}
-                  {badge ? 'Update Badge' : 'Create Badge'}
+                  {badge ? "Update Badge" : "Create Badge"}
                 </Button>
               </div>
             </form>
@@ -592,7 +604,8 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Badge?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete the badge and all associated credentials. This action cannot be undone.
+                This will permanently delete the badge and all associated credentials. This action
+                cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

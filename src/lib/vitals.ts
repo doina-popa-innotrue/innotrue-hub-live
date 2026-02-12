@@ -1,4 +1,4 @@
-import { onCLS, onINP, onLCP, onFCP, onTTFB, type Metric } from 'web-vitals';
+import { onCLS, onINP, onLCP, onFCP, onTTFB, type Metric } from "web-vitals";
 
 /**
  * Reports Core Web Vitals metrics.
@@ -20,9 +20,9 @@ function sendToAnalytics(metric: Metric) {
 
   // Send to Sentry as custom measurement if available
   try {
-    import('@sentry/react').then((Sentry) => {
+    import("@sentry/react").then((Sentry) => {
       Sentry.metrics?.distribution(metric.name, metric.value, {
-        unit: metric.name === 'CLS' ? '' : 'millisecond',
+        unit: metric.name === "CLS" ? "" : "millisecond",
       });
     });
   } catch {

@@ -1,20 +1,20 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@/hooks/use-toast';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
 import {
   WHEEL_OF_LIFE_CATEGORIES,
   WHEEL_CATEGORY_DESCRIPTIONS,
   WheelCategory,
-} from '@/lib/wheelOfLifeCategories';
+} from "@/lib/wheelOfLifeCategories";
 import {
   RadarChart,
   PolarGrid,
@@ -22,13 +22,27 @@ import {
   PolarRadiusAxis,
   Radar,
   ResponsiveContainer,
-  Tooltip
-} from 'recharts';
-import { Target, Mail, Download, UserPlus, Loader2, ArrowRight, ArrowLeft, Check, Zap, Rocket, TrendingUp, Crown, Sparkles } from 'lucide-react';
-import { z } from 'zod';
-import { generateWheelPdf } from '@/lib/wheelPdfExport';
+  Tooltip,
+} from "recharts";
+import {
+  Target,
+  Mail,
+  Download,
+  UserPlus,
+  Loader2,
+  ArrowRight,
+  ArrowLeft,
+  Check,
+  Zap,
+  Rocket,
+  TrendingUp,
+  Crown,
+  Sparkles,
+} from "lucide-react";
+import { z } from "zod";
+import { generateWheelPdf } from "@/lib/wheelPdfExport";
 
-const emailSchema = z.string().email('Please enter a valid email address');
+const emailSchema = z.string().email("Please enter a valid email address");
 
 interface Plan {
   id: string;
@@ -40,69 +54,70 @@ interface Plan {
 
 const PLANS: Plan[] = [
   {
-    id: 'free',
-    key: 'free',
-    name: 'Free',
-    description: 'Get started with InnoTrue Hub and explore how structured development works.',
+    id: "free",
+    key: "free",
+    name: "Free",
+    description: "Get started with InnoTrue Hub and explore how structured development works.",
     tier_level: 1,
   },
   {
-    id: 'base',
-    key: 'base',
-    name: 'Base',
-    description: 'Understand your direction, strengths, and next steps before committing deeper.',
+    id: "base",
+    key: "base",
+    name: "Base",
+    description: "Understand your direction, strengths, and next steps before committing deeper.",
     tier_level: 2,
   },
   {
-    id: 'pro',
-    key: 'pro',
-    name: 'Pro',
-    description: 'Your system for lifelong development with learning, assessment, and progress tracking.',
+    id: "pro",
+    key: "pro",
+    name: "Pro",
+    description:
+      "Your system for lifelong development with learning, assessment, and progress tracking.",
     tier_level: 3,
   },
   {
-    id: 'advanced',
-    key: 'advanced',
-    name: 'Advanced',
-    description: 'For timeframes of deeper focus with increased intensity.',
+    id: "advanced",
+    key: "advanced",
+    name: "Advanced",
+    description: "For timeframes of deeper focus with increased intensity.",
     tier_level: 4,
   },
   {
-    id: 'elite',
-    key: 'elite',
-    name: 'Elite',
-    description: 'For high-stakes phases: exams, transitions, or critical career moments.',
+    id: "elite",
+    key: "elite",
+    name: "Elite",
+    description: "For high-stakes phases: exams, transitions, or critical career moments.",
     tier_level: 5,
   },
 ];
 
-type Step = 'questionnaire' | 'email' | 'results' | 'plans';
+type Step = "questionnaire" | "email" | "results" | "plans";
 
 export default function WheelAssessment() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  const [step, setStep] = useState<Step>('questionnaire');
-  const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [name, setName] = useState('');
+
+  const [step, setStep] = useState<Step>("questionnaire");
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [name, setName] = useState("");
   const [subscribeNewsletter, setSubscribeNewsletter] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState("");
   const [sending, setSending] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [signingUp, setSigningUp] = useState(false);
-  
+
   const [ratings, setRatings] = useState<Record<WheelCategory, number>>(() => {
     const initial: Record<WheelCategory, number> = {} as Record<WheelCategory, number>;
-    (Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).forEach(cat => {
+    (Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).forEach((cat) => {
       initial[cat] = 5;
     });
     return initial;
   });
 
   const getChartData = () => {
-    return (Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).map(cat => ({
+    return (Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).map((cat) => ({
       category: WHEEL_OF_LIFE_CATEGORIES[cat],
       value: ratings[cat] || 0,
       fullMark: 10,
@@ -127,60 +142,58 @@ export default function WheelAssessment() {
       setEmailError(result.error.errors[0].message);
       return;
     }
-    setEmailError('');
-    
+    setEmailError("");
+
     setSending(true);
     try {
       // Save to ac_signup_intents
-      const { error } = await supabase
-        .from('ac_signup_intents')
-        .insert({
-          email: email.trim().toLowerCase(),
-          name: name.trim() || null,
-          status: 'wheel_completed',
-          notes: JSON.stringify({
-            wheel_ratings: ratings,
-            notes: notes,
-            subscribe_newsletter: subscribeNewsletter,
-          }),
-          consent_given: subscribeNewsletter,
-        });
+      const { error } = await supabase.from("ac_signup_intents").insert({
+        email: email.trim().toLowerCase(),
+        name: name.trim() || null,
+        status: "wheel_completed",
+        notes: JSON.stringify({
+          wheel_ratings: ratings,
+          notes: notes,
+          subscribe_newsletter: subscribeNewsletter,
+        }),
+        consent_given: subscribeNewsletter,
+      });
 
-      if (error && !error.message.includes('duplicate')) {
-        console.error('Error saving intent:', error);
+      if (error && !error.message.includes("duplicate")) {
+        console.error("Error saving intent:", error);
       }
 
       // Send PDF via email
-      const { error: emailError } = await supabase.functions.invoke('send-wheel-pdf', {
+      const { error: emailError } = await supabase.functions.invoke("send-wheel-pdf", {
         body: {
           email: email.trim().toLowerCase(),
-          name: name.trim() || 'Friend',
+          name: name.trim() || "Friend",
           ratings,
           notes,
         },
       });
 
       if (emailError) {
-        console.error('Error sending email:', emailError);
+        console.error("Error sending email:", emailError);
         toast({
-          title: 'Email sending failed',
-          description: 'We couldn\'t send the PDF to your email, but you can still download it.',
-          variant: 'destructive',
+          title: "Email sending failed",
+          description: "We couldn't send the PDF to your email, but you can still download it.",
+          variant: "destructive",
         });
       } else {
         toast({
-          title: 'PDF sent!',
+          title: "PDF sent!",
           description: `We've sent your Wheel of Life results to ${email}`,
         });
       }
 
-      setStep('results');
+      setStep("results");
     } catch (err) {
-      console.error('Error:', err);
+      console.error("Error:", err);
       toast({
-        title: 'Error',
-        description: 'Something went wrong. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setSending(false);
@@ -190,17 +203,17 @@ export default function WheelAssessment() {
   const handleDownloadPdf = async () => {
     setDownloadingPdf(true);
     try {
-      await generateWheelPdf(name || 'Your', ratings, notes);
+      await generateWheelPdf(name || "Your", ratings, notes);
       toast({
-        title: 'PDF Downloaded',
-        description: 'Your Wheel of Life results have been saved.',
+        title: "PDF Downloaded",
+        description: "Your Wheel of Life results have been saved.",
       });
     } catch (err) {
-      console.error('Error generating PDF:', err);
+      console.error("Error generating PDF:", err);
       toast({
-        title: 'Error',
-        description: 'Failed to generate PDF. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setDownloadingPdf(false);
@@ -213,29 +226,29 @@ export default function WheelAssessment() {
       // Update the signup intent with plan interest
       if (selectedPlan) {
         await supabase
-          .from('ac_signup_intents')
+          .from("ac_signup_intents")
           .update({
             plan_interest: selectedPlan,
-            status: 'plan_selected',
+            status: "plan_selected",
           })
-          .eq('email', email.trim().toLowerCase());
+          .eq("email", email.trim().toLowerCase());
       }
 
       // Navigate to auth page with prefilled data
       const params = new URLSearchParams({
         email: email.trim().toLowerCase(),
         name: name.trim(),
-        wheel_completed: 'true',
-        plan_interest: selectedPlan || '',
+        wheel_completed: "true",
+        plan_interest: selectedPlan || "",
       });
-      
+
       navigate(`/auth?${params.toString()}`);
     } catch (err) {
-      console.error('Error:', err);
+      console.error("Error:", err);
       toast({
-        title: 'Error',
-        description: 'Something went wrong. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setSigningUp(false);
@@ -244,15 +257,15 @@ export default function WheelAssessment() {
 
   const getPlanIcon = (planKey: string) => {
     switch (planKey) {
-      case 'free':
+      case "free":
         return <Zap className="h-5 w-5" />;
-      case 'base':
+      case "base":
         return <Sparkles className="h-5 w-5" />;
-      case 'pro':
+      case "pro":
         return <Rocket className="h-5 w-5" />;
-      case 'advanced':
+      case "advanced":
         return <TrendingUp className="h-5 w-5" />;
-      case 'elite':
+      case "elite":
         return <Crown className="h-5 w-5" />;
       default:
         return <Zap className="h-5 w-5" />;
@@ -278,22 +291,33 @@ export default function WheelAssessment() {
         {/* Progress indicator */}
         <div className="flex justify-center mb-8">
           <div className="flex items-center gap-2">
-            {['questionnaire', 'email', 'results', 'plans'].map((s, idx) => (
+            {["questionnaire", "email", "results", "plans"].map((s, idx) => (
               <div key={s} className="flex items-center">
-                <div className={`w-3 h-3 rounded-full ${
-                  step === s ? 'bg-primary' : 
-                  ['questionnaire', 'email', 'results', 'plans'].indexOf(step) > idx ? 'bg-primary/60' : 'bg-muted-foreground/30'
-                }`} />
-                {idx < 3 && <div className={`w-8 h-0.5 ${
-                  ['questionnaire', 'email', 'results', 'plans'].indexOf(step) > idx ? 'bg-primary/60' : 'bg-muted-foreground/30'
-                }`} />}
+                <div
+                  className={`w-3 h-3 rounded-full ${
+                    step === s
+                      ? "bg-primary"
+                      : ["questionnaire", "email", "results", "plans"].indexOf(step) > idx
+                        ? "bg-primary/60"
+                        : "bg-muted-foreground/30"
+                  }`}
+                />
+                {idx < 3 && (
+                  <div
+                    className={`w-8 h-0.5 ${
+                      ["questionnaire", "email", "results", "plans"].indexOf(step) > idx
+                        ? "bg-primary/60"
+                        : "bg-muted-foreground/30"
+                    }`}
+                  />
+                )}
               </div>
             ))}
           </div>
         </div>
 
         {/* Step: Questionnaire */}
-        {step === 'questionnaire' && (
+        {step === "questionnaire" && (
           <Card>
             <CardHeader>
               <CardTitle>Rate Your Life Balance</CardTitle>
@@ -303,7 +327,7 @@ export default function WheelAssessment() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
-                {(Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).map(cat => (
+                {(Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).map((cat) => (
                   <div key={cat} className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
@@ -312,11 +336,13 @@ export default function WheelAssessment() {
                           {WHEEL_CATEGORY_DESCRIPTIONS[cat]}
                         </p>
                       </div>
-                      <Badge variant="secondary" className="ml-2">{ratings[cat]}</Badge>
+                      <Badge variant="secondary" className="ml-2">
+                        {ratings[cat]}
+                      </Badge>
                     </div>
                     <Slider
                       value={[ratings[cat]]}
-                      onValueChange={([value]) => setRatings(prev => ({ ...prev, [cat]: value }))}
+                      onValueChange={([value]) => setRatings((prev) => ({ ...prev, [cat]: value }))}
                       min={1}
                       max={10}
                       step={1}
@@ -337,7 +363,7 @@ export default function WheelAssessment() {
               </div>
 
               <div className="flex justify-end">
-                <Button onClick={() => setStep('email')} size="lg">
+                <Button onClick={() => setStep("email")} size="lg">
                   Continue
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -347,7 +373,7 @@ export default function WheelAssessment() {
         )}
 
         {/* Step: Email Collection */}
-        {step === 'email' && (
+        {step === "email" && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -380,13 +406,11 @@ export default function WheelAssessment() {
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
-                      setEmailError('');
+                      setEmailError("");
                     }}
-                    className={emailError ? 'border-destructive' : ''}
+                    className={emailError ? "border-destructive" : ""}
                   />
-                  {emailError && (
-                    <p className="text-sm text-destructive">{emailError}</p>
-                  )}
+                  {emailError && <p className="text-sm text-destructive">{emailError}</p>}
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -395,14 +419,17 @@ export default function WheelAssessment() {
                     checked={subscribeNewsletter}
                     onCheckedChange={(checked) => setSubscribeNewsletter(checked === true)}
                   />
-                  <Label htmlFor="newsletter" className="text-sm text-muted-foreground cursor-pointer">
+                  <Label
+                    htmlFor="newsletter"
+                    className="text-sm text-muted-foreground cursor-pointer"
+                  >
                     Keep me updated with tips on personal development
                   </Label>
                 </div>
               </div>
 
               <div className="flex justify-between">
-                <Button variant="outline" onClick={() => setStep('questionnaire')}>
+                <Button variant="outline" onClick={() => setStep("questionnaire")}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Button>
@@ -425,14 +452,12 @@ export default function WheelAssessment() {
         )}
 
         {/* Step: Results */}
-        {step === 'results' && (
+        {step === "results" && (
           <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Your Wheel of Life Results</CardTitle>
-                <CardDescription>
-                  Here's a snapshot of your current life balance
-                </CardDescription>
+                <CardDescription>Here's a snapshot of your current life balance</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-6 lg:grid-cols-2">
@@ -461,16 +486,24 @@ export default function WheelAssessment() {
                     </div>
 
                     <div className="p-4 rounded-lg border">
-                      <p className="text-sm text-muted-foreground mb-2">Areas with most growth potential:</p>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Areas with most growth potential:
+                      </p>
                       <div className="flex flex-wrap gap-2">
-                        {getLowestCategories().map(cat => (
-                          <Badge key={cat} variant="secondary">{cat}</Badge>
+                        {getLowestCategories().map((cat) => (
+                          <Badge key={cat} variant="secondary">
+                            {cat}
+                          </Badge>
                         ))}
                       </div>
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <Button onClick={handleDownloadPdf} variant="outline" disabled={downloadingPdf}>
+                      <Button
+                        onClick={handleDownloadPdf}
+                        variant="outline"
+                        disabled={downloadingPdf}
+                      >
                         {downloadingPdf ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
@@ -485,7 +518,7 @@ export default function WheelAssessment() {
             </Card>
 
             <div className="flex justify-center">
-              <Button onClick={() => setStep('plans')} size="lg">
+              <Button onClick={() => setStep("plans")} size="lg">
                 Explore Development Plans
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -494,7 +527,7 @@ export default function WheelAssessment() {
         )}
 
         {/* Step: Plans */}
-        {step === 'plans' && (
+        {step === "plans" && (
           <div className="space-y-6">
             <div className="text-center">
               <h2 className="text-2xl font-bold mb-2">Choose Your Development Path</h2>
@@ -504,11 +537,11 @@ export default function WheelAssessment() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {PLANS.filter(p => p.key !== 'free').map((plan) => (
+              {PLANS.filter((p) => p.key !== "free").map((plan) => (
                 <Card
                   key={plan.id}
                   className={`cursor-pointer transition-all hover:border-primary/50 ${
-                    selectedPlan === plan.key ? 'border-primary ring-2 ring-primary/20' : ''
+                    selectedPlan === plan.key ? "border-primary ring-2 ring-primary/20" : ""
                   }`}
                   onClick={() => setSelectedPlan(plan.key)}
                 >
@@ -517,9 +550,7 @@ export default function WheelAssessment() {
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
                         {getPlanIcon(plan.key)}
                       </div>
-                      {selectedPlan === plan.key && (
-                        <Check className="h-5 w-5 text-primary" />
-                      )}
+                      {selectedPlan === plan.key && <Check className="h-5 w-5 text-primary" />}
                     </div>
                     <CardTitle className="text-lg">{plan.name}</CardTitle>
                   </CardHeader>
@@ -540,7 +571,7 @@ export default function WheelAssessment() {
                     </p>
                   </div>
                   <div className="flex gap-3">
-                    <Button variant="outline" onClick={() => setStep('results')}>
+                    <Button variant="outline" onClick={() => setStep("results")}>
                       <ArrowLeft className="mr-2 h-4 w-4" />
                       Back
                     </Button>
@@ -558,7 +589,7 @@ export default function WheelAssessment() {
             </Card>
 
             <div className="text-center">
-              <Button variant="link" onClick={() => navigate('/')}>
+              <Button variant="link" onClick={() => navigate("/")}>
                 Just browsing? Return to homepage
               </Button>
             </div>

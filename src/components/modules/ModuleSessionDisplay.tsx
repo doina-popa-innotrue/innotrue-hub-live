@@ -6,7 +6,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, MapPin, Video, User, Users, ExternalLink, MessageSquare, RefreshCw, Download, AlertTriangle } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Video,
+  User,
+  Users,
+  ExternalLink,
+  MessageSquare,
+  RefreshCw,
+  Download,
+  AlertTriangle,
+} from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { ClientSessionForm } from "./ClientSessionForm";
@@ -44,16 +56,23 @@ interface ModuleSessionDisplayProps {
   moduleType?: string; // Optional - if provided, skips internal lookup
 }
 
-export function ModuleSessionDisplay({ moduleId, enrollmentId, schedulingUrl, moduleName = "Module", defaultDuration = 60, moduleType }: ModuleSessionDisplayProps) {
+export function ModuleSessionDisplay({
+  moduleId,
+  enrollmentId,
+  schedulingUrl,
+  moduleName = "Module",
+  defaultDuration = 60,
+  moduleType,
+}: ModuleSessionDisplayProps) {
   const { user } = useAuth();
 
   // Use the resilient hook for capability check (proxy-first with fallback)
-  const { 
-    hasCapability: resilientCapability, 
-    isLoading: isLoadingResilient, 
+  const {
+    hasCapability: resilientCapability,
+    isLoading: isLoadingResilient,
     isError: isCapabilityError,
     error: capabilityError,
-    retry: retryCapability 
+    retry: retryCapability,
   } = useModuleSessionCapability({
     moduleType,
     moduleId: moduleType ? undefined : moduleId,
@@ -63,14 +82,19 @@ export function ModuleSessionDisplay({ moduleId, enrollmentId, schedulingUrl, mo
   // Legacy hook for non-moduleType path (still used as additional fallback)
   const { requiresSession, isLoading: isLoadingLegacy } = useModuleRequiresSession(
     moduleType ? undefined : moduleId,
-    !moduleType && resilientCapability === null // Only run if resilient didn't work
+    !moduleType && resilientCapability === null, // Only run if resilient didn't work
   );
 
   // Determine capability: prefer resilient result, fall back to legacy
   const hasSessionCapability = resilientCapability ?? requiresSession;
-  const isLoadingCapability = isLoadingResilient || (resilientCapability === null && isLoadingLegacy);
+  const isLoadingCapability =
+    isLoadingResilient || (resilientCapability === null && isLoadingLegacy);
 
-  const { data: sessions, isLoading, refetch } = useQuery({
+  const {
+    data: sessions,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["module-sessions-client", moduleId, enrollmentId, user?.id],
     queryFn: async () => {
       // Use the safe view which hides meeting_url from non-confirmed participants
@@ -116,16 +140,18 @@ export function ModuleSessionDisplay({ moduleId, enrollmentId, schedulingUrl, mo
 
   // Build context-aware booking URL with enrollment/module metadata
   // Note: Supabase stores name in user_metadata.name (not full_name)
-  const contextAwareBookingUrl = schedulingUrl ? buildCalcomBookingUrl({
-    schedulingUrl,
-    enrollmentId,
-    moduleId,
-    userId: user?.id,
-    sessionType: 'individual',
-    email: user?.email || undefined,
-    name: (user?.user_metadata?.full_name || user?.user_metadata?.name) as string | undefined,
-    redirectUrl: window.location.href,
-  }) : null;
+  const contextAwareBookingUrl = schedulingUrl
+    ? buildCalcomBookingUrl({
+        schedulingUrl,
+        enrollmentId,
+        moduleId,
+        userId: user?.id,
+        sessionType: "individual",
+        email: user?.email || undefined,
+        name: (user?.user_metadata?.full_name || user?.user_metadata?.name) as string | undefined,
+        redirectUrl: window.location.href,
+      })
+    : null;
 
   // Sessions are now auto-accepted - clients can reschedule via Cal.com if needed
 
@@ -182,27 +208,36 @@ export function ModuleSessionDisplay({ moduleId, enrollmentId, schedulingUrl, mo
   // The "Book Session" button will only appear if schedulingUrl is available
 
   const hasSessions = sessions && sessions.length > 0;
-  
+
   // Check if there's an active scheduled session with a date (hide Book Session button in this case)
   const hasActiveScheduledSession = sessions?.some(
-    s => s.status === 'scheduled' && s.session_date && new Date(s.session_date).getTime() > Date.now()
+    (s) =>
+      s.status === "scheduled" && s.session_date && new Date(s.session_date).getTime() > Date.now(),
   );
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed": return "default";
-      case "rescheduled": return "secondary";
-      case "scheduled": return "outline";
-      default: return "outline";
+      case "completed":
+        return "default";
+      case "rescheduled":
+        return "secondary";
+      case "scheduled":
+        return "outline";
+      default:
+        return "outline";
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "scheduled": return "Confirmed";
-      case "completed": return "Completed";
-      case "rescheduled": return "Rescheduled";
-      default: return status;
+      case "scheduled":
+        return "Confirmed";
+      case "completed":
+        return "Completed";
+      case "rescheduled":
+        return "Rescheduled";
+      default:
+        return status;
     }
   };
 
@@ -212,10 +247,10 @@ export function ModuleSessionDisplay({ moduleId, enrollmentId, schedulingUrl, mo
 
   const handleDownloadICS = (session: ModuleSession) => {
     if (!session.session_date) return;
-    
+
     const startDate = new Date(session.session_date);
     const endDate = new Date(startDate.getTime() + (session.duration_minutes || 60) * 60 * 1000);
-    
+
     downloadICSFile({
       id: session.id,
       title: session.title || moduleName,
@@ -224,7 +259,7 @@ export function ModuleSessionDisplay({ moduleId, enrollmentId, schedulingUrl, mo
       endDate,
       location: session.meeting_url || session.location || undefined,
     });
-    
+
     toast.success("Calendar file downloaded");
   };
 
@@ -258,171 +293,194 @@ export function ModuleSessionDisplay({ moduleId, enrollmentId, schedulingUrl, mo
           )}
         </div>
       </div>
-      
+
       {hasSessions && (
-      <div className="space-y-3">
-        {sessions!.map((session) => {
-          const isClientRequest = session.source === 'client_request';
-          const isExternalBooking = session.source === 'client_external';
-          const isPendingConfirmation = isClientRequest && !session.session_date;
+        <div className="space-y-3">
+          {sessions!.map((session) => {
+            const isClientRequest = session.source === "client_request";
+            const isExternalBooking = session.source === "client_external";
+            const isPendingConfirmation = isClientRequest && !session.session_date;
 
-          return (
-            <Card key={session.id} className={`bg-muted/50 ${isPendingConfirmation ? 'border-warning/50' : ''}`}>
-              <CardContent className="pt-4">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium">{session.title}</span>
-                    <Badge variant={session.session_type === "group" ? "secondary" : "outline"}>
-                      {session.session_type === "group" ? (
-                        <><Users className="h-3 w-3 mr-1" />Group</>
-                      ) : (
-                        <><User className="h-3 w-3 mr-1" />1:1</>
+            return (
+              <Card
+                key={session.id}
+                className={`bg-muted/50 ${isPendingConfirmation ? "border-warning/50" : ""}`}
+              >
+                <CardContent className="pt-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium">{session.title}</span>
+                      <Badge variant={session.session_type === "group" ? "secondary" : "outline"}>
+                        {session.session_type === "group" ? (
+                          <>
+                            <Users className="h-3 w-3 mr-1" />
+                            Group
+                          </>
+                        ) : (
+                          <>
+                            <User className="h-3 w-3 mr-1" />
+                            1:1
+                          </>
+                        )}
+                      </Badge>
+                      {isClientRequest && isPendingConfirmation && (
+                        <Badge variant="outline" className="border-warning text-warning">
+                          <MessageSquare className="h-3 w-3 mr-1" />
+                          Awaiting Confirmation
+                        </Badge>
                       )}
-                    </Badge>
-                    {isClientRequest && isPendingConfirmation && (
-                      <Badge variant="outline" className="border-warning text-warning">
-                        <MessageSquare className="h-3 w-3 mr-1" />
-                        Awaiting Confirmation
-                      </Badge>
-                    )}
-                    {isExternalBooking && (
-                      <Badge variant="outline" className="border-muted-foreground">
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        External Booking
-                      </Badge>
-                    )}
-                    {!isPendingConfirmation && (
-                      <Badge variant={getStatusColor(session.status)}>
-                        {getStatusLabel(session.status)}
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  {session.description && (
-                    <p className="text-sm text-muted-foreground">{session.description}</p>
-                  )}
-
-                  {/* Show request notes for client-initiated sessions */}
-                  {session.request_notes && (
-                    <div className="text-sm bg-muted p-2 rounded border-l-2 border-primary">
-                      <span className="font-medium text-xs text-muted-foreground">Your notes:</span>
-                      <p className="mt-0.5">{session.request_notes}</p>
+                      {isExternalBooking && (
+                        <Badge variant="outline" className="border-muted-foreground">
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          External Booking
+                        </Badge>
+                      )}
+                      {!isPendingConfirmation && (
+                        <Badge variant={getStatusColor(session.status)}>
+                          {getStatusLabel(session.status)}
+                        </Badge>
+                      )}
                     </div>
-                  )}
 
-                  {/* Show preferred date for pending requests */}
-                  {isPendingConfirmation && session.preferred_date && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      <span>Preferred: {format(new Date(session.preferred_date), "EEEE, MMMM d, yyyy 'at' h:mm a")}</span>
-                    </div>
-                  )}
-                  
-                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    {session.session_date && (
-                      <div className="flex items-center gap-1">
+                    {session.description && (
+                      <p className="text-sm text-muted-foreground">{session.description}</p>
+                    )}
+
+                    {/* Show request notes for client-initiated sessions */}
+                    {session.request_notes && (
+                      <div className="text-sm bg-muted p-2 rounded border-l-2 border-primary">
+                        <span className="font-medium text-xs text-muted-foreground">
+                          Your notes:
+                        </span>
+                        <p className="mt-0.5">{session.request_notes}</p>
+                      </div>
+                    )}
+
+                    {/* Show preferred date for pending requests */}
+                    {isPendingConfirmation && session.preferred_date && (
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Calendar className="h-3 w-3" />
-                        {format(new Date(session.session_date), "EEEE, MMMM d, yyyy 'at' h:mm a")}
+                        <span>
+                          Preferred:{" "}
+                          {format(
+                            new Date(session.preferred_date),
+                            "EEEE, MMMM d, yyyy 'at' h:mm a",
+                          )}
+                        </span>
                       </div>
                     )}
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {session.duration_minutes} minutes
-                    </div>
-                    {session.location && (
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {session.location}
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Show scheduling link if no time set yet */}
-                  {!session.session_date && session.status === 'scheduled' && schedulingUrl && (
-                    <div className="pt-2 border-t">
-                      <a
-                        href={schedulingUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/90"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        Pick a Time
-                      </a>
-                    </div>
-                  )}
-                  
-                  {session.meeting_url && session.status === "scheduled" && (
-                    <div className="flex items-center gap-2 flex-wrap mt-2">
-                      <a
-                        href={session.meeting_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90"
-                      >
-                        <Video className="h-4 w-4" />
-                        Join Meeting
-                      </a>
-                      
-                      {/* Add to Calendar button */}
+                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                       {session.session_date && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDownloadICS(session)}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Add to Calendar
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(session.session_date), "EEEE, MMMM d, yyyy 'at' h:mm a")}
+                        </div>
                       )}
-                      
-                      {/* Reschedule button for Cal.com sessions */}
-                      {session.calcom_booking_uid && (
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {session.duration_minutes} minutes
+                      </div>
+                      {session.location && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {session.location}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Show scheduling link if no time set yet */}
+                    {!session.session_date && session.status === "scheduled" && schedulingUrl && (
+                      <div className="pt-2 border-t">
                         <a
-                          href={buildCalcomRescheduleUrl(session.calcom_booking_uid, undefined, window.location.href)}
+                          href={schedulingUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/90"
                         >
-                          <RefreshCw className="h-4 w-4" />
-                          Reschedule
+                          <ExternalLink className="h-4 w-4" />
+                          Pick a Time
                         </a>
-                      )}
-                      
-                      {/* For non-Cal.com sessions, offer to rebook if scheduling URL available */}
-                      {!session.calcom_booking_uid && contextAwareBookingUrl && (
+                      </div>
+                    )}
+
+                    {session.meeting_url && session.status === "scheduled" && (
+                      <div className="flex items-center gap-2 flex-wrap mt-2">
                         <a
-                          href={contextAwareBookingUrl}
+                          href={session.meeting_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/90"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90"
                         >
-                          <RefreshCw className="h-4 w-4" />
-                          Rebook
+                          <Video className="h-4 w-4" />
+                          Join Meeting
                         </a>
+
+                        {/* Add to Calendar button */}
+                        {session.session_date && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadICS(session)}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Add to Calendar
+                          </Button>
+                        )}
+
+                        {/* Reschedule button for Cal.com sessions */}
+                        {session.calcom_booking_uid && (
+                          <a
+                            href={buildCalcomRescheduleUrl(
+                              session.calcom_booking_uid,
+                              undefined,
+                              window.location.href,
+                            )}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/90"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                            Reschedule
+                          </a>
+                        )}
+
+                        {/* For non-Cal.com sessions, offer to rebook if scheduling URL available */}
+                        {!session.calcom_booking_uid && contextAwareBookingUrl && (
+                          <a
+                            href={contextAwareBookingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/90"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                            Rebook
+                          </a>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Add to Calendar for scheduled sessions without meeting URL */}
+                    {!session.meeting_url &&
+                      session.session_date &&
+                      session.status === "scheduled" && (
+                        <div className="flex items-center gap-2 flex-wrap mt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadICS(session)}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Add to Calendar
+                          </Button>
+                        </div>
                       )}
-                    </div>
-                  )}
-                  
-                  {/* Add to Calendar for scheduled sessions without meeting URL */}
-                  {!session.meeting_url && session.session_date && session.status === "scheduled" && (
-                    <div className="flex items-center gap-2 flex-wrap mt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadICS(session)}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Add to Calendar
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       )}
     </div>
   );

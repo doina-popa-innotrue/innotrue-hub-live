@@ -1,20 +1,30 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Sparkles, ChevronRight, Loader2, RefreshCw, Check, PenLine, Clock, FileText } from 'lucide-react';
-import { useReflectionPrompt } from '@/hooks/useReflectionPrompt';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
-import { useNavigate, Link } from 'react-router-dom';
-import { differenceInDays, format } from 'date-fns';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Sparkles,
+  ChevronRight,
+  Loader2,
+  RefreshCw,
+  Check,
+  PenLine,
+  Clock,
+  FileText,
+} from "lucide-react";
+import { useReflectionPrompt } from "@/hooks/useReflectionPrompt";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { useNavigate, Link } from "react-router-dom";
+import { differenceInDays, format } from "date-fns";
 
 export function WeeklyReflectionCard() {
-  const { prompt, isLoading, isGenerating, error, generatePrompt, answerPrompt } = useReflectionPrompt();
+  const { prompt, isLoading, isGenerating, error, generatePrompt, answerPrompt } =
+    useReflectionPrompt();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [reflectionContent, setReflectionContent] = useState('');
+  const [reflectionContent, setReflectionContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [reflectionCount, setReflectionCount] = useState<number>(0);
   const { user } = useAuth();
@@ -25,23 +35,23 @@ export function WeeklyReflectionCard() {
     const fetchReflectionCount = async () => {
       if (!user) return;
       const { count } = await supabase
-        .from('development_items')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('item_type', 'reflection');
+        .from("development_items")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("item_type", "reflection");
       setReflectionCount(count || 0);
     };
     fetchReflectionCount();
   }, [user]);
 
   const handleGeneratePrompt = async () => {
-    await generatePrompt('weekly', true); // Force generate new prompt
+    await generatePrompt("weekly", true); // Force generate new prompt
   };
 
-  const promptAge = prompt?.generated_at 
+  const promptAge = prompt?.generated_at
     ? differenceInDays(new Date(), new Date(prompt.generated_at))
     : 0;
-  
+
   const isPromptOld = promptAge > 7;
 
   const handleSubmitReflection = async () => {
@@ -51,10 +61,10 @@ export function WeeklyReflectionCard() {
     try {
       // Create the development item
       const { data: newItem, error: insertError } = await supabase
-        .from('development_items')
+        .from("development_items")
         .insert({
           user_id: user.id,
-          item_type: 'reflection',
+          item_type: "reflection",
           content: reflectionContent.trim(),
           prompt_id: prompt.id,
         })
@@ -62,20 +72,20 @@ export function WeeklyReflectionCard() {
         .single();
 
       if (insertError) {
-        console.error('Error saving reflection:', insertError);
-        toast.error('Failed to save reflection');
+        console.error("Error saving reflection:", insertError);
+        toast.error("Failed to save reflection");
         return;
       }
 
       // Mark prompt as answered
       await answerPrompt(newItem.id);
 
-      toast.success('Reflection saved!');
-      setReflectionContent('');
+      toast.success("Reflection saved!");
+      setReflectionContent("");
       setIsExpanded(false);
     } catch (err) {
-      console.error('Error submitting reflection:', err);
-      toast.error('Failed to save reflection');
+      console.error("Error submitting reflection:", err);
+      toast.error("Failed to save reflection");
     } finally {
       setIsSaving(false);
     }
@@ -116,9 +126,11 @@ export function WeeklyReflectionCard() {
   const ReflectionSummary = () => (
     <div className="flex items-center gap-2 text-sm text-muted-foreground">
       <FileText className="h-4 w-4" />
-      <span>{reflectionCount} self reflection{reflectionCount !== 1 ? 's' : ''} added</span>
-      <Link 
-        to="/development-items?type=reflection" 
+      <span>
+        {reflectionCount} self reflection{reflectionCount !== 1 ? "s" : ""} added
+      </span>
+      <Link
+        to="/development-items?type=reflection"
         className="text-primary hover:underline font-medium"
       >
         View all
@@ -143,8 +155,8 @@ export function WeeklyReflectionCard() {
                 </p>
               </div>
             </div>
-            <Button 
-              onClick={handleGeneratePrompt} 
+            <Button
+              onClick={handleGeneratePrompt}
               disabled={isGenerating}
               className="gap-2 w-full sm:w-auto bg-secondary hover:bg-secondary/90 text-secondary-foreground shrink-0"
             >
@@ -177,14 +189,17 @@ export function WeeklyReflectionCard() {
             <CardTitle className="text-lg">This Week's Reflection</CardTitle>
           </div>
           <div className="flex items-center gap-2">
-            {prompt.status === 'answered' && (
+            {prompt.status === "answered" && (
               <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
                 <Check className="h-3 w-3 mr-1" />
                 Answered
               </Badge>
             )}
             {isPromptOld && (
-              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+              <Badge
+                variant="outline"
+                className="bg-amber-500/10 text-amber-600 border-amber-500/30"
+              >
                 <Clock className="h-3 w-3 mr-1" />
                 {promptAge} days old
               </Badge>
@@ -196,22 +211,18 @@ export function WeeklyReflectionCard() {
         </CardDescription>
         {prompt.generated_at && (
           <p className="text-xs text-muted-foreground mt-1">
-            Generated on {format(new Date(prompt.generated_at), 'MMM d, yyyy')}
+            Generated on {format(new Date(prompt.generated_at), "MMM d, yyyy")}
           </p>
         )}
       </CardHeader>
       <CardContent className="space-y-4">
         {!isExpanded ? (
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button 
-              onClick={() => setIsExpanded(true)} 
-              className="flex-1 gap-2"
-              variant="default"
-            >
+            <Button onClick={() => setIsExpanded(true)} className="flex-1 gap-2" variant="default">
               <PenLine className="h-4 w-4" />
               Add Self Reflection
             </Button>
-            <Button 
+            <Button
               onClick={handleGeneratePrompt}
               disabled={isGenerating}
               variant="outline"
@@ -241,16 +252,16 @@ export function WeeklyReflectionCard() {
               autoFocus
             />
             <div className="flex gap-2 justify-end">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setIsExpanded(false);
-                  setReflectionContent('');
+                  setReflectionContent("");
                 }}
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleSubmitReflection}
                 disabled={!reflectionContent.trim() || isSaving}
               >
@@ -260,7 +271,7 @@ export function WeeklyReflectionCard() {
                     Saving...
                   </>
                 ) : (
-                  'Save Reflection'
+                  "Save Reflection"
                 )}
               </Button>
             </div>

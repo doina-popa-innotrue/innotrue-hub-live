@@ -7,11 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CalendarIcon, Trash2, AlertTriangle, Loader2, Database, FileText, Users, Clock } from "lucide-react";
+import {
+  CalendarIcon,
+  Trash2,
+  AlertTriangle,
+  Loader2,
+  Database,
+  FileText,
+  Users,
+  Clock,
+} from "lucide-react";
 
 interface DateRange {
   from: Date;
@@ -47,8 +64,16 @@ export function DataCleanupManager({ onCleanupComplete }: DataCleanupManagerProp
   }, [dateRange]);
 
   // Fetch preview of data to be deleted
-  const { data: preview, isLoading: isLoadingPreview, isFetching } = useQuery({
-    queryKey: ["cleanup-preview", debouncedRange.from.toISOString(), debouncedRange.to.toISOString()],
+  const {
+    data: preview,
+    isLoading: isLoadingPreview,
+    isFetching,
+  } = useQuery({
+    queryKey: [
+      "cleanup-preview",
+      debouncedRange.from.toISOString(),
+      debouncedRange.to.toISOString(),
+    ],
     queryFn: async (): Promise<CleanupPreview> => {
       const startDate = debouncedRange.from.toISOString();
       const endDate = debouncedRange.to.toISOString();
@@ -71,7 +96,7 @@ export function DataCleanupManager({ onCleanupComplete }: DataCleanupManagerProp
 
       if (sessionsError) throw sessionsError;
 
-      const uniqueSessions = new Set(sessionsData?.map(e => e.session_id) || []).size;
+      const uniqueSessions = new Set(sessionsData?.map((e) => e.session_id) || []).size;
 
       // Get event categories breakdown
       const { data: categoryData, error: categoryError } = await supabase
@@ -83,7 +108,7 @@ export function DataCleanupManager({ onCleanupComplete }: DataCleanupManagerProp
       if (categoryError) throw categoryError;
 
       const categoryMap = new Map<string, number>();
-      categoryData?.forEach(e => {
+      categoryData?.forEach((e) => {
         const cat = e.event_category || "uncategorized";
         categoryMap.set(cat, (categoryMap.get(cat) || 0) + 1);
       });
@@ -137,7 +162,9 @@ export function DataCleanupManager({ onCleanupComplete }: DataCleanupManagerProp
       onCleanupComplete?.();
     },
     onError: (error) => {
-      toast.error("Failed to delete data: " + (error instanceof Error ? error.message : "Unknown error"));
+      toast.error(
+        "Failed to delete data: " + (error instanceof Error ? error.message : "Unknown error"),
+      );
     },
   });
 
@@ -172,7 +199,7 @@ export function DataCleanupManager({ onCleanupComplete }: DataCleanupManagerProp
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Warning:</strong> Deleting analytics data is permanent and cannot be undone. 
+            <strong>Warning:</strong> Deleting analytics data is permanent and cannot be undone.
             This will remove all tracked events within the selected date range.
           </AlertDescription>
         </Alert>
@@ -181,25 +208,13 @@ export function DataCleanupManager({ onCleanupComplete }: DataCleanupManagerProp
         <div className="space-y-2">
           <span className="text-sm font-medium">Quick Select:</span>
           <div className="flex flex-wrap gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => handleDatePreset(90, 60)}
-            >
+            <Button variant="outline" size="sm" onClick={() => handleDatePreset(90, 60)}>
               Data older than 90 days
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => handleDatePreset(180, 90)}
-            >
+            <Button variant="outline" size="sm" onClick={() => handleDatePreset(180, 90)}>
               Data older than 6 months
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => handleDatePreset(365, 180)}
-            >
+            <Button variant="outline" size="sm" onClick={() => handleDatePreset(365, 180)}>
               Data older than 1 year
             </Button>
           </div>
@@ -281,16 +296,16 @@ export function DataCleanupManager({ onCleanupComplete }: DataCleanupManagerProp
                     <Clock className="h-3 w-3" />
                     Date Range Span
                   </div>
-                  <p className="text-2xl font-bold text-foreground">
-                    {daysDiff} days
-                  </p>
+                  <p className="text-2xl font-bold text-foreground">{daysDiff} days</p>
                 </div>
               </div>
 
               {/* Event categories breakdown */}
               {preview.eventCategories.length > 0 && (
                 <div className="space-y-2">
-                  <span className="text-xs font-medium text-muted-foreground">Event Categories:</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Event Categories:
+                  </span>
                   <div className="flex flex-wrap gap-2">
                     {preview.eventCategories.map(({ category, count }) => (
                       <Badge key={category} variant="outline" className="text-xs">
@@ -307,8 +322,8 @@ export function DataCleanupManager({ onCleanupComplete }: DataCleanupManagerProp
                   Events span from{" "}
                   <span className="font-medium text-foreground">
                     {format(new Date(preview.oldestEvent), "MMM d, yyyy h:mm a")}
-                  </span>
-                  {" "}to{" "}
+                  </span>{" "}
+                  to{" "}
                   <span className="font-medium text-foreground">
                     {format(new Date(preview.newestEvent), "MMM d, yyyy h:mm a")}
                   </span>
@@ -327,8 +342,8 @@ export function DataCleanupManager({ onCleanupComplete }: DataCleanupManagerProp
         {/* Delete action */}
         <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
           <DialogTrigger asChild>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               className="gap-2"
               disabled={!preview || preview.totalEvents === 0}
             >
@@ -349,20 +364,25 @@ export function DataCleanupManager({ onCleanupComplete }: DataCleanupManagerProp
                     <strong>{format(dateRange.from, "MMMM d, yyyy")}</strong> to{" "}
                     <strong>{format(dateRange.to, "MMMM d, yyyy")}</strong>.
                   </p>
-                  
+
                   {preview && (
                     <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 space-y-2">
-                      <p className="font-semibold text-destructive">
-                        This will delete:
-                      </p>
+                      <p className="font-semibold text-destructive">This will delete:</p>
                       <ul className="text-sm space-y-1 list-disc list-inside">
-                        <li><strong>{preview.totalEvents.toLocaleString()}</strong> analytics events</li>
-                        <li>Data from <strong>{preview.uniqueSessions.toLocaleString()}</strong> unique sessions</li>
-                        <li>Spanning <strong>{daysDiff} days</strong> of tracking data</li>
+                        <li>
+                          <strong>{preview.totalEvents.toLocaleString()}</strong> analytics events
+                        </li>
+                        <li>
+                          Data from <strong>{preview.uniqueSessions.toLocaleString()}</strong>{" "}
+                          unique sessions
+                        </li>
+                        <li>
+                          Spanning <strong>{daysDiff} days</strong> of tracking data
+                        </li>
                       </ul>
                     </div>
                   )}
-                  
+
                   <p className="text-destructive font-medium">
                     This action <strong>cannot be undone</strong>. Are you sure you want to proceed?
                   </p>
@@ -373,8 +393,8 @@ export function DataCleanupManager({ onCleanupComplete }: DataCleanupManagerProp
               <Button variant="outline" onClick={() => setIsConfirmOpen(false)}>
                 Cancel
               </Button>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={handleDelete}
                 disabled={deleteMutation.isPending}
                 className="gap-2"

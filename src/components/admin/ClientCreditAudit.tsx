@@ -1,23 +1,60 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { Coins, TrendingUp, TrendingDown, Gift, CalendarIcon, AlertTriangle, Plus, Pencil, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
-import { format, addMonths } from 'date-fns';
-import { formatCredits, useGrantCreditBatch } from '@/hooks/useCreditBatches';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Coins,
+  TrendingUp,
+  TrendingDown,
+  Gift,
+  CalendarIcon,
+  AlertTriangle,
+  Plus,
+  Pencil,
+  Trash2,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
+import { format, addMonths } from "date-fns";
+import { formatCredits, useGrantCreditBatch } from "@/hooks/useCreditBatches";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface ClientCreditAuditProps {
   userId: string;
@@ -48,25 +85,25 @@ interface Transaction {
 export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
   const queryClient = useQueryClient();
   const [grantDialogOpen, setGrantDialogOpen] = useState(false);
-  const [grantAmount, setGrantAmount] = useState('');
-  const [grantReason, setGrantReason] = useState('');
+  const [grantAmount, setGrantAmount] = useState("");
+  const [grantReason, setGrantReason] = useState("");
   const [grantExpiryDate, setGrantExpiryDate] = useState<Date | undefined>();
   const { grant, isGranting } = useGrantCreditBatch();
 
   // Edit batch state
   const [editBatch, setEditBatch] = useState<CreditBatch | null>(null);
-  const [editAmount, setEditAmount] = useState('');
+  const [editAmount, setEditAmount] = useState("");
   const [editExpiryDate, setEditExpiryDate] = useState<Date | undefined>();
-  const [editDescription, setEditDescription] = useState('');
+  const [editDescription, setEditDescription] = useState("");
 
   // Fetch default expiry months for admin_grant
   const { data: sourceTypeConfig } = useQuery({
-    queryKey: ['credit-source-type', 'admin_grant'],
+    queryKey: ["credit-source-type", "admin_grant"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('credit_source_types')
-        .select('default_expiry_months')
-        .eq('key', 'admin_grant')
+        .from("credit_source_types")
+        .select("default_expiry_months")
+        .eq("key", "admin_grant")
         .single();
       if (error) throw error;
       return data;
@@ -85,56 +122,56 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
     if (editBatch) {
       setEditAmount(editBatch.remaining_amount.toString());
       setEditExpiryDate(new Date(editBatch.expires_at));
-      setEditDescription(editBatch.description || '');
+      setEditDescription(editBatch.description || "");
     }
   }, [editBatch]);
 
   // Update batch mutation
   const updateBatchMutation = useMutation({
-    mutationFn: async ({ batchId, updates }: { batchId: string; updates: { remaining_amount?: number; expires_at?: string; description?: string } }) => {
-      const { error } = await supabase
-        .from('credit_batches')
-        .update(updates)
-        .eq('id', batchId);
+    mutationFn: async ({
+      batchId,
+      updates,
+    }: {
+      batchId: string;
+      updates: { remaining_amount?: number; expires_at?: string; description?: string };
+    }) => {
+      const { error } = await supabase.from("credit_batches").update(updates).eq("id", batchId);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Credit batch updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['admin-user-credit-batches', userId] });
-      queryClient.invalidateQueries({ queryKey: ['admin-user-credit-summary', userId] });
+      toast.success("Credit batch updated successfully");
+      queryClient.invalidateQueries({ queryKey: ["admin-user-credit-batches", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-credit-summary", userId] });
       setEditBatch(null);
     },
     onError: (error) => {
-      toast.error('Failed to update batch: ' + (error as Error).message);
+      toast.error("Failed to update batch: " + (error as Error).message);
     },
   });
 
   // Delete batch mutation
   const deleteBatchMutation = useMutation({
     mutationFn: async (batchId: string) => {
-      const { error } = await supabase
-        .from('credit_batches')
-        .delete()
-        .eq('id', batchId);
+      const { error } = await supabase.from("credit_batches").delete().eq("id", batchId);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Credit batch deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['admin-user-credit-batches', userId] });
-      queryClient.invalidateQueries({ queryKey: ['admin-user-credit-summary', userId] });
-      queryClient.invalidateQueries({ queryKey: ['admin-user-credit-transactions', userId] });
+      toast.success("Credit batch deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["admin-user-credit-batches", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-credit-summary", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-credit-transactions", userId] });
     },
     onError: (error) => {
-      toast.error('Failed to delete batch: ' + (error as Error).message);
+      toast.error("Failed to delete batch: " + (error as Error).message);
     },
   });
 
   const handleUpdateBatch = () => {
     if (!editBatch || !editExpiryDate) return;
-    
+
     const newAmount = parseInt(editAmount, 10);
     if (isNaN(newAmount) || newAmount < 0) {
-      toast.error('Please enter a valid amount');
+      toast.error("Please enter a valid amount");
       return;
     }
 
@@ -149,10 +186,14 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
   };
 
   // Fetch credit summary
-  const { data: summary, isLoading: summaryLoading, error: summaryError } = useQuery({
-    queryKey: ['admin-user-credit-summary', userId],
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    error: summaryError,
+  } = useQuery({
+    queryKey: ["admin-user-credit-summary", userId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_user_credit_summary_v2', {
+      const { data, error } = await supabase.rpc("get_user_credit_summary_v2", {
         p_user_id: userId,
       });
       if (error) throw error;
@@ -162,15 +203,19 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
   });
 
   // Fetch credit batches
-  const { data: batches, isLoading: batchesLoading, error: batchesError } = useQuery({
-    queryKey: ['admin-user-credit-batches', userId],
+  const {
+    data: batches,
+    isLoading: batchesLoading,
+    error: batchesError,
+  } = useQuery({
+    queryKey: ["admin-user-credit-batches", userId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('credit_batches')
-        .select('*')
-        .eq('owner_type', 'user')
-        .eq('owner_id', userId)
-        .order('expires_at', { ascending: true });
+        .from("credit_batches")
+        .select("*")
+        .eq("owner_type", "user")
+        .eq("owner_id", userId)
+        .order("expires_at", { ascending: true });
       if (error) throw error;
       return data as CreditBatch[];
     },
@@ -178,14 +223,18 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
   });
 
   // Fetch recent transactions
-  const { data: transactions, isLoading: transactionsLoading, error: transactionsError } = useQuery({
-    queryKey: ['admin-user-credit-transactions', userId],
+  const {
+    data: transactions,
+    isLoading: transactionsLoading,
+    error: transactionsError,
+  } = useQuery({
+    queryKey: ["admin-user-credit-transactions", userId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('user_credit_transactions')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+        .from("user_credit_transactions")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
       return data as Transaction[];
@@ -199,36 +248,36 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
   const handleGrantCredits = async () => {
     const amount = parseInt(grantAmount, 10);
     if (isNaN(amount) || amount <= 0) {
-      toast.error('Please enter a valid credit amount');
+      toast.error("Please enter a valid credit amount");
       return;
     }
 
     if (!grantExpiryDate) {
-      toast.error('Please select an expiry date');
+      toast.error("Please select an expiry date");
       return;
     }
 
     try {
       await grant({
-        ownerType: 'user',
+        ownerType: "user",
         ownerId: userId,
         amount,
         expiresAt: grantExpiryDate,
-        sourceType: 'admin_grant',
-        description: grantReason || 'Discretionary credit grant',
+        sourceType: "admin_grant",
+        description: grantReason || "Discretionary credit grant",
       });
-      
+
       // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['admin-user-credit-summary', userId] });
-      queryClient.invalidateQueries({ queryKey: ['admin-user-credit-batches', userId] });
-      queryClient.invalidateQueries({ queryKey: ['admin-user-credit-transactions', userId] });
-      
+      queryClient.invalidateQueries({ queryKey: ["admin-user-credit-summary", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-credit-batches", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-credit-transactions", userId] });
+
       setGrantDialogOpen(false);
-      setGrantAmount('');
-      setGrantReason('');
+      setGrantAmount("");
+      setGrantReason("");
       setGrantExpiryDate(undefined);
     } catch (error) {
-      console.error('Failed to grant credits:', error);
+      console.error("Failed to grant credits:", error);
     }
   };
 
@@ -247,8 +296,12 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
   }
 
   if (hasError) {
-    const errorMessage = summaryError?.message || batchesError?.message || transactionsError?.message || 'Unknown error';
-    console.error('Credit Audit Error:', { summaryError, batchesError, transactionsError });
+    const errorMessage =
+      summaryError?.message ||
+      batchesError?.message ||
+      transactionsError?.message ||
+      "Unknown error";
+    console.error("Credit Audit Error:", { summaryError, batchesError, transactionsError });
     return (
       <Card>
         <CardHeader>
@@ -261,13 +314,15 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
           <p className="text-sm text-muted-foreground">
             Failed to load credit information: {errorMessage}
           </p>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => {
-              queryClient.invalidateQueries({ queryKey: ['admin-user-credit-summary', userId] });
-              queryClient.invalidateQueries({ queryKey: ['admin-user-credit-batches', userId] });
-              queryClient.invalidateQueries({ queryKey: ['admin-user-credit-transactions', userId] });
+              queryClient.invalidateQueries({ queryKey: ["admin-user-credit-summary", userId] });
+              queryClient.invalidateQueries({ queryKey: ["admin-user-credit-batches", userId] });
+              queryClient.invalidateQueries({
+                queryKey: ["admin-user-credit-transactions", userId],
+              });
             }}
           >
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -278,8 +333,8 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
     );
   }
 
-  const activeBatches = batches?.filter(b => !b.is_expired && b.remaining_amount > 0) || [];
-  const expiredBatches = batches?.filter(b => b.is_expired || b.remaining_amount === 0) || [];
+  const activeBatches = batches?.filter((b) => !b.is_expired && b.remaining_amount > 0) || [];
+  const expiredBatches = batches?.filter((b) => b.is_expired || b.remaining_amount === 0) || [];
 
   return (
     <Card>
@@ -290,9 +345,7 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
               <Coins className="h-5 w-5" />
               Credit Audit
             </CardTitle>
-            <CardDescription>
-              Complete credit history across all sources
-            </CardDescription>
+            <CardDescription>Complete credit history across all sources</CardDescription>
           </div>
           <Dialog open={grantDialogOpen} onOpenChange={setGrantDialogOpen}>
             <DialogTrigger asChild>
@@ -304,9 +357,7 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Grant Discretionary Credits</DialogTitle>
-                <DialogDescription>
-                  Add bonus credits to this client's account.
-                </DialogDescription>
+                <DialogDescription>Add bonus credits to this client's account.</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
@@ -328,7 +379,7 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
                         variant="outline"
                         className={cn(
                           "w-full justify-start text-left font-normal",
-                          !grantExpiryDate && "text-muted-foreground"
+                          !grantExpiryDate && "text-muted-foreground",
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -361,7 +412,7 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
                   Cancel
                 </Button>
                 <Button onClick={handleGrantCredits} disabled={isGranting || !grantAmount}>
-                  {isGranting ? 'Granting...' : 'Grant Credits'}
+                  {isGranting ? "Granting..." : "Grant Credits"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -380,7 +431,9 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
           </div>
           <div className="p-4 rounded-lg border">
             <div className="text-sm text-muted-foreground">Program Credits</div>
-            <div className="text-2xl font-bold">{formatCredits(summary?.program_remaining ?? 0)}</div>
+            <div className="text-2xl font-bold">
+              {formatCredits(summary?.program_remaining ?? 0)}
+            </div>
             <div className="text-xs text-muted-foreground">
               from {summary?.program_details?.length ?? 0} enrollments
             </div>
@@ -394,7 +447,9 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
           </div>
           <div className="p-4 rounded-lg border bg-success/5">
             <div className="text-sm text-muted-foreground">Total Available</div>
-            <div className="text-2xl font-bold text-success">{formatCredits(summary?.total_available ?? 0)}</div>
+            <div className="text-2xl font-bold text-success">
+              {formatCredits(summary?.total_available ?? 0)}
+            </div>
           </div>
         </div>
 
@@ -431,10 +486,10 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
                   <TableRow key={batch.id}>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
-                        {batch.source_type.replace('_', ' ')}
+                        {batch.source_type.replace("_", " ")}
                       </Badge>
                     </TableCell>
-                    <TableCell>{batch.feature_key || 'General'}</TableCell>
+                    <TableCell>{batch.feature_key || "General"}</TableCell>
                     <TableCell className="text-right font-medium">
                       {formatCredits(batch.remaining_amount)}
                     </TableCell>
@@ -444,7 +499,7 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
                     <TableCell>
                       <span className="flex items-center gap-1 text-sm">
                         <CalendarIcon className="h-3 w-3" />
-                        {format(new Date(batch.expires_at), 'MMM d, yyyy')}
+                        {format(new Date(batch.expires_at), "MMM d, yyyy")}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
@@ -471,7 +526,8 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete Credit Batch</AlertDialogTitle>
                               <AlertDialogDescription>
-                                This will permanently remove {formatCredits(batch.remaining_amount)} credits from this user's account. This action cannot be undone.
+                                This will permanently remove {formatCredits(batch.remaining_amount)}{" "}
+                                credits from this user's account. This action cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -524,7 +580,7 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !editExpiryDate && "text-muted-foreground"
+                        !editExpiryDate && "text-muted-foreground",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -554,11 +610,8 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
               <Button variant="outline" onClick={() => setEditBatch(null)}>
                 Cancel
               </Button>
-              <Button 
-                onClick={handleUpdateBatch} 
-                disabled={updateBatchMutation.isPending}
-              >
-                {updateBatchMutation.isPending ? 'Saving...' : 'Save Changes'}
+              <Button onClick={handleUpdateBatch} disabled={updateBatchMutation.isPending}>
+                {updateBatchMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -582,24 +635,34 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
                 {transactions.map((tx) => (
                   <TableRow key={tx.id}>
                     <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(tx.created_at), 'MMM d, HH:mm')}
+                      {format(new Date(tx.created_at), "MMM d, HH:mm")}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={tx.amount >= 0 ? 'default' : 'secondary'} className="capitalize">
-                        {tx.transaction_type.replace('_', ' ')}
+                      <Badge
+                        variant={tx.amount >= 0 ? "default" : "secondary"}
+                        className="capitalize"
+                      >
+                        {tx.transaction_type.replace("_", " ")}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <span className={`flex items-center justify-end gap-1 font-medium ${tx.amount >= 0 ? 'text-success' : 'text-destructive'}`}>
-                        {tx.amount >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                        {tx.amount >= 0 ? '+' : ''}{formatCredits(tx.amount)}
+                      <span
+                        className={`flex items-center justify-end gap-1 font-medium ${tx.amount >= 0 ? "text-success" : "text-destructive"}`}
+                      >
+                        {tx.amount >= 0 ? (
+                          <TrendingUp className="h-3 w-3" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3" />
+                        )}
+                        {tx.amount >= 0 ? "+" : ""}
+                        {formatCredits(tx.amount)}
                       </span>
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
                       {formatCredits(tx.balance_after)}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                      {tx.description || tx.action_type || '-'}
+                      {tx.description || tx.action_type || "-"}
                     </TableCell>
                   </TableRow>
                 ))}

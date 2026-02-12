@@ -9,11 +9,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Save, Trash2, ChevronRight, Copy } from "lucide-react";
 import TaskNotes from "@/components/tasks/TaskNotes";
-import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from "@/components/ui/breadcrumb";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
+  BreadcrumbPage,
+} from "@/components/ui/breadcrumb";
 import { useWheelCategories } from "@/hooks/useWheelCategories";
 
 interface Task {
@@ -42,7 +55,9 @@ export default function TaskDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { data: categories = [], isLoading: categoriesLoading } = useWheelCategories({ includeLegacy: false });
+  const { data: categories = [], isLoading: categoriesLoading } = useWheelCategories({
+    includeLegacy: false,
+  });
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -76,7 +91,7 @@ export default function TaskDetail() {
       const { data, error } = await supabase
         .from("goals")
         .select("id, title")
-        .eq("user_id", user?.id ?? '')
+        .eq("user_id", user?.id ?? "")
         .order("title");
 
       if (error) throw error;
@@ -125,7 +140,14 @@ export default function TaskDetail() {
     }
   }
 
-  function getQuadrant(imp: boolean, urg: boolean): "important_urgent" | "important_not_urgent" | "not_important_urgent" | "not_important_not_urgent" {
+  function getQuadrant(
+    imp: boolean,
+    urg: boolean,
+  ):
+    | "important_urgent"
+    | "important_not_urgent"
+    | "not_important_urgent"
+    | "not_important_not_urgent" {
     if (imp && urg) return "important_urgent";
     if (imp && !urg) return "important_not_urgent";
     if (!imp && urg) return "not_important_urgent";
@@ -206,21 +228,28 @@ export default function TaskDetail() {
     try {
       const { data, error } = await supabase
         .from("tasks")
-        .insert([{
-          user_id: user?.id ?? '',
-          title: `${task.title} (copy)`,
-          description: task.description,
-          status: "todo" as const,
-          importance: task.importance,
-          urgency: task.urgency,
-          quadrant: task.quadrant as "important_urgent" | "important_not_urgent" | "not_important_urgent" | "not_important_not_urgent" | null,
-          due_date: task.due_date,
-          category: task.category,
-          goal_id: task.goal_id,
-          source_type: task.source_type as "manual" | "goal" | "decision" | "program" | null,
-          is_private: task.is_private,
-          shared_with_coach: false,
-        }])
+        .insert([
+          {
+            user_id: user?.id ?? "",
+            title: `${task.title} (copy)`,
+            description: task.description,
+            status: "todo" as const,
+            importance: task.importance,
+            urgency: task.urgency,
+            quadrant: task.quadrant as
+              | "important_urgent"
+              | "important_not_urgent"
+              | "not_important_urgent"
+              | "not_important_not_urgent"
+              | null,
+            due_date: task.due_date,
+            category: task.category,
+            goal_id: task.goal_id,
+            source_type: task.source_type as "manual" | "goal" | "decision" | "program" | null,
+            is_private: task.is_private,
+            shared_with_coach: false,
+          },
+        ])
         .select()
         .single();
 
@@ -230,7 +259,7 @@ export default function TaskDetail() {
         title: "Task cloned",
         description: "A copy of the task has been created",
       });
-      
+
       navigate(`/tasks/${data!.id}`);
     } catch (error: any) {
       toast({
@@ -320,7 +349,11 @@ export default function TaskDetail() {
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
           </Button>
-          <Button onClick={handleSave} disabled={saving} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
+          >
             <Save className="h-4 w-4 mr-2" />
             {saving ? "Saving..." : "Save Changes"}
           </Button>
@@ -356,7 +389,12 @@ export default function TaskDetail() {
 
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
-            <Select value={status} onValueChange={(value) => setStatus(value as "todo" | "in_progress" | "done" | "blocked")}>
+            <Select
+              value={status}
+              onValueChange={(value) =>
+                setStatus(value as "todo" | "in_progress" | "done" | "blocked")
+              }
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -371,13 +409,15 @@ export default function TaskDetail() {
 
           <div className="space-y-2">
             <Label htmlFor="category">Life Area</Label>
-            <Select 
-              value={category || "_none"} 
+            <Select
+              value={category || "_none"}
               onValueChange={(value) => setCategory(value === "_none" ? "" : value)}
               disabled={categoriesLoading}
             >
               <SelectTrigger>
-                <SelectValue placeholder={categoriesLoading ? "Loading..." : "Select life area (optional)"} />
+                <SelectValue
+                  placeholder={categoriesLoading ? "Loading..." : "Select life area (optional)"}
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="_none">None</SelectItem>
@@ -392,8 +432,8 @@ export default function TaskDetail() {
 
           <div className="space-y-2">
             <Label htmlFor="goalId">Linked Goal</Label>
-            <Select 
-              value={goalId || "_none"} 
+            <Select
+              value={goalId || "_none"}
               onValueChange={(value) => setGoalId(value === "_none" ? "" : value)}
             >
               <SelectTrigger>
@@ -425,9 +465,7 @@ export default function TaskDetail() {
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="space-y-1">
                 <Label htmlFor="importance">Important</Label>
-                <p className="text-xs text-muted-foreground">
-                  Impacts long-term goals and values
-                </p>
+                <p className="text-xs text-muted-foreground">Impacts long-term goals and values</p>
               </div>
               <Switch id="importance" checked={importance} onCheckedChange={setImportance} />
             </div>
@@ -435,9 +473,7 @@ export default function TaskDetail() {
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="space-y-1">
                 <Label htmlFor="urgency">Urgent</Label>
-                <p className="text-xs text-muted-foreground">
-                  Requires immediate attention
-                </p>
+                <p className="text-xs text-muted-foreground">Requires immediate attention</p>
               </div>
               <Switch id="urgency" checked={urgency} onCheckedChange={setUrgency} />
             </div>

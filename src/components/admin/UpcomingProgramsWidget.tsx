@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, Users, AlertTriangle } from 'lucide-react';
-import { format, isWithinInterval, addDays, parseISO } from 'date-fns';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, Users, AlertTriangle } from "lucide-react";
+import { format, isWithinInterval, addDays, parseISO } from "date-fns";
+import { Link } from "react-router-dom";
 
 interface ScheduledDate {
   id: string;
@@ -44,12 +44,12 @@ export function UpcomingProgramsWidget() {
     const thirtyDaysFromNow = addDays(now, 30);
 
     const { data: programs, error } = await supabase
-      .from('programs')
-      .select('id, name, category, slug, scheduled_dates')
-      .eq('is_active', true);
+      .from("programs")
+      .select("id, name, category, slug, scheduled_dates")
+      .eq("is_active", true);
 
     if (error) {
-      console.error('Error fetching programs:', error);
+      console.error("Error fetching programs:", error);
       setLoading(false);
       return;
     }
@@ -63,9 +63,11 @@ export function UpcomingProgramsWidget() {
       scheduledDates.forEach((schedule) => {
         try {
           const scheduleDate = parseISO(schedule.date);
-          
+
           if (isWithinInterval(scheduleDate, { start: now, end: thirtyDaysFromNow })) {
-            const daysUntil = Math.ceil((scheduleDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            const daysUntil = Math.ceil(
+              (scheduleDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+            );
             const enrolledCount = schedule.enrolled_count || 0;
             const capacity = schedule.capacity || 0;
             const capacityPercentage = capacity > 0 ? (enrolledCount / capacity) * 100 : 0;
@@ -82,7 +84,7 @@ export function UpcomingProgramsWidget() {
             });
           }
         } catch (err) {
-          console.error('Error parsing date:', schedule.date, err);
+          console.error("Error parsing date:", schedule.date, err);
         }
       });
     });
@@ -96,13 +98,13 @@ export function UpcomingProgramsWidget() {
 
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
-      cta: 'bg-blue-500/10 text-blue-500',
-      leadership: 'bg-purple-500/10 text-purple-500',
-      executive: 'bg-amber-500/10 text-amber-500',
-      ai: 'bg-green-500/10 text-green-500',
-      'deep-dive': 'bg-pink-500/10 text-pink-500',
+      cta: "bg-blue-500/10 text-blue-500",
+      leadership: "bg-purple-500/10 text-purple-500",
+      executive: "bg-amber-500/10 text-amber-500",
+      ai: "bg-green-500/10 text-green-500",
+      "deep-dive": "bg-pink-500/10 text-pink-500",
     };
-    return colors[category] || 'bg-muted text-muted-foreground';
+    return colors[category] || "bg-muted text-muted-foreground";
   };
 
   if (loading) {
@@ -129,7 +131,8 @@ export function UpcomingProgramsWidget() {
           Upcoming Programs (30 Days)
         </CardTitle>
         <CardDescription>
-          {upcomingSessions.length} scheduled session{upcomingSessions.length !== 1 ? 's' : ''} in the next 30 days
+          {upcomingSessions.length} scheduled session{upcomingSessions.length !== 1 ? "s" : ""} in
+          the next 30 days
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -152,12 +155,13 @@ export function UpcomingProgramsWidget() {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">
-                      {session.title || 'Scheduled Session'}
+                      {session.title || "Scheduled Session"}
                     </p>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {format(parseISO(session.date), 'MMM dd, yyyy')} ({session.daysUntil} day{session.daysUntil !== 1 ? 's' : ''})
+                        {format(parseISO(session.date), "MMM dd, yyyy")} ({session.daysUntil} day
+                        {session.daysUntil !== 1 ? "s" : ""})
                       </span>
                       <span className="flex items-center gap-1">
                         <Users className="h-3 w-3" />

@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CrossProgramModule {
   moduleId: string;
@@ -7,7 +7,7 @@ interface CrossProgramModule {
   programId: string;
   programName: string;
   completedAt: string;
-  completedVia: 'canonical_code' | 'talentlms';
+  completedVia: "canonical_code" | "talentlms";
 }
 
 interface CrossProgramCompletion {
@@ -20,7 +20,9 @@ interface CrossProgramCompletion {
  * Uses canonical_code for linked modules and talentlms_course_id for TalentLMS courses
  */
 export function useCrossProgramCompletion(userId?: string, programId?: string) {
-  const [crossProgramCompletions, setCrossProgramCompletions] = useState<Map<string, CrossProgramModule[]>>(new Map());
+  const [crossProgramCompletions, setCrossProgramCompletions] = useState<
+    Map<string, CrossProgramModule[]>
+  >(new Map());
   const [loading, setLoading] = useState(true);
 
   const fetchCrossCompletions = useCallback(async () => {
@@ -35,10 +37,10 @@ export function useCrossProgramCompletion(userId?: string, programId?: string) {
 
       // Get all modules for the current program with their canonical codes and talentlms links
       const { data: programModules, error: modulesError } = await supabase
-        .from('program_modules')
-        .select('id, title, canonical_code, links')
-        .eq('program_id', programId)
-        .eq('is_active', true);
+        .from("program_modules")
+        .select("id, title, canonical_code, links")
+        .eq("program_id", programId)
+        .eq("is_active", true);
 
       if (modulesError) throw modulesError;
       if (!programModules?.length) {
@@ -48,19 +50,20 @@ export function useCrossProgramCompletion(userId?: string, programId?: string) {
 
       // Get user's TalentLMS progress
       const { data: talentLmsProgress } = await supabase
-        .from('talentlms_progress')
-        .select('talentlms_course_id, completed_at')
-        .eq('user_id', userId)
-        .eq('completion_status', 'completed');
+        .from("talentlms_progress")
+        .select("talentlms_course_id, completed_at")
+        .eq("user_id", userId)
+        .eq("completion_status", "completed");
 
       const completedTlmsCourses = new Map(
-        talentLmsProgress?.map(p => [p.talentlms_course_id, p.completed_at]) || []
+        talentLmsProgress?.map((p) => [p.talentlms_course_id, p.completed_at]) || [],
       );
 
       // Get all user's completed module progress across ALL programs (not current one)
       const { data: allCompletedProgress } = await supabase
-        .from('module_progress')
-        .select(`
+        .from("module_progress")
+        .select(
+          `
           module_id,
           completed_at,
           client_enrollments!inner (
@@ -73,22 +76,24 @@ export function useCrossProgramCompletion(userId?: string, programId?: string) {
             title,
             canonical_code
           )
-        `)
-        .eq('status', 'completed')
-        .neq('client_enrollments.program_id', programId);
+        `,
+        )
+        .eq("status", "completed")
+        .neq("client_enrollments.program_id", programId);
 
       // Filter to only get completions for this user
       const { data: userEnrollments } = await supabase
-        .from('client_enrollments')
-        .select('id')
-        .eq('client_user_id', userId);
+        .from("client_enrollments")
+        .select("id")
+        .eq("client_user_id", userId);
 
-      const userEnrollmentIds = new Set(userEnrollments?.map(e => e.id) || []);
+      const userEnrollmentIds = new Set(userEnrollments?.map((e) => e.id) || []);
 
       // Get completed progress for user's enrollments only
       const { data: userCompletedProgress } = await supabase
-        .from('module_progress')
-        .select(`
+        .from("module_progress")
+        .select(
+          `
           module_id,
           enrollment_id,
           completed_at,
@@ -102,12 +107,15 @@ export function useCrossProgramCompletion(userId?: string, programId?: string) {
               name
             )
           )
-        `)
-        .eq('status', 'completed');
+        `,
+        )
+        .eq("status", "completed");
 
-      const userCompletions = userCompletedProgress?.filter(
-        p => userEnrollmentIds.has(p.enrollment_id) && p.program_modules.program_id !== programId
-      ) || [];
+      const userCompletions =
+        userCompletedProgress?.filter(
+          (p) =>
+            userEnrollmentIds.has(p.enrollment_id) && p.program_modules.program_id !== programId,
+        ) || [];
 
       // Build a map of canonical_code -> completed modules from other programs
       const canonicalCodeCompletions = new Map<string, CrossProgramModule[]>();
@@ -119,8 +127,8 @@ export function useCrossProgramCompletion(userId?: string, programId?: string) {
             moduleTitle: completion.program_modules.title,
             programId: completion.program_modules.programs.id,
             programName: completion.program_modules.programs.name,
-            completedAt: completion.completed_at || '',
-            completedVia: 'canonical_code',
+            completedAt: completion.completed_at || "",
+            completedVia: "canonical_code",
           };
           if (!canonicalCodeCompletions.has(code)) {
             canonicalCodeCompletions.set(code, []);
@@ -140,15 +148,18 @@ export function useCrossProgramCompletion(userId?: string, programId?: string) {
 
         // Check TalentLMS course matches
         const links = module.links as Array<{ type: string; url: string }> | null;
-        const talentLmsLink = links?.find(l => l.type === 'talentlms');
+        const talentLmsLink = links?.find((l) => l.type === "talentlms");
         if (talentLmsLink) {
           const match = talentLmsLink.url.match(/id:(\d+)/);
           const courseId = match?.[1];
           if (courseId && completedTlmsCourses.has(courseId)) {
             // Find which program this was completed in
             for (const completion of userCompletions) {
-              const completionLinks = (completion.program_modules as any).links as Array<{ type: string; url: string }> | null;
-              const completionTlmsLink = completionLinks?.find(l => l.type === 'talentlms');
+              const completionLinks = (completion.program_modules as any).links as Array<{
+                type: string;
+                url: string;
+              }> | null;
+              const completionTlmsLink = completionLinks?.find((l) => l.type === "talentlms");
               if (completionTlmsLink) {
                 const completionMatch = completionTlmsLink.url.match(/id:(\d+)/);
                 if (completionMatch?.[1] === courseId) {
@@ -157,8 +168,8 @@ export function useCrossProgramCompletion(userId?: string, programId?: string) {
                     moduleTitle: completion.program_modules.title,
                     programId: completion.program_modules.programs.id,
                     programName: completion.program_modules.programs.name,
-                    completedAt: completedTlmsCourses.get(courseId) || '',
-                    completedVia: 'talentlms',
+                    completedAt: completedTlmsCourses.get(courseId) || "",
+                    completedVia: "talentlms",
                   });
                   break; // Only need one match
                 }
@@ -174,7 +185,7 @@ export function useCrossProgramCompletion(userId?: string, programId?: string) {
 
       setCrossProgramCompletions(completionsMap);
     } catch (error) {
-      console.error('Error fetching cross-program completions:', error);
+      console.error("Error fetching cross-program completions:", error);
     } finally {
       setLoading(false);
     }

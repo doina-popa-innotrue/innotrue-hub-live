@@ -1,12 +1,19 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { ArrowUp, Crown, Sparkles } from 'lucide-react';
-import { getTierDisplayName } from '@/lib/tierUtils';
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { ArrowUp, Crown, Sparkles } from "lucide-react";
+import { getTierDisplayName } from "@/lib/tierUtils";
 
 interface TierUpgradeDialogProps {
   open: boolean;
@@ -25,12 +32,12 @@ export function TierUpgradeDialog({
   onSubmit,
   isSubmitting = false,
 }: TierUpgradeDialogProps) {
-  const [selectedTier, setSelectedTier] = useState<string>('');
-  const [reason, setReason] = useState('');
+  const [selectedTier, setSelectedTier] = useState<string>("");
+  const [reason, setReason] = useState("");
 
   // Filter to only show tiers higher than current
-  const upgradeTiers = availableTiers.filter(tier => {
-    const tierOrder = ['essentials', 'professional', 'premium', 'enterprise'];
+  const upgradeTiers = availableTiers.filter((tier) => {
+    const tierOrder = ["essentials", "professional", "premium", "enterprise"];
     const currentIndex = tierOrder.indexOf(currentTier.toLowerCase());
     const tierIndex = tierOrder.indexOf(tier.toLowerCase());
     return tierIndex > currentIndex;
@@ -44,10 +51,10 @@ export function TierUpgradeDialog({
 
   const getTierIcon = (tier: string) => {
     switch (tier.toLowerCase()) {
-      case 'premium':
-      case 'enterprise':
+      case "premium":
+      case "enterprise":
         return <Crown className="h-4 w-4" />;
-      case 'professional':
+      case "professional":
         return <Sparkles className="h-4 w-4" />;
       default:
         return <ArrowUp className="h-4 w-4" />;
@@ -56,14 +63,14 @@ export function TierUpgradeDialog({
 
   const getTierDescription = (tier: string) => {
     switch (tier.toLowerCase()) {
-      case 'professional':
-        return 'Access to additional modules and personalized coaching sessions';
-      case 'premium':
-        return 'Full access to all modules, 1-on-1 coaching, and priority support';
-      case 'enterprise':
-        return 'Custom enterprise features, dedicated support, and team access';
+      case "professional":
+        return "Access to additional modules and personalized coaching sessions";
+      case "premium":
+        return "Full access to all modules, 1-on-1 coaching, and priority support";
+      case "enterprise":
+        return "Custom enterprise features, dedicated support, and team access";
       default:
-        return 'Enhanced access and features';
+        return "Enhanced access and features";
     }
   };
 
@@ -73,7 +80,8 @@ export function TierUpgradeDialog({
         <DialogHeader>
           <DialogTitle>Request Tier Upgrade</DialogTitle>
           <DialogDescription>
-            Select the tier you'd like to upgrade to. An administrator will review your request and contact you about upgrade options.
+            Select the tier you'd like to upgrade to. An administrator will review your request and
+            contact you about upgrade options.
           </DialogDescription>
         </DialogHeader>
 
@@ -92,8 +100,8 @@ export function TierUpgradeDialog({
               <Label>Select upgrade tier:</Label>
               <RadioGroup value={selectedTier} onValueChange={setSelectedTier}>
                 {upgradeTiers.map((tier) => (
-                  <div 
-                    key={tier} 
+                  <div
+                    key={tier}
                     className="flex items-center space-x-3 rounded-lg border p-4 hover:border-primary/50 transition-colors"
                   >
                     <RadioGroupItem value={tier} id={tier} />
@@ -101,7 +109,9 @@ export function TierUpgradeDialog({
                       <div className="flex items-center gap-2">
                         {getTierIcon(tier)}
                         <div>
-                          <div className="font-medium">{getTierDisplayName(availableTiers, tier)}</div>
+                          <div className="font-medium">
+                            {getTierDisplayName(availableTiers, tier)}
+                          </div>
                           <div className="text-sm text-muted-foreground">
                             {getTierDescription(tier)}
                           </div>
@@ -130,11 +140,11 @@ export function TierUpgradeDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             disabled={isSubmitting || !selectedTier || upgradeTiers.length === 0}
           >
-            {isSubmitting ? 'Submitting...' : 'Submit Request'}
+            {isSubmitting ? "Submitting..." : "Submit Request"}
           </Button>
         </DialogFooter>
       </DialogContent>

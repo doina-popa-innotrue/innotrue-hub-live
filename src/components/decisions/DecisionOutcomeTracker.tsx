@@ -10,7 +10,9 @@ export function DecisionOutcomeTracker() {
   const { data: decisions, isLoading } = useQuery({
     queryKey: ["decisions-with-outcomes"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
@@ -30,52 +32,66 @@ export function DecisionOutcomeTracker() {
   // Calculate accuracy using simple text similarity
   const calculateAccuracy = (expected: string, actual: string): number => {
     if (!expected || !actual) return 0;
-    
+
     const exp = expected.toLowerCase().trim();
     const act = actual.toLowerCase().trim();
-    
+
     // Simple keyword matching
-    const expWords = new Set(exp.split(/\s+/).filter(w => w.length > 3));
-    const actWords = new Set(act.split(/\s+/).filter(w => w.length > 3));
-    
+    const expWords = new Set(exp.split(/\s+/).filter((w) => w.length > 3));
+    const actWords = new Set(act.split(/\s+/).filter((w) => w.length > 3));
+
     if (expWords.size === 0 || actWords.size === 0) return 50;
-    
+
     let matches = 0;
-    expWords.forEach(word => {
+    expWords.forEach((word) => {
       if (actWords.has(word)) matches++;
     });
-    
+
     return Math.round((matches / expWords.size) * 100);
   };
 
-  const decisionsWithAccuracy = decisions?.map(d => ({
-    ...d,
-    accuracy: calculateAccuracy(d.expected_outcome || "", d.actual_outcome || "")
-  })) || [];
+  const decisionsWithAccuracy =
+    decisions?.map((d) => ({
+      ...d,
+      accuracy: calculateAccuracy(d.expected_outcome || "", d.actual_outcome || ""),
+    })) || [];
 
-  const overallAccuracy = decisionsWithAccuracy.length > 0
-    ? Math.round(decisionsWithAccuracy.reduce((sum, d) => sum + d.accuracy, 0) / decisionsWithAccuracy.length)
-    : 0;
+  const overallAccuracy =
+    decisionsWithAccuracy.length > 0
+      ? Math.round(
+          decisionsWithAccuracy.reduce((sum, d) => sum + d.accuracy, 0) /
+            decisionsWithAccuracy.length,
+        )
+      : 0;
 
-  const recentAccuracy = decisionsWithAccuracy.slice(0, 5).length > 0
-    ? Math.round(decisionsWithAccuracy.slice(0, 5).reduce((sum, d) => sum + d.accuracy, 0) / Math.min(5, decisionsWithAccuracy.length))
-    : 0;
+  const recentAccuracy =
+    decisionsWithAccuracy.slice(0, 5).length > 0
+      ? Math.round(
+          decisionsWithAccuracy.slice(0, 5).reduce((sum, d) => sum + d.accuracy, 0) /
+            Math.min(5, decisionsWithAccuracy.length),
+        )
+      : 0;
 
   const trend = recentAccuracy - overallAccuracy;
 
   // Group by importance
-  const byImportance = decisionsWithAccuracy.reduce((acc, d) => {
-    const imp = d.importance || "medium";
-    if (!acc[imp]) acc[imp] = [];
-    acc[imp].push(d);
-    return acc;
-  }, {} as Record<string, typeof decisionsWithAccuracy>);
+  const byImportance = decisionsWithAccuracy.reduce(
+    (acc, d) => {
+      const imp = d.importance || "medium";
+      if (!acc[imp]) acc[imp] = [];
+      acc[imp].push(d);
+      return acc;
+    },
+    {} as Record<string, typeof decisionsWithAccuracy>,
+  );
 
-  const importanceAccuracy = Object.entries(byImportance).map(([importance, decs]) => ({
-    importance,
-    accuracy: Math.round(decs.reduce((sum, d) => sum + d.accuracy, 0) / decs.length),
-    count: decs.length
-  })).sort((a, b) => b.accuracy - a.accuracy);
+  const importanceAccuracy = Object.entries(byImportance)
+    .map(([importance, decs]) => ({
+      importance,
+      accuracy: Math.round(decs.reduce((sum, d) => sum + d.accuracy, 0) / decs.length),
+      count: decs.length,
+    }))
+    .sort((a, b) => b.accuracy - a.accuracy);
 
   if (isLoading) {
     return <div className="text-muted-foreground">Loading outcome data...</div>;
@@ -86,9 +102,7 @@ export function DecisionOutcomeTracker() {
       <Card>
         <CardContent className="py-12 text-center">
           <Target className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">
-            No completed decisions with outcomes yet.
-          </p>
+          <p className="text-muted-foreground">No completed decisions with outcomes yet.</p>
           <p className="text-sm text-muted-foreground mt-2">
             Start tracking outcomes to build your decision accuracy score!
           </p>
@@ -148,9 +162,7 @@ export function DecisionOutcomeTracker() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Decisions with recorded outcomes
-            </p>
+            <p className="text-sm text-muted-foreground">Decisions with recorded outcomes</p>
           </CardContent>
         </Card>
       </div>
@@ -168,12 +180,17 @@ export function DecisionOutcomeTracker() {
             <div key={importance} className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Badge variant={
-                    importance === "critical" ? "destructive" :
-                    importance === "high" ? "default" :
-                    importance === "medium" ? "secondary" :
-                    "outline"
-                  }>
+                  <Badge
+                    variant={
+                      importance === "critical"
+                        ? "destructive"
+                        : importance === "high"
+                          ? "default"
+                          : importance === "medium"
+                            ? "secondary"
+                            : "outline"
+                    }
+                  >
                     {importance}
                   </Badge>
                   <span className="text-sm text-muted-foreground">
@@ -192,9 +209,7 @@ export function DecisionOutcomeTracker() {
       <Card>
         <CardHeader>
           <CardTitle>Recent Outcome Comparisons</CardTitle>
-          <CardDescription>
-            Expected vs actual outcomes for your latest decisions
-          </CardDescription>
+          <CardDescription>Expected vs actual outcomes for your latest decisions</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {decisionsWithAccuracy.slice(0, 5).map((decision) => (
@@ -208,11 +223,15 @@ export function DecisionOutcomeTracker() {
                     </p>
                   )}
                 </div>
-                <Badge variant={
-                  decision.accuracy >= 80 ? "default" :
-                  decision.accuracy >= 60 ? "secondary" :
-                  "outline"
-                }>
+                <Badge
+                  variant={
+                    decision.accuracy >= 80
+                      ? "default"
+                      : decision.accuracy >= 60
+                        ? "secondary"
+                        : "outline"
+                  }
+                >
                   {decision.accuracy}% match
                 </Badge>
               </div>

@@ -1,13 +1,19 @@
-import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
-import { Loader2, Upload, Link, Image, FileText } from 'lucide-react';
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { Loader2, Upload, Link, Image, FileText } from "lucide-react";
 
 interface FeedbackAttachmentFormProps {
   feedbackId: string;
@@ -15,12 +21,16 @@ interface FeedbackAttachmentFormProps {
   onCancel: () => void;
 }
 
-export default function FeedbackAttachmentForm({ feedbackId, onSuccess, onCancel }: FeedbackAttachmentFormProps) {
+export default function FeedbackAttachmentForm({
+  feedbackId,
+  onSuccess,
+  onCancel,
+}: FeedbackAttachmentFormProps) {
   const { user } = useAuth();
-  const [type, setType] = useState<'file' | 'image' | 'link'>('file');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [url, setUrl] = useState('');
+  const [type, setType] = useState<"file" | "image" | "link">("file");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [url, setUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -35,12 +45,12 @@ export default function FeedbackAttachmentForm({ feedbackId, onSuccess, onCancel
       let mimeType: string | null = null;
 
       // Upload file if present
-      if (file && (type === 'file' || type === 'image')) {
-        const fileExt = file.name.split('.').pop();
+      if (file && (type === "file" || type === "image")) {
+        const fileExt = file.name.split(".").pop();
         const fileName = `${feedbackId}/${Date.now()}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('coach-feedback-attachments')
+          .from("coach-feedback-attachments")
           .upload(fileName, file);
 
         if (uploadError) throw uploadError;
@@ -51,26 +61,24 @@ export default function FeedbackAttachmentForm({ feedbackId, onSuccess, onCancel
       }
 
       // Insert attachment record
-      const { error } = await supabase
-        .from('coach_feedback_attachments')
-        .insert({
-          feedback_id: feedbackId,
-          title: title.trim(),
-          description: description.trim() || null,
-          attachment_type: type,
-          file_path: filePath,
-          url: type === 'link' ? url.trim() : null,
-          file_size: fileSize,
-          mime_type: mimeType,
-        });
+      const { error } = await supabase.from("coach_feedback_attachments").insert({
+        feedback_id: feedbackId,
+        title: title.trim(),
+        description: description.trim() || null,
+        attachment_type: type,
+        file_path: filePath,
+        url: type === "link" ? url.trim() : null,
+        file_size: fileSize,
+        mime_type: mimeType,
+      });
 
       if (error) throw error;
 
-      toast.success('Attachment added');
+      toast.success("Attachment added");
       onSuccess();
     } catch (error) {
-      console.error('Error adding attachment:', error);
-      toast.error('Failed to add attachment');
+      console.error("Error adding attachment:", error);
+      toast.error("Failed to add attachment");
     } finally {
       setSubmitting(false);
     }
@@ -80,7 +88,7 @@ export default function FeedbackAttachmentForm({ feedbackId, onSuccess, onCancel
     <form onSubmit={handleSubmit} className="space-y-4 p-4 border rounded-md bg-muted/30">
       <div className="space-y-2">
         <Label>Type</Label>
-        <Select value={type} onValueChange={(v) => setType(v as 'file' | 'image' | 'link')}>
+        <Select value={type} onValueChange={(v) => setType(v as "file" | "image" | "link")}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
@@ -127,7 +135,7 @@ export default function FeedbackAttachmentForm({ feedbackId, onSuccess, onCancel
         />
       </div>
 
-      {type === 'link' ? (
+      {type === "link" ? (
         <div className="space-y-2">
           <Label>URL *</Label>
           <Input
@@ -143,7 +151,7 @@ export default function FeedbackAttachmentForm({ feedbackId, onSuccess, onCancel
           <Label>File *</Label>
           <Input
             type="file"
-            accept={type === 'image' ? 'image/*' : '*/*'}
+            accept={type === "image" ? "image/*" : "*/*"}
             onChange={(e) => setFile(e.target.files?.[0] || null)}
             required
           />
@@ -159,7 +167,10 @@ export default function FeedbackAttachmentForm({ feedbackId, onSuccess, onCancel
         <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
           Cancel
         </Button>
-        <Button type="submit" disabled={submitting || !title.trim() || (type === 'link' ? !url.trim() : !file)}>
+        <Button
+          type="submit"
+          disabled={submitting || !title.trim() || (type === "link" ? !url.trim() : !file)}
+        >
           {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           <Upload className="mr-2 h-4 w-4" />
           Add Attachment

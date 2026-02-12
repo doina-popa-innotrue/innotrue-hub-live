@@ -94,20 +94,17 @@ export function CreditServiceConsumer({
   const [showConfirm, setShowConfirm] = useState(false);
   const { consume, isConsuming, getServiceCost } = useCreditService();
   const { summary } = useCreditBatches();
-  
+
   // If using entity lookup, get the service ID
-  const { data: entityService } = useCreditServiceByEntity(
-    entityType || '',
-    entityId || ''
-  );
-  
+  const { data: entityService } = useCreditServiceByEntity(entityType || "", entityId || "");
+
   const resolvedServiceId = serviceId || entityService?.id;
-  const { data: serviceCost, isLoading: costLoading } = getServiceCost(resolvedServiceId || '');
+  const { data: serviceCost, isLoading: costLoading } = getServiceCost(resolvedServiceId || "");
 
   const balance = summary?.total_available ?? 0;
   const cost = serviceCost?.effective_cost ?? 0;
   const canAfford = balance >= cost;
-  const serviceName = serviceCost?.service_name || 'this service';
+  const serviceName = serviceCost?.service_name || "this service";
 
   const handleConsume = async () => {
     if (!resolvedServiceId) {
@@ -117,7 +114,7 @@ export function CreditServiceConsumer({
 
     try {
       const result = await consume(resolvedServiceId, notes, actionReferenceId);
-      
+
       if (result?.success) {
         setShowConfirm(false);
         toast.success(`${result.credits_consumed} credits consumed`, {
@@ -184,9 +181,7 @@ export function CreditServiceConsumer({
               <Coins className="h-5 w-5 text-primary" />
               Confirm Credit Usage
             </DialogTitle>
-            <DialogDescription>
-              You are about to use credits for {serviceName}.
-            </DialogDescription>
+            <DialogDescription>You are about to use credits for {serviceName}.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">

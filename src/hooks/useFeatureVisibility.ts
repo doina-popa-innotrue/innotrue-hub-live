@@ -1,10 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
-import { useEntitlements } from './useEntitlements';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEntitlements } from "./useEntitlements";
+import { supabase } from "@/integrations/supabase/client";
 
-export type FeatureVisibility = 'hidden' | 'locked' | 'accessible';
-export type AccessSourceType = 'plan' | 'track' | 'add_on' | 'program_plan' | null;
+export type FeatureVisibility = "hidden" | "locked" | "accessible";
+export type AccessSourceType = "plan" | "track" | "add_on" | "program_plan" | null;
 
 export interface FeatureVisibilityResult {
   visibility: FeatureVisibility;
@@ -16,7 +16,7 @@ export interface FeatureVisibilityResult {
   /** Display name for the source type (e.g., "learning track", "add-on") - from database */
   sourceDisplayName: string | null;
   /** Reason why the feature is hidden (for admin debugging) */
-  hiddenReason: 'inactive' | 'not_monetized' | null;
+  hiddenReason: "inactive" | "not_monetized" | null;
 }
 
 interface MonetizedFeature {
@@ -40,22 +40,24 @@ interface FeatureRow {
  * 3. If feature is monetized but user lacks entitlement → locked (show with upsell)
  * 4. If user has entitlement → accessible
  */
-export function useFeatureVisibility(featureKey: string | null | undefined): FeatureVisibilityResult {
+export function useFeatureVisibility(
+  featureKey: string | null | undefined,
+): FeatureVisibilityResult {
   const { userRoles } = useAuth();
   const { hasFeature, isLoading: entitlementsLoading } = useEntitlements();
-  const isAdmin = userRoles.includes('admin');
+  const isAdmin = userRoles.includes("admin");
 
   // Fetch feature metadata and monetization status
   const { data: featureData, isLoading: featureLoading } = useQuery({
-    queryKey: ['feature-visibility', featureKey],
+    queryKey: ["feature-visibility", featureKey],
     queryFn: async (): Promise<MonetizedFeature | null> => {
       if (!featureKey) return null;
 
       // Get feature details including is_active
       const { data: feature, error: featureError } = await supabase
-        .from('features')
-        .select('id, key, is_active')
-        .eq('key', featureKey)
+        .from("features")
+        .select("id, key, is_active")
+        .eq("key", featureKey)
         .maybeSingle();
 
       if (featureError || !feature) {
@@ -68,32 +70,32 @@ export function useFeatureVisibility(featureKey: string | null | undefined): Fea
       // Check if feature is monetized (assigned to any plan, track, add-on, or program_plan)
       const [planCheck, trackCheck, addOnCheck, programPlanCheck] = await Promise.all([
         supabase
-          .from('plan_features')
-          .select('plans!inner(name, tier_level, display_name)')
-          .eq('feature_id', typedFeature.id)
-          .eq('enabled', true)
-          .order('plans(tier_level)', { ascending: true })
+          .from("plan_features")
+          .select("plans!inner(name, tier_level, display_name)")
+          .eq("feature_id", typedFeature.id)
+          .eq("enabled", true)
+          .order("plans(tier_level)", { ascending: true })
           .limit(1),
         supabase
-          .from('track_features')
-          .select('tracks!inner(name, display_name)')
-          .eq('feature_id', typedFeature.id)
-          .eq('is_enabled', true)
+          .from("track_features")
+          .select("tracks!inner(name, display_name)")
+          .eq("feature_id", typedFeature.id)
+          .eq("is_enabled", true)
           .limit(1),
         supabase
-          .from('add_on_features')
-          .select('add_ons!inner(name, display_name)')
-          .eq('feature_id', typedFeature.id)
+          .from("add_on_features")
+          .select("add_ons!inner(name, display_name)")
+          .eq("feature_id", typedFeature.id)
           .limit(1),
         supabase
-          .from('program_plan_features')
-          .select('program_plans!inner(name, display_name)')
-          .eq('feature_id', typedFeature.id)
-          .eq('enabled', true)
+          .from("program_plan_features")
+          .select("program_plans!inner(name, display_name)")
+          .eq("feature_id", typedFeature.id)
+          .eq("enabled", true)
           .limit(1),
       ]);
 
-      const hasAnyMonetization = 
+      const hasAnyMonetization =
         (planCheck.data && planCheck.data.length > 0) ||
         (trackCheck.data && trackCheck.data.length > 0) ||
         (addOnCheck.data && addOnCheck.data.length > 0) ||
@@ -103,27 +105,27 @@ export function useFeatureVisibility(featureKey: string | null | undefined): Fea
       let lowestPlanName: string | null = null;
       let sourceType: AccessSourceType = null;
       let sourceDisplayName: string | null = null;
-      
+
       if (planCheck.data && planCheck.data.length > 0) {
         const plan = planCheck.data[0].plans as any;
         lowestPlanName = plan?.name || null;
-        sourceDisplayName = plan?.display_name || 'plan';
-        sourceType = 'plan';
+        sourceDisplayName = plan?.display_name || "plan";
+        sourceType = "plan";
       } else if (trackCheck.data && trackCheck.data.length > 0) {
         const track = trackCheck.data[0].tracks as any;
         lowestPlanName = track?.name || null;
-        sourceDisplayName = track?.display_name || 'learning track';
-        sourceType = 'track';
+        sourceDisplayName = track?.display_name || "learning track";
+        sourceType = "track";
       } else if (addOnCheck.data && addOnCheck.data.length > 0) {
         const addOn = addOnCheck.data[0].add_ons as any;
         lowestPlanName = addOn?.name || null;
-        sourceDisplayName = addOn?.display_name || 'add-on';
-        sourceType = 'add_on';
+        sourceDisplayName = addOn?.display_name || "add-on";
+        sourceType = "add_on";
       } else if (programPlanCheck.data && programPlanCheck.data.length > 0) {
         const programPlan = programPlanCheck.data[0].program_plans as any;
         lowestPlanName = programPlan?.name || null;
-        sourceDisplayName = programPlan?.display_name || 'program';
-        sourceType = 'program_plan';
+        sourceDisplayName = programPlan?.display_name || "program";
+        sourceType = "program_plan";
       }
 
       return {
@@ -144,7 +146,7 @@ export function useFeatureVisibility(featureKey: string | null | undefined): Fea
   // No feature key provided = always accessible (null means no gating)
   if (!featureKey) {
     return {
-      visibility: 'accessible',
+      visibility: "accessible",
       isLoading: false,
       requiredPlan: null,
       sourceType: null,
@@ -156,7 +158,7 @@ export function useFeatureVisibility(featureKey: string | null | undefined): Fea
   // Still loading
   if (isLoading) {
     return {
-      visibility: 'hidden', // Default to hidden while loading
+      visibility: "hidden", // Default to hidden while loading
       isLoading: true,
       requiredPlan: null,
       sourceType: null,
@@ -168,7 +170,7 @@ export function useFeatureVisibility(featureKey: string | null | undefined): Fea
   // Feature not found in DB = treat as accessible (legacy/unmigrated features)
   if (!featureData) {
     return {
-      visibility: 'accessible',
+      visibility: "accessible",
       isLoading: false,
       requiredPlan: null,
       sourceType: null,
@@ -180,31 +182,31 @@ export function useFeatureVisibility(featureKey: string | null | undefined): Fea
   // Rule 1: Feature is inactive → hidden (admins can still see)
   if (!featureData.isActive) {
     return {
-      visibility: isAdmin ? 'locked' : 'hidden', // Admins see it as locked, others don't see it
+      visibility: isAdmin ? "locked" : "hidden", // Admins see it as locked, others don't see it
       isLoading: false,
       requiredPlan: null,
       sourceType: null,
       sourceDisplayName: null,
-      hiddenReason: 'inactive',
+      hiddenReason: "inactive",
     };
   }
 
   // Rule 2: Feature is active but not monetized → hidden (admins can still see)
   if (!featureData.lowestPlanName) {
     return {
-      visibility: isAdmin ? 'locked' : 'hidden', // Admins see it as locked, others don't see it
+      visibility: isAdmin ? "locked" : "hidden", // Admins see it as locked, others don't see it
       isLoading: false,
       requiredPlan: null,
       sourceType: null,
       sourceDisplayName: null,
-      hiddenReason: 'not_monetized',
+      hiddenReason: "not_monetized",
     };
   }
 
   // Rule 3: Feature is monetized, check user entitlement
   if (hasFeature(featureKey)) {
     return {
-      visibility: 'accessible',
+      visibility: "accessible",
       isLoading: false,
       requiredPlan: null,
       sourceType: null,
@@ -215,7 +217,7 @@ export function useFeatureVisibility(featureKey: string | null | undefined): Fea
 
   // Rule 4: User lacks entitlement → locked (show with upsell)
   return {
-    visibility: 'locked',
+    visibility: "locked",
     isLoading: false,
     requiredPlan: featureData.lowestPlanName,
     sourceType: featureData.sourceType,
@@ -233,49 +235,49 @@ export function useMultipleFeatureVisibility(featureKeys: (string | null | undef
 } {
   const { userRoles } = useAuth();
   const { hasFeature, isLoading: entitlementsLoading } = useEntitlements();
-  const isAdmin = userRoles.includes('admin');
+  const isAdmin = userRoles.includes("admin");
 
   // Filter to unique non-null keys
   const uniqueKeys = [...new Set(featureKeys.filter((k): k is string => !!k))];
 
   // Fetch all features at once
   const { data: featuresData, isLoading: featuresLoading } = useQuery({
-    queryKey: ['features-visibility-batch', uniqueKeys.sort().join(',')],
+    queryKey: ["features-visibility-batch", uniqueKeys.sort().join(",")],
     queryFn: async (): Promise<Map<string, MonetizedFeature>> => {
       if (uniqueKeys.length === 0) return new Map();
 
       // Get all features
       const { data: features } = await supabase
-        .from('features')
-        .select('id, key, is_active')
-        .in('key', uniqueKeys);
+        .from("features")
+        .select("id, key, is_active")
+        .in("key", uniqueKeys);
 
       if (!features || features.length === 0) return new Map();
 
       const typedFeatures = features as unknown as FeatureRow[];
-      const featureIds = typedFeatures.map(f => f.id);
+      const featureIds = typedFeatures.map((f) => f.id);
 
       // Check monetization for all features at once
       const [planFeatures, trackFeatures, addOnFeatures, programPlanFeatures] = await Promise.all([
         supabase
-          .from('plan_features')
-          .select('feature_id, plans!inner(name, tier_level, display_name)')
-          .in('feature_id', featureIds)
-          .eq('enabled', true),
+          .from("plan_features")
+          .select("feature_id, plans!inner(name, tier_level, display_name)")
+          .in("feature_id", featureIds)
+          .eq("enabled", true),
         supabase
-          .from('track_features')
-          .select('feature_id, tracks!inner(name, display_name)')
-          .in('feature_id', featureIds)
-          .eq('is_enabled', true),
+          .from("track_features")
+          .select("feature_id, tracks!inner(name, display_name)")
+          .in("feature_id", featureIds)
+          .eq("is_enabled", true),
         supabase
-          .from('add_on_features')
-          .select('feature_id, add_ons!inner(name, display_name)')
-          .in('feature_id', featureIds),
+          .from("add_on_features")
+          .select("feature_id, add_ons!inner(name, display_name)")
+          .in("feature_id", featureIds),
         supabase
-          .from('program_plan_features')
-          .select('feature_id, program_plans!inner(name, display_name)')
-          .in('feature_id', featureIds)
-          .eq('enabled', true),
+          .from("program_plan_features")
+          .select("feature_id, program_plans!inner(name, display_name)")
+          .in("feature_id", featureIds)
+          .eq("enabled", true),
       ]);
 
       // Build result map
@@ -283,37 +285,44 @@ export function useMultipleFeatureVisibility(featureKeys: (string | null | undef
 
       for (const feature of typedFeatures) {
         // Find monetization sources
-        const planSource = planFeatures.data?.find(pf => pf.feature_id === feature.id);
-        const trackSource = trackFeatures.data?.find(tf => tf.feature_id === feature.id);
-        const addOnSource = addOnFeatures.data?.find(af => af.feature_id === feature.id);
-        const programPlanSource = programPlanFeatures.data?.find(ppf => ppf.feature_id === feature.id);
+        const planSource = planFeatures.data?.find((pf) => pf.feature_id === feature.id);
+        const trackSource = trackFeatures.data?.find((tf) => tf.feature_id === feature.id);
+        const addOnSource = addOnFeatures.data?.find((af) => af.feature_id === feature.id);
+        const programPlanSource = programPlanFeatures.data?.find(
+          (ppf) => ppf.feature_id === feature.id,
+        );
 
-        const hasAnyMonetization = !!(planSource || trackSource || addOnSource || programPlanSource);
+        const hasAnyMonetization = !!(
+          planSource ||
+          trackSource ||
+          addOnSource ||
+          programPlanSource
+        );
 
         let lowestPlanName: string | null = null;
         let sourceType: AccessSourceType = null;
         let sourceDisplayName: string | null = null;
-        
+
         if (planSource) {
           const plan = planSource.plans as any;
           lowestPlanName = plan?.name || null;
-          sourceDisplayName = plan?.display_name || 'plan';
-          sourceType = 'plan';
+          sourceDisplayName = plan?.display_name || "plan";
+          sourceType = "plan";
         } else if (trackSource) {
           const track = trackSource.tracks as any;
           lowestPlanName = track?.name || null;
-          sourceDisplayName = track?.display_name || 'learning track';
-          sourceType = 'track';
+          sourceDisplayName = track?.display_name || "learning track";
+          sourceType = "track";
         } else if (addOnSource) {
           const addOn = addOnSource.add_ons as any;
           lowestPlanName = addOn?.name || null;
-          sourceDisplayName = addOn?.display_name || 'add-on';
-          sourceType = 'add_on';
+          sourceDisplayName = addOn?.display_name || "add-on";
+          sourceType = "add_on";
         } else if (programPlanSource) {
           const programPlan = programPlanSource.program_plans as any;
           lowestPlanName = programPlan?.name || null;
-          sourceDisplayName = programPlan?.display_name || 'program';
-          sourceType = 'program_plan';
+          sourceDisplayName = programPlan?.display_name || "program";
+          sourceType = "program_plan";
         }
 
         result.set(feature.key, {
@@ -338,7 +347,7 @@ export function useMultipleFeatureVisibility(featureKeys: (string | null | undef
     // No feature key = always accessible
     if (!featureKey) {
       return {
-        visibility: 'accessible',
+        visibility: "accessible",
         isLoading: false,
         requiredPlan: null,
         sourceType: null,
@@ -349,7 +358,7 @@ export function useMultipleFeatureVisibility(featureKeys: (string | null | undef
 
     if (isLoading) {
       return {
-        visibility: 'hidden',
+        visibility: "hidden",
         isLoading: true,
         requiredPlan: null,
         sourceType: null,
@@ -363,7 +372,7 @@ export function useMultipleFeatureVisibility(featureKeys: (string | null | undef
     // Feature not found = accessible (legacy)
     if (!featureData) {
       return {
-        visibility: 'accessible',
+        visibility: "accessible",
         isLoading: false,
         requiredPlan: null,
         sourceType: null,
@@ -375,31 +384,31 @@ export function useMultipleFeatureVisibility(featureKeys: (string | null | undef
     // Inactive
     if (!featureData.isActive) {
       return {
-        visibility: isAdmin ? 'locked' : 'hidden',
+        visibility: isAdmin ? "locked" : "hidden",
         isLoading: false,
         requiredPlan: null,
         sourceType: null,
         sourceDisplayName: null,
-        hiddenReason: 'inactive',
+        hiddenReason: "inactive",
       };
     }
 
     // Not monetized
     if (!featureData.lowestPlanName) {
       return {
-        visibility: isAdmin ? 'locked' : 'hidden',
+        visibility: isAdmin ? "locked" : "hidden",
         isLoading: false,
         requiredPlan: null,
         sourceType: null,
         sourceDisplayName: null,
-        hiddenReason: 'not_monetized',
+        hiddenReason: "not_monetized",
       };
     }
 
     // Check entitlement
     if (hasFeature(featureKey)) {
       return {
-        visibility: 'accessible',
+        visibility: "accessible",
         isLoading: false,
         requiredPlan: null,
         sourceType: null,
@@ -410,7 +419,7 @@ export function useMultipleFeatureVisibility(featureKeys: (string | null | undef
 
     // Locked
     return {
-      visibility: 'locked',
+      visibility: "locked",
       isLoading: false,
       requiredPlan: featureData.lowestPlanName,
       sourceType: featureData.sourceType,

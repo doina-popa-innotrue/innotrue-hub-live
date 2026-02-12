@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Check, ChevronsUpDown, User } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { Check, ChevronsUpDown, User } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -9,12 +9,8 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Client {
   id: string;
@@ -30,9 +26,7 @@ interface ClientFilterComboboxProps {
 export function ClientFilterCombobox({ clients, value, onChange }: ClientFilterComboboxProps) {
   const [open, setOpen] = useState(false);
 
-  const selectedClient = value === 'all' 
-    ? null 
-    : clients.find(c => c.id === value);
+  const selectedClient = value === "all" ? null : clients.find((c) => c.id === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -45,9 +39,7 @@ export function ClientFilterCombobox({ clients, value, onChange }: ClientFilterC
         >
           <span className="flex items-center gap-2 truncate">
             <User className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span className="truncate">
-              {selectedClient ? selectedClient.name : 'All Clients'}
-            </span>
+            <span className="truncate">{selectedClient ? selectedClient.name : "All Clients"}</span>
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -61,15 +53,12 @@ export function ClientFilterCombobox({ clients, value, onChange }: ClientFilterC
               <CommandItem
                 value="all"
                 onSelect={() => {
-                  onChange('all');
+                  onChange("all");
                   setOpen(false);
                 }}
               >
                 <Check
-                  className={cn(
-                    'mr-2 h-4 w-4',
-                    value === 'all' ? 'opacity-100' : 'opacity-0'
-                  )}
+                  className={cn("mr-2 h-4 w-4", value === "all" ? "opacity-100" : "opacity-0")}
                 />
                 All Clients
               </CommandItem>
@@ -84,8 +73,8 @@ export function ClientFilterCombobox({ clients, value, onChange }: ClientFilterC
                 >
                   <Check
                     className={cn(
-                      'mr-2 h-4 w-4',
-                      value === client.id ? 'opacity-100' : 'opacity-0'
+                      "mr-2 h-4 w-4",
+                      value === client.id ? "opacity-100" : "opacity-0",
                     )}
                   />
                   {client.name}

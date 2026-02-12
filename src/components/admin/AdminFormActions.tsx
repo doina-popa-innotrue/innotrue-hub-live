@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 interface AdminFormActionsProps {
   isEditing: boolean;
@@ -10,7 +10,7 @@ interface AdminFormActionsProps {
 
 /**
  * Standardized form action buttons for admin dialogs.
- * 
+ *
  * @example
  * ```tsx
  * <AdminFormActions
@@ -24,7 +24,7 @@ export function AdminFormActions({
   isEditing,
   isSubmitting,
   onCancel,
-  submitLabel = { create: 'Create', update: 'Update' },
+  submitLabel = { create: "Create", update: "Update" },
 }: AdminFormActionsProps) {
   return (
     <div className="flex gap-2 justify-end">

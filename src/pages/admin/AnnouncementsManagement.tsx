@@ -1,30 +1,66 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Megaphone, Settings, Trash, Loader2, Pin } from 'lucide-react';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { Pencil, Trash2, Megaphone, Settings, Trash, Loader2, Pin } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   AdminPageHeader,
   AdminLoadingState,
   AdminEmptyState,
   AdminFormActions,
-} from '@/components/admin';
-import { IconPicker, DynamicIcon } from '@/components/admin/IconPicker';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
-import { Link } from 'react-router-dom';
+} from "@/components/admin";
+import { IconPicker, DynamicIcon } from "@/components/admin/IconPicker";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { Link } from "react-router-dom";
 
 interface AnnouncementCategory {
   id: string;
@@ -60,10 +96,10 @@ type FormData = {
 };
 
 const initialFormData: FormData = {
-  title: '',
-  content: '',
-  category_id: '',
-  icon: '',
+  title: "",
+  content: "",
+  category_id: "",
+  icon: "",
   is_active: false,
   is_pinned: false,
   display_order: 0,
@@ -82,14 +118,14 @@ export default function AnnouncementsManagement() {
 
   // Fetch announcements
   const { data: announcements = [], isLoading } = useQuery({
-    queryKey: ['announcements'],
+    queryKey: ["announcements"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('announcements')
-        .select('*, announcement_categories(*)')
-        .order('is_pinned', { ascending: false })
-        .order('display_order')
-        .order('created_at', { ascending: false });
+        .from("announcements")
+        .select("*, announcement_categories(*)")
+        .order("is_pinned", { ascending: false })
+        .order("display_order")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data as Announcement[];
     },
@@ -99,25 +135,25 @@ export default function AnnouncementsManagement() {
   const togglePinnedMutation = useMutation({
     mutationFn: async ({ id, value }: { id: string; value: boolean }) => {
       const { error } = await supabase
-        .from('announcements')
+        .from("announcements")
         .update({ is_pinned: value })
-        .eq('id', id);
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['announcements'] });
-      queryClient.invalidateQueries({ queryKey: ['active-announcements'] });
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["active-announcements"] });
     },
   });
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
-    queryKey: ['announcement-categories'],
+    queryKey: ["announcement-categories"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('announcement_categories')
-        .select('*')
-        .order('display_order');
+        .from("announcement_categories")
+        .select("*")
+        .order("display_order");
       if (error) throw error;
       return data as AnnouncementCategory[];
     },
@@ -139,32 +175,30 @@ export default function AnnouncementsManagement() {
 
       if (editingItem) {
         const { error } = await supabase
-          .from('announcements')
+          .from("announcements")
           .update(payload)
-          .eq('id', editingItem.id);
+          .eq("id", editingItem.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('announcements')
-          .insert(payload);
+        const { error } = await supabase.from("announcements").insert(payload);
         if (error) throw error;
       }
     },
     onSuccess: () => {
       toast({
-        title: editingItem ? 'Announcement updated' : 'Announcement created',
-        description: 'Your changes have been saved.',
+        title: editingItem ? "Announcement updated" : "Announcement created",
+        description: "Your changes have been saved.",
       });
-      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
       setIsDialogOpen(false);
       setEditingItem(null);
       setFormData(initialFormData);
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error',
+        title: "Error",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
@@ -172,21 +206,18 @@ export default function AnnouncementsManagement() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('announcements')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from("announcements").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: 'Announcement deleted' });
-      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+      toast({ title: "Announcement deleted" });
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error',
+        title: "Error",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
@@ -195,14 +226,14 @@ export default function AnnouncementsManagement() {
   const toggleMutation = useMutation({
     mutationFn: async ({ id, value }: { id: string; value: boolean }) => {
       const { error } = await supabase
-        .from('announcements')
+        .from("announcements")
         .update({ is_active: value })
-        .eq('id', id);
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['announcements'] });
-      queryClient.invalidateQueries({ queryKey: ['active-announcements'] });
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["active-announcements"] });
     },
   });
 
@@ -210,21 +241,21 @@ export default function AnnouncementsManagement() {
   const handleCleanup = async () => {
     setIsCleaningUp(true);
     try {
-      const { data, error } = await supabase.rpc('cleanup_old_announcements', {
+      const { data, error } = await supabase.rpc("cleanup_old_announcements", {
         days_old: cleanupDays,
       });
       if (error) throw error;
       toast({
-        title: 'Cleanup complete',
+        title: "Cleanup complete",
         description: `Deleted ${data} inactive announcement(s) older than ${cleanupDays} days.`,
       });
-      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
       setShowCleanupDialog(false);
     } catch (error: any) {
       toast({
-        title: 'Cleanup failed',
+        title: "Cleanup failed",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setIsCleaningUp(false);
@@ -241,9 +272,9 @@ export default function AnnouncementsManagement() {
     setEditingItem(item);
     setFormData({
       title: item.title,
-      content: item.content || '',
-      category_id: item.category_id || '',
-      icon: item.icon || '',
+      content: item.content || "",
+      category_id: item.category_id || "",
+      icon: item.icon || "",
       is_active: item.is_active,
       is_pinned: item.is_pinned,
       display_order: item.display_order,
@@ -315,7 +346,9 @@ export default function AnnouncementsManagement() {
             id="display_order"
             type="number"
             value={formData.display_order}
-            onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
+            onChange={(e) =>
+              setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })
+            }
           />
         </div>
         <div className="flex items-center gap-2 pt-6">
@@ -334,9 +367,7 @@ export default function AnnouncementsManagement() {
           checked={formData.is_pinned}
           onCheckedChange={(checked) => setFormData({ ...formData, is_pinned: checked })}
         />
-        <Label htmlFor="is_pinned">
-          Pinned (always visible at top of widget)
-        </Label>
+        <Label htmlFor="is_pinned">Pinned (always visible at top of widget)</Label>
       </div>
 
       <AdminFormActions
@@ -351,9 +382,9 @@ export default function AnnouncementsManagement() {
     return <AdminLoadingState />;
   }
 
-  const activeCount = announcements.filter(a => a.is_active).length;
-  const inactiveCount = announcements.filter(a => !a.is_active).length;
-  const pinnedCount = announcements.filter(a => a.is_pinned).length;
+  const activeCount = announcements.filter((a) => a.is_active).length;
+  const inactiveCount = announcements.filter((a) => !a.is_active).length;
+  const pinnedCount = announcements.filter((a) => a.is_pinned).length;
 
   return (
     <div>
@@ -373,7 +404,9 @@ export default function AnnouncementsManagement() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-3xl font-bold">Announcements</h1>
-            <p className="text-muted-foreground">Manage news and updates shown to authenticated users on their dashboard</p>
+            <p className="text-muted-foreground">
+              Manage news and updates shown to authenticated users on their dashboard
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <Link to="/admin/announcement-categories">
@@ -409,8 +442,8 @@ export default function AnnouncementsManagement() {
                       <span>days</span>
                     </div>
                   </div>
-                  <Button 
-                    onClick={() => setShowCleanupDialog(true)} 
+                  <Button
+                    onClick={() => setShowCleanupDialog(true)}
                     variant="destructive"
                     disabled={isCleaningUp}
                   >
@@ -429,7 +462,9 @@ export default function AnnouncementsManagement() {
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>{editingItem ? 'Edit Announcement' : 'Create Announcement'}</DialogTitle>
+                  <DialogTitle>
+                    {editingItem ? "Edit Announcement" : "Create Announcement"}
+                  </DialogTitle>
                 </DialogHeader>
                 {formContent}
               </DialogContent>
@@ -507,7 +542,8 @@ export default function AnnouncementsManagement() {
                 </TableHeader>
                 <TableBody>
                   {announcements.map((announcement) => {
-                    const displayIcon = announcement.icon || announcement.announcement_categories?.icon || 'Info';
+                    const displayIcon =
+                      announcement.icon || announcement.announcement_categories?.icon || "Info";
                     return (
                       <TableRow key={announcement.id}>
                         <TableCell>
@@ -530,12 +566,20 @@ export default function AnnouncementsManagement() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => togglePinnedMutation.mutate({ 
-                              id: announcement.id, 
-                              value: !announcement.is_pinned 
-                            })}
-                            className={announcement.is_pinned ? 'text-primary hover:text-primary/80' : 'text-muted-foreground hover:text-foreground'}
-                            title={announcement.is_pinned ? 'Unpin announcement' : 'Pin announcement'}
+                            onClick={() =>
+                              togglePinnedMutation.mutate({
+                                id: announcement.id,
+                                value: !announcement.is_pinned,
+                              })
+                            }
+                            className={
+                              announcement.is_pinned
+                                ? "text-primary hover:text-primary/80"
+                                : "text-muted-foreground hover:text-foreground"
+                            }
+                            title={
+                              announcement.is_pinned ? "Unpin announcement" : "Pin announcement"
+                            }
                           >
                             <Pin className="h-4 w-4" />
                           </Button>
@@ -543,22 +587,26 @@ export default function AnnouncementsManagement() {
                         <TableCell>
                           <Switch
                             checked={announcement.is_active}
-                            onCheckedChange={(checked) => 
+                            onCheckedChange={(checked) =>
                               toggleMutation.mutate({ id: announcement.id, value: checked })
                             }
                           />
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {format(new Date(announcement.updated_at), 'MMM d, yyyy')}
+                          {format(new Date(announcement.updated_at), "MMM d, yyyy")}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => openEdit(announcement)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEdit(announcement)}
+                            >
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="text-destructive"
                               onClick={() => deleteMutation.mutate(announcement.id)}
                             >

@@ -1,18 +1,30 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { AdminPageHeader, AdminTable, AdminEmptyState, AdminLoadingState, AdminTableColumn } from '@/components/admin';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Pencil, Trash2, Eye, Map } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AdminPageHeader,
+  AdminTable,
+  AdminEmptyState,
+  AdminLoadingState,
+  AdminTableColumn,
+} from "@/components/admin";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Pencil, Trash2, Eye, Map } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +34,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 
 interface Template {
   id: string;
@@ -63,54 +75,62 @@ export default function GuidedPathTemplates() {
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [deletingTemplate, setDeletingTemplate] = useState<Template | null>(null);
   const [formData, setFormData] = useState<FormData>({
-    name: '',
-    description: '',
-    program_id: '',
-    family_id: '',
+    name: "",
+    description: "",
+    program_id: "",
+    family_id: "",
     is_active: true,
     is_base_template: false,
   });
 
   const { data: templates = [], isLoading } = useQuery({
-    queryKey: ['guided-path-templates'],
+    queryKey: ["guided-path-templates"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('guided_path_templates')
-        .select(`
+        .from("guided_path_templates")
+        .select(
+          `
           *,
           programs(name),
           guided_path_template_families(id, name)
-        `)
-        .order('created_at', { ascending: false });
+        `,
+        )
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
       // Get goal counts and conditions for each template
-      const templateIds = (data || []).map(t => t.id);
-      
+      const templateIds = (data || []).map((t) => t.id);
+
       const [goalsResult, conditionsResult] = await Promise.all([
         supabase
-          .from('guided_path_template_goals')
-          .select('template_id')
-          .in('template_id', templateIds),
+          .from("guided_path_template_goals")
+          .select("template_id")
+          .in("template_id", templateIds),
         supabase
-          .from('template_conditions')
-          .select('id, template_id, question_id, operator, value')
-          .in('template_id', templateIds),
+          .from("template_conditions")
+          .select("id, template_id, question_id, operator, value")
+          .in("template_id", templateIds),
       ]);
 
-      const goalCounts = (goalsResult.data || []).reduce((acc, g) => {
-        acc[g.template_id] = (acc[g.template_id] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
+      const goalCounts = (goalsResult.data || []).reduce(
+        (acc, g) => {
+          acc[g.template_id] = (acc[g.template_id] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
 
-      const conditionsByTemplate = (conditionsResult.data || []).reduce((acc, c) => {
-        if (!acc[c.template_id]) acc[c.template_id] = [];
-        acc[c.template_id]!.push(c);
-        return acc;
-      }, {} as Record<string, typeof conditionsResult.data>);
+      const conditionsByTemplate = (conditionsResult.data || []).reduce(
+        (acc, c) => {
+          if (!acc[c.template_id]) acc[c.template_id] = [];
+          acc[c.template_id]!.push(c);
+          return acc;
+        },
+        {} as Record<string, typeof conditionsResult.data>,
+      );
 
-      return (data || []).map(t => ({
+      return (data || []).map((t) => ({
         ...t,
         _count: { goals: goalCounts[t.id] || 0 },
         conditions: conditionsByTemplate[t.id] || [],
@@ -119,25 +139,22 @@ export default function GuidedPathTemplates() {
   });
 
   const { data: families = [] } = useQuery({
-    queryKey: ['guided-path-families-list'],
+    queryKey: ["guided-path-families-list"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('guided_path_template_families')
-        .select('id, name')
-        .eq('is_active', true)
-        .order('name');
+        .from("guided_path_template_families")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
       if (error) throw error;
       return data as Family[];
     },
   });
 
   const { data: programs = [] } = useQuery({
-    queryKey: ['programs-for-templates'],
+    queryKey: ["programs-for-templates"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('programs')
-        .select('id, name')
-        .order('name');
+      const { data, error } = await supabase.from("programs").select("id, name").order("name");
       if (error) throw error;
       return data || [];
     },
@@ -156,56 +173,51 @@ export default function GuidedPathTemplates() {
 
       if (editingTemplate) {
         const { error } = await supabase
-          .from('guided_path_templates')
+          .from("guided_path_templates")
           .update(payload)
-          .eq('id', editingTemplate.id);
+          .eq("id", editingTemplate.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('guided_path_templates')
-          .insert([payload]);
+        const { error } = await supabase.from("guided_path_templates").insert([payload]);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['guided-path-templates'] });
+      queryClient.invalidateQueries({ queryKey: ["guided-path-templates"] });
       toast({
-        title: 'Success',
-        description: `Template ${editingTemplate ? 'updated' : 'created'} successfully`,
+        title: "Success",
+        description: `Template ${editingTemplate ? "updated" : "created"} successfully`,
       });
       handleCloseDialog();
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error',
+        title: "Error",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('guided_path_templates')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from("guided_path_templates").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['guided-path-templates'] });
+      queryClient.invalidateQueries({ queryKey: ["guided-path-templates"] });
       toast({
-        title: 'Success',
-        description: 'Template deleted successfully',
+        title: "Success",
+        description: "Template deleted successfully",
       });
       setDeleteDialogOpen(false);
       setDeletingTemplate(null);
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error',
+        title: "Error",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
@@ -213,10 +225,10 @@ export default function GuidedPathTemplates() {
   const handleOpenCreate = () => {
     setEditingTemplate(null);
     setFormData({
-      name: '',
-      description: '',
-      program_id: '',
-      family_id: '',
+      name: "",
+      description: "",
+      program_id: "",
+      family_id: "",
       is_active: true,
       is_base_template: false,
     });
@@ -227,9 +239,9 @@ export default function GuidedPathTemplates() {
     setEditingTemplate(template);
     setFormData({
       name: template.name,
-      description: template.description || '',
-      program_id: template.program_id || '',
-      family_id: template.family_id || '',
+      description: template.description || "",
+      program_id: template.program_id || "",
+      family_id: template.family_id || "",
       is_active: template.is_active,
       is_base_template: template.is_base_template,
     });
@@ -240,10 +252,10 @@ export default function GuidedPathTemplates() {
     setDialogOpen(false);
     setEditingTemplate(null);
     setFormData({
-      name: '',
-      description: '',
-      program_id: '',
-      family_id: '',
+      name: "",
+      description: "",
+      program_id: "",
+      family_id: "",
       is_active: true,
       is_base_template: false,
     });
@@ -261,63 +273,58 @@ export default function GuidedPathTemplates() {
 
   const columns: AdminTableColumn<Template>[] = [
     {
-      key: 'name',
-      header: 'Name',
+      key: "name",
+      header: "Name",
       accessor: (template: Template) => (
         <div>
           <div className="font-medium">{template.name}</div>
           {template.description && (
-            <div className="text-sm text-muted-foreground line-clamp-1">
-              {template.description}
-            </div>
+            <div className="text-sm text-muted-foreground line-clamp-1">{template.description}</div>
           )}
         </div>
       ),
     },
     {
-      key: 'family',
-      header: 'Family',
-      accessor: (template: Template) => (
+      key: "family",
+      header: "Family",
+      accessor: (template: Template) =>
         template.guided_path_template_families?.name ? (
           <Badge variant="outline">{template.guided_path_template_families.name}</Badge>
         ) : (
           <span className="text-muted-foreground italic">None</span>
-        )
-      ),
+        ),
     },
     {
-      key: 'program',
-      header: 'Program',
-      accessor: (template: Template) => (
-        template.programs?.name || (
-          <span className="text-muted-foreground italic">General</span>
-        )
-      ),
+      key: "program",
+      header: "Program",
+      accessor: (template: Template) =>
+        template.programs?.name || <span className="text-muted-foreground italic">General</span>,
     },
     {
-      key: 'type',
-      header: 'Type',
-      accessor: (template: Template) => (
+      key: "type",
+      header: "Type",
+      accessor: (template: Template) =>
         template.is_base_template ? (
           <Badge>Base</Badge>
         ) : template.conditions && template.conditions.length > 0 ? (
-          <Badge variant="secondary">{template.conditions.length} condition{template.conditions.length !== 1 ? 's' : ''}</Badge>
+          <Badge variant="secondary">
+            {template.conditions.length} condition{template.conditions.length !== 1 ? "s" : ""}
+          </Badge>
         ) : (
           <Badge variant="outline">Conditional</Badge>
-        )
-      ),
+        ),
     },
     {
-      key: 'goals',
-      header: 'Goals',
+      key: "goals",
+      header: "Goals",
       accessor: (template: Template) => template._count?.goals || 0,
     },
     {
-      key: 'status',
-      header: 'Status',
+      key: "status",
+      header: "Status",
       accessor: (template: Template) => (
-        <Badge variant={template.is_active ? 'default' : 'secondary'}>
-          {template.is_active ? 'Active' : 'Inactive'}
+        <Badge variant={template.is_active ? "default" : "secondary"}>
+          {template.is_active ? "Active" : "Inactive"}
         </Badge>
       ),
     },
@@ -341,12 +348,7 @@ export default function GuidedPathTemplates() {
       >
         <Pencil className="h-4 w-4" />
       </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => handleDelete(template)}
-        title="Delete"
-      >
+      <Button variant="ghost" size="icon" onClick={() => handleDelete(template)} title="Delete">
         <Trash2 className="h-4 w-4" />
       </Button>
     </div>
@@ -376,19 +378,13 @@ export default function GuidedPathTemplates() {
           onAction={handleOpenCreate}
         />
       ) : (
-        <AdminTable
-          data={templates}
-          columns={columns}
-          renderActions={actions}
-        />
+        <AdminTable data={templates} columns={columns} renderActions={actions} />
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingTemplate ? 'Edit Template' : 'Create Template'}
-            </DialogTitle>
+            <DialogTitle>{editingTemplate ? "Edit Template" : "Create Template"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -467,7 +463,9 @@ export default function GuidedPathTemplates() {
                 <Switch
                   id="is_base"
                   checked={formData.is_base_template}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_base_template: checked })}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, is_base_template: checked })
+                  }
                 />
               </div>
             )}
@@ -491,7 +489,7 @@ export default function GuidedPathTemplates() {
                 Cancel
               </Button>
               <Button type="submit" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? 'Saving...' : editingTemplate ? 'Update' : 'Create'}
+                {saveMutation.isPending ? "Saving..." : editingTemplate ? "Update" : "Create"}
               </Button>
             </div>
           </form>
@@ -513,7 +511,7 @@ export default function GuidedPathTemplates() {
               onClick={() => deletingTemplate && deleteMutation.mutate(deletingTemplate.id)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

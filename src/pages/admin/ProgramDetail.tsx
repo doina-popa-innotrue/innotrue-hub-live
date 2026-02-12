@@ -1,28 +1,52 @@
-import { useEffect, useState, useRef } from 'react';
-import { useParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { toast } from 'sonner';
-import { Plus, Pencil, ExternalLink, Copy, GripVertical, Undo, Redo, Trash2, Check, Settings, X, ArrowRightLeft, CopyPlus, Users, Upload, ImageIcon, UserCog } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import ModuleForm from '@/components/admin/ModuleForm';
-import { ModulePrerequisites } from '@/components/admin/ModulePrerequisites';
-import { ModuleSectionsEditor } from '@/components/admin/ModuleSectionsEditor';
-import { InstructorCoachAssignment } from '@/components/admin/InstructorCoachAssignment';
-import { ModuleAssignmentConfig } from '@/components/admin/ModuleAssignmentConfig';
-import { ModuleSkillsEditor } from '@/components/admin/ModuleSkillsEditor';
-import { ModuleScenariosEditor } from '@/components/admin/ModuleScenariosEditor';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
-import { RichTextDisplay } from '@/components/ui/rich-text-display';
-import { ProgramVersionHistory } from '@/components/admin/ProgramVersionHistory';
-import { ProgramTermsManager } from '@/components/admin/ProgramTermsManager';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useEffect, useState, useRef } from "react";
+import { useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import {
+  Plus,
+  Pencil,
+  ExternalLink,
+  Copy,
+  GripVertical,
+  Undo,
+  Redo,
+  Trash2,
+  Check,
+  Settings,
+  X,
+  ArrowRightLeft,
+  CopyPlus,
+  Users,
+  Upload,
+  ImageIcon,
+  UserCog,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import ModuleForm from "@/components/admin/ModuleForm";
+import { ModulePrerequisites } from "@/components/admin/ModulePrerequisites";
+import { ModuleSectionsEditor } from "@/components/admin/ModuleSectionsEditor";
+import { InstructorCoachAssignment } from "@/components/admin/InstructorCoachAssignment";
+import { ModuleAssignmentConfig } from "@/components/admin/ModuleAssignmentConfig";
+import { ModuleSkillsEditor } from "@/components/admin/ModuleSkillsEditor";
+import { ModuleScenariosEditor } from "@/components/admin/ModuleScenariosEditor";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { ProgramVersionHistory } from "@/components/admin/ProgramVersionHistory";
+import { ProgramTermsManager } from "@/components/admin/ProgramTermsManager";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +56,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 import {
   DndContext,
   closestCenter,
@@ -41,21 +65,26 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from '@dnd-kit/core';
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ModuleProgramTransferDialog } from '@/components/admin/ModuleProgramTransferDialog';
-import ModuleClientContentManager from '@/components/admin/ModuleClientContentManager';
-import ProgramBadgeManager from '@/components/admin/ProgramBadgeManager';
-import { ProgramCohortsManager } from '@/components/admin/ProgramCohortsManager';
-import { ProgramPlanConfig } from '@/components/admin/ProgramPlanConfig';
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ModuleProgramTransferDialog } from "@/components/admin/ModuleProgramTransferDialog";
+import ModuleClientContentManager from "@/components/admin/ModuleClientContentManager";
+import ProgramBadgeManager from "@/components/admin/ProgramBadgeManager";
+import { ProgramCohortsManager } from "@/components/admin/ProgramCohortsManager";
+import { ProgramPlanConfig } from "@/components/admin/ProgramPlanConfig";
 
 interface SortableModuleProps {
   module: any;
@@ -71,15 +100,22 @@ interface SortableModuleProps {
   selectionMode: boolean;
 }
 
-function SortableModule({ module, index, onEdit, onClone, onCopyToProgram, onMoveToProgram, onToggleActive, onDelete, isSelected, onSelect, selectionMode }: SortableModuleProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: module.id });
+function SortableModule({
+  module,
+  index,
+  onEdit,
+  onClone,
+  onCopyToProgram,
+  onMoveToProgram,
+  onToggleActive,
+  onDelete,
+  isSelected,
+  onSelect,
+  selectionMode,
+}: SortableModuleProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: module.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -89,7 +125,9 @@ function SortableModule({ module, index, onEdit, onClone, onCopyToProgram, onMov
 
   return (
     <div ref={setNodeRef} style={style}>
-      <Card className={`${isDragging ? 'shadow-lg' : ''} ${isSelected ? 'ring-2 ring-primary' : ''} ${!module.is_active ? 'opacity-60' : ''}`}>
+      <Card
+        className={`${isDragging ? "shadow-lg" : ""} ${isSelected ? "ring-2 ring-primary" : ""} ${!module.is_active ? "opacity-60" : ""}`}
+      >
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
             {selectionMode && (
@@ -112,14 +150,32 @@ function SortableModule({ module, index, onEdit, onClone, onCopyToProgram, onMov
               </CardTitle>
               <div className="flex items-center gap-1 sm:gap-2 flex-wrap mt-2">
                 {module.code && (
-                  <Badge variant="outline" className="text-xs font-mono">{module.code}</Badge>
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {module.code}
+                  </Badge>
                 )}
-                <Badge variant="outline" className="text-xs">{module.module_type}</Badge>
+                <Badge variant="outline" className="text-xs">
+                  {module.module_type}
+                </Badge>
                 {module.tier_required && (
-                  <Badge variant="secondary" className="text-xs">{module.tier_required}</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {module.tier_required}
+                  </Badge>
                 )}
-                {module.is_individualized && <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20 text-xs"><UserCog className="h-3 w-3 mr-1" />Personalised</Badge>}
-                {!module.is_active && <Badge variant="destructive" className="text-xs">Inactive</Badge>}
+                {module.is_individualized && (
+                  <Badge
+                    variant="outline"
+                    className="bg-blue-500/10 text-blue-600 border-blue-500/20 text-xs"
+                  >
+                    <UserCog className="h-3 w-3 mr-1" />
+                    Personalised
+                  </Badge>
+                )}
+                {!module.is_active && (
+                  <Badge variant="destructive" className="text-xs">
+                    Inactive
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -152,12 +208,7 @@ function SortableModule({ module, index, onEdit, onClone, onCopyToProgram, onMov
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => onEdit(module)}
-              title="Edit module"
-            >
+            <Button size="sm" variant="ghost" onClick={() => onEdit(module)} title="Edit module">
               <Pencil className="h-4 w-4" />
             </Button>
             <Button
@@ -173,7 +224,7 @@ function SortableModule({ module, index, onEdit, onClone, onCopyToProgram, onMov
         </CardHeader>
         <CardContent className="space-y-4">
           <RichTextDisplay
-            content={module.description ?? ''}
+            content={module.description ?? ""}
             className="text-sm text-muted-foreground"
           />
           {module.links && module.links.length > 0 && (
@@ -188,7 +239,12 @@ function SortableModule({ module, index, onEdit, onClone, onCopyToProgram, onMov
                     asChild
                     className="w-full sm:w-auto justify-start"
                   >
-                    <a href={link.url} target="_blank" rel="noopener noreferrer" className="truncate">
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="truncate"
+                    >
                       <span className="truncate">{link.name}</span>
                       <ExternalLink className="ml-2 h-3 w-3 shrink-0" />
                     </a>
@@ -197,7 +253,7 @@ function SortableModule({ module, index, onEdit, onClone, onCopyToProgram, onMov
               </div>
             </div>
           )}
-          
+
           <div className="border-t pt-4">
             <InstructorCoachAssignment
               entityType="module"
@@ -205,20 +261,20 @@ function SortableModule({ module, index, onEdit, onClone, onCopyToProgram, onMov
               moduleTypeName={module.module_type}
             />
           </div>
-          
+
           <div className="border-t pt-4">
             <ModuleAssignmentConfig moduleId={module.id} />
           </div>
           {module.is_individualized && (
             <div className="border-t pt-4">
-              <ModuleClientContentManager 
-                moduleId={module.id} 
+              <ModuleClientContentManager
+                moduleId={module.id}
                 moduleName={module.title}
                 programId={module.program_id}
               />
             </div>
           )}
-          
+
           <p className="text-xs text-muted-foreground">
             Estimated time: {module.estimated_minutes} minutes
           </p>
@@ -237,15 +293,17 @@ interface SortableTierItemProps {
   canRemove: boolean;
 }
 
-function SortableTierItem({ id, tier, index, onUpdateName, onRemove, canRemove }: SortableTierItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
+function SortableTierItem({
+  id,
+  tier,
+  index,
+  onUpdateName,
+  onRemove,
+  canRemove,
+}: SortableTierItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -263,11 +321,7 @@ function SortableTierItem({ id, tier, index, onUpdateName, onRemove, canRemove }
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </button>
       <span className="w-6 text-center font-medium text-muted-foreground">{index + 1}.</span>
-      <Input
-        value={tier}
-        onChange={(e) => onUpdateName(e.target.value)}
-        className="flex-1"
-      />
+      <Input value={tier} onChange={(e) => onUpdateName(e.target.value)} className="flex-1" />
       <Button
         variant="ghost"
         size="icon"
@@ -297,14 +351,14 @@ export default function ProgramDetail() {
   const [showSingleDeleteDialog, setShowSingleDeleteDialog] = useState(false);
   const [openTierManager, setOpenTierManager] = useState(false);
   const [editingTiers, setEditingTiers] = useState<string[]>([]);
-  const [newTierName, setNewTierName] = useState('');
+  const [newTierName, setNewTierName] = useState("");
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
-  const [transferMode, setTransferMode] = useState<'copy' | 'move'>('copy');
+  const [transferMode, setTransferMode] = useState<"copy" | "move">("copy");
   const [transferModule, setTransferModule] = useState<any>(null);
   const [openEditProgram, setOpenEditProgram] = useState(false);
-  const [editingProgramName, setEditingProgramName] = useState('');
-  const [editingDescription, setEditingDescription] = useState('');
-  const [editingProgramCode, setEditingProgramCode] = useState('');
+  const [editingProgramName, setEditingProgramName] = useState("");
+  const [editingDescription, setEditingDescription] = useState("");
+  const [editingProgramCode, setEditingProgramCode] = useState("");
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -312,7 +366,7 @@ export default function ProgramDetail() {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const canUndo = historyIndex > 0;
@@ -323,12 +377,20 @@ export default function ProgramDetail() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const { data: programData, error: programError } = await supabase.from('programs').select('*').eq('id', id).single();
-        const { data: modulesData, error: modulesError } = await supabase.from('program_modules').select('*').eq('program_id', id).order('order_index');
-        
-        if (programError) console.error('Error fetching program:', programError);
-        if (modulesError) console.error('Error fetching modules:', modulesError);
-        
+        const { data: programData, error: programError } = await supabase
+          .from("programs")
+          .select("*")
+          .eq("id", id)
+          .single();
+        const { data: modulesData, error: modulesError } = await supabase
+          .from("program_modules")
+          .select("*")
+          .eq("program_id", id)
+          .order("order_index");
+
+        if (programError) console.error("Error fetching program:", programError);
+        if (modulesError) console.error("Error fetching modules:", modulesError);
+
         setProgram(programData);
         if (modulesData) {
           setModules(modulesData);
@@ -337,7 +399,7 @@ export default function ProgramDetail() {
           setHistoryIndex(0);
         }
       } catch (error) {
-        console.error('Error in fetchData:', error);
+        console.error("Error in fetchData:", error);
       }
     }
     fetchData();
@@ -346,26 +408,26 @@ export default function ProgramDetail() {
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         if (canUndo) undo();
-      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
         e.preventDefault();
         if (canRedo) redo();
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [canUndo, canRedo, historyIndex, history]);
 
   async function addModule(data: any) {
-    const { error } = await supabase.from('program_modules').insert({
+    const { error } = await supabase.from("program_modules").insert({
       program_id: id,
       title: data.title,
       description: data.description,
       content: data.content || null,
-      module_type: data.moduleType as 'session' | 'assignment' | 'reflection' | 'resource',
+      module_type: data.moduleType as "session" | "assignment" | "reflection" | "resource",
       order_index: modules.length + 1,
       estimated_minutes: parseInt(data.estimatedMinutes),
       links: data.links,
@@ -377,39 +439,50 @@ export default function ProgramDetail() {
     });
 
     if (error) {
-      toast.error('Failed to add module');
+      toast.error("Failed to add module");
     } else {
-      toast.success('Module added!');
+      toast.success("Module added!");
       setOpenAdd(false);
       // Refresh modules
-      const { data: modulesData } = await supabase.from('program_modules').select('*').eq('program_id', id).order('order_index');
+      const { data: modulesData } = await supabase
+        .from("program_modules")
+        .select("*")
+        .eq("program_id", id)
+        .order("order_index");
       setModules(modulesData || []);
     }
   }
 
   async function updateModule(data: any) {
-    const { error } = await supabase.from('program_modules').update({
-      title: data.title,
-      description: data.description,
-      content: data.content || null,
-      module_type: data.moduleType as 'session' | 'assignment' | 'reflection' | 'resource',
-      estimated_minutes: parseInt(data.estimatedMinutes),
-      links: data.links,
-      tier_required: data.tierRequired,
-      is_individualized: data.isIndividualized || false,
-      code: data.code || null,
-      feature_key: data.featureKey || null,
-      capability_assessment_id: data.capabilityAssessmentId || null,
-    }).eq('id', editingModule.id);
+    const { error } = await supabase
+      .from("program_modules")
+      .update({
+        title: data.title,
+        description: data.description,
+        content: data.content || null,
+        module_type: data.moduleType as "session" | "assignment" | "reflection" | "resource",
+        estimated_minutes: parseInt(data.estimatedMinutes),
+        links: data.links,
+        tier_required: data.tierRequired,
+        is_individualized: data.isIndividualized || false,
+        code: data.code || null,
+        feature_key: data.featureKey || null,
+        capability_assessment_id: data.capabilityAssessmentId || null,
+      })
+      .eq("id", editingModule.id);
 
     if (error) {
-      toast.error('Failed to update module');
+      toast.error("Failed to update module");
     } else {
-      toast.success('Module updated!');
+      toast.success("Module updated!");
       setOpenEdit(false);
       setEditingModule(null);
       // Refresh modules
-      const { data: modulesData } = await supabase.from('program_modules').select('*').eq('program_id', id).order('order_index');
+      const { data: modulesData } = await supabase
+        .from("program_modules")
+        .select("*")
+        .eq("program_id", id)
+        .order("order_index");
       setModules(modulesData || []);
     }
   }
@@ -432,19 +505,19 @@ export default function ProgramDetail() {
 
       // Always use fresh data to avoid cloning based on stale local state
       const { data: latestModules, error: latestError } = await supabase
-        .from('program_modules')
-        .select('*')
-        .eq('program_id', id)
-        .order('order_index');
+        .from("program_modules")
+        .select("*")
+        .eq("program_id", id)
+        .order("order_index");
 
       if (latestError) throw latestError;
 
       const list = latestModules || [];
       const sourceIndex = list.findIndex((m) => m.id === module.id);
-      if (sourceIndex === -1) throw new Error('Module not found in program');
+      if (sourceIndex === -1) throw new Error("Module not found in program");
 
       const { data: insertedRows, error: insertError } = await supabase
-        .from('program_modules')
+        .from("program_modules")
         .insert({
           program_id: module.program_id,
           title: `Copy of ${module.title}`,
@@ -462,35 +535,31 @@ export default function ProgramDetail() {
           feature_key: module.feature_key || null,
           capability_assessment_id: module.capability_assessment_id || null,
         })
-        .select('*');
+        .select("*");
 
       if (insertError) throw insertError;
       const cloned = insertedRows?.[0];
-      if (!cloned?.id) throw new Error('Failed to create clone');
+      if (!cloned?.id) throw new Error("Failed to create clone");
 
-      const desired = [
-        ...list.slice(0, sourceIndex + 1),
-        cloned,
-        ...list.slice(sourceIndex + 1),
-      ];
+      const desired = [...list.slice(0, sourceIndex + 1), cloned, ...list.slice(sourceIndex + 1)];
 
       await updateModuleOrder(desired);
 
-      toast.success('Module cloned successfully!');
+      toast.success("Module cloned successfully!");
       const { data: modulesData } = await supabase
-        .from('program_modules')
-        .select('*')
-        .eq('program_id', id)
-        .order('order_index');
+        .from("program_modules")
+        .select("*")
+        .eq("program_id", id)
+        .order("order_index");
       setModules(modulesData || []);
     } catch (error: any) {
-      console.error('Clone error:', error);
-      toast.error(`Failed to clone module: ${error?.message || 'Unknown error'}`);
+      console.error("Clone error:", error);
+      toast.error(`Failed to clone module: ${error?.message || "Unknown error"}`);
       const { data: modulesData } = await supabase
-        .from('program_modules')
-        .select('*')
-        .eq('program_id', id)
-        .order('order_index');
+        .from("program_modules")
+        .select("*")
+        .eq("program_id", id)
+        .order("order_index");
       setModules(modulesData || []);
     }
   }
@@ -532,44 +601,44 @@ export default function ProgramDetail() {
       const tempResults = await Promise.all(
         moduleList.map((module, index) =>
           supabase
-            .from('program_modules')
+            .from("program_modules")
             .update({ order_index: tempBase + index + 1 })
-            .eq('id', module.id)
-            .select('id')
-        )
+            .eq("id", module.id)
+            .select("id"),
+        ),
       );
 
       const tempErrors = tempResults.filter((r) => r.error);
       if (tempErrors.length > 0) {
-        console.error('Temp module order update errors:', tempErrors);
-        throw new Error('Failed to update module order (temp phase)');
+        console.error("Temp module order update errors:", tempErrors);
+        throw new Error("Failed to update module order (temp phase)");
       }
 
       const finalResults = await Promise.all(
         moduleList.map((module, index) =>
           supabase
-            .from('program_modules')
+            .from("program_modules")
             .update({ order_index: index + 1 })
-            .eq('id', module.id)
-            .select('id')
-        )
+            .eq("id", module.id)
+            .select("id"),
+        ),
       );
 
       const finalErrors = finalResults.filter((r) => r.error);
       if (finalErrors.length > 0) {
-        console.error('Final module order update errors:', finalErrors);
-        throw new Error('Failed to update module order (final phase)');
+        console.error("Final module order update errors:", finalErrors);
+        throw new Error("Failed to update module order (final phase)");
       }
 
-      toast.success('Module order updated!');
+      toast.success("Module order updated!");
     } catch (error) {
-      console.error('Failed to update module order:', error);
-      toast.error('Failed to update module order');
+      console.error("Failed to update module order:", error);
+      toast.error("Failed to update module order");
       const { data: modulesData } = await supabase
-        .from('program_modules')
-        .select('*')
-        .eq('program_id', id)
-        .order('order_index');
+        .from("program_modules")
+        .select("*")
+        .eq("program_id", id)
+        .order("order_index");
       if (modulesData) {
         setModules(modulesData);
         setHistory([modulesData]);
@@ -583,12 +652,12 @@ export default function ProgramDetail() {
 
     const newIndex = historyIndex - 1;
     const previousState = history[newIndex];
-    
+
     setHistoryIndex(newIndex);
     setModules(previousState);
-    
+
     await updateModuleOrder(previousState);
-    toast.success('Undone!');
+    toast.success("Undone!");
   }
 
   async function redo() {
@@ -596,12 +665,12 @@ export default function ProgramDetail() {
 
     const newIndex = historyIndex + 1;
     const nextState = history[newIndex];
-    
+
     setHistoryIndex(newIndex);
     setModules(nextState);
-    
+
     await updateModuleOrder(nextState);
-    toast.success('Redone!');
+    toast.success("Redone!");
   }
 
   function handleModuleSelect(moduleId: string, checked: boolean) {
@@ -618,18 +687,15 @@ export default function ProgramDetail() {
     if (allSelected) {
       setSelectedModules(new Set());
     } else {
-      setSelectedModules(new Set(modules.map(m => m.id)));
+      setSelectedModules(new Set(modules.map((m) => m.id)));
     }
   }
 
   async function bulkDelete() {
     try {
       const modulesToDelete = Array.from(selectedModules);
-      
-      const { error } = await supabase
-        .from('program_modules')
-        .delete()
-        .in('id', modulesToDelete);
+
+      const { error } = await supabase.from("program_modules").delete().in("id", modulesToDelete);
 
       if (error) throw error;
 
@@ -637,14 +703,14 @@ export default function ProgramDetail() {
       setSelectedModules(new Set());
       setSelectionMode(false);
       setShowDeleteDialog(false);
-      
+
       // Refresh modules
       const { data: modulesData } = await supabase
-        .from('program_modules')
-        .select('*')
-        .eq('program_id', id)
-        .order('order_index');
-      
+        .from("program_modules")
+        .select("*")
+        .eq("program_id", id)
+        .order("order_index");
+
       if (modulesData) {
         setModules(modulesData);
         // Update history
@@ -665,26 +731,23 @@ export default function ProgramDetail() {
 
   async function confirmDeleteModule() {
     if (!moduleToDelete) return;
-    
+
     try {
-      const { error } = await supabase
-        .from('program_modules')
-        .delete()
-        .eq('id', moduleToDelete.id);
+      const { error } = await supabase.from("program_modules").delete().eq("id", moduleToDelete.id);
 
       if (error) throw error;
 
       toast.success(`Module "${moduleToDelete.title}" deleted`);
       setModuleToDelete(null);
       setShowSingleDeleteDialog(false);
-      
+
       // Refresh modules
       const { data: modulesData } = await supabase
-        .from('program_modules')
-        .select('*')
-        .eq('program_id', id)
-        .order('order_index');
-      
+        .from("program_modules")
+        .select("*")
+        .eq("program_id", id)
+        .order("order_index");
+
       if (modulesData) {
         setModules(modulesData);
         const newHistory = history.slice(0, historyIndex + 1);
@@ -699,13 +762,13 @@ export default function ProgramDetail() {
 
   async function bulkDuplicate() {
     try {
-      const modulesToDuplicate = modules.filter(m => selectedModules.has(m.id));
-      
+      const modulesToDuplicate = modules.filter((m) => selectedModules.has(m.id));
+
       // Sort by order_index to maintain order
       modulesToDuplicate.sort((a, b) => a.order_index - b.order_index);
 
       // Get the highest order_index
-      const maxOrderIndex = Math.max(...modules.map(m => m.order_index));
+      const maxOrderIndex = Math.max(...modules.map((m) => m.order_index));
 
       // Prepare new modules with incremented order_index
       const newModules = modulesToDuplicate.map((module, idx) => ({
@@ -721,23 +784,21 @@ export default function ProgramDetail() {
         is_active: module.is_active,
       }));
 
-      const { error } = await supabase
-        .from('program_modules')
-        .insert(newModules);
+      const { error } = await supabase.from("program_modules").insert(newModules);
 
       if (error) throw error;
 
       toast.success(`Duplicated ${modulesToDuplicate.length} module(s)`);
       setSelectedModules(new Set());
       setSelectionMode(false);
-      
+
       // Refresh modules
       const { data: modulesData } = await supabase
-        .from('program_modules')
-        .select('*')
-        .eq('program_id', id)
-        .order('order_index');
-      
+        .from("program_modules")
+        .select("*")
+        .eq("program_id", id)
+        .order("order_index");
+
       if (modulesData) {
         setModules(modulesData);
         // Update history
@@ -754,21 +815,21 @@ export default function ProgramDetail() {
   async function toggleModuleActive(moduleId: string, currentState: boolean) {
     try {
       const { error } = await supabase
-        .from('program_modules')
+        .from("program_modules")
         .update({ is_active: !currentState })
-        .eq('id', moduleId);
+        .eq("id", moduleId);
 
       if (error) throw error;
 
-      toast.success(`Module ${!currentState ? 'activated' : 'deactivated'}`);
-      
+      toast.success(`Module ${!currentState ? "activated" : "deactivated"}`);
+
       // Refresh modules
       const { data: modulesData } = await supabase
-        .from('program_modules')
-        .select('*')
-        .eq('program_id', id)
-        .order('order_index');
-      
+        .from("program_modules")
+        .select("*")
+        .eq("program_id", id)
+        .order("order_index");
+
       if (modulesData) {
         setModules(modulesData);
       }
@@ -778,8 +839,8 @@ export default function ProgramDetail() {
   }
 
   function openTierManagerDialog() {
-    setEditingTiers((program?.tiers as string[]) || ['Essentials', 'Premium']);
-    setNewTierName('');
+    setEditingTiers((program?.tiers as string[]) || ["Essentials", "Premium"]);
+    setNewTierName("");
     setOpenTierManager(true);
   }
 
@@ -787,8 +848,8 @@ export default function ProgramDetail() {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = parseInt(String(active.id).replace('tier-', ''));
-    const newIndex = parseInt(String(over.id).replace('tier-', ''));
+    const oldIndex = parseInt(String(active.id).replace("tier-", ""));
+    const newIndex = parseInt(String(over.id).replace("tier-", ""));
 
     const newTiers = arrayMove(editingTiers, oldIndex, newIndex);
     setEditingTiers(newTiers);
@@ -796,30 +857,34 @@ export default function ProgramDetail() {
 
   function addTier() {
     if (!newTierName.trim()) {
-      toast.error('Please enter a tier name');
+      toast.error("Please enter a tier name");
       return;
     }
-    
-    const tierExists = editingTiers.some(t => t.toLowerCase() === newTierName.trim().toLowerCase());
+
+    const tierExists = editingTiers.some(
+      (t) => t.toLowerCase() === newTierName.trim().toLowerCase(),
+    );
     if (tierExists) {
-      toast.error('A tier with this name already exists');
+      toast.error("A tier with this name already exists");
       return;
     }
 
     setEditingTiers([...editingTiers, newTierName.trim()]);
-    setNewTierName('');
+    setNewTierName("");
   }
 
   function removeTier(index: number) {
     const tierToRemove = editingTiers[index];
-    
+
     // Check if any modules use this tier
-    const modulesUsingTier = modules.filter(m => 
-      m.tier_required?.toLowerCase() === tierToRemove.toLowerCase()
+    const modulesUsingTier = modules.filter(
+      (m) => m.tier_required?.toLowerCase() === tierToRemove.toLowerCase(),
     );
-    
+
     if (modulesUsingTier.length > 0) {
-      toast.error(`Cannot remove tier "${tierToRemove}": ${modulesUsingTier.length} module(s) are using it`);
+      toast.error(
+        `Cannot remove tier "${tierToRemove}": ${modulesUsingTier.length} module(s) are using it`,
+      );
       return;
     }
 
@@ -834,47 +899,40 @@ export default function ProgramDetail() {
 
   async function saveTiers() {
     if (editingTiers.length === 0) {
-      toast.error('Program must have at least one tier');
+      toast.error("Program must have at least one tier");
       return;
     }
 
     // Check for duplicate names
-    const lowerCaseTiers = editingTiers.map(t => t.toLowerCase());
-    const hasDuplicates = lowerCaseTiers.some((tier, index) => 
-      lowerCaseTiers.indexOf(tier) !== index
+    const lowerCaseTiers = editingTiers.map((t) => t.toLowerCase());
+    const hasDuplicates = lowerCaseTiers.some(
+      (tier, index) => lowerCaseTiers.indexOf(tier) !== index,
     );
-    
+
     if (hasDuplicates) {
-      toast.error('Tier names must be unique');
+      toast.error("Tier names must be unique");
       return;
     }
 
-    const { error } = await supabase
-      .from('programs')
-      .update({ tiers: editingTiers })
-      .eq('id', id);
+    const { error } = await supabase.from("programs").update({ tiers: editingTiers }).eq("id", id);
 
     if (error) {
-      toast.error('Failed to update tiers');
+      toast.error("Failed to update tiers");
       return;
     }
 
-    toast.success('Tiers updated successfully');
+    toast.success("Tiers updated successfully");
     setOpenTierManager(false);
-    
+
     // Refresh program data
-    const { data: programData } = await supabase
-      .from('programs')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const { data: programData } = await supabase.from("programs").select("*").eq("id", id).single();
     setProgram(programData);
   }
 
   function openEditProgramDialog() {
-    setEditingProgramName(program?.name || '');
-    setEditingDescription(program?.description || '');
-    setEditingProgramCode(program?.code || '');
+    setEditingProgramName(program?.name || "");
+    setEditingDescription(program?.description || "");
+    setEditingProgramCode(program?.code || "");
     setOpenEditProgram(true);
   }
 
@@ -883,14 +941,14 @@ export default function ProgramDetail() {
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
       return;
     }
 
     // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      toast.error('Image must be less than 2MB');
+      toast.error("Image must be less than 2MB");
       return;
     }
 
@@ -899,43 +957,43 @@ export default function ProgramDetail() {
     try {
       // Delete old logo if exists
       if (program?.logo_url) {
-        const oldPath = program.logo_url.split('/').pop();
+        const oldPath = program.logo_url.split("/").pop();
         if (oldPath) {
-          await supabase.storage.from('program-logos').remove([`${id}/${oldPath}`]);
+          await supabase.storage.from("program-logos").remove([`${id}/${oldPath}`]);
         }
       }
 
       // Upload new logo
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split(".").pop();
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `${id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('program-logos')
+        .from("program-logos")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('program-logos')
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("program-logos").getPublicUrl(filePath);
 
       // Update program with logo URL
       const { error: updateError } = await supabase
-        .from('programs')
+        .from("programs")
         .update({ logo_url: publicUrl })
-        .eq('id', id);
+        .eq("id", id);
 
       if (updateError) throw updateError;
 
-      toast.success('Logo uploaded successfully');
-      
+      toast.success("Logo uploaded successfully");
+
       // Refresh program data
       const { data: programData } = await supabase
-        .from('programs')
-        .select('*')
-        .eq('id', id)
+        .from("programs")
+        .select("*")
+        .eq("id", id)
         .single();
       setProgram(programData);
     } catch (error: any) {
@@ -943,7 +1001,7 @@ export default function ProgramDetail() {
     } finally {
       setUploadingLogo(false);
       if (logoInputRef.current) {
-        logoInputRef.current.value = '';
+        logoInputRef.current.value = "";
       }
     }
   }
@@ -952,25 +1010,22 @@ export default function ProgramDetail() {
     if (!program?.logo_url) return;
 
     try {
-      const path = program.logo_url.split('program-logos/')[1];
+      const path = program.logo_url.split("program-logos/")[1];
       if (path) {
-        await supabase.storage.from('program-logos').remove([path]);
+        await supabase.storage.from("program-logos").remove([path]);
       }
 
-      const { error } = await supabase
-        .from('programs')
-        .update({ logo_url: null })
-        .eq('id', id);
+      const { error } = await supabase.from("programs").update({ logo_url: null }).eq("id", id);
 
       if (error) throw error;
 
-      toast.success('Logo removed');
-      
+      toast.success("Logo removed");
+
       // Refresh program data
       const { data: programData } = await supabase
-        .from('programs')
-        .select('*')
-        .eq('id', id)
+        .from("programs")
+        .select("*")
+        .eq("id", id)
         .single();
       setProgram(programData);
     } catch (error: any) {
@@ -980,30 +1035,30 @@ export default function ProgramDetail() {
 
   async function saveProgram() {
     if (!editingProgramName.trim()) {
-      toast.error('Program name is required');
+      toast.error("Program name is required");
       return;
     }
 
     try {
       const { error } = await supabase
-        .from('programs')
-        .update({ 
+        .from("programs")
+        .update({
           name: editingProgramName.trim(),
           description: editingDescription,
-          code: editingProgramCode.trim() || null
+          code: editingProgramCode.trim() || null,
         })
-        .eq('id', id);
+        .eq("id", id);
 
       if (error) throw error;
 
-      toast.success('Program updated');
+      toast.success("Program updated");
       setOpenEditProgram(false);
-      
+
       // Refresh program data
       const { data: programData } = await supabase
-        .from('programs')
-        .select('*')
-        .eq('id', id)
+        .from("programs")
+        .select("*")
+        .eq("id", id)
         .single();
       setProgram(programData);
     } catch (error: any) {
@@ -1022,8 +1077,8 @@ export default function ProgramDetail() {
           <div className="shrink-0">
             {program.logo_url ? (
               <div className="relative group">
-                <img 
-                  src={program.logo_url} 
+                <img
+                  src={program.logo_url}
                   alt={`${program.name} logo`}
                   className="h-16 w-16 sm:h-20 sm:w-20 object-contain rounded-lg border bg-muted"
                 />
@@ -1036,11 +1091,7 @@ export default function ProgramDetail() {
                   >
                     <Upload className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={removeLogo}
-                  >
+                  <Button variant="ghost" size="sm" onClick={removeLogo}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
@@ -1074,12 +1125,19 @@ export default function ProgramDetail() {
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold truncate">{program.name}</h1>
             {program.code && (
-              <Badge variant="secondary" className="text-xs shrink-0">{program.code}</Badge>
+              <Badge variant="secondary" className="text-xs shrink-0">
+                {program.code}
+              </Badge>
             )}
           </div>
 
           {/* Manage Tiers button */}
-          <Button variant="outline" size="sm" onClick={openTierManagerDialog} className="shrink-0 self-start sm:self-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={openTierManagerDialog}
+            className="shrink-0 self-start sm:self-center"
+          >
             <Settings className="mr-2 h-4 w-4" />
             <span className="hidden xs:inline">Manage Tiers</span>
             <span className="xs:hidden">Tiers</span>
@@ -1102,10 +1160,14 @@ export default function ProgramDetail() {
           </div>
           <div className="flex flex-wrap gap-2 mt-3 items-center">
             <span className="text-sm text-muted-foreground">Tier Hierarchy:</span>
-            {(program?.tiers as string[] || ['Essentials', 'Premium']).map((tier, index) => (
-              <Badge key={tier} variant="outline">{index + 1}. {tier}</Badge>
+            {((program?.tiers as string[]) || ["Essentials", "Premium"]).map((tier, index) => (
+              <Badge key={tier} variant="outline">
+                {index + 1}. {tier}
+              </Badge>
             ))}
-            <span className="text-xs text-muted-foreground ml-2">(higher numbers include access to lower tiers)</span>
+            <span className="text-xs text-muted-foreground ml-2">
+              (higher numbers include access to lower tiers)
+            </span>
           </div>
         </div>
 
@@ -1114,10 +1176,7 @@ export default function ProgramDetail() {
             <CardTitle>Program Team</CardTitle>
           </CardHeader>
           <CardContent>
-            <InstructorCoachAssignment
-              entityType="program"
-              entityId={id}
-            />
+            <InstructorCoachAssignment entityType="program" entityId={id} />
           </CardContent>
         </Card>
       </div>
@@ -1130,7 +1189,9 @@ export default function ProgramDetail() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="program-name">Name <span className="text-destructive">*</span></Label>
+              <Label htmlFor="program-name">
+                Name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="program-name"
                 value={editingProgramName}
@@ -1146,7 +1207,9 @@ export default function ProgramDetail() {
                 onChange={(e) => setEditingProgramCode(e.target.value)}
                 placeholder="e.g., PROG-001 or cta-immersion"
               />
-              <p className="text-xs text-muted-foreground">Optional. Use to link with external systems like InnoTrue Academy.</p>
+              <p className="text-xs text-muted-foreground">
+                Optional. Use to link with external systems like InnoTrue Academy.
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
@@ -1160,9 +1223,7 @@ export default function ProgramDetail() {
               <Button variant="outline" onClick={() => setOpenEditProgram(false)}>
                 Cancel
               </Button>
-              <Button onClick={saveProgram}>
-                Save
-              </Button>
+              <Button onClick={saveProgram}>Save</Button>
             </div>
           </div>
         </DialogContent>
@@ -1174,9 +1235,13 @@ export default function ProgramDetail() {
             <TabsTrigger value="modules">Modules</TabsTrigger>
             <TabsTrigger value="access">Plan Access</TabsTrigger>
             <TabsTrigger value="cohorts">Cohorts</TabsTrigger>
-            <TabsTrigger value="terms" className="whitespace-nowrap">Terms & Conditions</TabsTrigger>
+            <TabsTrigger value="terms" className="whitespace-nowrap">
+              Terms & Conditions
+            </TabsTrigger>
             <TabsTrigger value="badge">Badge</TabsTrigger>
-            <TabsTrigger value="versions" className="whitespace-nowrap">Version History</TabsTrigger>
+            <TabsTrigger value="versions" className="whitespace-nowrap">
+              Version History
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -1189,12 +1254,16 @@ export default function ProgramDetail() {
             currentRequiresSeparatePurchase={program?.requires_separate_purchase || false}
             currentAllowRepeatEnrollment={(program as any)?.allow_repeat_enrollment || false}
             onUpdate={async () => {
-              const { data: programData } = await supabase.from('programs').select('*').eq('id', id).single();
+              const { data: programData } = await supabase
+                .from("programs")
+                .select("*")
+                .eq("id", id)
+                .single();
               setProgram(programData);
             }}
           />
         </TabsContent>
-        
+
         <TabsContent value="modules" className="mt-6">
           <div className="flex flex-wrap gap-2 mb-6">
             <div className="flex gap-1">
@@ -1228,12 +1297,17 @@ export default function ProgramDetail() {
               }}
             >
               <Check className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">{selectionMode ? 'Cancel Selection' : 'Select Modules'}</span>
-              <span className="sm:hidden">{selectionMode ? 'Cancel' : 'Select'}</span>
+              <span className="hidden sm:inline">
+                {selectionMode ? "Cancel Selection" : "Select Modules"}
+              </span>
+              <span className="sm:hidden">{selectionMode ? "Cancel" : "Select"}</span>
             </Button>
             <Dialog open={openAdd} onOpenChange={setOpenAdd}>
               <DialogTrigger asChild>
-                <Button size="sm"><Plus className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Add Module</span></Button>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Add Module</span>
+                </Button>
               </DialogTrigger>
               <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
@@ -1243,7 +1317,7 @@ export default function ProgramDetail() {
                   onSubmit={addModule}
                   onCancel={() => setOpenAdd(false)}
                   submitLabel="Add Module"
-                  availableTiers={program?.tiers as string[] || ['Essentials', 'Premium']}
+                  availableTiers={(program?.tiers as string[]) || ["Essentials", "Premium"]}
                 />
               </DialogContent>
             </Dialog>
@@ -1254,20 +1328,13 @@ export default function ProgramDetail() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={toggleSelectAll}
-                    />
+                    <Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} />
                     <span className="text-sm font-medium">
                       {selectedModules.size} module(s) selected
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={bulkDuplicate}
-                    >
+                    <Button variant="outline" size="sm" onClick={bulkDuplicate}>
                       <Copy className="mr-2 h-4 w-4" />
                       Duplicate Selected
                     </Button>
@@ -1304,12 +1371,12 @@ export default function ProgramDetail() {
                     onClone={cloneModule}
                     onCopyToProgram={(mod) => {
                       setTransferModule(mod);
-                      setTransferMode('copy');
+                      setTransferMode("copy");
                       setTransferDialogOpen(true);
                     }}
                     onMoveToProgram={(mod) => {
                       setTransferModule(mod);
-                      setTransferMode('move');
+                      setTransferMode("move");
                       setTransferDialogOpen(true);
                     }}
                     onToggleActive={toggleModuleActive}
@@ -1323,13 +1390,16 @@ export default function ProgramDetail() {
             </SortableContext>
           </DndContext>
 
-          <Dialog open={openEdit} onOpenChange={(open) => {
-            setOpenEdit(open);
-            if (!open) {
-              // Delay clearing editingModule to allow dialog to close gracefully
-              setTimeout(() => setEditingModule(null), 150);
-            }
-          }}>
+          <Dialog
+            open={openEdit}
+            onOpenChange={(open) => {
+              setOpenEdit(open);
+              if (!open) {
+                // Delay clearing editingModule to allow dialog to close gracefully
+                setTimeout(() => setEditingModule(null), 150);
+              }
+            }}
+          >
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Edit Module</DialogTitle>
@@ -1348,13 +1418,13 @@ export default function ProgramDetail() {
                       initialData={{
                         title: editingModule.title,
                         description: editingModule.description,
-                        content: editingModule.content || '',
+                        content: editingModule.content || "",
                         moduleType: editingModule.module_type,
                         estimatedMinutes: String(editingModule.estimated_minutes),
                         links: editingModule.links || [],
-                        tierRequired: editingModule.tier_required || 'essentials',
+                        tierRequired: editingModule.tier_required || "essentials",
                         isIndividualized: editingModule.is_individualized || false,
-                        code: editingModule.code || '',
+                        code: editingModule.code || "",
                         featureKey: editingModule.feature_key || null,
                         capabilityAssessmentId: editingModule.capability_assessment_id || null,
                       }}
@@ -1364,7 +1434,7 @@ export default function ProgramDetail() {
                         setEditingModule(null);
                       }}
                       submitLabel="Update Module"
-                      availableTiers={program?.tiers as string[] || ['Essentials', 'Premium']}
+                      availableTiers={(program?.tiers as string[]) || ["Essentials", "Premium"]}
                     />
                   </TabsContent>
                   <TabsContent value="sections" className="mt-4 space-y-2">
@@ -1381,10 +1451,11 @@ export default function ProgramDetail() {
                   </TabsContent>
                   <TabsContent value="prerequisites" className="mt-4 space-y-2">
                     <p className="text-xs text-muted-foreground">
-                      Click <span className="font-medium">Add</span> / <span className="font-medium">Remove</span> to save changes.
+                      Click <span className="font-medium">Add</span> /{" "}
+                      <span className="font-medium">Remove</span> to save changes.
                     </p>
-                    <ModulePrerequisites 
-                      moduleId={editingModule.id} 
+                    <ModulePrerequisites
+                      moduleId={editingModule.id}
                       programId={editingModule.program_id}
                       currentModuleOrderIndex={editingModule.order_index}
                     />
@@ -1405,7 +1476,10 @@ export default function ProgramDetail() {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={bulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                <AlertDialogAction
+                  onClick={bulkDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
                   Delete
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -1417,13 +1491,16 @@ export default function ProgramDetail() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete module?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete the module
-                  "{moduleToDelete?.title}" from this program.
+                  This action cannot be undone. This will permanently delete the module "
+                  {moduleToDelete?.title}" from this program.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmDeleteModule} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                <AlertDialogAction
+                  onClick={confirmDeleteModule}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
                   Delete
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -1439,7 +1516,8 @@ export default function ProgramDetail() {
                 <div className="space-y-4">
                   <Label>Tier Hierarchy (drag to reorder or edit names)</Label>
                   <p className="text-xs text-muted-foreground">
-                    Tiers are ordered from lowest (1) to highest. Higher tiers include access to all lower tier content.
+                    Tiers are ordered from lowest (1) to highest. Higher tiers include access to all
+                    lower tier content.
                   </p>
                   <DndContext
                     sensors={sensors}
@@ -1475,7 +1553,7 @@ export default function ProgramDetail() {
                       value={newTierName}
                       onChange={(e) => setNewTierName(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
+                        if (e.key === "Enter") {
                           e.preventDefault();
                           addTier();
                         }
@@ -1492,8 +1570,12 @@ export default function ProgramDetail() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button onClick={saveTiers} className="flex-1">Save Changes</Button>
-                  <Button variant="outline" onClick={() => setOpenTierManager(false)}>Cancel</Button>
+                  <Button onClick={saveTiers} className="flex-1">
+                    Save Changes
+                  </Button>
+                  <Button variant="outline" onClick={() => setOpenTierManager(false)}>
+                    Cancel
+                  </Button>
                 </div>
               </div>
             </DialogContent>
@@ -1501,30 +1583,19 @@ export default function ProgramDetail() {
         </TabsContent>
 
         <TabsContent value="cohorts" className="mt-6">
-          {program && (
-            <ProgramCohortsManager programId={id} />
-          )}
+          {program && <ProgramCohortsManager programId={id} />}
         </TabsContent>
 
         <TabsContent value="terms" className="mt-6">
-          {program && (
-            <ProgramTermsManager programId={id} />
-          )}
+          {program && <ProgramTermsManager programId={id} />}
         </TabsContent>
 
         <TabsContent value="badge" className="mt-6">
-          {program && (
-            <ProgramBadgeManager programId={id} programName={program.name} />
-          )}
+          {program && <ProgramBadgeManager programId={id} programName={program.name} />}
         </TabsContent>
 
         <TabsContent value="versions" className="mt-6">
-          {program && (
-            <ProgramVersionHistory 
-              programId={id} 
-              programName={program.name}
-            />
-          )}
+          {program && <ProgramVersionHistory programId={id} programName={program.name} />}
         </TabsContent>
       </Tabs>
 
@@ -1536,10 +1607,10 @@ export default function ProgramDetail() {
         currentProgramId={id}
         onComplete={async () => {
           const { data: modulesData } = await supabase
-            .from('program_modules')
-            .select('*')
-            .eq('program_id', id)
-            .order('order_index');
+            .from("program_modules")
+            .select("*")
+            .eq("program_id", id)
+            .order("order_index");
           if (modulesData) {
             setModules(modulesData);
           }

@@ -1,14 +1,34 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Calendar, Clock, Crown, Sparkles, Star, CheckCircle, Percent, Tag, Loader2, XCircle, Mail, HelpCircle } from 'lucide-react';
-import { getTierDisplayName } from '@/lib/tierUtils';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useSupportEmail } from '@/hooks/useSupportEmail';
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Calendar,
+  Clock,
+  Crown,
+  Sparkles,
+  Star,
+  CheckCircle,
+  Percent,
+  Tag,
+  Loader2,
+  XCircle,
+  Mail,
+  HelpCircle,
+} from "lucide-react";
+import { getTierDisplayName } from "@/lib/tierUtils";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useSupportEmail } from "@/hooks/useSupportEmail";
 interface ScheduledDate {
   id: string;
   date: string;
@@ -22,12 +42,12 @@ interface CrossProgramModule {
   moduleTitle: string;
   completedInProgram: string;
   completedAt: string | null;
-  completionSource: 'internal' | 'talentlms';
+  completionSource: "internal" | "talentlms";
 }
 
 interface DiscountResult {
   discountId: string;
-  discountType: 'percentage' | 'fixed';
+  discountType: "percentage" | "fixed";
   discountValue: number;
   originalCost: number;
   discountedCost: number;
@@ -41,7 +61,13 @@ interface ExpressInterestDialogProps {
   programName: string;
   scheduledDates?: ScheduledDate[];
   availableTiers?: string[];
-  onSubmit: (timeframe: string, preferredTier?: string, crossCompletions?: CrossProgramModule[], suggestedDiscount?: number, discountCode?: string) => void;
+  onSubmit: (
+    timeframe: string,
+    preferredTier?: string,
+    crossCompletions?: CrossProgramModule[],
+    suggestedDiscount?: number,
+    discountCode?: string,
+  ) => void;
   isSubmitting?: boolean;
   onJoinWaitlist?: (scheduleId: string) => void;
   crossCompletions?: {
@@ -51,7 +77,12 @@ interface ExpressInterestDialogProps {
   };
   // Discount code props
   tierCreditCost?: number | null;
-  onValidateDiscount?: (code: string, programId: string, tier: string, cost: number) => Promise<DiscountResult | null>;
+  onValidateDiscount?: (
+    code: string,
+    programId: string,
+    tier: string,
+    cost: number,
+  ) => Promise<DiscountResult | null>;
   isValidatingDiscount?: boolean;
   validatedDiscount?: DiscountResult | null;
   discountValidationError?: string | null;
@@ -77,9 +108,11 @@ export function ExpressInterestDialog({
 }: ExpressInterestDialogProps) {
   const hasScheduledDates = scheduledDates.length > 0;
   const hasTiers = availableTiers.length > 0;
-  const [selection, setSelection] = useState<string>(hasScheduledDates ? scheduledDates[0].id : 'asap');
-  const [selectedTier, setSelectedTier] = useState<string>(hasTiers ? availableTiers[0] : '');
-  const [discountCode, setDiscountCode] = useState('');
+  const [selection, setSelection] = useState<string>(
+    hasScheduledDates ? scheduledDates[0].id : "asap",
+  );
+  const [selectedTier, setSelectedTier] = useState<string>(hasTiers ? availableTiers[0] : "");
+  const [discountCode, setDiscountCode] = useState("");
   const [hasAttemptedValidation, setHasAttemptedValidation] = useState(false);
   const { supportEmail } = useSupportEmail();
   // Reset discount when tier changes
@@ -98,20 +131,20 @@ export function ExpressInterestDialog({
 
   const handleSubmit = () => {
     onSubmit(
-      selection, 
+      selection,
       hasTiers ? selectedTier : undefined,
       crossCompletions?.completedElsewhere,
       crossCompletions?.suggestedDiscountPercent,
-      validatedDiscount ? discountCode : undefined
+      validatedDiscount ? discountCode : undefined,
     );
   };
 
   const getTierIcon = (tier: string) => {
     switch (tier.toLowerCase()) {
-      case 'premium':
-      case 'enterprise':
+      case "premium":
+      case "enterprise":
         return <Crown className="h-4 w-4 text-amber-500" />;
-      case 'professional':
+      case "professional":
         return <Sparkles className="h-4 w-4 text-blue-500" />;
       default:
         return <Star className="h-4 w-4 text-muted-foreground" />;
@@ -120,16 +153,16 @@ export function ExpressInterestDialog({
 
   const getTierDescription = (tier: string) => {
     switch (tier.toLowerCase()) {
-      case 'essentials':
-        return 'Core program content and group sessions';
-      case 'professional':
-        return 'Additional modules and personalized coaching';
-      case 'premium':
-        return 'Full access, 1-on-1 coaching, and priority support';
-      case 'enterprise':
-        return 'Custom features, dedicated support, and team access';
+      case "essentials":
+        return "Core program content and group sessions";
+      case "professional":
+        return "Additional modules and personalized coaching";
+      case "premium":
+        return "Full access, 1-on-1 coaching, and priority support";
+      case "enterprise":
+        return "Custom features, dedicated support, and team access";
       default:
-        return 'Program access at this tier level';
+        return "Program access at this tier level";
     }
   };
 
@@ -139,7 +172,8 @@ export function ExpressInterestDialog({
         <DialogHeader>
           <DialogTitle>Express Interest in {programName}</DialogTitle>
           <DialogDescription>
-            Let us know when you'd like to start this program. An administrator will contact you to discuss enrollment options.
+            Let us know when you'd like to start this program. An administrator will contact you to
+            discuss enrollment options.
           </DialogDescription>
         </DialogHeader>
 
@@ -150,7 +184,8 @@ export function ExpressInterestDialog({
               <CheckCircle className="h-4 w-4 text-green-500" />
               <AlertDescription className="text-green-600 dark:text-green-300">
                 <p className="font-medium mb-1">
-                  {crossCompletions.completedElsewhere.length} of {crossCompletions.totalModules} modules already completed
+                  {crossCompletions.completedElsewhere.length} of {crossCompletions.totalModules}{" "}
+                  modules already completed
                 </p>
                 {crossCompletions.suggestedDiscountPercent > 0 && (
                   <p className="text-sm flex items-center gap-1">
@@ -168,8 +203,8 @@ export function ExpressInterestDialog({
               <Label>Select your preferred tier:</Label>
               <RadioGroup value={selectedTier} onValueChange={setSelectedTier}>
                 {availableTiers.map((tier) => (
-                  <div 
-                    key={tier} 
+                  <div
+                    key={tier}
                     className="flex items-center space-x-3 rounded-lg border p-3 hover:border-primary/50 transition-colors"
                   >
                     <RadioGroupItem value={tier} id={`tier-${tier}`} />
@@ -177,7 +212,9 @@ export function ExpressInterestDialog({
                       <div className="flex items-center gap-2">
                         {getTierIcon(tier)}
                         <div>
-                          <div className="font-medium">{getTierDisplayName(availableTiers, tier)}</div>
+                          <div className="font-medium">
+                            {getTierDisplayName(availableTiers, tier)}
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {getTierDescription(tier)}
                           </div>
@@ -211,14 +248,10 @@ export function ExpressInterestDialog({
                   onClick={handleValidateDiscount}
                   disabled={!discountCode.trim() || isValidatingDiscount}
                 >
-                  {isValidatingDiscount ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    'Apply'
-                  )}
+                  {isValidatingDiscount ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
                 </Button>
               </div>
-              
+
               {/* Discount validation result */}
               {hasAttemptedValidation && !isValidatingDiscount && (
                 <>
@@ -227,20 +260,27 @@ export function ExpressInterestDialog({
                       <CheckCircle className="h-4 w-4 text-green-500" />
                       <AlertDescription className="text-green-600 dark:text-green-300">
                         <p className="font-medium">
-                          {validatedDiscount.discountType === 'percentage'
+                          {validatedDiscount.discountType === "percentage"
                             ? `${validatedDiscount.discountValue}% off`
                             : `${validatedDiscount.discountAmount} credits off`}
                         </p>
                         <p className="text-sm">
-                          <span className="line-through text-muted-foreground">{validatedDiscount.originalCost} credits</span>
-                          {' → '}
-                          <span className="font-bold">{validatedDiscount.discountedCost} credits</span>
+                          <span className="line-through text-muted-foreground">
+                            {validatedDiscount.originalCost} credits
+                          </span>
+                          {" → "}
+                          <span className="font-bold">
+                            {validatedDiscount.discountedCost} credits
+                          </span>
                         </p>
                       </AlertDescription>
                     </Alert>
                   )}
                   {discountValidationError && (
-                    <Alert variant="destructive" className="border-destructive/30 bg-destructive/10">
+                    <Alert
+                      variant="destructive"
+                      className="border-destructive/30 bg-destructive/10"
+                    >
                       <XCircle className="h-4 w-4" />
                       <AlertDescription>{discountValidationError}</AlertDescription>
                     </Alert>
@@ -250,38 +290,51 @@ export function ExpressInterestDialog({
             </div>
           )}
           <div className="space-y-3">
-            <Label>{hasScheduledDates ? 'Select a scheduled class date:' : 'When would you like to enroll?'}</Label>
+            <Label>
+              {hasScheduledDates
+                ? "Select a scheduled class date:"
+                : "When would you like to enroll?"}
+            </Label>
             <RadioGroup value={selection} onValueChange={setSelection}>
               {hasScheduledDates ? (
                 scheduledDates.map((schedule) => {
-                  const isFull = !!(schedule.capacity && schedule.enrolled_count !== undefined && schedule.enrolled_count >= schedule.capacity);
+                  const isFull = !!(
+                    schedule.capacity &&
+                    schedule.enrolled_count !== undefined &&
+                    schedule.enrolled_count >= schedule.capacity
+                  );
                   const hasCapacity = schedule.capacity && schedule.capacity > 0;
-                  
+
                   return (
-                    <div 
-                      key={schedule.id} 
+                    <div
+                      key={schedule.id}
                       className={`flex items-center space-x-3 rounded-lg border p-3 transition-colors ${
-                        isFull ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary/50'
+                        isFull ? "opacity-60 cursor-not-allowed" : "hover:border-primary/50"
                       }`}
                     >
                       <RadioGroupItem value={schedule.id} id={schedule.id} disabled={isFull} />
-                      <Label htmlFor={schedule.id} className={`flex-1 ${isFull ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                      <Label
+                        htmlFor={schedule.id}
+                        className={`flex-1 ${isFull ? "cursor-not-allowed" : "cursor-pointer"}`}
+                      >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             <div>
                               <div className="font-medium flex items-center gap-2">
-                                {schedule.title || 'Scheduled Class'}
+                                {schedule.title || "Scheduled Class"}
                                 {isFull && (
-                                  <Badge variant="destructive" className="text-xs">Full</Badge>
+                                  <Badge variant="destructive" className="text-xs">
+                                    Full
+                                  </Badge>
                                 )}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {new Date(schedule.date).toLocaleDateString('en-US', {
-                                  weekday: 'long',
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
+                                {new Date(schedule.date).toLocaleDateString("en-US", {
+                                  weekday: "long",
+                                  year: "numeric",
+                                  month: "long",
+                                  day: "numeric",
                                 })}
                               </div>
                             </div>
@@ -305,7 +358,9 @@ export function ExpressInterestDialog({
                         <Clock className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <div className="font-medium">As Soon As Possible</div>
-                          <div className="text-xs text-muted-foreground">I'm ready to start right away</div>
+                          <div className="text-xs text-muted-foreground">
+                            I'm ready to start right away
+                          </div>
                         </div>
                       </div>
                     </Label>
@@ -318,7 +373,9 @@ export function ExpressInterestDialog({
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <div className="font-medium">1-3 Months</div>
-                          <div className="text-xs text-muted-foreground">I'd like to start in the near future</div>
+                          <div className="text-xs text-muted-foreground">
+                            I'd like to start in the near future
+                          </div>
                         </div>
                       </div>
                     </Label>
@@ -334,8 +391,8 @@ export function ExpressInterestDialog({
           <HelpCircle className="h-4 w-4 text-muted-foreground" />
           <AlertDescription className="text-muted-foreground">
             <p className="text-sm">
-              Need a payment plan or have questions?{' '}
-              <a 
+              Need a payment plan or have questions?{" "}
+              <a
                 href={`mailto:${supportEmail}?subject=Program Inquiry: ${programName}`}
                 className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
               >
@@ -351,7 +408,7 @@ export function ExpressInterestDialog({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Submitting...' : 'Submit Interest'}
+            {isSubmitting ? "Submitting..." : "Submit Interest"}
           </Button>
         </DialogFooter>
       </DialogContent>

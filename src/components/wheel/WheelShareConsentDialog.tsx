@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -8,11 +8,23 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Shield, Eye, Heart, Wallet, Users, Briefcase, GraduationCap, Smile, Sparkles, Home, Dumbbell } from 'lucide-react';
-import { WHEEL_OF_LIFE_CATEGORIES, WheelCategory } from '@/lib/wheelOfLifeCategories';
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  Shield,
+  Eye,
+  Heart,
+  Wallet,
+  Users,
+  Briefcase,
+  GraduationCap,
+  Smile,
+  Sparkles,
+  Home,
+  Dumbbell,
+} from "lucide-react";
+import { WHEEL_OF_LIFE_CATEGORIES, WheelCategory } from "@/lib/wheelOfLifeCategories";
 
 interface WheelShareConsentDialogProps {
   open: boolean;
@@ -69,7 +81,8 @@ export function WheelShareConsentDialog({
             Share Personal Life Assessment
           </AlertDialogTitle>
           <AlertDialogDescription className="text-center">
-            You're about to share your Wheel of Life snapshot from <strong>{snapshotDate}</strong> with your assigned coach(es).
+            You're about to share your Wheel of Life snapshot from <strong>{snapshotDate}</strong>{" "}
+            with your assigned coach(es).
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -80,11 +93,12 @@ export function WheelShareConsentDialog({
               <div>
                 <p className="font-medium text-sm">What your coach will see:</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Your self-assessment ratings across all life domains, including any notes you've added.
+                  Your self-assessment ratings across all life domains, including any notes you've
+                  added.
                 </p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-2 mt-4">
               {categories.map(([key, label]) => {
                 const Icon = categoryIcons[key] || Sparkles;
@@ -100,7 +114,8 @@ export function WheelShareConsentDialog({
 
           <div className="rounded-lg border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-800 p-4">
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              <strong>Privacy note:</strong> This data is personal and sensitive. Only coaches assigned to you can view shared snapshots. You can revoke access at any time.
+              <strong>Privacy note:</strong> This data is personal and sensitive. Only coaches
+              assigned to you can view shared snapshots. You can revoke access at any time.
             </p>
           </div>
 
@@ -110,11 +125,9 @@ export function WheelShareConsentDialog({
               checked={acknowledged}
               onCheckedChange={(checked) => setAcknowledged(checked === true)}
             />
-            <Label
-              htmlFor="acknowledge-sharing"
-              className="text-sm leading-relaxed cursor-pointer"
-            >
-              I understand that sharing this snapshot will allow my assigned coach(es) to view my personal life balance assessment, including all ratings and notes.
+            <Label htmlFor="acknowledge-sharing" className="text-sm leading-relaxed cursor-pointer">
+              I understand that sharing this snapshot will allow my assigned coach(es) to view my
+              personal life balance assessment, including all ratings and notes.
             </Label>
           </div>
         </div>

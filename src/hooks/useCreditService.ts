@@ -23,20 +23,20 @@ interface ConsumeResult {
 
 /**
  * Hook for consuming credit services.
- * 
+ *
  * @example
  * ```tsx
  * function BookSessionButton({ serviceId }: { serviceId: string }) {
  *   const { consume, isConsuming, getServiceCost } = useCreditService();
  *   const { data: cost } = getServiceCost(serviceId);
- * 
+ *
  *   const handleBook = async () => {
  *     const result = await consume(serviceId, 'Booked live mock session');
  *     if (result?.success) {
  *       toast.success(`Session booked! Used ${result.credits_consumed} credits.`);
  *     }
  *   };
- * 
+ *
  *   return (
  *     <Button onClick={handleBook} disabled={isConsuming}>
  *       Book Session ({cost?.effective_cost ?? '...'} credits)
@@ -132,7 +132,7 @@ export function useCreditService() {
   const consume = async (
     serviceId: string,
     notes?: string,
-    actionReferenceId?: string
+    actionReferenceId?: string,
   ): Promise<ConsumeResult | undefined> => {
     return consumeMutation.mutateAsync({ serviceId, notes, actionReferenceId });
   };

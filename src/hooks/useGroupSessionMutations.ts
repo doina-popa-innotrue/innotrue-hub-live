@@ -1,8 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { generateRecurringDatesSimple } from '@/lib/recurringDates';
-import { useRecurrenceSettings } from '@/hooks/useRecurrenceSettings';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { generateRecurringDatesSimple } from "@/lib/recurringDates";
+import { useRecurrenceSettings } from "@/hooks/useRecurrenceSettings";
 
 export interface SessionFormData {
   title: string;
@@ -53,7 +53,10 @@ export interface UpdateSessionStatusParams {
  * Shared hook for group session mutations.
  * Consolidates create, update, delete, and status change logic for group sessions.
  */
-export function useGroupSessionMutations(groupId: string | undefined, queryKeyPrefix: string = 'group-sessions') {
+export function useGroupSessionMutations(
+  groupId: string | undefined,
+  queryKeyPrefix: string = "group-sessions",
+) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { maxRecurrenceLimit } = useRecurrenceSettings();
@@ -72,19 +75,19 @@ export function useGroupSessionMutations(groupId: string | undefined, queryKeyPr
 
       // Fetch all active group members first
       const { data: groupMembers, error: membersError } = await supabase
-        .from('group_memberships')
-        .select('user_id')
-        .eq('group_id', groupId)
-        .eq('status', 'active');
+        .from("group_memberships")
+        .select("user_id")
+        .eq("group_id", groupId)
+        .eq("status", "active");
 
       if (membersError) {
-        console.error('Failed to fetch group members:', membersError);
+        console.error("Failed to fetch group members:", membersError);
         // Continue without members - session can still be created
       }
 
       // Create the master session
       const { data: masterSession, error } = await supabase
-        .from('group_sessions')
+        .from("group_sessions")
         .insert({
           group_id: groupId,
           title: formData.title,
@@ -93,13 +96,16 @@ export function useGroupSessionMutations(groupId: string | undefined, queryKeyPr
           duration_minutes: parseInt(formData.duration_minutes) || 60,
           location: formData.location || null,
           booked_by: userId,
-          status: 'scheduled',
+          status: "scheduled",
           is_recurring: formData.is_recurring,
           recurrence_pattern: formData.is_recurring ? formData.recurrence_pattern || null : null,
-          recurrence_end_date: formData.is_recurring && formData.recurrence_end_date ? formData.recurrence_end_date : null,
-          timezone: formData.timezone || 'UTC',
+          recurrence_end_date:
+            formData.is_recurring && formData.recurrence_end_date
+              ? formData.recurrence_end_date
+              : null,
+          timezone: formData.timezone || "UTC",
         })
-        .select('id')
+        .select("id")
         .single();
 
       if (error) throw error;
@@ -107,21 +113,21 @@ export function useGroupSessionMutations(groupId: string | undefined, queryKeyPr
       // Helper function to add participants to a session
       const addParticipantsToSession = async (sessionId: string) => {
         if (!groupMembers || groupMembers.length === 0) return;
-        
+
         const participants = groupMembers.map((m) => ({
           session_id: sessionId,
           group_id: groupId,
           user_id: m.user_id,
-          response_status: m.user_id === userId ? 'accepted' : 'pending', // Creator is auto-accepted
+          response_status: m.user_id === userId ? "accepted" : "pending", // Creator is auto-accepted
           responded_at: m.user_id === userId ? new Date().toISOString() : null,
         }));
 
         const { error: participantError } = await supabase
-          .from('group_session_participants')
-          .upsert(participants, { onConflict: 'session_id,user_id', ignoreDuplicates: true });
+          .from("group_session_participants")
+          .upsert(participants, { onConflict: "session_id,user_id", ignoreDuplicates: true });
 
         if (participantError) {
-          console.error('Failed to add participants to session:', participantError);
+          console.error("Failed to add participants to session:", participantError);
         }
       };
 
@@ -134,7 +140,7 @@ export function useGroupSessionMutations(groupId: string | undefined, queryKeyPr
           sessionDateTime,
           formData.recurrence_pattern,
           formData.recurrence_end_date || null,
-          maxRecurrenceLimit
+          maxRecurrenceLimit,
         );
 
         if (recurringDates.length > 0) {
@@ -146,21 +152,21 @@ export function useGroupSessionMutations(groupId: string | undefined, queryKeyPr
             duration_minutes: parseInt(formData.duration_minutes) || 60,
             location: formData.location || null,
             booked_by: userId,
-            status: 'scheduled',
+            status: "scheduled",
             is_recurring: false, // Child sessions are not recurring themselves
             recurrence_pattern: null as string | null,
             recurrence_end_date: null as string | null,
             parent_session_id: masterSession.id,
-            timezone: formData.timezone || 'UTC',
+            timezone: formData.timezone || "UTC",
           }));
 
           const { data: createdChildSessions, error: childError } = await supabase
-            .from('group_sessions')
+            .from("group_sessions")
             .insert(childSessions)
-            .select('id');
+            .select("id");
 
           if (childError) {
-            console.error('Failed to create recurring instances:', childError);
+            console.error("Failed to create recurring instances:", childError);
           } else if (createdChildSessions) {
             // Add participants to all child sessions
             for (const childSession of createdChildSessions) {
@@ -174,10 +180,10 @@ export function useGroupSessionMutations(groupId: string | undefined, queryKeyPr
     },
     onSuccess: () => {
       invalidateSessions();
-      toast({ title: 'Session created' });
+      toast({ title: "Session created" });
     },
     onError: (error: any) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -201,34 +207,34 @@ export function useGroupSessionMutations(groupId: string | undefined, queryKeyPr
 
         // Update the current session with its specific date
         const { error: currentError } = await supabase
-          .from('group_sessions')
+          .from("group_sessions")
           .update({ ...updatePayload, session_date: sessionDateTime.toISOString() })
-          .eq('id', sessionId);
+          .eq("id", sessionId);
         if (currentError) throw currentError;
 
         // Update all future sessions in the series (same title, description, duration, location but keep their dates)
         const { error: futureError } = await supabase
-          .from('group_sessions')
+          .from("group_sessions")
           .update(updatePayload)
           .or(`id.eq.${masterSessionId},parent_session_id.eq.${masterSessionId}`)
-          .neq('id', sessionId)
-          .gte('session_date', new Date().toISOString());
+          .neq("id", sessionId)
+          .gte("session_date", new Date().toISOString());
         if (futureError) throw futureError;
       } else {
         // Update only this session
         const { error } = await supabase
-          .from('group_sessions')
+          .from("group_sessions")
           .update({ ...updatePayload, session_date: sessionDateTime.toISOString() })
-          .eq('id', sessionId);
+          .eq("id", sessionId);
         if (error) throw error;
       }
     },
     onSuccess: (_, { updateAll }) => {
       invalidateSessions();
-      toast({ title: updateAll ? 'All future sessions updated' : 'Session updated' });
+      toast({ title: updateAll ? "All future sessions updated" : "Session updated" });
     },
     onError: (error: any) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -241,26 +247,23 @@ export function useGroupSessionMutations(groupId: string | undefined, queryKeyPr
 
         // Delete all future sessions in the series
         const { error } = await supabase
-          .from('group_sessions')
+          .from("group_sessions")
           .delete()
           .or(`id.eq.${masterSessionId},parent_session_id.eq.${masterSessionId}`)
-          .gte('session_date', new Date().toISOString());
+          .gte("session_date", new Date().toISOString());
         if (error) throw error;
       } else {
         // Delete only this session
-        const { error } = await supabase
-          .from('group_sessions')
-          .delete()
-          .eq('id', sessionId);
+        const { error } = await supabase.from("group_sessions").delete().eq("id", sessionId);
         if (error) throw error;
       }
     },
     onSuccess: (_, { deleteAll }) => {
       invalidateSessions();
-      toast({ title: deleteAll ? 'All future sessions deleted' : 'Session deleted' });
+      toast({ title: deleteAll ? "All future sessions deleted" : "Session deleted" });
     },
     onError: (error: any) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -268,16 +271,16 @@ export function useGroupSessionMutations(groupId: string | undefined, queryKeyPr
   const updateSessionStatus = useMutation({
     mutationFn: async ({ sessionId, status }: UpdateSessionStatusParams) => {
       const { error } = await supabase
-        .from('group_sessions')
+        .from("group_sessions")
         .update({ status })
-        .eq('id', sessionId);
+        .eq("id", sessionId);
       if (error) throw error;
     },
     onSuccess: () => {
       invalidateSessions();
     },
     onError: (error: any) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -295,15 +298,15 @@ export function useGroupSessionMutations(groupId: string | undefined, queryKeyPr
  */
 export function getEmptySessionForm(): SessionFormData {
   return {
-    title: '',
-    description: '',
-    session_date: '',
-    session_time: '',
-    duration_minutes: '60',
-    location: '',
+    title: "",
+    description: "",
+    session_date: "",
+    session_time: "",
+    duration_minutes: "60",
+    location: "",
     is_recurring: false,
-    recurrence_pattern: '',
-    recurrence_end_date: '',
-    timezone: 'UTC',
+    recurrence_pattern: "",
+    recurrence_end_date: "",
+    timezone: "UTC",
   };
 }

@@ -126,20 +126,22 @@ export function ProgramVersionHistory({ programId, programName }: ProgramVersion
 
       const { data: newVersion, error: versionError } = await supabase
         .from("program_versions")
-        .insert([{
-          program_id: programId,
-          version_number: maxVersion + 1,
-          version_name: name,
-          created_by: (await supabase.auth.getUser()).data.user?.id ?? '',
-          snapshot_data: {
-            name: program.name,
-            description: program.description,
-            category: program.category,
-            is_active: program.is_active,
-            slug: program.slug,
-          } as any,
-          is_current: true,
-        }])
+        .insert([
+          {
+            program_id: programId,
+            version_number: maxVersion + 1,
+            version_name: name,
+            created_by: (await supabase.auth.getUser()).data.user?.id ?? "",
+            snapshot_data: {
+              name: program.name,
+              description: program.description,
+              category: program.category,
+              is_active: program.is_active,
+              slug: program.slug,
+            } as any,
+            is_current: true,
+          },
+        ])
         .select()
         .single();
 
@@ -182,10 +184,7 @@ export function ProgramVersionHistory({ programId, programName }: ProgramVersion
 
   const deleteVersionMutation = useMutation({
     mutationFn: async (versionId: string) => {
-      const { error } = await supabase
-        .from("program_versions")
-        .delete()
-        .eq("id", versionId);
+      const { error } = await supabase.from("program_versions").delete().eq("id", versionId);
 
       if (error) throw error;
     },
@@ -289,13 +288,13 @@ export function ProgramVersionHistory({ programId, programName }: ProgramVersion
                   {version.version_name && (
                     <span className="text-muted-foreground">- {version.version_name}</span>
                   )}
-                  {version.is_current && (
-                    <Badge variant="default">Current</Badge>
-                  )}
+                  {version.is_current && <Badge variant="default">Current</Badge>}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Created by {(version.profiles as any)?.name || "Unknown"} on{" "}
-                  {version.created_at ? format(new Date(version.created_at), "PPp") : "Unknown date"}
+                  {version.created_at
+                    ? format(new Date(version.created_at), "PPp")
+                    : "Unknown date"}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -374,9 +373,7 @@ export function ProgramVersionHistory({ programId, programName }: ProgramVersion
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCreateVersion}>
-              Save Version
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleCreateVersion}>Save Version</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -406,8 +403,8 @@ export function ProgramVersionHistory({ programId, programName }: ProgramVersion
           <AlertDialogHeader>
             <AlertDialogTitle>Revert to Version</AlertDialogTitle>
             <AlertDialogDescription>
-              This will restore the program to this version. The current state will be preserved
-              as a version, so you can always switch back.
+              This will restore the program to this version. The current state will be preserved as
+              a version, so you can always switch back.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

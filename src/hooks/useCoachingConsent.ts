@@ -40,7 +40,9 @@ export function useCoachingConsent() {
   });
 
   const updateConsent = useMutation({
-    mutationFn: async (updates: Partial<Omit<CoachingConsentPreferences, 'id' | 'user_id' | 'created_at'>>) => {
+    mutationFn: async (
+      updates: Partial<Omit<CoachingConsentPreferences, "id" | "user_id" | "created_at">>,
+    ) => {
       if (!user) throw new Error("Not authenticated");
 
       const now = new Date().toISOString();
@@ -62,18 +64,25 @@ export function useCoachingConsent() {
       toast({ description: "Coach sharing preferences updated" });
     },
     onError: (error: Error) => {
-      toast({ 
-        title: "Error", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
 
-  const toggleConsent = async (field: keyof Pick<CoachingConsentPreferences, 
-    'share_goals' | 'share_decisions' | 'share_tasks' | 
-    'share_progress' | 'share_assessments' | 'share_development_items'
-  >) => {
+  const toggleConsent = async (
+    field: keyof Pick<
+      CoachingConsentPreferences,
+      | "share_goals"
+      | "share_decisions"
+      | "share_tasks"
+      | "share_progress"
+      | "share_assessments"
+      | "share_development_items"
+    >,
+  ) => {
     const currentValue = consent?.[field] ?? false;
     await updateConsent.mutateAsync({ [field]: !currentValue });
   };

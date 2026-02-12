@@ -28,13 +28,20 @@ interface ModuleAssignmentsViewProps {
   isInstructor?: boolean; // true when instructor/coach is viewing
 }
 
-export function ModuleAssignmentsView({ moduleId, moduleProgressId, isEditable, isInstructor = false }: ModuleAssignmentsViewProps) {
+export function ModuleAssignmentsView({
+  moduleId,
+  moduleProgressId,
+  isEditable,
+  isInstructor = false,
+}: ModuleAssignmentsViewProps) {
   const { data: assignedTypes, isLoading } = useQuery({
     queryKey: ["module-assigned-assignments", moduleId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("module_assignment_configs")
-        .select("assignment_type_id, module_assignment_types(id, name, description, structure, scoring_assessment_id)")
+        .select(
+          "assignment_type_id, module_assignment_types(id, name, description, structure, scoring_assessment_id)",
+        )
         .eq("module_id", moduleId);
       if (error) throw error;
       return data

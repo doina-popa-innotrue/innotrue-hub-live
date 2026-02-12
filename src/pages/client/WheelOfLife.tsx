@@ -1,70 +1,92 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { FeatureGate } from '@/components/FeatureGate';
-import { 
-  WHEEL_OF_LIFE_CATEGORIES, 
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { FeatureGate } from "@/components/FeatureGate";
+import {
+  WHEEL_OF_LIFE_CATEGORIES,
   WHEEL_CATEGORY_DESCRIPTIONS,
-  WheelCategory, 
+  WheelCategory,
   WheelSnapshot,
-  getSnapshotRatings 
-} from '@/lib/wheelOfLifeCategories';
-import { useCategoryLookup } from '@/hooks/useWheelCategories';
-import { 
-  RadarChart, 
-  PolarGrid, 
-  PolarAngleAxis, 
-  PolarRadiusAxis, 
-  Radar, 
+  getSnapshotRatings,
+} from "@/lib/wheelOfLifeCategories";
+import { useCategoryLookup } from "@/hooks/useWheelCategories";
+import {
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
   ResponsiveContainer,
   Legend,
-  Tooltip
-} from 'recharts';
-import { Camera, History, Target, Plus, Calendar, ArrowRight, Share2, MessageSquare, Lock, Crown } from 'lucide-react';
-import { format } from 'date-fns';
-import { Switch } from '@/components/ui/switch';
-import { DomainReflectionDialog } from '@/components/wheel/DomainReflectionDialog';
-import { useWheelFreePlanLimits } from '@/hooks/useWheelFreePlanLimits';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { WheelShareConsentDialog } from '@/components/wheel/WheelShareConsentDialog';
+  Tooltip,
+} from "recharts";
+import {
+  Camera,
+  History,
+  Target,
+  Plus,
+  Calendar,
+  ArrowRight,
+  Share2,
+  MessageSquare,
+  Lock,
+  Crown,
+} from "lucide-react";
+import { format } from "date-fns";
+import { Switch } from "@/components/ui/switch";
+import { DomainReflectionDialog } from "@/components/wheel/DomainReflectionDialog";
+import { useWheelFreePlanLimits } from "@/hooks/useWheelFreePlanLimits";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { WheelShareConsentDialog } from "@/components/wheel/WheelShareConsentDialog";
 
 export default function WheelOfLife() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const preselectedCategory = searchParams.get('category');
+  const preselectedCategory = searchParams.get("category");
   const planLimits = useWheelFreePlanLimits();
   const { colors: categoryColors } = useCategoryLookup();
-  
+
   const [snapshots, setSnapshots] = useState<WheelSnapshot[]>([]);
-  const [goalCounts, setGoalCounts] = useState<Record<WheelCategory, number>>({} as Record<WheelCategory, number>);
+  const [goalCounts, setGoalCounts] = useState<Record<WheelCategory, number>>(
+    {} as Record<WheelCategory, number>,
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [compareSnapshot, setCompareSnapshot] = useState<string | null>(null);
   const [updatingShare, setUpdatingShare] = useState<string | null>(null);
   const [reflectionCategory, setReflectionCategory] = useState<WheelCategory | null>(null);
-  const [shareConsentSnapshot, setShareConsentSnapshot] = useState<{ id: string; date: string } | null>(null);
-  
+  const [shareConsentSnapshot, setShareConsentSnapshot] = useState<{
+    id: string;
+    date: string;
+  } | null>(null);
+
   const [currentRatings, setCurrentRatings] = useState<Record<WheelCategory, number>>(() => {
     const initial: Record<WheelCategory, number> = {} as Record<WheelCategory, number>;
-    (Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).forEach(cat => {
+    (Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).forEach((cat) => {
       initial[cat] = 5;
     });
     return initial;
   });
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -75,31 +97,31 @@ export default function WheelOfLife() {
 
   const fetchSnapshots = async () => {
     if (!user) return;
-    
+
     try {
       const { data, error } = await supabase
-        .from('wheel_of_life_snapshots')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('snapshot_date', { ascending: false });
+        .from("wheel_of_life_snapshots")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("snapshot_date", { ascending: false });
 
       if (error) throw error;
       setSnapshots((data || []) as WheelSnapshot[]);
-      
+
       // Pre-fill with latest snapshot values if available
       if (data && data.length > 0) {
         const latest = data[0] as WheelSnapshot;
         const ratings: Record<WheelCategory, number> = {} as Record<WheelCategory, number>;
-        (Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).forEach(cat => {
+        (Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).forEach((cat) => {
           ratings[cat] = latest[cat] || 5;
         });
         setCurrentRatings(ratings);
       }
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to load wheel of life data',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load wheel of life data",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -108,17 +130,17 @@ export default function WheelOfLife() {
 
   const fetchGoalCounts = async () => {
     if (!user) return;
-    
+
     try {
       const { data, error } = await supabase
-        .from('goals')
-        .select('category')
-        .eq('user_id', user.id);
+        .from("goals")
+        .select("category")
+        .eq("user_id", user.id);
 
       if (error) throw error;
 
       const counts: Record<WheelCategory, number> = {} as Record<WheelCategory, number>;
-      (Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).forEach(cat => {
+      (Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).forEach((cat) => {
         counts[cat] = 0;
       });
 
@@ -130,7 +152,7 @@ export default function WheelOfLife() {
 
       setGoalCounts(counts);
     } catch (error) {
-      console.error('Failed to fetch goal counts:', error);
+      console.error("Failed to fetch goal counts:", error);
     }
   };
 
@@ -141,30 +163,28 @@ export default function WheelOfLife() {
     try {
       const snapshotData = {
         user_id: user.id,
-        snapshot_date: new Date().toISOString().split('T')[0],
+        snapshot_date: new Date().toISOString().split("T")[0],
         notes: notes || null,
         ...currentRatings,
       };
 
-      const { error } = await supabase
-        .from('wheel_of_life_snapshots')
-        .insert([snapshotData]);
+      const { error } = await supabase.from("wheel_of_life_snapshots").insert([snapshotData]);
 
       if (error) throw error;
 
       toast({
-        title: 'Snapshot Saved',
-        description: 'Your Wheel of Life snapshot has been saved.',
+        title: "Snapshot Saved",
+        description: "Your Wheel of Life snapshot has been saved.",
       });
 
       setShowForm(false);
-      setNotes('');
+      setNotes("");
       fetchSnapshots();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to save snapshot',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to save snapshot",
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -172,8 +192,8 @@ export default function WheelOfLife() {
   };
 
   const getChartData = (snapshot?: WheelSnapshot) => {
-    const source = snapshot || { ...currentRatings } as any;
-    return (Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).map(cat => ({
+    const source = snapshot || ({ ...currentRatings } as any);
+    return (Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).map((cat) => ({
       category: WHEEL_OF_LIFE_CATEGORIES[cat],
       value: source[cat] || 0,
       fullMark: 10,
@@ -182,13 +202,13 @@ export default function WheelOfLife() {
 
   const getComparisonData = () => {
     if (!compareSnapshot || snapshots.length < 2) return null;
-    
-    const compareSnap = snapshots.find(s => s.id === compareSnapshot);
+
+    const compareSnap = snapshots.find((s) => s.id === compareSnapshot);
     const latestSnap = snapshots[0];
-    
+
     if (!compareSnap || !latestSnap) return null;
 
-    return (Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).map(cat => ({
+    return (Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).map((cat) => ({
       category: WHEEL_OF_LIFE_CATEGORIES[cat],
       current: latestSnap[cat] || 0,
       previous: compareSnap[cat] || 0,
@@ -203,9 +223,9 @@ export default function WheelOfLife() {
   const handleAddGoal = (category: WheelCategory) => {
     if (planLimits.isFreePlan && !planLimits.canAddGoal) {
       toast({
-        title: 'Goal Limit Reached',
+        title: "Goal Limit Reached",
         description: `Free plan allows ${planLimits.maxGoals} wheel goals. Upgrade to add more.`,
-        variant: 'destructive',
+        variant: "destructive",
       });
       return;
     }
@@ -219,7 +239,10 @@ export default function WheelOfLife() {
   const handleShareToggle = (snapshotId: string, snapshotDate: string, currentValue: boolean) => {
     if (!currentValue) {
       // Show consent dialog when enabling sharing
-      setShareConsentSnapshot({ id: snapshotId, date: format(new Date(snapshotDate), 'MMMM d, yyyy') });
+      setShareConsentSnapshot({
+        id: snapshotId,
+        date: format(new Date(snapshotDate), "MMMM d, yyyy"),
+      });
     } else {
       // Immediately disable sharing (no consent needed to revoke)
       executeShareUpdate(snapshotId, false);
@@ -230,27 +253,27 @@ export default function WheelOfLife() {
     setUpdatingShare(snapshotId);
     try {
       const { error } = await supabase
-        .from('wheel_of_life_snapshots')
+        .from("wheel_of_life_snapshots")
         .update({ shared_with_coach: newValue })
-        .eq('id', snapshotId);
+        .eq("id", snapshotId);
 
       if (error) throw error;
 
-      setSnapshots(prev => prev.map(s => 
-        s.id === snapshotId ? { ...s, shared_with_coach: newValue } : s
-      ));
+      setSnapshots((prev) =>
+        prev.map((s) => (s.id === snapshotId ? { ...s, shared_with_coach: newValue } : s)),
+      );
 
       toast({
-        title: newValue ? 'Shared with Coach' : 'Sharing Disabled',
-        description: newValue 
-          ? 'Your coach can now view this snapshot.'
-          : 'This snapshot is now private.',
+        title: newValue ? "Shared with Coach" : "Sharing Disabled",
+        description: newValue
+          ? "Your coach can now view this snapshot."
+          : "This snapshot is now private.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to update sharing settings',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update sharing settings",
+        variant: "destructive",
       });
     } finally {
       setUpdatingShare(null);
@@ -304,14 +327,16 @@ export default function WheelOfLife() {
                     Ready to turn insights into lasting change?
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Unlock unlimited goals, reflections, and historical tracking to see your growth over time.
+                    Unlock unlimited goals, reflections, and historical tracking to see your growth
+                    over time.
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Currently using {planLimits.currentGoalCount}/{planLimits.maxGoals} goals · {planLimits.currentReflectionCount}/{planLimits.maxReflections} reflections
+                    Currently using {planLimits.currentGoalCount}/{planLimits.maxGoals} goals ·{" "}
+                    {planLimits.currentReflectionCount}/{planLimits.maxReflections} reflections
                   </p>
                 </div>
               </div>
-              <Button onClick={() => navigate('/subscription')} className="shrink-0">
+              <Button onClick={() => navigate("/subscription")} className="shrink-0">
                 <Crown className="mr-2 h-4 w-4" />
                 Upgrade Plan
               </Button>
@@ -325,9 +350,7 @@ export default function WheelOfLife() {
             {planLimits.canViewHistory ? (
               <>
                 <TabsTrigger value="history">History</TabsTrigger>
-                {snapshots.length >= 2 && (
-                  <TabsTrigger value="compare">Compare</TabsTrigger>
-                )}
+                {snapshots.length >= 2 && <TabsTrigger value="compare">Compare</TabsTrigger>}
               </>
             ) : (
               <TabsTrigger value="history" disabled className="opacity-50 cursor-not-allowed">
@@ -348,7 +371,7 @@ export default function WheelOfLife() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid gap-6 md:grid-cols-2">
-                    {(Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).map(cat => (
+                    {(Object.keys(WHEEL_OF_LIFE_CATEGORIES) as WheelCategory[]).map((cat) => (
                       <div key={cat} className="space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
@@ -357,11 +380,15 @@ export default function WheelOfLife() {
                               {WHEEL_CATEGORY_DESCRIPTIONS[cat]}
                             </p>
                           </div>
-                          <Badge variant="secondary" className="ml-2">{currentRatings[cat]}</Badge>
+                          <Badge variant="secondary" className="ml-2">
+                            {currentRatings[cat]}
+                          </Badge>
                         </div>
                         <Slider
                           value={[currentRatings[cat]]}
-                          onValueChange={([value]) => setCurrentRatings(prev => ({ ...prev, [cat]: value }))}
+                          onValueChange={([value]) =>
+                            setCurrentRatings((prev) => ({ ...prev, [cat]: value }))
+                          }
                           min={1}
                           max={10}
                           step={1}
@@ -386,7 +413,7 @@ export default function WheelOfLife() {
                       Cancel
                     </Button>
                     <Button onClick={handleSaveSnapshot} disabled={saving}>
-                      {saving ? 'Saving...' : 'Save Snapshot'}
+                      {saving ? "Saving..." : "Save Snapshot"}
                     </Button>
                   </div>
                 </CardContent>
@@ -402,18 +429,26 @@ export default function WheelOfLife() {
                           Latest Snapshot
                         </CardTitle>
                         <CardDescription>
-                          {format(new Date(latestSnapshot.snapshot_date), 'MMMM d, yyyy')}
+                          {format(new Date(latestSnapshot.snapshot_date), "MMMM d, yyyy")}
                         </CardDescription>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Share2 className={`h-4 w-4 ${latestSnapshot.shared_with_coach ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <Share2
+                          className={`h-4 w-4 ${latestSnapshot.shared_with_coach ? "text-primary" : "text-muted-foreground"}`}
+                        />
                         <Switch
                           checked={latestSnapshot.shared_with_coach}
-                          onCheckedChange={() => handleShareToggle(latestSnapshot.id, latestSnapshot.snapshot_date, latestSnapshot.shared_with_coach)}
+                          onCheckedChange={() =>
+                            handleShareToggle(
+                              latestSnapshot.id,
+                              latestSnapshot.snapshot_date,
+                              latestSnapshot.shared_with_coach,
+                            )
+                          }
                           disabled={updatingShare === latestSnapshot.id}
                         />
                         <span className="text-sm text-muted-foreground">
-                          {latestSnapshot.shared_with_coach ? 'Shared' : 'Private'}
+                          {latestSnapshot.shared_with_coach ? "Shared" : "Private"}
                         </span>
                       </div>
                     </div>
@@ -449,7 +484,7 @@ export default function WheelOfLife() {
                   <CardContent>
                     <div className="space-y-3">
                       {getSnapshotRatings(latestSnapshot).map(({ category, label, value }) => {
-                        const color = categoryColors[category] || 'hsl(var(--primary))';
+                        const color = categoryColors[category] || "hsl(var(--primary))";
                         return (
                           <div
                             key={category}
@@ -457,22 +492,25 @@ export default function WheelOfLife() {
                             className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer group"
                           >
                             <div className="flex items-center gap-3">
-                              <div 
+                              <div
                                 className="w-10 h-10 rounded-full flex items-center justify-center"
                                 style={{ backgroundColor: `${color}20` }}
                               >
-                                <span className="font-semibold" style={{ color }}>{value}</span>
+                                <span className="font-semibold" style={{ color }}>
+                                  {value}
+                                </span>
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <div 
+                                  <div
                                     className="w-2.5 h-2.5 rounded-full shrink-0"
                                     style={{ backgroundColor: color }}
                                   />
                                   <span className="font-medium">{label}</span>
                                   {goalCounts[category] > 0 && (
                                     <Badge variant="secondary" className="text-xs">
-                                      {goalCounts[category]} {goalCounts[category] === 1 ? 'goal' : 'goals'}
+                                      {goalCounts[category]}{" "}
+                                      {goalCounts[category] === 1 ? "goal" : "goals"}
                                     </Badge>
                                   )}
                                 </div>
@@ -481,51 +519,54 @@ export default function WheelOfLife() {
                                 </p>
                               </div>
                             </div>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setReflectionCategory(category);
-                              }}
-                              title="Reflections"
-                            >
-                              <MessageSquare className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigateToGoals(category);
-                              }}
-                              className="group-hover:bg-primary/10"
-                            >
-                              Goals
-                              <ArrowRight className="ml-1 h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAddGoal(category);
-                              }}
-                              title={planLimits.isFreePlan && !planLimits.canAddGoal ? "Goal limit reached" : "Add Goal"}
-                              disabled={planLimits.isFreePlan && !planLimits.canAddGoal}
-                            >
-                              {planLimits.isFreePlan && !planLimits.canAddGoal ? (
-                                <Lock className="h-4 w-4" />
-                              ) : (
-                                <Plus className="h-4 w-4" />
-                              )}
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setReflectionCategory(category);
+                                }}
+                                title="Reflections"
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigateToGoals(category);
+                                }}
+                                className="group-hover:bg-primary/10"
+                              >
+                                Goals
+                                <ArrowRight className="ml-1 h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddGoal(category);
+                                }}
+                                title={
+                                  planLimits.isFreePlan && !planLimits.canAddGoal
+                                    ? "Goal limit reached"
+                                    : "Add Goal"
+                                }
+                                disabled={planLimits.isFreePlan && !planLimits.canAddGoal}
+                              >
+                                {planLimits.isFreePlan && !planLimits.canAddGoal ? (
+                                  <Lock className="h-4 w-4" />
+                                ) : (
+                                  <Plus className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
                           </div>
-                        </div>
                         );
                       })}
-
                     </div>
                   </CardContent>
                 </Card>
@@ -576,17 +617,25 @@ export default function WheelOfLife() {
                     <div className="flex items-center justify-between">
                       <CardTitle className="flex items-center gap-2">
                         <Calendar className="h-5 w-5" />
-                        {format(new Date(snapshot.snapshot_date), 'MMMM d, yyyy')}
+                        {format(new Date(snapshot.snapshot_date), "MMMM d, yyyy")}
                       </CardTitle>
                       <div className="flex items-center gap-2">
-                        <Share2 className={`h-4 w-4 ${snapshot.shared_with_coach ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <Share2
+                          className={`h-4 w-4 ${snapshot.shared_with_coach ? "text-primary" : "text-muted-foreground"}`}
+                        />
                         <Switch
                           checked={snapshot.shared_with_coach}
-                          onCheckedChange={() => handleShareToggle(snapshot.id, snapshot.snapshot_date, snapshot.shared_with_coach)}
+                          onCheckedChange={() =>
+                            handleShareToggle(
+                              snapshot.id,
+                              snapshot.snapshot_date,
+                              snapshot.shared_with_coach,
+                            )
+                          }
                           disabled={updatingShare === snapshot.id}
                         />
                         <span className="text-sm text-muted-foreground">
-                          {snapshot.shared_with_coach ? 'Shared' : 'Private'}
+                          {snapshot.shared_with_coach ? "Shared" : "Private"}
                         </span>
                       </div>
                     </div>
@@ -625,14 +674,14 @@ export default function WheelOfLife() {
                 <CardContent className="space-y-6">
                   <div className="flex items-center gap-4">
                     <Label>Compare with:</Label>
-                    <Select value={compareSnapshot || ''} onValueChange={setCompareSnapshot}>
+                    <Select value={compareSnapshot || ""} onValueChange={setCompareSnapshot}>
                       <SelectTrigger className="w-[250px]">
                         <SelectValue placeholder="Select a snapshot" />
                       </SelectTrigger>
                       <SelectContent>
                         {snapshots.slice(1).map((snapshot) => (
                           <SelectItem key={snapshot.id} value={snapshot.id}>
-                            {format(new Date(snapshot.snapshot_date), 'MMMM d, yyyy')}
+                            {format(new Date(snapshot.snapshot_date), "MMMM d, yyyy")}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -688,7 +737,7 @@ export default function WheelOfLife() {
           open={!!shareConsentSnapshot}
           onOpenChange={(open) => !open && setShareConsentSnapshot(null)}
           onConfirm={handleConsentConfirm}
-          snapshotDate={shareConsentSnapshot?.date || ''}
+          snapshotDate={shareConsentSnapshot?.date || ""}
         />
       </div>
     </FeatureGate>

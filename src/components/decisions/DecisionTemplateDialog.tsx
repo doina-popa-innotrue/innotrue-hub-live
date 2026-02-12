@@ -1,10 +1,24 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { decisionTemplates, DecisionTemplate } from "@/lib/decisionTemplates";
-import { Briefcase, MapPin, DollarSign, GraduationCap, Heart, Rocket, FileText } from "lucide-react";
+import {
+  Briefcase,
+  MapPin,
+  DollarSign,
+  GraduationCap,
+  Heart,
+  Rocket,
+  FileText,
+} from "lucide-react";
 
 interface DecisionTemplateDialogProps {
   open: boolean;
@@ -21,12 +35,16 @@ const iconMap: Record<string, any> = {
   rocket: Rocket,
 };
 
-export function DecisionTemplateDialog({ open, onOpenChange, onSelectTemplate }: DecisionTemplateDialogProps) {
+export function DecisionTemplateDialog({
+  open,
+  onOpenChange,
+  onSelectTemplate,
+}: DecisionTemplateDialogProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const categories = Array.from(new Set(decisionTemplates.map(t => t.category)));
+  const categories = Array.from(new Set(decisionTemplates.map((t) => t.category)));
   const filteredTemplates = selectedCategory
-    ? decisionTemplates.filter(t => t.category === selectedCategory)
+    ? decisionTemplates.filter((t) => t.category === selectedCategory)
     : decisionTemplates;
 
   return (
@@ -49,7 +67,7 @@ export function DecisionTemplateDialog({ open, onOpenChange, onSelectTemplate }:
             >
               All Templates
             </Button>
-            {categories.map(category => (
+            {categories.map((category) => (
               <Button
                 key={category}
                 variant={selectedCategory === category ? "default" : "outline"}
@@ -63,7 +81,7 @@ export function DecisionTemplateDialog({ open, onOpenChange, onSelectTemplate }:
 
           {/* Template cards */}
           <div className="grid gap-4 md:grid-cols-2">
-            {filteredTemplates.map(template => {
+            {filteredTemplates.map((template) => {
               const Icon = iconMap[template.icon] || FileText;
               return (
                 <Card

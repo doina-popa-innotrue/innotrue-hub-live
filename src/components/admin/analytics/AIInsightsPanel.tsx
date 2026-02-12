@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Sparkles, Loader2, AlertCircle, Coins } from "lucide-react";
@@ -114,8 +120,8 @@ export function AIInsightsPanel({ analytics, isLoading }: AIInsightsPanelProps) 
             </Select>
           </div>
 
-          <Button 
-            onClick={generateInsights} 
+          <Button
+            onClick={generateInsights}
             disabled={isGenerating || !analytics}
             className="gap-2"
           >
@@ -159,7 +165,8 @@ export function AIInsightsPanel({ analytics, isLoading }: AIInsightsPanelProps) 
             <Sparkles className="h-12 w-12 mb-4 text-muted-foreground/50" />
             <p className="font-medium text-foreground">No insights generated yet</p>
             <p className="text-sm mt-1 text-center max-w-md">
-              Select a focus area and click "Generate Insights" to get AI-powered analysis of your user behavior data.
+              Select a focus area and click "Generate Insights" to get AI-powered analysis of your
+              user behavior data.
             </p>
           </div>
         ) : null}

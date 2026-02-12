@@ -3,7 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { X, Plus, ClipboardCheck, Gauge, Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -70,13 +76,15 @@ export function ModuleAssignmentConfig({ moduleId }: ModuleAssignmentConfigProps
     queryFn: async () => {
       const { data, error } = await supabase
         .from("module_assignment_configs")
-        .select(`
+        .select(
+          `
           id, 
           assignment_type_id, 
           linked_capability_assessment_id,
           module_assignment_types(id, name, description),
           capability_assessments(id, name, slug)
-        `)
+        `,
+        )
         .eq("module_id", moduleId);
       if (error) throw error;
       return data as AssignmentConfig[];
@@ -84,7 +92,13 @@ export function ModuleAssignmentConfig({ moduleId }: ModuleAssignmentConfigProps
   });
 
   const assignMutation = useMutation({
-    mutationFn: async ({ assignmentTypeId, assessmentId }: { assignmentTypeId: string; assessmentId?: string }) => {
+    mutationFn: async ({
+      assignmentTypeId,
+      assessmentId,
+    }: {
+      assignmentTypeId: string;
+      assessmentId?: string;
+    }) => {
       const { error } = await supabase.from("module_assignment_configs").insert({
         module_id: moduleId,
         assignment_type_id: assignmentTypeId,
@@ -104,7 +118,13 @@ export function ModuleAssignmentConfig({ moduleId }: ModuleAssignmentConfigProps
   });
 
   const updateAssessmentLinkMutation = useMutation({
-    mutationFn: async ({ configId, assessmentId }: { configId: string; assessmentId: string | null }) => {
+    mutationFn: async ({
+      configId,
+      assessmentId,
+    }: {
+      configId: string;
+      assessmentId: string | null;
+    }) => {
       const { error } = await supabase
         .from("module_assignment_configs")
         .update({ linked_capability_assessment_id: assessmentId })
@@ -122,7 +142,10 @@ export function ModuleAssignmentConfig({ moduleId }: ModuleAssignmentConfigProps
 
   const unassignMutation = useMutation({
     mutationFn: async (configId: string) => {
-      const { error } = await supabase.from("module_assignment_configs").delete().eq("id", configId);
+      const { error } = await supabase
+        .from("module_assignment_configs")
+        .delete()
+        .eq("id", configId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -135,14 +158,14 @@ export function ModuleAssignmentConfig({ moduleId }: ModuleAssignmentConfigProps
   });
 
   const availableTypes = assignmentTypes?.filter(
-    (type) => !configs?.some((c) => c.assignment_type_id === type.id)
+    (type) => !configs?.some((c) => c.assignment_type_id === type.id),
   );
 
   const handleAssign = () => {
     if (selectedTypeId) {
-      assignMutation.mutate({ 
-        assignmentTypeId: selectedTypeId, 
-        assessmentId: selectedAssessmentId || undefined 
+      assignMutation.mutate({
+        assignmentTypeId: selectedTypeId,
+        assessmentId: selectedAssessmentId || undefined,
       });
     }
   };
@@ -155,13 +178,19 @@ export function ModuleAssignmentConfig({ moduleId }: ModuleAssignmentConfigProps
       </div>
 
       {isLoading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading...</div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading...
+        </div>
       ) : (
         <>
           {configs && configs.length > 0 && (
             <div className="space-y-3">
               {configs.map((config) => (
-                <div key={config.id} className="flex flex-col gap-2 p-3 border rounded-lg bg-muted/30">
+                <div
+                  key={config.id}
+                  className="flex flex-col gap-2 p-3 border rounded-lg bg-muted/30"
+                >
                   <div className="flex items-center justify-between">
                     <Badge variant="secondary" className="flex items-center gap-1">
                       {config.module_assignment_types?.name}
@@ -175,12 +204,12 @@ export function ModuleAssignmentConfig({ moduleId }: ModuleAssignmentConfigProps
                       <X className="h-3 w-3" />
                     </Button>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <Gauge className="h-3 w-3 text-muted-foreground shrink-0" />
                     <Select
                       value={config.linked_capability_assessment_id || "_none"}
-                      onValueChange={(value) => 
+                      onValueChange={(value) =>
                         updateAssessmentLinkMutation.mutate({
                           configId: config.id,
                           assessmentId: value === "_none" ? null : value,
@@ -200,10 +229,11 @@ export function ModuleAssignmentConfig({ moduleId }: ModuleAssignmentConfigProps
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   {config.capability_assessments && (
                     <p className="text-xs text-muted-foreground pl-5">
-                      Instructor completes "{config.capability_assessments.name}" when grading submissions
+                      Instructor completes "{config.capability_assessments.name}" when grading
+                      submissions
                     </p>
                   )}
                 </div>
@@ -252,11 +282,12 @@ export function ModuleAssignmentConfig({ moduleId }: ModuleAssignmentConfigProps
             </div>
           )}
 
-          {(!availableTypes || availableTypes.length === 0) && (!configs || configs.length === 0) && (
-            <p className="text-sm text-muted-foreground">
-              No assignment types available. Create them in Admin → Assignment Types.
-            </p>
-          )}
+          {(!availableTypes || availableTypes.length === 0) &&
+            (!configs || configs.length === 0) && (
+              <p className="text-sm text-muted-foreground">
+                No assignment types available. Create them in Admin → Assignment Types.
+              </p>
+            )}
         </>
       )}
     </div>

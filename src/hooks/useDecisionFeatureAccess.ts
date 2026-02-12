@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { useEntitlements } from './useEntitlements';
-import { supabase } from '@/integrations/supabase/client';
-import { DecisionCapability } from '@/lib/decisionFeatureConfig';
+import { useEffect, useState } from "react";
+import { useEntitlements } from "./useEntitlements";
+import { supabase } from "@/integrations/supabase/client";
+import { DecisionCapability } from "@/lib/decisionFeatureConfig";
 
 interface DecisionFeatureAccess {
   isLoading: boolean;
@@ -24,8 +24,8 @@ export function useDecisionFeatureAccess(): DecisionFeatureAccess {
     async function fetchMappings() {
       try {
         const { data: settings, error } = await supabase
-          .from('decision_capability_settings')
-          .select('capability, feature_key');
+          .from("decision_capability_settings")
+          .select("capability, feature_key");
 
         if (error) throw error;
 
@@ -35,7 +35,7 @@ export function useDecisionFeatureAccess(): DecisionFeatureAccess {
         });
         setCapabilityMappings(mappings);
       } catch (error) {
-        console.error('Error fetching capability mappings:', error);
+        console.error("Error fetching capability mappings:", error);
       } finally {
         setMappingsLoading(false);
       }
@@ -50,8 +50,8 @@ export function useDecisionFeatureAccess(): DecisionFeatureAccess {
     return hasFeature(requiredFeature);
   };
 
-  const hasBasicAccess = hasFeature('decision_toolkit_basic');
-  const hasAdvancedAccess = hasFeature('decision_toolkit_advanced');
+  const hasBasicAccess = hasFeature("decision_toolkit_basic");
+  const hasAdvancedAccess = hasFeature("decision_toolkit_advanced");
 
   return {
     isLoading: entitlementsLoading || mappingsLoading,

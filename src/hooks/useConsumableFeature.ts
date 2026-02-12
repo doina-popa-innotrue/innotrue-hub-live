@@ -1,11 +1,11 @@
-import { useState, useCallback, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useCombinedFeatureAccess } from '@/hooks/useCombinedFeatureAccess';
-import { useToast } from '@/hooks/use-toast';
-import { useCreditBatches } from '@/hooks/useCreditBatches';
-import { useCreditService } from '@/hooks/useCreditService';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useCallback, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useCombinedFeatureAccess } from "@/hooks/useCombinedFeatureAccess";
+import { useToast } from "@/hooks/use-toast";
+import { useCreditBatches } from "@/hooks/useCreditBatches";
+import { useCreditService } from "@/hooks/useCreditService";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CreditServiceByFeature {
   found: boolean;
@@ -30,7 +30,7 @@ interface UseConsumableFeatureResult {
   limit: number | null;
   /** Whether a consumption action is in progress */
   isConsuming: boolean;
-  /** 
+  /**
    * Consume one use of the feature. Returns true if successful.
    * Uses credit service if configured, otherwise falls back to unified credits.
    */
@@ -54,29 +54,29 @@ interface UseConsumableFeatureResult {
 
 /**
  * Hook for managing consumable features with unified credits.
- * 
+ *
  * **CONSOLIDATED**: Now uses `useCreditBatches` directly instead of `useUnifiedCredits`.
- * 
+ *
  * This hook checks for credit_services first:
  * 1. If a credit_service is linked to the feature, use its cost and consume from user credits
  * 2. Otherwise, fall back to plan/program/bonus credits via useCreditBatches
- * 
+ *
  * This allows admins to configure feature costs through the UI without code changes.
- * 
+ *
  * @example
  * ```tsx
  * function AIAnalysisButton() {
  *   const { canConsume, consume, remaining, isLoading, effectiveCost } = useConsumableFeature('ai_insights');
- * 
+ *
  *   const handleClick = async () => {
  *     const success = await consume();
  *     if (success) {
  *       await runAIAnalysis();
  *     }
  *   };
- * 
+ *
  *   if (isLoading) return <Skeleton />;
- * 
+ *
  *   return (
  *     <Button onClick={handleClick} disabled={!canConsume}>
  *       Run AI Analysis ({effectiveCost} credits)
@@ -89,36 +89,36 @@ export function useConsumableFeature(featureKey: string): UseConsumableFeatureRe
   const { user } = useAuth();
   const { toast } = useToast();
   const [isConsuming, setIsConsuming] = useState(false);
-  
+
   // Check if there's a credit service linked to this feature
   const { data: creditService, isLoading: serviceLoading } = useQuery({
-    queryKey: ['credit-service-by-feature', featureKey, user?.id],
+    queryKey: ["credit-service-by-feature", featureKey, user?.id],
     queryFn: async (): Promise<CreditServiceByFeature | null> => {
       if (!user) return null;
-      
-      const { data, error } = await supabase.rpc('get_credit_service_by_feature', {
+
+      const { data, error } = await supabase.rpc("get_credit_service_by_feature", {
         p_user_id: user.id,
         p_feature_key: featureKey,
       });
-      
+
       if (error) {
-        console.error('Error fetching credit service by feature:', error);
+        console.error("Error fetching credit service by feature:", error);
         return null;
       }
-      
+
       return data as unknown as CreditServiceByFeature;
     },
     enabled: !!user && !!featureKey,
     staleTime: 60000, // 1 minute
   });
-  
+
   // Use the credit service consume function
   const { consume: consumeService } = useCreditService();
-  
+
   // Use consolidated credit batches for all credit operations
-  const { 
+  const {
     summary,
-    isLoading: batchLoading, 
+    isLoading: batchLoading,
     totalAvailable,
     planRemaining,
     programRemaining,
@@ -127,7 +127,7 @@ export function useConsumableFeature(featureKey: string): UseConsumableFeatureRe
     consume: batchConsume,
     isConsuming: batchConsuming,
   } = useCreditBatches();
-  
+
   // Also check combined feature access for hasAccess flag
   const { hasAccess, isLoading: accessLoading, limit } = useCombinedFeatureAccess(featureKey);
 
@@ -135,10 +135,10 @@ export function useConsumableFeature(featureKey: string): UseConsumableFeatureRe
   const useCreditServiceFlow = creditService?.found === true;
 
   const isLoading = serviceLoading || batchLoading || accessLoading;
-  
+
   // Calculate effective cost and remaining
   const effectiveCost = useCreditServiceFlow ? (creditService?.effective_cost ?? 1) : 1;
-  
+
   const remaining = useMemo(() => {
     if (useCreditServiceFlow) {
       // For credit service flow, remaining is based on total available credits
@@ -146,9 +146,16 @@ export function useConsumableFeature(featureKey: string): UseConsumableFeatureRe
     }
     // For feature-specific credits
     const featureCredits = getFeatureCredits(featureKey);
-    return featureCredits > 0 ? featureCredits : (hasAccess ? null : 0);
-  }, [useCreditServiceFlow, totalAvailable, effectiveCost, getFeatureCredits, featureKey, hasAccess]);
-  
+    return featureCredits > 0 ? featureCredits : hasAccess ? null : 0;
+  }, [
+    useCreditServiceFlow,
+    totalAvailable,
+    effectiveCost,
+    getFeatureCredits,
+    featureKey,
+    hasAccess,
+  ]);
+
   // User can consume if they have access AND have enough credits
   const canConsume = useMemo(() => {
     if (!hasAccess) return false;
@@ -157,51 +164,61 @@ export function useConsumableFeature(featureKey: string): UseConsumableFeatureRe
     }
     const featureCredits = getFeatureCredits(featureKey);
     return featureCredits >= 1 || limit === null; // Unlimited if no limit set
-  }, [hasAccess, useCreditServiceFlow, totalAvailable, effectiveCost, getFeatureCredits, featureKey, limit]);
-  
+  }, [
+    hasAccess,
+    useCreditServiceFlow,
+    totalAvailable,
+    effectiveCost,
+    getFeatureCredits,
+    featureKey,
+    limit,
+  ]);
+
   // Build credit breakdown
-  const creditBreakdown = summary ? {
-    plan: planRemaining,
-    program: programRemaining,
-    addon: bonusCredits,
-  } : null;
+  const creditBreakdown = summary
+    ? {
+        plan: planRemaining,
+        program: programRemaining,
+        addon: bonusCredits,
+      }
+    : null;
 
   const consume = useCallback(async (): Promise<boolean> => {
     if (!user) {
       toast({
-        title: 'Not Authenticated',
-        description: 'Please sign in to continue.',
-        variant: 'destructive',
+        title: "Not Authenticated",
+        description: "Please sign in to continue.",
+        variant: "destructive",
       });
       return false;
     }
-    
+
     if (!canConsume) {
       toast({
-        title: 'Insufficient Credits',
+        title: "Insufficient Credits",
         description: `You need ${effectiveCost} credit(s) to use this feature.`,
-        variant: 'destructive',
+        variant: "destructive",
       });
       return false;
     }
-    
+
     setIsConsuming(true);
-    
+
     try {
       if (useCreditServiceFlow && creditService?.service_id) {
         // Use credit service consumption
         const result = await consumeService(
           creditService.service_id,
-          `Feature usage: ${featureKey}`
+          `Feature usage: ${featureKey}`,
         );
-        
+
         if (result?.success) {
           return true;
         } else {
           toast({
-            title: 'Error',
-            description: result?.error || 'Failed to consume credits.',
-            variant: 'destructive',
+            title: "Error",
+            description: result?.error || "Failed to consume credits.",
+            variant: "destructive",
           });
           return false;
         }
@@ -211,32 +228,42 @@ export function useConsumableFeature(featureKey: string): UseConsumableFeatureRe
           1,
           featureKey,
           `Feature usage: ${featureKey}`,
-          'feature_usage'
+          "feature_usage",
         );
-        
+
         if (result.success) {
           return true;
         } else {
           toast({
-            title: 'Insufficient Credits',
-            description: result.error || 'Not enough credits available.',
-            variant: 'destructive',
+            title: "Insufficient Credits",
+            description: result.error || "Not enough credits available.",
+            variant: "destructive",
           });
           return false;
         }
       }
     } catch (error) {
-      console.error('Error consuming feature:', error);
+      console.error("Error consuming feature:", error);
       toast({
-        title: 'Error',
-        description: 'An unexpected error occurred. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
       return false;
     } finally {
       setIsConsuming(false);
     }
-  }, [user, canConsume, effectiveCost, useCreditServiceFlow, creditService, consumeService, featureKey, batchConsume, toast]);
+  }, [
+    user,
+    canConsume,
+    effectiveCost,
+    useCreditServiceFlow,
+    creditService,
+    consumeService,
+    featureKey,
+    batchConsume,
+    toast,
+  ]);
 
   return {
     hasAccess,

@@ -7,15 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  CalendarIcon, 
+import {
+  CalendarIcon,
   UserMinus,
   RefreshCw,
   BarChart3,
   Activity,
   Target,
   Sparkles,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin";
 import { ExcludedUsersManager } from "@/components/admin/analytics/ExcludedUsersManager";
@@ -38,7 +38,11 @@ export default function UserBehaviorAnalytics() {
     to: new Date(),
   });
 
-  const { data: analytics, isLoading, refetch } = useQuery({
+  const {
+    data: analytics,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["user-behavior-analytics", dateRange],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_aggregated_analytics", {
@@ -93,13 +97,19 @@ export default function UserBehaviorAnalytics() {
                 </Button>
               </div>
             </div>
-            
+
             <div className="flex flex-wrap items-center gap-2">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full sm:w-auto justify-start text-left font-normal">
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto justify-start text-left font-normal"
+                  >
                     <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-                    <span className="truncate">{format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}</span>
+                    <span className="truncate">
+                      {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                      {format(dateRange.to, "MMM d, yyyy")}
+                    </span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -115,7 +125,7 @@ export default function UserBehaviorAnalytics() {
                   />
                 </PopoverContent>
               </Popover>
-              
+
               <Button variant="outline" size="icon" onClick={() => refetch()}>
                 <RefreshCw className="h-4 w-4" />
               </Button>
@@ -127,32 +137,50 @@ export default function UserBehaviorAnalytics() {
       <Tabs defaultValue="overview" className="space-y-6">
         <div className="overflow-x-auto -mx-4 px-4 pb-2">
           <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
-            <TabsTrigger value="overview" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+            <TabsTrigger
+              value="overview"
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm"
+            >
               <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden xs:inline">Overview</span>
               <span className="xs:hidden">Stats</span>
             </TabsTrigger>
-            <TabsTrigger value="engagement" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+            <TabsTrigger
+              value="engagement"
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm"
+            >
               <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Engagement</span>
               <span className="sm:hidden">Engage</span>
             </TabsTrigger>
-            <TabsTrigger value="dropoff" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+            <TabsTrigger
+              value="dropoff"
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm"
+            >
               <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Drop-offs</span>
               <span className="sm:hidden">Drops</span>
             </TabsTrigger>
-            <TabsTrigger value="ai-insights" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+            <TabsTrigger
+              value="ai-insights"
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm"
+            >
               <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">AI Insights</span>
               <span className="sm:hidden">AI</span>
             </TabsTrigger>
-            <TabsTrigger value="exclusions" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+            <TabsTrigger
+              value="exclusions"
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm"
+            >
               <UserMinus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Exclusions</span>
               <span className="sm:hidden">Excl.</span>
             </TabsTrigger>
-            <TabsTrigger value="cleanup" className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm">
+            <TabsTrigger
+              value="cleanup"
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs sm:text-sm"
+            >
               <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Cleanup</span>
               <span className="sm:hidden">Clean</span>
@@ -181,7 +209,7 @@ export default function UserBehaviorAnalytics() {
         </TabsContent>
 
         <TabsContent value="cleanup" className="space-y-6">
-          <DataCleanupManager 
+          <DataCleanupManager
             onCleanupComplete={() => {
               queryClient.invalidateQueries({ queryKey: ["user-behavior-analytics"] });
             }}

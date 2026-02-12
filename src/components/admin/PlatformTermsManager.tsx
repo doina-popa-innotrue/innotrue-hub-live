@@ -1,22 +1,22 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-import { Plus, Pencil, Eye, Trash2, Check, Shield, Users } from 'lucide-react';
-import DOMPurify from 'dompurify';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Plus, Pencil, Eye, Trash2, Check, Shield, Users } from "lucide-react";
+import DOMPurify from "dompurify";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,8 +26,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
+} from "@/components/ui/alert-dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -35,7 +35,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 
 interface PlatformTerms {
   id: string;
@@ -57,12 +57,12 @@ export function PlatformTermsManager() {
   const [previewTerm, setPreviewTerm] = useState<PlatformTerms | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [acceptanceStats, setAcceptanceStats] = useState<Record<string, number>>({});
-  
+
   // Form state
-  const [title, setTitle] = useState('');
-  const [contentHtml, setContentHtml] = useState('');
+  const [title, setTitle] = useState("");
+  const [contentHtml, setContentHtml] = useState("");
   const [isBlockingOnUpdate, setIsBlockingOnUpdate] = useState(false);
-  const [effectiveFrom, setEffectiveFrom] = useState('');
+  const [effectiveFrom, setEffectiveFrom] = useState("");
   const [isCurrent, setIsCurrent] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -73,9 +73,9 @@ export function PlatformTermsManager() {
   async function fetchTerms() {
     try {
       const { data, error } = await supabase
-        .from('platform_terms')
-        .select('*')
-        .order('version', { ascending: false });
+        .from("platform_terms")
+        .select("*")
+        .order("version", { ascending: false });
 
       if (error) throw error;
       setTerms(data || []);
@@ -85,16 +85,16 @@ export function PlatformTermsManager() {
         const stats: Record<string, number> = {};
         for (const term of data) {
           const { count } = await supabase
-            .from('user_platform_terms_acceptance')
-            .select('*', { count: 'exact', head: true })
-            .eq('platform_terms_id', term.id);
+            .from("user_platform_terms_acceptance")
+            .select("*", { count: "exact", head: true })
+            .eq("platform_terms_id", term.id);
           stats[term.id] = count || 0;
         }
         setAcceptanceStats(stats);
       }
     } catch (error: any) {
-      console.error('Error fetching platform terms:', error);
-      toast.error('Failed to load platform terms');
+      console.error("Error fetching platform terms:", error);
+      toast.error("Failed to load platform terms");
     } finally {
       setLoading(false);
     }
@@ -102,10 +102,10 @@ export function PlatformTermsManager() {
 
   function openCreateDialog() {
     setEditingTerm(null);
-    setTitle('');
-    setContentHtml('');
+    setTitle("");
+    setContentHtml("");
     setIsBlockingOnUpdate(false);
-    setEffectiveFrom(new Date().toISOString().split('T')[0]);
+    setEffectiveFrom(new Date().toISOString().split("T")[0]);
     setIsCurrent(terms.length === 0);
     setOpenDialog(true);
   }
@@ -115,14 +115,14 @@ export function PlatformTermsManager() {
     setTitle(term.title);
     setContentHtml(term.content_html);
     setIsBlockingOnUpdate(term.is_blocking_on_update);
-    setEffectiveFrom(term.effective_from.split('T')[0]);
+    setEffectiveFrom(term.effective_from.split("T")[0]);
     setIsCurrent(term.is_current);
     setOpenDialog(true);
   }
 
   async function handleSave() {
     if (!title.trim() || !contentHtml.trim()) {
-      toast.error('Please fill in title and content');
+      toast.error("Please fill in title and content");
       return;
     }
 
@@ -131,42 +131,40 @@ export function PlatformTermsManager() {
       if (editingTerm) {
         // Update existing term
         const { error } = await supabase
-          .from('platform_terms')
+          .from("platform_terms")
           .update({
             title,
             content_html: contentHtml,
             is_blocking_on_update: isBlockingOnUpdate,
             effective_from: effectiveFrom,
-            is_current: isCurrent
+            is_current: isCurrent,
           })
-          .eq('id', editingTerm.id);
+          .eq("id", editingTerm.id);
 
         if (error) throw error;
-        toast.success('Platform terms updated');
+        toast.success("Platform terms updated");
       } else {
         // Create new term - calculate next version
-        const maxVersion = terms.length > 0 ? Math.max(...terms.map(t => t.version)) : 0;
+        const maxVersion = terms.length > 0 ? Math.max(...terms.map((t) => t.version)) : 0;
 
-        const { error } = await supabase
-          .from('platform_terms')
-          .insert({
-            version: maxVersion + 1,
-            title,
-            content_html: contentHtml,
-            is_blocking_on_update: isBlockingOnUpdate,
-            effective_from: effectiveFrom,
-            is_current: isCurrent
-          });
+        const { error } = await supabase.from("platform_terms").insert({
+          version: maxVersion + 1,
+          title,
+          content_html: contentHtml,
+          is_blocking_on_update: isBlockingOnUpdate,
+          effective_from: effectiveFrom,
+          is_current: isCurrent,
+        });
 
         if (error) throw error;
-        toast.success('Platform terms created');
+        toast.success("Platform terms created");
       }
 
       setOpenDialog(false);
       fetchTerms();
     } catch (error: any) {
-      console.error('Error saving platform terms:', error);
-      toast.error('Failed to save platform terms');
+      console.error("Error saving platform terms:", error);
+      toast.error("Failed to save platform terms");
     } finally {
       setSaving(false);
     }
@@ -174,34 +172,31 @@ export function PlatformTermsManager() {
 
   async function handleDelete(termId: string) {
     try {
-      const { error } = await supabase
-        .from('platform_terms')
-        .delete()
-        .eq('id', termId);
+      const { error } = await supabase.from("platform_terms").delete().eq("id", termId);
 
       if (error) throw error;
-      toast.success('Platform terms deleted');
+      toast.success("Platform terms deleted");
       setDeleteConfirm(null);
       fetchTerms();
     } catch (error: any) {
-      console.error('Error deleting platform terms:', error);
-      toast.error('Failed to delete platform terms');
+      console.error("Error deleting platform terms:", error);
+      toast.error("Failed to delete platform terms");
     }
   }
 
   async function setAsCurrent(termId: string) {
     try {
       const { error } = await supabase
-        .from('platform_terms')
+        .from("platform_terms")
         .update({ is_current: true })
-        .eq('id', termId);
+        .eq("id", termId);
 
       if (error) throw error;
-      toast.success('Platform terms set as current');
+      toast.success("Platform terms set as current");
       fetchTerms();
     } catch (error: any) {
-      console.error('Error setting current platform terms:', error);
-      toast.error('Failed to update platform terms');
+      console.error("Error setting current platform terms:", error);
+      toast.error("Failed to update platform terms");
     }
   }
 
@@ -218,7 +213,9 @@ export function PlatformTermsManager() {
               <Shield className="h-5 w-5 text-primary" />
               <div>
                 <CardTitle>Platform Terms & Conditions</CardTitle>
-                <CardDescription>Manage platform-wide T&Cs that all users must accept</CardDescription>
+                <CardDescription>
+                  Manage platform-wide T&Cs that all users must accept
+                </CardDescription>
               </div>
             </div>
             <Button onClick={openCreateDialog} size="sm">
@@ -333,13 +330,14 @@ export function PlatformTermsManager() {
         <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
           <DialogHeader className="shrink-0">
             <DialogTitle>
-              {editingTerm ? `Edit Platform Terms (Version ${editingTerm.version})` : 'Create New Platform Terms Version'}
+              {editingTerm
+                ? `Edit Platform Terms (Version ${editingTerm.version})`
+                : "Create New Platform Terms Version"}
             </DialogTitle>
             <DialogDescription>
-              {editingTerm 
-                ? 'Update this version of platform terms and conditions'
-                : 'Create a new version of platform-wide terms and conditions'
-              }
+              {editingTerm
+                ? "Update this version of platform terms and conditions"
+                : "Create a new version of platform-wide terms and conditions"}
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-1 min-h-0">
@@ -375,7 +373,7 @@ export function PlatformTermsManager() {
 
               <div className="space-y-4 border rounded-lg p-4">
                 <Label className="text-base font-medium">Settings</Label>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-sm">Block on Update</p>
@@ -383,10 +381,7 @@ export function PlatformTermsManager() {
                       Require existing users to accept updated terms before continuing
                     </p>
                   </div>
-                  <Switch
-                    checked={isBlockingOnUpdate}
-                    onCheckedChange={setIsBlockingOnUpdate}
-                  />
+                  <Switch checked={isBlockingOnUpdate} onCheckedChange={setIsBlockingOnUpdate} />
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -396,10 +391,7 @@ export function PlatformTermsManager() {
                       Make this the active version shown to users
                     </p>
                   </div>
-                  <Switch
-                    checked={isCurrent}
-                    onCheckedChange={setIsCurrent}
-                  />
+                  <Switch checked={isCurrent} onCheckedChange={setIsCurrent} />
                 </div>
               </div>
             </div>
@@ -409,7 +401,7 @@ export function PlatformTermsManager() {
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : editingTerm ? 'Update' : 'Create'}
+              {saving ? "Saving..." : editingTerm ? "Update" : "Create"}
             </Button>
           </div>
         </DialogContent>
@@ -421,13 +413,16 @@ export function PlatformTermsManager() {
           <DialogHeader className="shrink-0">
             <DialogTitle>{previewTerm?.title}</DialogTitle>
             <DialogDescription>
-              Version {previewTerm?.version} • Effective from {previewTerm && new Date(previewTerm.effective_from).toLocaleDateString()}
+              Version {previewTerm?.version} • Effective from{" "}
+              {previewTerm && new Date(previewTerm.effective_from).toLocaleDateString()}
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-1 min-h-0 w-full rounded-md border p-4">
-            <div 
+            <div
               className="prose prose-sm max-w-none dark:prose-invert"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewTerm?.content_html || '') }} 
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(previewTerm?.content_html || ""),
+              }}
             />
           </ScrollArea>
         </DialogContent>
@@ -439,8 +434,8 @@ export function PlatformTermsManager() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Platform Terms Version?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this version of platform terms. This action cannot be undone.
-              Any acceptance records for this version will also be removed.
+              This will permanently delete this version of platform terms. This action cannot be
+              undone. Any acceptance records for this version will also be removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -1,45 +1,64 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Users, MapPin, Clock, ChevronRight, ExternalLink } from 'lucide-react';
-import { format, isSameDay, isBefore, startOfDay, addDays, addWeeks, addMonths, isAfter, endOfMonth, startOfMonth } from 'date-fns';
-import { ExternalCalendarManager } from '@/components/calendar/ExternalCalendarManager';
-import { useExternalCalendarEvents, ExternalCalendarEvent } from '@/hooks/useExternalCalendarEvents';
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Calendar as CalendarIcon,
+  Users,
+  MapPin,
+  Clock,
+  ChevronRight,
+  ExternalLink,
+} from "lucide-react";
+import {
+  format,
+  isSameDay,
+  isBefore,
+  startOfDay,
+  addDays,
+  addWeeks,
+  addMonths,
+  isAfter,
+  endOfMonth,
+  startOfMonth,
+} from "date-fns";
+import { ExternalCalendarManager } from "@/components/calendar/ExternalCalendarManager";
+import {
+  useExternalCalendarEvents,
+  ExternalCalendarEvent,
+} from "@/hooks/useExternalCalendarEvents";
 
 /**
  * Calculate next occurrences for a recurring session
  */
-function getRecurringOccurrences(
-  session: any,
-  now: Date,
-  maxOccurrences: number = 12
-): Date[] {
+function getRecurringOccurrences(session: any, now: Date, maxOccurrences: number = 12): Date[] {
   if (!session.is_recurring || !session.recurrence_pattern) {
     return [];
   }
 
   const sessionDate = new Date(session.session_date);
-  const endDate = session.recurrence_end_date ? new Date(session.recurrence_end_date) : addMonths(now, 6);
+  const endDate = session.recurrence_end_date
+    ? new Date(session.recurrence_end_date)
+    : addMonths(now, 6);
   const dates: Date[] = [];
   let currentDate = new Date(sessionDate);
 
   // Find the first occurrence >= today
   while (isBefore(currentDate, startOfDay(now)) && dates.length < maxOccurrences) {
     switch (session.recurrence_pattern.toLowerCase()) {
-      case 'daily':
+      case "daily":
         currentDate = addDays(currentDate, 1);
         break;
-      case 'weekly':
+      case "weekly":
         currentDate = addWeeks(currentDate, 1);
         break;
-      case 'bi-weekly':
+      case "bi-weekly":
         currentDate = addWeeks(currentDate, 2);
         break;
-      case 'monthly':
+      case "monthly":
         currentDate = addMonths(currentDate, 1);
         break;
       default:
@@ -53,18 +72,18 @@ function getRecurringOccurrences(
       break;
     }
     dates.push(new Date(currentDate));
-    
+
     switch (session.recurrence_pattern.toLowerCase()) {
-      case 'daily':
+      case "daily":
         currentDate = addDays(currentDate, 1);
         break;
-      case 'weekly':
+      case "weekly":
         currentDate = addWeeks(currentDate, 1);
         break;
-      case 'bi-weekly':
+      case "bi-weekly":
         currentDate = addWeeks(currentDate, 2);
         break;
-      case 'monthly':
+      case "monthly":
         currentDate = addMonths(currentDate, 1);
         break;
       default:
@@ -80,7 +99,13 @@ interface CalendarEvent {
   title: string;
   description?: string;
   date: Date;
-  type: 'group_session' | 'program_schedule' | 'module_session' | 'individual_session' | 'cohort_session' | 'external';
+  type:
+    | "group_session"
+    | "program_schedule"
+    | "module_session"
+    | "individual_session"
+    | "cohort_session"
+    | "external";
   location?: string;
   duration_minutes?: number;
   metadata: {
@@ -112,10 +137,10 @@ export default function ClientCalendar() {
   // External calendar events - fetch for a 3-month window
   const externalStartDate = useMemo(() => startOfMonth(new Date()), []);
   const externalEndDate = useMemo(() => endOfMonth(addMonths(new Date(), 3)), []);
-  const { 
-    events: externalEvents, 
-    loading: externalLoading, 
-    refresh: refreshExternalEvents 
+  const {
+    events: externalEvents,
+    loading: externalLoading,
+    refresh: refreshExternalEvents,
   } = useExternalCalendarEvents(externalStartDate, externalEndDate);
 
   useEffect(() => {
@@ -127,18 +152,18 @@ export default function ClientCalendar() {
     if (!user) return;
 
     const channel = supabase
-      .channel('calendar-module-sessions-changes')
+      .channel("calendar-module-sessions-changes")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*', // Listen to INSERT, UPDATE, DELETE
-          schema: 'public',
-          table: 'module_sessions',
+          event: "*", // Listen to INSERT, UPDATE, DELETE
+          schema: "public",
+          table: "module_sessions",
         },
         () => {
-          console.log('[Calendar Realtime] Module session changed, refreshing events');
+          console.log("[Calendar Realtime] Module session changed, refreshing events");
           loadEvents();
-        }
+        },
       )
       .subscribe();
 
@@ -157,8 +182,9 @@ export default function ClientCalendar() {
       // Fetch group sessions for groups user is member of
       // First fetch future pre-generated sessions
       const { data: groupSessions } = await supabase
-        .from('group_sessions')
-        .select(`
+        .from("group_sessions")
+        .select(
+          `
           id,
           title,
           description,
@@ -178,18 +204,19 @@ export default function ClientCalendar() {
               status
             )
           )
-        `)
-        .eq('groups.group_memberships.user_id', user.id)
-        .eq('groups.group_memberships.status', 'active')
-        .neq('status', 'cancelled')
-        .order('session_date', { ascending: true });
+        `,
+        )
+        .eq("groups.group_memberships.user_id", user.id)
+        .eq("groups.group_memberships.status", "active")
+        .neq("status", "cancelled")
+        .order("session_date", { ascending: true });
 
       if (groupSessions) {
         const addedSessionIds = new Set<string>();
-        
+
         groupSessions.forEach((session: any) => {
           const sessionDate = new Date(session.session_date);
-          
+
           // If this is a recurring master session (is_recurring=true), calculate future occurrences
           if (session.is_recurring && session.recurrence_pattern) {
             const occurrences = getRecurringOccurrences(session, now, 12);
@@ -203,7 +230,7 @@ export default function ClientCalendar() {
                   title: session.title,
                   description: session.description,
                   date: occDate,
-                  type: 'group_session',
+                  type: "group_session",
                   location: session.location,
                   duration_minutes: session.duration_minutes,
                   metadata: {
@@ -224,7 +251,7 @@ export default function ClientCalendar() {
                 title: session.title,
                 description: session.description,
                 date: sessionDate,
-                type: 'group_session',
+                type: "group_session",
                 location: session.location,
                 duration_minutes: session.duration_minutes,
                 metadata: {
@@ -239,18 +266,20 @@ export default function ClientCalendar() {
 
       // First get user's enrollment IDs
       const { data: userEnrollments } = await supabase
-        .from('client_enrollments')
-        .select('id, program_id, programs(id, name)')
-        .eq('client_user_id', user.id)
-        .eq('status', 'active');
+        .from("client_enrollments")
+        .select("id, program_id, programs(id, name)")
+        .eq("client_user_id", user.id)
+        .eq("status", "active");
 
-      const enrollmentIds = userEnrollments?.map(e => e.id) || [];
+      const enrollmentIds = userEnrollments?.map((e) => e.id) || [];
 
       // Fetch individual module sessions for user's enrollments
-      const { data: individualSessions } = enrollmentIds.length > 0 
-        ? await supabase
-            .from('module_sessions')
-            .select(`
+      const { data: individualSessions } =
+        enrollmentIds.length > 0
+          ? await supabase
+              .from("module_sessions")
+              .select(
+                `
               id,
               title,
               session_date,
@@ -260,25 +289,38 @@ export default function ClientCalendar() {
               session_type,
               module_id,
               enrollment_id
-            `)
-            .eq('session_type', 'individual')
-            .in('enrollment_id', enrollmentIds)
-            .neq('status', 'cancelled')
-            .not('session_date', 'is', null)
-            .gte('session_date', new Date().toISOString())
-            .order('session_date', { ascending: true })
-        : { data: [] as { id: string; title: string; session_date: string; duration_minutes: number; location: string; status: string; session_type: string; module_id: string; enrollment_id: string }[] };
+            `,
+              )
+              .eq("session_type", "individual")
+              .in("enrollment_id", enrollmentIds)
+              .neq("status", "cancelled")
+              .not("session_date", "is", null)
+              .gte("session_date", new Date().toISOString())
+              .order("session_date", { ascending: true })
+          : {
+              data: [] as {
+                id: string;
+                title: string;
+                session_date: string;
+                duration_minutes: number;
+                location: string;
+                status: string;
+                session_type: string;
+                module_id: string;
+                enrollment_id: string;
+              }[],
+            };
 
       if (individualSessions) {
         individualSessions.forEach((session: any) => {
           // Find the matching enrollment to get program info
-          const enrollment = userEnrollments?.find(e => e.id === session.enrollment_id);
+          const enrollment = userEnrollments?.find((e) => e.id === session.enrollment_id);
           allEvents.push({
             id: `is-${session.id}`,
             originalId: session.id,
-            title: session.title || 'Individual Session',
+            title: session.title || "Individual Session",
             date: new Date(session.session_date),
-            type: 'individual_session',
+            type: "individual_session",
             location: session.location,
             duration_minutes: session.duration_minutes,
             metadata: {
@@ -293,8 +335,9 @@ export default function ClientCalendar() {
 
       // Fetch group module sessions where user is a participant
       const { data: groupModuleSessions } = await supabase
-        .from('module_session_participants')
-        .select(`
+        .from("module_session_participants")
+        .select(
+          `
           session_id,
           module_sessions!inner (
             id,
@@ -311,11 +354,12 @@ export default function ClientCalendar() {
               name
             )
           )
-        `)
-        .eq('user_id', user.id)
-        .neq('module_sessions.status', 'cancelled')
-        .not('module_sessions.session_date', 'is', null)
-        .gte('module_sessions.session_date', new Date().toISOString());
+        `,
+        )
+        .eq("user_id", user.id)
+        .neq("module_sessions.status", "cancelled")
+        .not("module_sessions.session_date", "is", null)
+        .gte("module_sessions.session_date", new Date().toISOString());
 
       if (groupModuleSessions) {
         groupModuleSessions.forEach((participant: any) => {
@@ -324,9 +368,9 @@ export default function ClientCalendar() {
             allEvents.push({
               id: `ms-${session.id}`,
               originalId: session.id,
-              title: session.title || 'Group Module Session',
+              title: session.title || "Group Module Session",
               date: new Date(session.session_date),
-              type: 'module_session',
+              type: "module_session",
               location: session.location,
               duration_minutes: session.duration_minutes,
               metadata: {
@@ -341,8 +385,9 @@ export default function ClientCalendar() {
 
       // Fetch cohort sessions for enrolled cohorts
       const { data: enrollmentsWithCohorts } = await supabase
-        .from('client_enrollments')
-        .select(`
+        .from("client_enrollments")
+        .select(
+          `
           id,
           cohort_id,
           program_cohorts (
@@ -354,10 +399,11 @@ export default function ClientCalendar() {
               name
             )
           )
-        `)
-        .eq('client_user_id', user.id)
-        .eq('status', 'active')
-        .not('cohort_id', 'is', null);
+        `,
+        )
+        .eq("client_user_id", user.id)
+        .eq("status", "active")
+        .not("cohort_id", "is", null);
 
       if (enrollmentsWithCohorts) {
         const cohortIds = enrollmentsWithCohorts
@@ -366,16 +412,16 @@ export default function ClientCalendar() {
 
         if (cohortIds.length > 0) {
           const { data: cohortSessions } = await supabase
-            .from('cohort_sessions')
-            .select('*')
-            .in('cohort_id', cohortIds)
-            .gte('session_date', new Date().toISOString().split('T')[0])
-            .order('session_date', { ascending: true });
+            .from("cohort_sessions")
+            .select("*")
+            .in("cohort_id", cohortIds)
+            .gte("session_date", new Date().toISOString().split("T")[0])
+            .order("session_date", { ascending: true });
 
           if (cohortSessions) {
             cohortSessions.forEach((session: any) => {
               const enrollment = enrollmentsWithCohorts.find(
-                (e: any) => e.cohort_id === session.cohort_id
+                (e: any) => e.cohort_id === session.cohort_id,
               );
               const cohort = enrollment?.program_cohorts as any;
               allEvents.push({
@@ -384,7 +430,7 @@ export default function ClientCalendar() {
                 title: session.title,
                 description: session.description,
                 date: new Date(session.session_date),
-                type: 'cohort_session',
+                type: "cohort_session",
                 location: session.location,
                 metadata: {
                   cohortId: session.cohort_id,
@@ -417,7 +463,7 @@ export default function ClientCalendar() {
         setSelectedDate((prev) => prev ?? new Date());
       }
     } catch (error) {
-      console.error('Error loading calendar events:', error);
+      console.error("Error loading calendar events:", error);
     } finally {
       setLoading(false);
     }
@@ -425,22 +471,24 @@ export default function ClientCalendar() {
 
   // Combine internal events with external calendar events
   const allEventsWithExternal = useMemo(() => {
-    const externalMapped: CalendarEvent[] = externalEvents.map(ext => ({
+    const externalMapped: CalendarEvent[] = externalEvents.map((ext) => ({
       id: ext.id,
       originalId: ext.id,
       title: ext.title,
       description: ext.description,
       date: ext.start,
-      type: 'external' as const,
+      type: "external" as const,
       location: ext.location,
-      duration_minutes: ext.end ? Math.round((ext.end.getTime() - ext.start.getTime()) / 60000) : undefined,
+      duration_minutes: ext.end
+        ? Math.round((ext.end.getTime() - ext.start.getTime()) / 60000)
+        : undefined,
       metadata: {
         calendarName: ext.calendarName,
         calendarColor: ext.calendarColor,
         allDay: ext.allDay,
       },
     }));
-    
+
     return [...events, ...externalMapped].sort((a, b) => a.date.getTime() - b.date.getTime());
   }, [events, externalEvents]);
 
@@ -460,54 +508,54 @@ export default function ClientCalendar() {
     return events.slice(0, 5);
   }, [events]);
 
-  const getEventTypeColor = (type: CalendarEvent['type'], metadata?: CalendarEvent['metadata']) => {
+  const getEventTypeColor = (type: CalendarEvent["type"], metadata?: CalendarEvent["metadata"]) => {
     switch (type) {
-      case 'group_session':
-        return 'bg-primary/10 text-primary';
-      case 'individual_session':
-        return 'bg-chart-4/10 text-chart-4';
-      case 'module_session':
-        return 'bg-chart-2/10 text-chart-2';
-      case 'cohort_session':
-        return 'bg-chart-1/10 text-chart-1';
-      case 'program_schedule':
-        return 'bg-secondary/50 text-secondary-foreground';
-      case 'external':
+      case "group_session":
+        return "bg-primary/10 text-primary";
+      case "individual_session":
+        return "bg-chart-4/10 text-chart-4";
+      case "module_session":
+        return "bg-chart-2/10 text-chart-2";
+      case "cohort_session":
+        return "bg-chart-1/10 text-chart-1";
+      case "program_schedule":
+        return "bg-secondary/50 text-secondary-foreground";
+      case "external":
         // Use calendar color for external events
-        return 'bg-muted/50 text-muted-foreground border-l-2';
+        return "bg-muted/50 text-muted-foreground border-l-2";
       default:
-        return 'bg-muted text-muted-foreground';
+        return "bg-muted text-muted-foreground";
     }
   };
 
-  const getEventTypeLabel = (type: CalendarEvent['type'], metadata?: CalendarEvent['metadata']) => {
+  const getEventTypeLabel = (type: CalendarEvent["type"], metadata?: CalendarEvent["metadata"]) => {
     switch (type) {
-      case 'group_session':
-        return 'Group Session';
-      case 'individual_session':
-        return '1:1 Session';
-      case 'module_session':
-        return 'Module Session';
-      case 'cohort_session':
-        return 'Live Workshop';
-      case 'program_schedule':
-        return 'Program';
-      case 'external':
-        return metadata?.calendarName || 'External';
+      case "group_session":
+        return "Group Session";
+      case "individual_session":
+        return "1:1 Session";
+      case "module_session":
+        return "Module Session";
+      case "cohort_session":
+        return "Live Workshop";
+      case "program_schedule":
+        return "Program";
+      case "external":
+        return metadata?.calendarName || "External";
       default:
-        return 'Event';
+        return "Event";
     }
   };
 
   const handleEventClick = (event: CalendarEvent) => {
     switch (event.type) {
-      case 'group_session':
+      case "group_session":
         if (event.metadata.groupId) {
           // Navigate to the specific session detail page
           navigate(`/groups/${event.metadata.groupId}/sessions/${event.originalId}`);
         }
         break;
-      case 'individual_session':
+      case "individual_session":
         // Individual sessions - navigate to the module within the program
         if (event.metadata.programId && event.metadata.moduleId) {
           navigate(`/programs/${event.metadata.programId}/modules/${event.metadata.moduleId}`);
@@ -515,20 +563,20 @@ export default function ClientCalendar() {
           navigate(`/modules/${event.metadata.moduleId}`);
         }
         break;
-      case 'module_session':
+      case "module_session":
         if (event.metadata.moduleId) {
           navigate(`/modules/${event.metadata.moduleId}`);
         }
         break;
-      case 'program_schedule':
+      case "program_schedule":
         if (event.metadata.programId) {
           navigate(`/programs/${event.metadata.programId}`);
         }
         break;
-      case 'cohort_session':
+      case "cohort_session":
         // For cohort sessions, navigate to the program or open meeting link
         if (event.metadata.meetingLink) {
-          window.open(event.metadata.meetingLink, '_blank');
+          window.open(event.metadata.meetingLink, "_blank");
         } else if (event.metadata.programId) {
           navigate(`/programs/${event.metadata.programId}`);
         }
@@ -537,34 +585,31 @@ export default function ClientCalendar() {
   };
 
   const EventCard = ({ event, showDate = true }: { event: CalendarEvent; showDate?: boolean }) => {
-    const isExternal = event.type === 'external';
-    const borderStyle = isExternal && event.metadata.calendarColor 
-      ? { borderLeftColor: event.metadata.calendarColor } 
-      : undefined;
-    
+    const isExternal = event.type === "external";
+    const borderStyle =
+      isExternal && event.metadata.calendarColor
+        ? { borderLeftColor: event.metadata.calendarColor }
+        : undefined;
+
     return (
       <div
         onClick={() => !isExternal && handleEventClick(event)}
         className={`flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 p-4 rounded-lg border bg-card transition-colors ${
-          isExternal ? 'border-l-4 opacity-80' : 'hover:bg-accent/50 cursor-pointer group'
+          isExternal ? "border-l-4 opacity-80" : "hover:bg-accent/50 cursor-pointer group"
         }`}
         style={borderStyle}
       >
         {/* Mobile: Date/time at top */}
         <div className="flex sm:hidden items-center justify-between text-sm">
           <div className="flex items-center gap-2">
-            {showDate && (
-              <span className="font-medium">
-                {format(event.date, 'EEE, MMM d')}
-              </span>
-            )}
+            {showDate && <span className="font-medium">{format(event.date, "EEE, MMM d")}</span>}
             {!event.metadata.allDay && (
-              <span className="text-muted-foreground">
-                {format(event.date, 'h:mm a')}
-              </span>
+              <span className="text-muted-foreground">{format(event.date, "h:mm a")}</span>
             )}
             {event.metadata.allDay && (
-              <Badge variant="secondary" className="text-xs">All day</Badge>
+              <Badge variant="secondary" className="text-xs">
+                All day
+              </Badge>
             )}
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -582,11 +627,16 @@ export default function ClientCalendar() {
           <div className="flex items-start gap-2 mb-1">
             {isExternal && <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0 mt-1" />}
             <div className="flex-1 min-w-0">
-              <div className={`font-medium ${!isExternal ? 'group-hover:text-primary' : ''} transition-colors line-clamp-2`}>
+              <div
+                className={`font-medium ${!isExternal ? "group-hover:text-primary" : ""} transition-colors line-clamp-2`}
+              >
                 {event.title}
               </div>
             </div>
-            <Badge className={`${getEventTypeColor(event.type, event.metadata)} shrink-0 text-xs`} variant="outline">
+            <Badge
+              className={`${getEventTypeColor(event.type, event.metadata)} shrink-0 text-xs`}
+              variant="outline"
+            >
               {getEventTypeLabel(event.type, event.metadata)}
             </Badge>
           </div>
@@ -614,20 +664,14 @@ export default function ClientCalendar() {
         <div className="hidden sm:flex flex-col items-end gap-2 text-right shrink-0">
           {showDate && (
             <div>
-              <div className="font-medium">
-                {format(event.date, 'EEE, MMM d')}
-              </div>
+              <div className="font-medium">{format(event.date, "EEE, MMM d")}</div>
               {!event.metadata.allDay && (
-                <div className="text-xs text-muted-foreground">
-                  {format(event.date, 'h:mm a')}
-                </div>
+                <div className="text-xs text-muted-foreground">{format(event.date, "h:mm a")}</div>
               )}
             </div>
           )}
           {!showDate && !event.metadata.allDay && (
-            <div className="text-sm font-medium">
-              {format(event.date, 'h:mm a')}
-            </div>
+            <div className="text-sm font-medium">{format(event.date, "h:mm a")}</div>
           )}
 
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -708,7 +752,7 @@ export default function ClientCalendar() {
                 hasEvent: eventDates,
               }}
               modifiersClassNames={{
-                hasEvent: 'bg-primary/20 font-semibold',
+                hasEvent: "bg-primary/20 font-semibold",
               }}
               className="rounded-md border"
             />
@@ -723,10 +767,11 @@ export default function ClientCalendar() {
         <Card className="w-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {selectedDate ? format(selectedDate, 'EEEE, MMMM d, yyyy') : 'Select a date'}
+              {selectedDate ? format(selectedDate, "EEEE, MMMM d, yyyy") : "Select a date"}
             </CardTitle>
             <CardDescription>
-              {selectedDateEvents.length} event{selectedDateEvents.length !== 1 ? 's' : ''} scheduled
+              {selectedDateEvents.length} event{selectedDateEvents.length !== 1 ? "s" : ""}{" "}
+              scheduled
             </CardDescription>
           </CardHeader>
           <CardContent>

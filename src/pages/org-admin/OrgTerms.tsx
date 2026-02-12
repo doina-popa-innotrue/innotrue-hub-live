@@ -1,5 +1,5 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { OrganizationTermsManager } from '@/components/admin/OrganizationTermsManager';
+import { useAuth } from "@/contexts/AuthContext";
+import { OrganizationTermsManager } from "@/components/admin/OrganizationTermsManager";
 
 export default function OrgTerms() {
   const { organizationMembership } = useAuth();

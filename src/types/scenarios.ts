@@ -7,7 +7,7 @@ export interface ScenarioTemplate {
   title: string;
   description: string | null;
   capability_assessment_id: string | null;
-   category_id: string | null;
+  category_id: string | null;
   is_protected: boolean;
   is_active: boolean;
   is_locked: boolean;
@@ -23,11 +23,11 @@ export interface ScenarioTemplate {
     slug: string;
     rating_scale: number;
   } | null;
-   scenario_categories?: {
-     id: string;
-     name: string;
-     color: string | null;
-   } | null;
+  scenario_categories?: {
+    id: string;
+    name: string;
+    color: string | null;
+  } | null;
   sections_count?: number;
 }
 
@@ -74,7 +74,7 @@ export interface ParagraphQuestionLink {
   };
 }
 
-export type ScenarioAssignmentStatus = 'draft' | 'submitted' | 'in_review' | 'evaluated';
+export type ScenarioAssignmentStatus = "draft" | "submitted" | "in_review" | "evaluated";
 
 export interface ScenarioAssignment {
   id: string;
@@ -106,11 +106,11 @@ export interface ScenarioAssignment {
     id: string;
     name: string;
   };
-   scenario_categories?: {
-     id: string;
-     name: string;
-     color: string | null;
-   } | null;
+  scenario_categories?: {
+    id: string;
+    name: string;
+    color: string | null;
+  } | null;
   program_modules?: {
     id: string;
     title: string;
@@ -192,21 +192,21 @@ export interface ScenarioTemplateFormData {
   title: string;
   description: string;
   capability_assessment_id: string;
-   category_id: string;
+  category_id: string;
   is_protected: boolean;
   is_active: boolean;
 }
 
- export interface ScenarioCategory {
-   id: string;
-   name: string;
-   description: string | null;
-   color: string | null;
-   display_order: number;
-   is_active: boolean;
-   created_at: string;
-   updated_at: string;
- }
+export interface ScenarioCategory {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string | null;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface ScenarioSectionFormData {
   title: string;

@@ -19,8 +19,14 @@ export interface OrganizationSharingConsent {
   created_at: string;
 }
 
-type ConsentField = 'share_goals' | 'share_decisions' | 'share_tasks' | 
-  'share_progress' | 'share_assessments' | 'share_development_items' | 'share_assignments';
+type ConsentField =
+  | "share_goals"
+  | "share_decisions"
+  | "share_tasks"
+  | "share_progress"
+  | "share_assessments"
+  | "share_development_items"
+  | "share_assignments";
 
 export function useOrganizationSharingConsent(organizationId?: string) {
   const { user } = useAuth();
@@ -46,7 +52,11 @@ export function useOrganizationSharingConsent(organizationId?: string) {
   });
 
   const updateConsent = useMutation({
-    mutationFn: async (updates: Partial<Omit<OrganizationSharingConsent, 'id' | 'user_id' | 'organization_id' | 'created_at'>>) => {
+    mutationFn: async (
+      updates: Partial<
+        Omit<OrganizationSharingConsent, "id" | "user_id" | "organization_id" | "created_at">
+      >,
+    ) => {
       if (!user || !organizationId) throw new Error("Not authenticated or no organization");
 
       const now = new Date().toISOString();
@@ -69,10 +79,10 @@ export function useOrganizationSharingConsent(organizationId?: string) {
       toast({ description: "Organization sharing preferences updated" });
     },
     onError: (error: Error) => {
-      toast({ 
-        title: "Error", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });

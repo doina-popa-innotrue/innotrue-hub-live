@@ -30,7 +30,7 @@ interface ModuleProgressInfo {
 export function useGuidedResourceAccess(
   programIds: string[],
   moduleIds: string[],
-  moduleToProgram: Map<string, { programId: string; programName: string }>
+  moduleToProgram: Map<string, { programId: string; programName: string }>,
 ) {
   const { user } = useAuth();
 
@@ -202,7 +202,7 @@ export function useGuidedResourceAccess(
         const tierAccess = hasTierAccess(
           programInfo?.tiers || null,
           enrollment.tier,
-          moduleInfo.tier
+          moduleInfo.tier,
         );
 
         if (!tierAccess) {

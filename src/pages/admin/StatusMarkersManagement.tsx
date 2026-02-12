@@ -1,20 +1,34 @@
-import { useAdminCRUD, useAdminToggle } from '@/hooks/useAdminCRUD';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, GripVertical, Tags } from 'lucide-react';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { useAdminCRUD, useAdminToggle } from "@/hooks/useAdminCRUD";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Pencil, Trash2, GripVertical, Tags } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import {
   AdminPageHeader,
   AdminLoadingState,
   AdminEmptyState,
   AdminFormActions,
-} from '@/components/admin';
+} from "@/components/admin";
 
 interface StatusMarker {
   id: string;
@@ -34,13 +48,13 @@ type FormData = {
 };
 
 const initialFormData: FormData = {
-  name: '',
-  description: '',
-  color: 'blue',
+  name: "",
+  description: "",
+  color: "blue",
   is_active: true,
 };
 
-const colorOptions = ['blue', 'green', 'red', 'purple', 'orange', 'yellow', 'pink', 'indigo'];
+const colorOptions = ["blue", "green", "red", "purple", "orange", "yellow", "pink", "indigo"];
 
 export default function StatusMarkersManagement() {
   const {
@@ -57,20 +71,20 @@ export default function StatusMarkersManagement() {
     handleDelete,
     isSubmitting,
   } = useAdminCRUD<StatusMarker, FormData>({
-    tableName: 'status_markers',
-    queryKey: 'status-markers',
-    entityName: 'Status marker',
-    orderBy: 'display_order',
+    tableName: "status_markers",
+    queryKey: "status-markers",
+    entityName: "Status marker",
+    orderBy: "display_order",
     initialFormData,
     mapItemToForm: (marker) => ({
       name: marker.name,
-      description: marker.description || '',
+      description: marker.description || "",
       color: marker.color,
       is_active: marker.is_active,
     }),
   });
 
-  const toggleActive = useAdminToggle('status_markers', 'status-markers', 'Status marker');
+  const toggleActive = useAdminToggle("status_markers", "status-markers", "Status marker");
 
   const formContent = (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -100,7 +114,7 @@ export default function StatusMarkersManagement() {
             <button
               key={color}
               type="button"
-              className={`w-8 h-8 rounded-full border-2 ${formData.color === color ? 'border-foreground' : 'border-transparent'}`}
+              className={`w-8 h-8 rounded-full border-2 ${formData.color === color ? "border-foreground" : "border-transparent"}`}
               style={{ backgroundColor: `var(--${color}-500, ${color})` }}
               onClick={() => setFormData({ ...formData, color })}
             />
@@ -147,7 +161,7 @@ export default function StatusMarkersManagement() {
           description="Manage client status markers like CTA Candidate, Architect, etc."
           isDialogOpen={isDialogOpen}
           onDialogOpenChange={setIsDialogOpen}
-          dialogTitle={editingItem ? 'Edit Status Marker' : 'Create Status Marker'}
+          dialogTitle={editingItem ? "Edit Status Marker" : "Create Status Marker"}
           dialogContent={formContent}
           createButtonLabel="New Marker"
         />
@@ -155,7 +169,9 @@ export default function StatusMarkersManagement() {
         <Card>
           <CardHeader>
             <CardTitle>All Status Markers</CardTitle>
-            <CardDescription>These markers can be assigned to clients to indicate their status level.</CardDescription>
+            <CardDescription>
+              These markers can be assigned to clients to indicate their status level.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {markers.length === 0 ? (
@@ -189,12 +205,18 @@ export default function StatusMarkersManagement() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {marker.description || '—'}
+                        {marker.description || "—"}
                       </TableCell>
                       <TableCell>
                         <Switch
                           checked={marker.is_active}
-                          onCheckedChange={() => toggleActive.mutate({ id: marker.id, column: 'is_active', value: !marker.is_active })}
+                          onCheckedChange={() =>
+                            toggleActive.mutate({
+                              id: marker.id,
+                              column: "is_active",
+                              value: !marker.is_active,
+                            })
+                          }
                         />
                       </TableCell>
                       <TableCell>
@@ -202,11 +224,16 @@ export default function StatusMarkersManagement() {
                           <Button variant="ghost" size="sm" onClick={() => openEdit(marker)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="text-destructive"
-                            onClick={() => handleDelete(marker.id, `Delete "${marker.name}"? Clients with this marker will have their marker cleared.`)}
+                            onClick={() =>
+                              handleDelete(
+                                marker.id,
+                                `Delete "${marker.name}"? Clients with this marker will have their marker cleared.`,
+                              )
+                            }
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

@@ -6,12 +6,7 @@ import { useEntitlements } from "@/hooks/useEntitlements";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   CircleDot,
   Target,
@@ -168,12 +163,12 @@ export function JourneyProgressWidget() {
     },
   ];
 
-  const isStepLocked = (step: typeof journeySteps[0]): boolean => {
+  const isStepLocked = (step: (typeof journeySteps)[0]): boolean => {
     if (!step.featureKey) return false;
     return !hasFeature(step.featureKey);
   };
 
-  const handleStepClick = (step: typeof journeySteps[0]) => {
+  const handleStepClick = (step: (typeof journeySteps)[0]) => {
     if (isStepLocked(step)) {
       toast.info(`${step.title} is a premium feature`, {
         description: "Upgrade your plan or enroll in a program to unlock this step.",
@@ -199,7 +194,10 @@ export function JourneyProgressWidget() {
             <Compass className="h-5 w-5 text-secondary" />
             <CardTitle className="text-lg">Your Growth Journey</CardTitle>
           </div>
-          <Badge variant="outline" className="text-xs border-secondary/40 bg-secondary/10 text-secondary dark:border-secondary/30">
+          <Badge
+            variant="outline"
+            className="text-xs border-secondary/40 bg-secondary/10 text-secondary dark:border-secondary/30"
+          >
             {completedCount}/{journeySteps.length} steps
           </Badge>
         </div>
@@ -207,78 +205,78 @@ export function JourneyProgressWidget() {
       <CardContent className="pt-4">
         {/* Journey Flow Visualization */}
         <div className="flex items-center justify-between mb-4 overflow-x-auto pb-2 gap-1 sm:gap-0">
-        <TooltipProvider delayDuration={300}>
-          {journeySteps.map((step, index) => {
-            const Icon = step.icon;
-            const isCompleted = step.completed;
-            const isNext = step.id === nextStep?.id;
-            const isLocked = isStepLocked(step);
+          <TooltipProvider delayDuration={300}>
+            {journeySteps.map((step, index) => {
+              const Icon = step.icon;
+              const isCompleted = step.completed;
+              const isNext = step.id === nextStep?.id;
+              const isLocked = isStepLocked(step);
 
-            const stepButton = (
-              <button
-                onClick={() => handleStepClick(step)}
-                className={cn(
-                  "flex flex-col items-center gap-1 p-1.5 sm:p-2 rounded-lg transition-all min-w-[50px] sm:min-w-[60px]",
-                  isLocked && "opacity-60 cursor-not-allowed",
-                  !isLocked && isCompleted && "text-green-700 dark:text-green-300",
-                  !isLocked && isNext && "ring-2 ring-secondary ring-offset-2",
-                  !isLocked && !isCompleted && !isNext && "text-muted-foreground",
-                  !isLocked && "hover:bg-accent"
-                )}
-              >
-                <div
+              const stepButton = (
+                <button
+                  onClick={() => handleStepClick(step)}
                   className={cn(
-                    "relative p-1.5 sm:p-2 rounded-full",
-                    isLocked && "bg-muted",
-                    !isLocked && isCompleted && "bg-green-100 dark:bg-green-900/50",
-                    !isLocked && isNext && "bg-secondary/15 dark:bg-secondary/25",
-                    !isLocked && !isCompleted && !isNext && "bg-muted"
+                    "flex flex-col items-center gap-1 p-1.5 sm:p-2 rounded-lg transition-all min-w-[50px] sm:min-w-[60px]",
+                    isLocked && "opacity-60 cursor-not-allowed",
+                    !isLocked && isCompleted && "text-green-700 dark:text-green-300",
+                    !isLocked && isNext && "ring-2 ring-secondary ring-offset-2",
+                    !isLocked && !isCompleted && !isNext && "text-muted-foreground",
+                    !isLocked && "hover:bg-accent",
                   )}
                 >
-                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  {isLocked && (
-                    <div className="absolute -top-1 -right-1 bg-muted-foreground text-background rounded-full p-0.5">
-                      <Lock className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
-                    </div>
+                  <div
+                    className={cn(
+                      "relative p-1.5 sm:p-2 rounded-full",
+                      isLocked && "bg-muted",
+                      !isLocked && isCompleted && "bg-green-100 dark:bg-green-900/50",
+                      !isLocked && isNext && "bg-secondary/15 dark:bg-secondary/25",
+                      !isLocked && !isCompleted && !isNext && "bg-muted",
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    {isLocked && (
+                      <div className="absolute -top-1 -right-1 bg-muted-foreground text-background rounded-full p-0.5">
+                        <Lock className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+                      </div>
+                    )}
+                    {!isLocked && isCompleted && (
+                      <div className="absolute -top-1 -right-1 bg-green-600 text-white rounded-full p-0.5">
+                        <Check className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-medium whitespace-nowrap">
+                    {step.title}
+                  </span>
+                </button>
+              );
+
+              return (
+                <div key={step.id} className="flex items-center">
+                  {isLocked ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>{stepButton}</TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-[200px] text-center">
+                        <p className="text-xs">Premium feature — upgrade to unlock</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    stepButton
                   )}
-                  {!isLocked && isCompleted && (
-                    <div className="absolute -top-1 -right-1 bg-green-600 text-white rounded-full p-0.5">
-                      <Check className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
-                    </div>
+                  {index < journeySteps.length - 1 && (
+                    <ChevronRight
+                      className={cn(
+                        "h-3 w-3 sm:h-4 sm:w-4 mx-0.5 sm:mx-1 shrink-0",
+                        journeySteps[index + 1].completed || isCompleted
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-muted-foreground/40",
+                      )}
+                    />
                   )}
                 </div>
-                <span className="text-[10px] sm:text-xs font-medium whitespace-nowrap">{step.title}</span>
-              </button>
-            );
-
-            return (
-              <div key={step.id} className="flex items-center">
-                {isLocked ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      {stepButton}
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-[200px] text-center">
-                      <p className="text-xs">Premium feature — upgrade to unlock</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ) : (
-                  stepButton
-                )}
-                {index < journeySteps.length - 1 && (
-                  <ChevronRight
-                    className={cn(
-                      "h-3 w-3 sm:h-4 sm:w-4 mx-0.5 sm:mx-1 shrink-0",
-                      journeySteps[index + 1].completed || isCompleted
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-muted-foreground/40"
-                    )}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </TooltipProvider>
+              );
+            })}
+          </TooltipProvider>
         </div>
 
         {/* Next Step CTA */}
@@ -301,9 +299,9 @@ export function JourneyProgressWidget() {
                 )}
               </div>
             </div>
-            <Button 
-              size="sm" 
-              onClick={() => handleStepClick(nextStep)} 
+            <Button
+              size="sm"
+              onClick={() => handleStepClick(nextStep)}
               className="w-full sm:w-auto bg-secondary hover:bg-secondary/90 text-secondary-foreground"
             >
               {isStepLocked(nextStep) ? "Unlock" : "Start"}

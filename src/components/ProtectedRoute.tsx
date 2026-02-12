@@ -1,5 +1,5 @@
-import { Navigate } from 'react-router-dom';
-import { useAuth, UserRoleType } from '@/contexts/AuthContext';
+import { Navigate } from "react-router-dom";
+import { useAuth, UserRoleType } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -27,11 +27,11 @@ export function ProtectedRoute({ children, requireRole }: ProtectedRouteProps) {
 
   if (requireRole && !userRoles.includes(requireRole)) {
     // Redirect to appropriate dashboard based on current role
-    if (userRole === 'admin') {
+    if (userRole === "admin") {
       return <Navigate to="/admin" replace />;
-    } else if (userRole === 'org_admin') {
+    } else if (userRole === "org_admin") {
       return <Navigate to="/org-admin" replace />;
-    } else if (userRole === 'instructor' || userRole === 'coach') {
+    } else if (userRole === "instructor" || userRole === "coach") {
       return <Navigate to="/teaching" replace />;
     }
     return <Navigate to="/dashboard" replace />;

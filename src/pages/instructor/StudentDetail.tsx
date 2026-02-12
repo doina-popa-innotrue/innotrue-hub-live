@@ -1,14 +1,29 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
-import { Loader2, ArrowLeft, Clock, CheckCircle2, Circle, PlayCircle, Calendar, TrendingUp, Mail, User, Edit2, MessageSquare, BookOpen, UserCog } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Textarea } from '@/components/ui/textarea';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import {
+  Loader2,
+  ArrowLeft,
+  Clock,
+  CheckCircle2,
+  Circle,
+  PlayCircle,
+  Calendar,
+  TrendingUp,
+  Mail,
+  User,
+  Edit2,
+  MessageSquare,
+  BookOpen,
+  UserCog,
+} from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -16,8 +31,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 import {
   Table,
   TableBody,
@@ -25,14 +40,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import ClientReflectionsView from '@/components/modules/ClientReflectionsView';
-import ModuleFeedback from '@/components/modules/ModuleFeedback';
-import { ModuleAssignmentsView } from '@/components/modules/ModuleAssignmentsView';
-import { ModuleSessionManager } from '@/components/modules/ModuleSessionManager';
-import { hasTierAccess } from '@/lib/tierUtils';
-import ClientStaffNotes from '@/components/admin/ClientStaffNotes';
-import { ManualCompletionControls } from '@/components/admin/ManualCompletionControls';
+} from "@/components/ui/table";
+import ClientReflectionsView from "@/components/modules/ClientReflectionsView";
+import ModuleFeedback from "@/components/modules/ModuleFeedback";
+import { ModuleAssignmentsView } from "@/components/modules/ModuleAssignmentsView";
+import { ModuleSessionManager } from "@/components/modules/ModuleSessionManager";
+import { hasTierAccess } from "@/lib/tierUtils";
+import ClientStaffNotes from "@/components/admin/ClientStaffNotes";
+import { ManualCompletionControls } from "@/components/admin/ManualCompletionControls";
 
 interface StudentInfo {
   id: string;
@@ -73,7 +88,7 @@ interface ModuleProgress {
 interface ActivityEvent {
   date: string;
   module_title: string;
-  event_type: 'started' | 'completed' | 'updated';
+  event_type: "started" | "completed" | "updated";
   status: string;
 }
 
@@ -86,23 +101,31 @@ export default function StudentDetail() {
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
   const [moduleProgress, setModuleProgress] = useState<ModuleProgress[]>([]);
   const [activityHistory, setActivityHistory] = useState<ActivityEvent[]>([]);
-  const [editingNote, setEditingNote] = useState<{ moduleProgressId: string; currentNote: string; noteId?: string } | null>(null);
-  const [noteText, setNoteText] = useState('');
+  const [editingNote, setEditingNote] = useState<{
+    moduleProgressId: string;
+    currentNote: string;
+    noteId?: string;
+  } | null>(null);
+  const [noteText, setNoteText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
-  const [viewingReflections, setViewingReflections] = useState<{ moduleProgressId: string; moduleTitle: string; moduleId: string } | null>(null);
+  const [viewingReflections, setViewingReflections] = useState<{
+    moduleProgressId: string;
+    moduleTitle: string;
+    moduleId: string;
+  } | null>(null);
 
   // Auto-open the reflections dialog if query params specify a module
   useEffect(() => {
-    const moduleId = searchParams.get('moduleId');
-    const moduleProgressId = searchParams.get('moduleProgressId');
-    
+    const moduleId = searchParams.get("moduleId");
+    const moduleProgressId = searchParams.get("moduleProgressId");
+
     if (moduleId && moduleProgressId && moduleProgress.length > 0 && !loading) {
-      const module = moduleProgress.find(m => m.module_id === moduleId);
+      const module = moduleProgress.find((m) => m.module_id === moduleId);
       if (module) {
         setViewingReflections({
           moduleProgressId: moduleProgressId,
           moduleTitle: module.module_title,
-          moduleId: moduleId
+          moduleId: moduleId,
         });
         // Keep query params in URL so state persists on refresh
       }
@@ -114,7 +137,7 @@ export default function StudentDetail() {
     if (!open) {
       setViewingReflections(null);
       // Clear query params when user closes the dialog
-      if (searchParams.has('moduleId') || searchParams.has('moduleProgressId')) {
+      if (searchParams.has("moduleId") || searchParams.has("moduleProgressId")) {
         setSearchParams({});
       }
     }
@@ -132,8 +155,9 @@ export default function StudentDetail() {
 
       // Get enrollment details with program tiers (using staff_enrollments view to exclude financial data)
       const { data: enrollment, error: enrollmentError } = await supabase
-        .from('staff_enrollments')
-        .select(`
+        .from("staff_enrollments")
+        .select(
+          `
           id,
           client_user_id,
           program_id,
@@ -142,8 +166,9 @@ export default function StudentDetail() {
           start_date,
           end_date,
           programs!inner(name, slug, tiers)
-        `)
-        .eq('id', enrollmentId ?? '')
+        `,
+        )
+        .eq("id", enrollmentId ?? "")
         .single();
 
       if (enrollmentError) throw enrollmentError;
@@ -152,83 +177,87 @@ export default function StudentDetail() {
 
       // Get student profile
       const { data: profile } = await supabase
-        .from('profiles')
-        .select('name, avatar_url, username')
-        .eq('id', enrollment.client_user_id ?? '')
+        .from("profiles")
+        .select("name, avatar_url, username")
+        .eq("id", enrollment.client_user_id ?? "")
         .single();
 
       setStudentInfo({
-        id: enrollment.client_user_id ?? '',
-        name: profile?.name || 'Unknown',
-        email: profile?.username || 'N/A',
+        id: enrollment.client_user_id ?? "",
+        name: profile?.name || "Unknown",
+        email: profile?.username || "N/A",
         avatar_url: profile?.avatar_url || null,
-        enrollment_id: enrollment.id ?? '',
-        program_id: enrollment.program_id ?? '',
+        enrollment_id: enrollment.id ?? "",
+        program_id: enrollment.program_id ?? "",
         program_name: (enrollment as any).programs.name,
         program_slug: (enrollment as any).programs.slug,
         program_tiers: programTiers,
-        enrollment_status: enrollment.status ?? '',
-        tier: enrollment.tier || programTiers[0] || 'essentials',
-        start_date: enrollment.start_date || '',
+        enrollment_status: enrollment.status ?? "",
+        tier: enrollment.tier || programTiers[0] || "essentials",
+        start_date: enrollment.start_date || "",
         end_date: enrollment.end_date || null,
       });
 
       // Get all modules for the program
       const { data: modules, error: modulesError } = await supabase
-        .from('program_modules')
-        .select('*')
-        .eq('program_id', enrollment.program_id ?? '')
-        .eq('is_active', true)
-        .order('order_index');
+        .from("program_modules")
+        .select("*")
+        .eq("program_id", enrollment.program_id ?? "")
+        .eq("is_active", true)
+        .order("order_index");
 
       if (modulesError) throw modulesError;
 
       // Get progress for each module
       const { data: progress, error: progressError } = await supabase
-        .from('module_progress')
-        .select('*')
-        .eq('enrollment_id', enrollmentId ?? '');
+        .from("module_progress")
+        .select("*")
+        .eq("enrollment_id", enrollmentId ?? "");
 
       if (progressError) throw progressError;
 
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       // Get instructor notes for this enrollment's modules
-      const progressIds = progress?.map(p => p.id) || [];
+      const progressIds = progress?.map((p) => p.id) || [];
       const { data: instructorNotes } = await supabase
-        .from('instructor_module_notes')
-        .select('*')
-        .in('module_progress_id', progressIds)
-        .eq('instructor_id', user?.id || '');
-
+        .from("instructor_module_notes")
+        .select("*")
+        .in("module_progress_id", progressIds)
+        .eq("instructor_id", user?.id || "");
 
       // Combine module data with progress
-      const moduleProgressData: ModuleProgress[] = (modules || []).map(module => {
-        const moduleProgress = progress?.find(p => p.module_id === module.id);
-        const instructorNote = instructorNotes?.find(n => n.module_progress_id === moduleProgress?.id);
-        
+      const moduleProgressData: ModuleProgress[] = (modules || []).map((module) => {
+        const moduleProgress = progress?.find((p) => p.module_id === module.id);
+        const instructorNote = instructorNotes?.find(
+          (n) => n.module_progress_id === moduleProgress?.id,
+        );
+
         // Calculate time spent (mock data for now - could be tracked via real usage data)
-        const timeSpent = moduleProgress?.status === 'completed' 
-          ? module.estimated_minutes || 0
-          : moduleProgress?.status === 'in_progress'
-          ? Math.floor((module.estimated_minutes || 0) * 0.5)
-          : 0;
+        const timeSpent =
+          moduleProgress?.status === "completed"
+            ? module.estimated_minutes || 0
+            : moduleProgress?.status === "in_progress"
+              ? Math.floor((module.estimated_minutes || 0) * 0.5)
+              : 0;
 
         return {
-          id: moduleProgress?.id || '',
+          id: moduleProgress?.id || "",
           module_id: module.id,
           module_title: module.title,
           module_description: module.description,
           module_type: module.module_type,
           estimated_minutes: module.estimated_minutes,
           order_index: module.order_index,
-          tier_required: module.tier_required || 'essentials',
+          tier_required: module.tier_required || "essentials",
           is_individualized: module.is_individualized || false,
-          status: moduleProgress?.status || 'not_started',
+          status: moduleProgress?.status || "not_started",
           completed_at: moduleProgress?.completed_at || null,
-          created_at: moduleProgress?.created_at || '',
-          updated_at: moduleProgress?.updated_at || '',
+          created_at: moduleProgress?.created_at || "",
+          updated_at: moduleProgress?.updated_at || "",
           notes: moduleProgress?.notes || null,
           time_spent_minutes: timeSpent,
           instructor_note_id: instructorNote?.id,
@@ -240,39 +269,39 @@ export default function StudentDetail() {
 
       // Build activity history
       const activities: ActivityEvent[] = [];
-      
-      progress?.forEach(p => {
-        const module = modules?.find(m => m.id === p.module_id);
+
+      progress?.forEach((p) => {
+        const module = modules?.find((m) => m.id === p.module_id);
         if (!module) return;
 
         // Only show "started" if the module is actually in_progress or completed
         // (not for records with status 'not_started' which are created when viewing modules)
-        if (p.created_at && (p.status === 'in_progress' || p.status === 'completed')) {
+        if (p.created_at && (p.status === "in_progress" || p.status === "completed")) {
           activities.push({
             date: p.created_at,
             module_title: module.title,
-            event_type: 'started',
-            status: 'in_progress',
+            event_type: "started",
+            status: "in_progress",
           });
         }
 
         // Add completed event
-        if (p.status === 'completed' && p.completed_at) {
+        if (p.status === "completed" && p.completed_at) {
           activities.push({
             date: p.completed_at,
             module_title: module.title,
-            event_type: 'completed',
-            status: 'completed',
+            event_type: "completed",
+            status: "completed",
           });
         }
 
         // Add updated events (if updated after creation)
-        if (p.updated_at && p.updated_at !== p.created_at && p.status === 'in_progress') {
+        if (p.updated_at && p.updated_at !== p.created_at && p.status === "in_progress") {
           activities.push({
             date: p.updated_at,
             module_title: module.title,
-            event_type: 'updated',
-            status: 'in_progress',
+            event_type: "updated",
+            status: "in_progress",
           });
         }
       });
@@ -280,9 +309,8 @@ export default function StudentDetail() {
       // Sort by date descending
       activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setActivityHistory(activities.slice(0, 20)); // Latest 20 activities
-
     } catch (error: any) {
-      console.error('Error loading student detail:', error);
+      console.error("Error loading student detail:", error);
     } finally {
       setLoading(false);
     }
@@ -290,9 +318,9 @@ export default function StudentDetail() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed':
+      case "completed":
         return <CheckCircle2 className="h-5 w-5 text-green-500" />;
-      case 'in_progress':
+      case "in_progress":
         return <PlayCircle className="h-5 w-5 text-blue-500" />;
       default:
         return <Circle className="h-5 w-5 text-gray-400" />;
@@ -301,48 +329,52 @@ export default function StudentDetail() {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
-      completed: 'default',
-      in_progress: 'secondary',
-      not_started: 'outline',
+      completed: "default",
+      in_progress: "secondary",
+      not_started: "outline",
     };
     return (
-      <Badge variant={variants[status] || 'outline'}>
-        {status === 'not_started' ? 'Not Started' : status === 'in_progress' ? 'In Progress' : 'Completed'}
+      <Badge variant={variants[status] || "outline"}>
+        {status === "not_started"
+          ? "Not Started"
+          : status === "in_progress"
+            ? "In Progress"
+            : "Completed"}
       </Badge>
     );
   };
 
   const getModuleTypeIcon = (type: string) => {
     const icons: Record<string, string> = {
-      session: '👥',
-      assignment: '📝',
-      reflection: '💭',
-      resource: '📚',
+      session: "👥",
+      assignment: "📝",
+      reflection: "💭",
+      resource: "📚",
     };
-    return icons[type] || '📄';
+    return icons[type] || "📄";
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const formatDuration = (minutes: number) => {
-    if (minutes === 0) return '0m';
+    if (minutes === 0) return "0m";
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     if (hours === 0) return `${mins}m`;
@@ -350,9 +382,13 @@ export default function StudentDetail() {
     return `${hours}h ${mins}m`;
   };
 
-  const handleEditNote = (moduleProgressId: string, currentNote: string | null, noteId?: string) => {
-    setEditingNote({ moduleProgressId, currentNote: currentNote || '', noteId });
-    setNoteText(currentNote || '');
+  const handleEditNote = (
+    moduleProgressId: string,
+    currentNote: string | null,
+    noteId?: string,
+  ) => {
+    setEditingNote({ moduleProgressId, currentNote: currentNote || "", noteId });
+    setNoteText(currentNote || "");
   };
 
   const handleSaveNote = async () => {
@@ -360,13 +396,15 @@ export default function StudentDetail() {
 
     try {
       setSavingNote(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (!user) {
         toast({
-          title: 'Error',
-          description: 'You must be logged in to save notes',
-          variant: 'destructive',
+          title: "Error",
+          description: "You must be logged in to save notes",
+          variant: "destructive",
         });
         return;
       }
@@ -374,39 +412,37 @@ export default function StudentDetail() {
       if (editingNote.noteId) {
         // Update existing note
         const { error } = await supabase
-          .from('instructor_module_notes')
+          .from("instructor_module_notes")
           .update({ notes: noteText })
-          .eq('id', editingNote.noteId);
+          .eq("id", editingNote.noteId);
 
         if (error) throw error;
       } else {
         // Create new note
-        const { error } = await supabase
-          .from('instructor_module_notes')
-          .insert({
-            module_progress_id: editingNote.moduleProgressId,
-            instructor_id: user.id,
-            notes: noteText,
-          });
+        const { error } = await supabase.from("instructor_module_notes").insert({
+          module_progress_id: editingNote.moduleProgressId,
+          instructor_id: user.id,
+          notes: noteText,
+        });
 
         if (error) throw error;
       }
 
       toast({
-        title: 'Success',
-        description: 'Instructor note saved successfully',
+        title: "Success",
+        description: "Instructor note saved successfully",
       });
 
       // Reload data
       await loadStudentDetail();
       setEditingNote(null);
-      setNoteText('');
+      setNoteText("");
     } catch (error: any) {
-      console.error('Error saving note:', error);
+      console.error("Error saving note:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to save note. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to save note. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setSavingNote(false);
@@ -434,25 +470,22 @@ export default function StudentDetail() {
   }
 
   // Filter modules to only those accessible to the student based on their tier
-  const accessibleModules = moduleProgress.filter(m => 
-    hasTierAccess(
-      studentInfo.program_tiers,
-      studentInfo.tier,
-      m.tier_required
-    )
+  const accessibleModules = moduleProgress.filter((m) =>
+    hasTierAccess(studentInfo.program_tiers, studentInfo.tier, m.tier_required),
   );
-  const completedModules = accessibleModules.filter(m => m.status === 'completed').length;
-  const inProgressModules = accessibleModules.filter(m => m.status === 'in_progress').length;
-  const notStartedModules = accessibleModules.filter(m => m.status === 'not_started').length;
+  const completedModules = accessibleModules.filter((m) => m.status === "completed").length;
+  const inProgressModules = accessibleModules.filter((m) => m.status === "in_progress").length;
+  const notStartedModules = accessibleModules.filter((m) => m.status === "not_started").length;
   const totalModules = accessibleModules.length;
-  const completionPercentage = totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0;
+  const completionPercentage =
+    totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0;
   const totalTimeSpent = moduleProgress.reduce((sum, m) => sum + m.time_spent_minutes, 0);
   const totalEstimatedTime = moduleProgress.reduce((sum, m) => sum + (m.estimated_minutes || 0), 0);
 
   return (
     <div className="container mx-auto py-8 space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => navigate('/teaching/students')}>
+        <Button variant="outline" size="icon" onClick={() => navigate("/teaching/students")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
@@ -471,7 +504,11 @@ export default function StudentDetail() {
             <Avatar className="h-20 w-20">
               <AvatarImage src={studentInfo.avatar_url || undefined} />
               <AvatarFallback className="text-2xl">
-                {studentInfo.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                {studentInfo.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 space-y-4">
@@ -499,7 +536,9 @@ export default function StudentDetail() {
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">Enrollment Status</div>
-                  <Badge variant={studentInfo.enrollment_status === 'active' ? 'default' : 'secondary'}>
+                  <Badge
+                    variant={studentInfo.enrollment_status === "active" ? "default" : "secondary"}
+                  >
                     {studentInfo.enrollment_status}
                   </Badge>
                 </div>
@@ -529,9 +568,7 @@ export default function StudentDetail() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{completedModules}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              of {totalModules} modules
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">of {totalModules} modules</p>
           </CardContent>
         </Card>
 
@@ -542,9 +579,7 @@ export default function StudentDetail() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{inProgressModules}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {notStartedModules} not started
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">{notStartedModules} not started</p>
           </CardContent>
         </Card>
 
@@ -573,7 +608,7 @@ export default function StudentDetail() {
             <CardContent>
               <Table>
                 <TableHeader>
-<TableRow>
+                  <TableRow>
                     <TableHead className="w-12">#</TableHead>
                     <TableHead>Module</TableHead>
                     <TableHead>Type</TableHead>
@@ -587,15 +622,20 @@ export default function StudentDetail() {
                 </TableHeader>
                 <TableBody>
                   {moduleProgress.map((module) => (
-                    <TableRow 
+                    <TableRow
                       key={module.module_id}
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/teaching/programs/${studentInfo?.program_id}/modules/${module.module_id}`, {
-                        state: {
-                          enrollmentId,
-                          clientName: studentInfo?.name,
-                        }
-                      })}
+                      onClick={() =>
+                        navigate(
+                          `/teaching/programs/${studentInfo?.program_id}/modules/${module.module_id}`,
+                          {
+                            state: {
+                              enrollmentId,
+                              clientName: studentInfo?.name,
+                            },
+                          },
+                        )
+                      }
                     >
                       <TableCell className="font-medium">{module.order_index + 1}</TableCell>
                       <TableCell>
@@ -605,7 +645,10 @@ export default function StudentDetail() {
                             <div className="flex items-center gap-2">
                               <span className="font-medium">{module.module_title}</span>
                               {module.is_individualized && (
-                                <Badge variant="outline" className="text-xs gap-1 bg-blue-500/10 text-blue-600 border-blue-500/20">
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs gap-1 bg-blue-500/10 text-blue-600 border-blue-500/20"
+                                >
                                   <UserCog className="h-3 w-3" />
                                   Personalised
                                 </Badge>
@@ -625,7 +668,9 @@ export default function StudentDetail() {
                       <TableCell>{getStatusBadge(module.status)}</TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          <div className="font-medium">{formatDuration(module.time_spent_minutes)}</div>
+                          <div className="font-medium">
+                            {formatDuration(module.time_spent_minutes)}
+                          </div>
                           {module.estimated_minutes && (
                             <div className="text-muted-foreground">
                               / {formatDuration(module.estimated_minutes)}
@@ -634,7 +679,7 @@ export default function StudentDetail() {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">
-                        {module.completed_at ? formatDate(module.completed_at) : '-'}
+                        {module.completed_at ? formatDate(module.completed_at) : "-"}
                       </TableCell>
                       <TableCell>
                         <Button
@@ -642,7 +687,11 @@ export default function StudentDetail() {
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setViewingReflections({ moduleProgressId: module.id, moduleTitle: module.module_title, moduleId: module.module_id });
+                            setViewingReflections({
+                              moduleProgressId: module.id,
+                              moduleTitle: module.module_title,
+                              moduleId: module.module_id,
+                            });
                           }}
                           disabled={!module.id}
                           className="h-8"
@@ -651,13 +700,17 @@ export default function StudentDetail() {
                           View
                         </Button>
                       </TableCell>
-<TableCell>
+                      <TableCell>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleEditNote(module.id, module.instructor_notes || null, module.instructor_note_id);
+                            handleEditNote(
+                              module.id,
+                              module.instructor_notes || null,
+                              module.instructor_note_id,
+                            );
                           }}
                           disabled={!module.id}
                           className="h-8"
@@ -682,7 +735,7 @@ export default function StudentDetail() {
                             enrollmentId={enrollmentId}
                             moduleId={module.module_id}
                             type="module"
-                            isCompleted={module.status === 'completed'}
+                            isCompleted={module.status === "completed"}
                             onSuccess={() => {
                               // Refresh module progress
                               window.location.reload();
@@ -715,9 +768,9 @@ export default function StudentDetail() {
                   {activityHistory.map((activity, index) => (
                     <div key={index} className="flex gap-3">
                       <div className="flex-shrink-0 mt-1">
-                        {activity.event_type === 'completed' ? (
+                        {activity.event_type === "completed" ? (
                           <CheckCircle2 className="h-5 w-5 text-green-500" />
-                        ) : activity.event_type === 'started' ? (
+                        ) : activity.event_type === "started" ? (
                           <PlayCircle className="h-5 w-5 text-blue-500" />
                         ) : (
                           <Clock className="h-5 w-5 text-yellow-500" />
@@ -725,9 +778,9 @@ export default function StudentDetail() {
                       </div>
                       <div className="flex-1 space-y-1">
                         <p className="text-sm font-medium leading-none">
-                          {activity.event_type === 'completed' && 'Completed'}
-                          {activity.event_type === 'started' && 'Started'}
-                          {activity.event_type === 'updated' && 'Updated'}
+                          {activity.event_type === "completed" && "Completed"}
+                          {activity.event_type === "started" && "Started"}
+                          {activity.event_type === "updated" && "Updated"}
                         </p>
                         <p className="text-sm text-muted-foreground line-clamp-2">
                           {activity.module_title}
@@ -747,10 +800,10 @@ export default function StudentDetail() {
         {/* Staff Notes Section */}
         {studentInfo && (
           <div className="mt-6">
-            <ClientStaffNotes 
-              clientUserId={studentInfo.id} 
+            <ClientStaffNotes
+              clientUserId={studentInfo.id}
               enrollmentId={studentInfo.enrollment_id}
-              isAdmin={false} 
+              isAdmin={false}
             />
           </div>
         )}
@@ -762,7 +815,8 @@ export default function StudentDetail() {
           <DialogHeader>
             <DialogTitle>Instructor Feedback & Notes</DialogTitle>
             <DialogDescription>
-              Add private notes about this client's performance on this module. These notes are only visible to instructors and admins.
+              Add private notes about this client's performance on this module. These notes are only
+              visible to instructors and admins.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -787,7 +841,7 @@ export default function StudentDetail() {
                   Saving...
                 </>
               ) : (
-                'Save Note'
+                "Save Note"
               )}
             </Button>
           </DialogFooter>
@@ -799,9 +853,7 @@ export default function StudentDetail() {
         <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Reflections & Feedback</DialogTitle>
-            <DialogDescription>
-              {viewingReflections?.moduleTitle}
-            </DialogDescription>
+            <DialogDescription>{viewingReflections?.moduleTitle}</DialogDescription>
           </DialogHeader>
           {viewingReflections && studentInfo && (
             <div className="space-y-6 py-4">
@@ -814,7 +866,10 @@ export default function StudentDetail() {
               <Separator />
               <ClientReflectionsView moduleProgressId={viewingReflections.moduleProgressId} />
               <Separator />
-              <ModuleFeedback moduleProgressId={viewingReflections.moduleProgressId} isCoachOrInstructor />
+              <ModuleFeedback
+                moduleProgressId={viewingReflections.moduleProgressId}
+                isCoachOrInstructor
+              />
               <Separator />
               <ModuleAssignmentsView
                 moduleId={viewingReflections.moduleId}

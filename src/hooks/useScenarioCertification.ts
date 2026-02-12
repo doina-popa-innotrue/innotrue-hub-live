@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface MissingScenario {
   template_id: string;
@@ -19,7 +19,7 @@ export interface CertificationRequirements {
  */
 export function useScenarioCertificationCheck(enrollmentId: string | undefined) {
   return useQuery({
-    queryKey: ['scenario-certification-check', enrollmentId],
+    queryKey: ["scenario-certification-check", enrollmentId],
     queryFn: async (): Promise<CertificationRequirements> => {
       if (!enrollmentId) {
         return {
@@ -31,7 +31,7 @@ export function useScenarioCertificationCheck(enrollmentId: string | undefined) 
       }
 
       const { data, error } = await supabase
-        .rpc('check_scenario_certification_requirements', { p_enrollment_id: enrollmentId })
+        .rpc("check_scenario_certification_requirements", { p_enrollment_id: enrollmentId })
         .single();
 
       if (error) throw error;
@@ -52,7 +52,7 @@ export function useScenarioCertificationCheck(enrollmentId: string | undefined) 
  */
 export function useBulkScenarioCertificationCheck(enrollmentIds: string[]) {
   return useQuery({
-    queryKey: ['scenario-certification-check-bulk', enrollmentIds],
+    queryKey: ["scenario-certification-check-bulk", enrollmentIds],
     queryFn: async (): Promise<Map<string, CertificationRequirements>> => {
       const results = new Map<string, CertificationRequirements>();
 
@@ -60,7 +60,7 @@ export function useBulkScenarioCertificationCheck(enrollmentIds: string[]) {
       await Promise.all(
         enrollmentIds.map(async (enrollmentId) => {
           const { data, error } = await supabase
-            .rpc('check_scenario_certification_requirements', { p_enrollment_id: enrollmentId })
+            .rpc("check_scenario_certification_requirements", { p_enrollment_id: enrollmentId })
             .single();
 
           if (!error && data) {
@@ -71,7 +71,7 @@ export function useBulkScenarioCertificationCheck(enrollmentIds: string[]) {
               missing_scenarios: (data.missing_scenarios as unknown as MissingScenario[]) ?? [],
             });
           }
-        })
+        }),
       );
 
       return results;

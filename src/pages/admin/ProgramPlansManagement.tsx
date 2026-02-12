@@ -1,15 +1,25 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Package, Zap, ChevronDown, ChevronRight, Lock, Coins } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Package,
+  Zap,
+  ChevronDown,
+  ChevronRight,
+  Lock,
+  Coins,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +27,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -25,13 +35,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface ProgramPlan {
   id: string;
@@ -73,11 +79,13 @@ export default function ProgramPlansManagement() {
   const queryClient = useQueryClient();
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<ProgramPlan | null>(null);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['uncategorized']));
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set(["uncategorized"]),
+  );
   const [planForm, setPlanForm] = useState({
-    name: '',
-    display_name: '',
-    description: '',
+    name: "",
+    display_name: "",
+    description: "",
     tier_level: 0,
     is_active: true,
     credit_allowance: null as number | null,
@@ -85,12 +93,12 @@ export default function ProgramPlansManagement() {
 
   // Fetch program plans
   const { data: programPlans, isLoading: plansLoading } = useQuery({
-    queryKey: ['program-plans'],
+    queryKey: ["program-plans"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('program_plans')
-        .select('*')
-        .order('tier_level', { ascending: true });
+        .from("program_plans")
+        .select("*")
+        .order("tier_level", { ascending: true });
       if (error) throw error;
       return data as ProgramPlan[];
     },
@@ -98,12 +106,12 @@ export default function ProgramPlansManagement() {
 
   // Fetch features
   const { data: features } = useQuery({
-    queryKey: ['features'],
+    queryKey: ["features"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('features')
-        .select('*, feature_categories(name)')
-        .order('name');
+        .from("features")
+        .select("*, feature_categories(name)")
+        .order("name");
       if (error) throw error;
       return data as Feature[];
     },
@@ -111,12 +119,12 @@ export default function ProgramPlansManagement() {
 
   // Fetch feature categories
   const { data: categories } = useQuery({
-    queryKey: ['feature-categories'],
+    queryKey: ["feature-categories"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('feature_categories')
-        .select('*')
-        .order('display_order');
+        .from("feature_categories")
+        .select("*")
+        .order("display_order");
       if (error) throw error;
       return data as FeatureCategory[];
     },
@@ -124,11 +132,9 @@ export default function ProgramPlansManagement() {
 
   // Fetch program plan features
   const { data: planFeatures } = useQuery({
-    queryKey: ['program-plan-features'],
+    queryKey: ["program-plan-features"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('program_plan_features')
-        .select('*');
+      const { data, error } = await supabase.from("program_plan_features").select("*");
       if (error) throw error;
       return data as ProgramPlanFeature[];
     },
@@ -137,106 +143,154 @@ export default function ProgramPlansManagement() {
   // Create program plan mutation
   const createPlanMutation = useMutation({
     mutationFn: async (plan: typeof planForm) => {
-      const { error } = await supabase.from('program_plans').insert(plan);
+      const { error } = await supabase.from("program_plans").insert(plan);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['program-plans'] });
-      toast({ title: 'Program plan created successfully' });
+      queryClient.invalidateQueries({ queryKey: ["program-plans"] });
+      toast({ title: "Program plan created successfully" });
       setIsPlanDialogOpen(false);
       resetForm();
     },
     onError: (error: Error) => {
-      toast({ title: 'Error creating program plan', description: error.message, variant: 'destructive' });
+      toast({
+        title: "Error creating program plan",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
   // Update program plan mutation
   const updatePlanMutation = useMutation({
     mutationFn: async ({ id, ...plan }: { id: string } & typeof planForm) => {
-      const { error } = await supabase.from('program_plans').update(plan).eq('id', id);
+      const { error } = await supabase.from("program_plans").update(plan).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['program-plans'] });
-      toast({ title: 'Program plan updated successfully' });
+      queryClient.invalidateQueries({ queryKey: ["program-plans"] });
+      toast({ title: "Program plan updated successfully" });
       setIsPlanDialogOpen(false);
       resetForm();
     },
     onError: (error: Error) => {
-      toast({ title: 'Error updating program plan', description: error.message, variant: 'destructive' });
+      toast({
+        title: "Error updating program plan",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
   // Delete program plan mutation
   const deletePlanMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('program_plans').delete().eq('id', id);
+      const { error } = await supabase.from("program_plans").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['program-plans'] });
-      toast({ title: 'Program plan deleted successfully' });
+      queryClient.invalidateQueries({ queryKey: ["program-plans"] });
+      toast({ title: "Program plan deleted successfully" });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error deleting program plan', description: error.message, variant: 'destructive' });
+      toast({
+        title: "Error deleting program plan",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
   // Toggle feature for a plan
   const toggleFeatureMutation = useMutation({
-    mutationFn: async ({ planId, featureId, enabled }: { planId: string; featureId: string; enabled: boolean }) => {
-      const existing = planFeatures?.find(pf => pf.program_plan_id === planId && pf.feature_id === featureId);
-      
+    mutationFn: async ({
+      planId,
+      featureId,
+      enabled,
+    }: {
+      planId: string;
+      featureId: string;
+      enabled: boolean;
+    }) => {
+      const existing = planFeatures?.find(
+        (pf) => pf.program_plan_id === planId && pf.feature_id === featureId,
+      );
+
       if (existing) {
         const { error } = await supabase
-          .from('program_plan_features')
+          .from("program_plan_features")
           .update({ enabled })
-          .eq('id', existing.id);
+          .eq("id", existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from('program_plan_features')
+          .from("program_plan_features")
           .insert({ program_plan_id: planId, feature_id: featureId, enabled });
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['program-plan-features'] });
+      queryClient.invalidateQueries({ queryKey: ["program-plan-features"] });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error updating feature', description: error.message, variant: 'destructive' });
+      toast({
+        title: "Error updating feature",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
   // Update limit value
   const updateLimitMutation = useMutation({
-    mutationFn: async ({ planId, featureId, limitValue }: { planId: string; featureId: string; limitValue: number | null }) => {
-      const existing = planFeatures?.find(pf => pf.program_plan_id === planId && pf.feature_id === featureId);
-      
+    mutationFn: async ({
+      planId,
+      featureId,
+      limitValue,
+    }: {
+      planId: string;
+      featureId: string;
+      limitValue: number | null;
+    }) => {
+      const existing = planFeatures?.find(
+        (pf) => pf.program_plan_id === planId && pf.feature_id === featureId,
+      );
+
       if (existing) {
         const { error } = await supabase
-          .from('program_plan_features')
+          .from("program_plan_features")
           .update({ limit_value: limitValue })
-          .eq('id', existing.id);
+          .eq("id", existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from('program_plan_features')
-          .insert({ program_plan_id: planId, feature_id: featureId, enabled: true, limit_value: limitValue });
+          .from("program_plan_features")
+          .insert({
+            program_plan_id: planId,
+            feature_id: featureId,
+            enabled: true,
+            limit_value: limitValue,
+          });
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['program-plan-features'] });
+      queryClient.invalidateQueries({ queryKey: ["program-plan-features"] });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error updating limit', description: error.message, variant: 'destructive' });
+      toast({ title: "Error updating limit", description: error.message, variant: "destructive" });
     },
   });
 
   const resetForm = () => {
-    setPlanForm({ name: '', display_name: '', description: '', tier_level: 0, is_active: true, credit_allowance: null });
+    setPlanForm({
+      name: "",
+      display_name: "",
+      description: "",
+      tier_level: 0,
+      is_active: true,
+      credit_allowance: null,
+    });
     setEditingPlan(null);
   };
 
@@ -245,8 +299,8 @@ export default function ProgramPlansManagement() {
       setEditingPlan(plan);
       setPlanForm({
         name: plan.name,
-        display_name: (plan as any).display_name || '',
-        description: plan.description || '',
+        display_name: (plan as any).display_name || "",
+        description: plan.description || "",
         tier_level: plan.tier_level,
         is_active: plan.is_active,
         credit_allowance: plan.credit_allowance,
@@ -266,17 +320,21 @@ export default function ProgramPlansManagement() {
   };
 
   const getFeatureStatus = (planId: string, featureId: string): boolean => {
-    const pf = planFeatures?.find(pf => pf.program_plan_id === planId && pf.feature_id === featureId);
+    const pf = planFeatures?.find(
+      (pf) => pf.program_plan_id === planId && pf.feature_id === featureId,
+    );
     return pf?.enabled ?? false;
   };
 
   const getFeatureLimit = (planId: string, featureId: string): number | null => {
-    const pf = planFeatures?.find(pf => pf.program_plan_id === planId && pf.feature_id === featureId);
+    const pf = planFeatures?.find(
+      (pf) => pf.program_plan_id === planId && pf.feature_id === featureId,
+    );
     return pf?.limit_value ?? null;
   };
 
   const toggleCategory = (categoryId: string) => {
-    setExpandedCategories(prev => {
+    setExpandedCategories((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(categoryId)) {
         newSet.delete(categoryId);
@@ -288,14 +346,18 @@ export default function ProgramPlansManagement() {
   };
 
   // Group features by category
-  const groupedFeatures = features?.reduce((acc, feature) => {
-    const categoryId = feature.category_id || 'uncategorized';
-    if (!acc[categoryId]) {
-      acc[categoryId] = [];
-    }
-    acc[categoryId].push(feature);
-    return acc;
-  }, {} as Record<string, Feature[]>) || {};
+  const groupedFeatures =
+    features?.reduce(
+      (acc, feature) => {
+        const categoryId = feature.category_id || "uncategorized";
+        if (!acc[categoryId]) {
+          acc[categoryId] = [];
+        }
+        acc[categoryId].push(feature);
+        return acc;
+      },
+      {} as Record<string, Feature[]>,
+    ) || {};
 
   if (plansLoading) {
     return <div className="p-6">Loading...</div>;
@@ -307,7 +369,8 @@ export default function ProgramPlansManagement() {
         <div>
           <h1 className="text-2xl font-bold">Program Plans</h1>
           <p className="text-muted-foreground">
-            Define feature access levels for different program enrollments (e.g., CTA programs vs. standard programs)
+            Define feature access levels for different program enrollments (e.g., CTA programs vs.
+            standard programs)
           </p>
         </div>
         <Button onClick={() => handleOpenDialog()}>
@@ -353,10 +416,10 @@ export default function ProgramPlansManagement() {
                 </TableHeader>
                 <TableBody>
                   {programPlans?.map((plan) => (
-                    <TableRow key={plan.id} className={!plan.is_active ? 'opacity-60' : ''}>
+                    <TableRow key={plan.id} className={!plan.is_active ? "opacity-60" : ""}>
                       <TableCell className="font-medium">{plan.name}</TableCell>
                       <TableCell className="max-w-xs truncate text-muted-foreground">
-                        {plan.description || '—'}
+                        {plan.description || "—"}
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge variant="outline">{plan.tier_level}</Badge>
@@ -364,32 +427,36 @@ export default function ProgramPlansManagement() {
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
                           <Coins className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-sm">
-                            {plan.credit_allowance ?? '—'}
-                          </span>
+                          <span className="text-sm">{plan.credit_allowance ?? "—"}</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
                           <Zap className="h-3 w-3 text-muted-foreground" />
                           <span className="text-sm">
-                            {planFeatures?.filter(pf => pf.program_plan_id === plan.id && pf.enabled).length || 0}
+                            {planFeatures?.filter(
+                              (pf) => pf.program_plan_id === plan.id && pf.enabled,
+                            ).length || 0}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={plan.is_active ? 'default' : 'secondary'}>
-                          {plan.is_active ? 'Active' : 'Inactive'}
+                        <Badge variant={plan.is_active ? "default" : "secondary"}>
+                          {plan.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleOpenDialog(plan)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenDialog(plan)}
+                          >
                             <Edit className="h-4 w-4 mr-1" /> Edit
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             className="text-destructive hover:text-destructive"
                             onClick={() => deletePlanMutation.mutate(plan.id)}
                           >
@@ -409,7 +476,9 @@ export default function ProgramPlansManagement() {
           {!programPlans?.length ? (
             <Card>
               <CardContent className="py-8 text-center">
-                <p className="text-muted-foreground">Create program plans first to configure features</p>
+                <p className="text-muted-foreground">
+                  Create program plans first to configure features
+                </p>
               </CardContent>
             </Card>
           ) : (
@@ -420,7 +489,8 @@ export default function ProgramPlansManagement() {
                   Configure which features are available for each program plan.
                   <span className="block mt-1 text-xs">
                     <Lock className="h-3 w-3 inline mr-1" />
-                    <strong>System</strong> features are required for core functionality or menu visibility.
+                    <strong>System</strong> features are required for core functionality or menu
+                    visibility.
                   </span>
                 </CardDescription>
               </CardHeader>
@@ -430,8 +500,11 @@ export default function ProgramPlansManagement() {
                   <div className="sticky top-0 z-10 -mx-6 px-6 py-2 bg-card border-b">
                     <div className="flex items-center">
                       <div className="min-w-[280px] pr-4 font-medium">Feature</div>
-                      {programPlans?.map(plan => (
-                        <div key={plan.id} className="w-40 px-4 text-center font-medium text-sm border-l">
+                      {programPlans?.map((plan) => (
+                        <div
+                          key={plan.id}
+                          className="w-40 px-4 text-center font-medium text-sm border-l"
+                        >
                           {plan.name}
                         </div>
                       ))}
@@ -439,8 +512,8 @@ export default function ProgramPlansManagement() {
                   </div>
 
                   {/* Categorized features */}
-                  {categories?.map(category => (
-                    <Collapsible 
+                  {categories?.map((category) => (
+                    <Collapsible
                       key={category.id}
                       open={expandedCategories.has(category.id)}
                       onOpenChange={() => toggleCategory(category.id)}
@@ -457,13 +530,16 @@ export default function ProgramPlansManagement() {
                         </Badge>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="pl-6 space-y-2 mt-2">
-                        {groupedFeatures[category.id]?.map(feature => (
+                        {groupedFeatures[category.id]?.map((feature) => (
                           <div key={feature.id} className="flex items-start py-2">
                             <div className="min-w-[280px] pr-4 flex-shrink-0">
                               <div className="font-medium text-sm flex items-center gap-2 flex-wrap">
                                 <span className="whitespace-nowrap">{feature.name}</span>
                                 {feature.is_system && (
-                                  <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 whitespace-nowrap">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs border-amber-500 text-amber-600 whitespace-nowrap"
+                                  >
                                     <Lock className="h-3 w-3 mr-1" />
                                     System
                                   </Badge>
@@ -471,15 +547,18 @@ export default function ProgramPlansManagement() {
                               </div>
                               <div className="text-xs text-muted-foreground">{feature.key}</div>
                             </div>
-                            {programPlans?.map(plan => (
-                              <div key={plan.id} className="w-40 px-4 border-l flex flex-col items-center gap-1">
+                            {programPlans?.map((plan) => (
+                              <div
+                                key={plan.id}
+                                className="w-40 px-4 border-l flex flex-col items-center gap-1"
+                              >
                                 <Switch
                                   checked={getFeatureStatus(plan.id, feature.id)}
-                                  onCheckedChange={(checked) => 
-                                    toggleFeatureMutation.mutate({ 
-                                      planId: plan.id, 
-                                      featureId: feature.id, 
-                                      enabled: checked 
+                                  onCheckedChange={(checked) =>
+                                    toggleFeatureMutation.mutate({
+                                      planId: plan.id,
+                                      featureId: feature.id,
+                                      enabled: checked,
                                     })
                                   }
                                 />
@@ -488,12 +567,14 @@ export default function ProgramPlansManagement() {
                                     type="number"
                                     placeholder="Limit"
                                     className="w-20 h-6 text-xs"
-                                    value={getFeatureLimit(plan.id, feature.id) ?? ''}
-                                    onChange={(e) => 
+                                    value={getFeatureLimit(plan.id, feature.id) ?? ""}
+                                    onChange={(e) =>
                                       updateLimitMutation.mutate({
                                         planId: plan.id,
                                         featureId: feature.id,
-                                        limitValue: e.target.value ? parseInt(e.target.value) : null
+                                        limitValue: e.target.value
+                                          ? parseInt(e.target.value)
+                                          : null,
                                       })
                                     }
                                   />
@@ -507,30 +588,33 @@ export default function ProgramPlansManagement() {
                   ))}
 
                   {/* Uncategorized features */}
-                  {groupedFeatures['uncategorized']?.length > 0 && (
-                    <Collapsible 
-                      open={expandedCategories.has('uncategorized')}
-                      onOpenChange={() => toggleCategory('uncategorized')}
+                  {groupedFeatures["uncategorized"]?.length > 0 && (
+                    <Collapsible
+                      open={expandedCategories.has("uncategorized")}
+                      onOpenChange={() => toggleCategory("uncategorized")}
                     >
                       <CollapsibleTrigger className="flex items-center gap-2 w-full hover:bg-muted/50 p-2 rounded-md">
-                        {expandedCategories.has('uncategorized') ? (
+                        {expandedCategories.has("uncategorized") ? (
                           <ChevronDown className="h-4 w-4" />
                         ) : (
                           <ChevronRight className="h-4 w-4" />
                         )}
                         <span className="font-medium">Uncategorized</span>
                         <Badge variant="outline" className="ml-2">
-                          {groupedFeatures['uncategorized']?.length || 0}
+                          {groupedFeatures["uncategorized"]?.length || 0}
                         </Badge>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="pl-6 space-y-2 mt-2">
-                        {groupedFeatures['uncategorized']?.map(feature => (
+                        {groupedFeatures["uncategorized"]?.map((feature) => (
                           <div key={feature.id} className="flex items-start py-2">
                             <div className="min-w-[280px] pr-4 flex-shrink-0">
                               <div className="font-medium text-sm flex items-center gap-2 flex-wrap">
                                 <span className="whitespace-nowrap">{feature.name}</span>
                                 {feature.is_system && (
-                                  <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 whitespace-nowrap">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs border-amber-500 text-amber-600 whitespace-nowrap"
+                                  >
                                     <Lock className="h-3 w-3 mr-1" />
                                     System
                                   </Badge>
@@ -538,15 +622,18 @@ export default function ProgramPlansManagement() {
                               </div>
                               <div className="text-xs text-muted-foreground">{feature.key}</div>
                             </div>
-                            {programPlans?.map(plan => (
-                              <div key={plan.id} className="w-40 px-4 border-l flex flex-col items-center gap-1">
+                            {programPlans?.map((plan) => (
+                              <div
+                                key={plan.id}
+                                className="w-40 px-4 border-l flex flex-col items-center gap-1"
+                              >
                                 <Switch
                                   checked={getFeatureStatus(plan.id, feature.id)}
-                                  onCheckedChange={(checked) => 
-                                    toggleFeatureMutation.mutate({ 
-                                      planId: plan.id, 
-                                      featureId: feature.id, 
-                                      enabled: checked 
+                                  onCheckedChange={(checked) =>
+                                    toggleFeatureMutation.mutate({
+                                      planId: plan.id,
+                                      featureId: feature.id,
+                                      enabled: checked,
                                     })
                                   }
                                 />
@@ -555,12 +642,14 @@ export default function ProgramPlansManagement() {
                                     type="number"
                                     placeholder="Limit"
                                     className="w-20 h-6 text-xs"
-                                    value={getFeatureLimit(plan.id, feature.id) ?? ''}
-                                    onChange={(e) => 
+                                    value={getFeatureLimit(plan.id, feature.id) ?? ""}
+                                    onChange={(e) =>
                                       updateLimitMutation.mutate({
                                         planId: plan.id,
                                         featureId: feature.id,
-                                        limitValue: e.target.value ? parseInt(e.target.value) : null
+                                        limitValue: e.target.value
+                                          ? parseInt(e.target.value)
+                                          : null,
                                       })
                                     }
                                   />
@@ -583,7 +672,7 @@ export default function ProgramPlansManagement() {
       <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingPlan ? 'Edit Program Plan' : 'Create Program Plan'}</DialogTitle>
+            <DialogTitle>{editingPlan ? "Edit Program Plan" : "Create Program Plan"}</DialogTitle>
             <DialogDescription>
               Program plans define which features are available based on program enrollment
             </DialogDescription>
@@ -626,7 +715,9 @@ export default function ProgramPlansManagement() {
                 type="number"
                 min={0}
                 value={planForm.tier_level}
-                onChange={(e) => setPlanForm({ ...planForm, tier_level: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setPlanForm({ ...planForm, tier_level: parseInt(e.target.value) || 0 })
+                }
               />
               <p className="text-xs text-muted-foreground">
                 Higher tiers inherit access from lower tiers
@@ -638,11 +729,13 @@ export default function ProgramPlansManagement() {
                 id="credit_allowance"
                 type="number"
                 min={0}
-                value={planForm.credit_allowance ?? ''}
-                onChange={(e) => setPlanForm({ 
-                  ...planForm, 
-                  credit_allowance: e.target.value ? parseInt(e.target.value) : null 
-                })}
+                value={planForm.credit_allowance ?? ""}
+                onChange={(e) =>
+                  setPlanForm({
+                    ...planForm,
+                    credit_allowance: e.target.value ? parseInt(e.target.value) : null,
+                  })
+                }
                 placeholder="e.g., 100"
               />
               <p className="text-xs text-muted-foreground">
@@ -663,7 +756,7 @@ export default function ProgramPlansManagement() {
               Cancel
             </Button>
             <Button onClick={handleSubmit} disabled={!planForm.name}>
-              {editingPlan ? 'Update' : 'Create'}
+              {editingPlan ? "Update" : "Create"}
             </Button>
           </DialogFooter>
         </DialogContent>

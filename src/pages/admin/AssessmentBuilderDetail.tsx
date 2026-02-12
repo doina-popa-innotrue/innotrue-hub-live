@@ -6,13 +6,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit, Trash2, Loader2, ArrowLeft, GripVertical, Target, HelpCircle, Lightbulb } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Loader2,
+  ArrowLeft,
+  GripVertical,
+  Target,
+  HelpCircle,
+  Lightbulb,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type Dimension = {
@@ -67,11 +94,16 @@ export default function AssessmentBuilderDetail() {
   // Question state
   const [questionDialogOpen, setQuestionDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [questionForm, setQuestionForm] = useState({ question_text: "", question_type: "single_choice" });
+  const [questionForm, setQuestionForm] = useState({
+    question_text: "",
+    question_type: "single_choice",
+  });
 
   // Option state
   const [optionDialogOpen, setOptionDialogOpen] = useState(false);
-  const [editingOption, setEditingOption] = useState<{ questionId: string; option: Option | null }>({ questionId: "", option: null });
+  const [editingOption, setEditingOption] = useState<{ questionId: string; option: Option | null }>(
+    { questionId: "", option: null },
+  );
   const [optionForm, setOptionForm] = useState({ option_text: "" });
 
   // Score state
@@ -138,7 +170,7 @@ export default function AssessmentBuilderDetail() {
   const { data: options = [] } = useQuery({
     queryKey: ["assessment-options", id],
     queryFn: async () => {
-      const questionIds = questions.map(q => q.id);
+      const questionIds = questions.map((q) => q.id);
       if (questionIds.length === 0) return [];
       const { data, error } = await supabase
         .from("assessment_options")
@@ -155,7 +187,7 @@ export default function AssessmentBuilderDetail() {
   const { data: optionScores = [] } = useQuery({
     queryKey: ["assessment-option-scores", id],
     queryFn: async () => {
-      const optionIds = options.map(o => o.id);
+      const optionIds = options.map((o) => o.id);
       if (optionIds.length === 0) return [];
       const { data, error } = await supabase
         .from("assessment_option_scores")
@@ -185,12 +217,14 @@ export default function AssessmentBuilderDetail() {
   // Mutations
   const createDimension = useMutation({
     mutationFn: async (data: { name: string; description: string }) => {
-      const { error } = await supabase.from("assessment_dimensions").insert([{
-        assessment_id: id!,
-        name: data.name,
-        description: data.description || null,
-        order_index: dimensions.length,
-      }]);
+      const { error } = await supabase.from("assessment_dimensions").insert([
+        {
+          assessment_id: id!,
+          name: data.name,
+          description: data.description || null,
+          order_index: dimensions.length,
+        },
+      ]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -203,11 +237,20 @@ export default function AssessmentBuilderDetail() {
   });
 
   const updateDimension = useMutation({
-    mutationFn: async ({ dimId, data }: { dimId: string; data: { name: string; description: string } }) => {
-      const { error } = await supabase.from("assessment_dimensions").update({
-        name: data.name,
-        description: data.description || null,
-      }).eq("id", dimId);
+    mutationFn: async ({
+      dimId,
+      data,
+    }: {
+      dimId: string;
+      data: { name: string; description: string };
+    }) => {
+      const { error } = await supabase
+        .from("assessment_dimensions")
+        .update({
+          name: data.name,
+          description: data.description || null,
+        })
+        .eq("id", dimId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -234,12 +277,14 @@ export default function AssessmentBuilderDetail() {
 
   const createQuestion = useMutation({
     mutationFn: async (data: { question_text: string; question_type: string }) => {
-      const { error } = await supabase.from("assessment_questions").insert([{
-        assessment_id: id!,
-        question_text: data.question_text,
-        question_type: data.question_type,
-        order_index: questions.length,
-      }]);
+      const { error } = await supabase.from("assessment_questions").insert([
+        {
+          assessment_id: id!,
+          question_text: data.question_text,
+          question_type: data.question_type,
+          order_index: questions.length,
+        },
+      ]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -252,11 +297,20 @@ export default function AssessmentBuilderDetail() {
   });
 
   const updateQuestion = useMutation({
-    mutationFn: async ({ qId, data }: { qId: string; data: { question_text: string; question_type: string } }) => {
-      const { error } = await supabase.from("assessment_questions").update({
-        question_text: data.question_text,
-        question_type: data.question_type,
-      }).eq("id", qId);
+    mutationFn: async ({
+      qId,
+      data,
+    }: {
+      qId: string;
+      data: { question_text: string; question_type: string };
+    }) => {
+      const { error } = await supabase
+        .from("assessment_questions")
+        .update({
+          question_text: data.question_text,
+          question_type: data.question_type,
+        })
+        .eq("id", qId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -284,12 +338,14 @@ export default function AssessmentBuilderDetail() {
 
   const createOption = useMutation({
     mutationFn: async (data: { question_id: string; option_text: string }) => {
-      const existingOptions = options.filter(o => o.question_id === data.question_id);
-      const { error } = await supabase.from("assessment_options").insert([{
-        question_id: data.question_id,
-        option_text: data.option_text,
-        order_index: existingOptions.length,
-      }]);
+      const existingOptions = options.filter((o) => o.question_id === data.question_id);
+      const { error } = await supabase.from("assessment_options").insert([
+        {
+          question_id: data.question_id,
+          option_text: data.option_text,
+          order_index: existingOptions.length,
+        },
+      ]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -303,9 +359,12 @@ export default function AssessmentBuilderDetail() {
 
   const updateOption = useMutation({
     mutationFn: async ({ optId, data }: { optId: string; data: { option_text: string } }) => {
-      const { error } = await supabase.from("assessment_options").update({
-        option_text: data.option_text,
-      }).eq("id", optId);
+      const { error } = await supabase
+        .from("assessment_options")
+        .update({
+          option_text: data.option_text,
+        })
+        .eq("id", optId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -333,11 +392,14 @@ export default function AssessmentBuilderDetail() {
 
   const upsertOptionScore = useMutation({
     mutationFn: async (data: { option_id: string; dimension_id: string; score: number }) => {
-      const { error } = await supabase.from("assessment_option_scores").upsert({
-        option_id: data.option_id,
-        dimension_id: data.dimension_id,
-        score: data.score,
-      }, { onConflict: "option_id,dimension_id" });
+      const { error } = await supabase.from("assessment_option_scores").upsert(
+        {
+          option_id: data.option_id,
+          dimension_id: data.dimension_id,
+          score: data.score,
+        },
+        { onConflict: "option_id,dimension_id" },
+      );
       if (error) throw error;
     },
     onSuccess: () => {
@@ -349,7 +411,8 @@ export default function AssessmentBuilderDetail() {
 
   const deleteOptionScore = useMutation({
     mutationFn: async ({ optionId, dimensionId }: { optionId: string; dimensionId: string }) => {
-      const { error } = await supabase.from("assessment_option_scores")
+      const { error } = await supabase
+        .from("assessment_option_scores")
         .delete()
         .eq("option_id", optionId)
         .eq("dimension_id", dimensionId);
@@ -370,21 +433,29 @@ export default function AssessmentBuilderDetail() {
       } catch {
         throw new Error("Invalid JSON in conditions");
       }
-      const { error } = await supabase.from("assessment_interpretations").insert([{
-        assessment_id: id!,
-        name: data.name,
-        description: data.description || null,
-        interpretation_text: data.interpretation_text,
-        conditions,
-        priority: data.priority,
-      }]);
+      const { error } = await supabase.from("assessment_interpretations").insert([
+        {
+          assessment_id: id!,
+          name: data.name,
+          description: data.description || null,
+          interpretation_text: data.interpretation_text,
+          conditions,
+          priority: data.priority,
+        },
+      ]);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["assessment-interpretations", id] });
       toast({ description: "Interpretation rule created" });
       setInterpretationDialogOpen(false);
-      setInterpretationForm({ name: "", description: "", interpretation_text: "", conditions: "{}", priority: 0 });
+      setInterpretationForm({
+        name: "",
+        description: "",
+        interpretation_text: "",
+        conditions: "{}",
+        priority: 0,
+      });
     },
     onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -397,13 +468,16 @@ export default function AssessmentBuilderDetail() {
       } catch {
         throw new Error("Invalid JSON in conditions");
       }
-      const { error } = await supabase.from("assessment_interpretations").update({
-        name: data.name,
-        description: data.description || null,
-        interpretation_text: data.interpretation_text,
-        conditions,
-        priority: data.priority,
-      }).eq("id", intId);
+      const { error } = await supabase
+        .from("assessment_interpretations")
+        .update({
+          name: data.name,
+          description: data.description || null,
+          interpretation_text: data.interpretation_text,
+          conditions,
+          priority: data.priority,
+        })
+        .eq("id", intId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -411,7 +485,13 @@ export default function AssessmentBuilderDetail() {
       toast({ description: "Interpretation rule updated" });
       setInterpretationDialogOpen(false);
       setEditingInterpretation(null);
-      setInterpretationForm({ name: "", description: "", interpretation_text: "", conditions: "{}", priority: 0 });
+      setInterpretationForm({
+        name: "",
+        description: "",
+        interpretation_text: "",
+        conditions: "{}",
+        priority: 0,
+      });
     },
     onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -429,7 +509,7 @@ export default function AssessmentBuilderDetail() {
   });
 
   const getScoreForOptionDimension = (optionId: string, dimensionId: string) => {
-    return optionScores.find(s => s.option_id === optionId && s.dimension_id === dimensionId);
+    return optionScores.find((s) => s.option_id === optionId && s.dimension_id === dimensionId);
   };
 
   if (assessmentLoading) {
@@ -459,7 +539,9 @@ export default function AssessmentBuilderDetail() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold">{assessment.name}</h1>
-          <p className="text-muted-foreground">Configure questions, dimensions, and interpretation rules</p>
+          <p className="text-muted-foreground">
+            Configure questions, dimensions, and interpretation rules
+          </p>
         </div>
       </div>
 
@@ -483,15 +565,19 @@ export default function AssessmentBuilderDetail() {
         <TabsContent value="dimensions" className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              Dimensions are the traits or categories being measured (e.g., "Strategic Thinking", "Team Leadership")
+              Dimensions are the traits or categories being measured (e.g., "Strategic Thinking",
+              "Team Leadership")
             </p>
-            <Dialog open={dimensionDialogOpen} onOpenChange={(open) => {
-              setDimensionDialogOpen(open);
-              if (!open) {
-                setEditingDimension(null);
-                setDimensionForm({ name: "", description: "" });
-              }
-            }}>
+            <Dialog
+              open={dimensionDialogOpen}
+              onOpenChange={(open) => {
+                setDimensionDialogOpen(open);
+                if (!open) {
+                  setEditingDimension(null);
+                  setDimensionForm({ name: "", description: "" });
+                }
+              }}
+            >
               <DialogTrigger asChild>
                 <Button size="sm">
                   <Plus className="h-4 w-4 mr-2" />
@@ -502,26 +588,49 @@ export default function AssessmentBuilderDetail() {
                 <DialogHeader>
                   <DialogTitle>{editingDimension ? "Edit Dimension" : "Add Dimension"}</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  if (editingDimension) {
-                    updateDimension.mutate({ dimId: editingDimension.id, data: dimensionForm });
-                  } else {
-                    createDimension.mutate(dimensionForm);
-                  }
-                }} className="space-y-4">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (editingDimension) {
+                      updateDimension.mutate({ dimId: editingDimension.id, data: dimensionForm });
+                    } else {
+                      createDimension.mutate(dimensionForm);
+                    }
+                  }}
+                  className="space-y-4"
+                >
                   <div>
                     <Label>Name *</Label>
-                    <Input value={dimensionForm.name} onChange={(e) => setDimensionForm({ ...dimensionForm, name: e.target.value })} required />
+                    <Input
+                      value={dimensionForm.name}
+                      onChange={(e) => setDimensionForm({ ...dimensionForm, name: e.target.value })}
+                      required
+                    />
                   </div>
                   <div>
                     <Label>Description</Label>
-                    <Textarea value={dimensionForm.description} onChange={(e) => setDimensionForm({ ...dimensionForm, description: e.target.value })} />
+                    <Textarea
+                      value={dimensionForm.description}
+                      onChange={(e) =>
+                        setDimensionForm({ ...dimensionForm, description: e.target.value })
+                      }
+                    />
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setDimensionDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit" disabled={createDimension.isPending || updateDimension.isPending}>
-                      {(createDimension.isPending || updateDimension.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setDimensionDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={createDimension.isPending || updateDimension.isPending}
+                    >
+                      {(createDimension.isPending || updateDimension.isPending) && (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      )}
                       {editingDimension ? "Update" : "Create"}
                     </Button>
                   </div>
@@ -534,7 +643,9 @@ export default function AssessmentBuilderDetail() {
             <Card>
               <CardContent className="py-8 text-center">
                 <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No dimensions yet. Add dimensions to define what you're measuring.</p>
+                <p className="text-muted-foreground">
+                  No dimensions yet. Add dimensions to define what you're measuring.
+                </p>
               </CardContent>
             </Card>
           ) : (
@@ -546,20 +657,30 @@ export default function AssessmentBuilderDetail() {
                       <GripVertical className="h-4 w-4 text-muted-foreground" />
                       <div>
                         <p className="font-medium">{dim.name}</p>
-                        {dim.description && <p className="text-sm text-muted-foreground">{dim.description}</p>}
+                        {dim.description && (
+                          <p className="text-sm text-muted-foreground">{dim.description}</p>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => {
-                        setEditingDimension(dim);
-                        setDimensionForm({ name: dim.name, description: dim.description || "" });
-                        setDimensionDialogOpen(true);
-                      }}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditingDimension(dim);
+                          setDimensionForm({ name: dim.name, description: dim.description || "" });
+                          setDimensionDialogOpen(true);
+                        }}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => {
-                        if (confirm("Delete this dimension?")) deleteDimension.mutate(dim.id);
-                      }}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (confirm("Delete this dimension?")) deleteDimension.mutate(dim.id);
+                        }}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -574,15 +695,19 @@ export default function AssessmentBuilderDetail() {
         <TabsContent value="questions" className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              Add situational questions with answer options. Each option can contribute points to different dimensions.
+              Add situational questions with answer options. Each option can contribute points to
+              different dimensions.
             </p>
-            <Dialog open={questionDialogOpen} onOpenChange={(open) => {
-              setQuestionDialogOpen(open);
-              if (!open) {
-                setEditingQuestion(null);
-                setQuestionForm({ question_text: "", question_type: "single_choice" });
-              }
-            }}>
+            <Dialog
+              open={questionDialogOpen}
+              onOpenChange={(open) => {
+                setQuestionDialogOpen(open);
+                if (!open) {
+                  setEditingQuestion(null);
+                  setQuestionForm({ question_text: "", question_type: "single_choice" });
+                }
+              }}
+            >
               <DialogTrigger asChild>
                 <Button size="sm">
                   <Plus className="h-4 w-4 mr-2" />
@@ -593,22 +718,43 @@ export default function AssessmentBuilderDetail() {
                 <DialogHeader>
                   <DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  if (editingQuestion) {
-                    updateQuestion.mutate({ qId: editingQuestion.id, data: questionForm });
-                  } else {
-                    createQuestion.mutate(questionForm);
-                  }
-                }} className="space-y-4">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (editingQuestion) {
+                      updateQuestion.mutate({ qId: editingQuestion.id, data: questionForm });
+                    } else {
+                      createQuestion.mutate(questionForm);
+                    }
+                  }}
+                  className="space-y-4"
+                >
                   <div>
                     <Label>Question Text *</Label>
-                    <Textarea value={questionForm.question_text} onChange={(e) => setQuestionForm({ ...questionForm, question_text: e.target.value })} required rows={3} />
+                    <Textarea
+                      value={questionForm.question_text}
+                      onChange={(e) =>
+                        setQuestionForm({ ...questionForm, question_text: e.target.value })
+                      }
+                      required
+                      rows={3}
+                    />
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setQuestionDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit" disabled={createQuestion.isPending || updateQuestion.isPending}>
-                      {(createQuestion.isPending || updateQuestion.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setQuestionDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={createQuestion.isPending || updateQuestion.isPending}
+                    >
+                      {(createQuestion.isPending || updateQuestion.isPending) && (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      )}
                       {editingQuestion ? "Update" : "Create"}
                     </Button>
                   </div>
@@ -621,13 +767,15 @@ export default function AssessmentBuilderDetail() {
             <Card>
               <CardContent className="py-8 text-center">
                 <HelpCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No questions yet. Add your first question to start building the assessment.</p>
+                <p className="text-muted-foreground">
+                  No questions yet. Add your first question to start building the assessment.
+                </p>
               </CardContent>
             </Card>
           ) : (
             <Accordion type="multiple" className="space-y-2">
               {questions.map((q, idx) => {
-                const qOptions = options.filter(o => o.question_id === q.id);
+                const qOptions = options.filter((o) => o.question_id === q.id);
                 return (
                   <AccordionItem key={q.id} value={q.id} className="border rounded-lg px-4">
                     <AccordionTrigger className="hover:no-underline">
@@ -638,26 +786,44 @@ export default function AssessmentBuilderDetail() {
                     </AccordionTrigger>
                     <AccordionContent className="space-y-4 pt-4">
                       <div className="flex justify-between items-center">
-                        <p className="text-sm text-muted-foreground">Answer options ({qOptions.length})</p>
+                        <p className="text-sm text-muted-foreground">
+                          Answer options ({qOptions.length})
+                        </p>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => {
-                            setEditingOption({ questionId: q.id, option: null });
-                            setOptionForm({ option_text: "" });
-                            setOptionDialogOpen(true);
-                          }}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingOption({ questionId: q.id, option: null });
+                              setOptionForm({ option_text: "" });
+                              setOptionDialogOpen(true);
+                            }}
+                          >
                             <Plus className="h-4 w-4 mr-2" />
                             Add Option
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => {
-                            setEditingQuestion(q);
-                            setQuestionForm({ question_text: q.question_text, question_type: q.question_type });
-                            setQuestionDialogOpen(true);
-                          }}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditingQuestion(q);
+                              setQuestionForm({
+                                question_text: q.question_text,
+                                question_type: q.question_type,
+                              });
+                              setQuestionDialogOpen(true);
+                            }}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => {
-                            if (confirm("Delete this question and all its options?")) deleteQuestion.mutate(q.id);
-                          }}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm("Delete this question and all its options?"))
+                                deleteQuestion.mutate(q.id);
+                            }}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -668,7 +834,7 @@ export default function AssessmentBuilderDetail() {
                       ) : (
                         <div className="space-y-2">
                           {qOptions.map((opt) => {
-                            const scores = optionScores.filter(s => s.option_id === opt.id);
+                            const scores = optionScores.filter((s) => s.option_id === opt.id);
                             return (
                               <Card key={opt.id} className="bg-muted/30">
                                 <CardContent className="py-3 flex items-start justify-between">
@@ -676,36 +842,57 @@ export default function AssessmentBuilderDetail() {
                                     <p className="font-medium">{opt.option_text}</p>
                                     {scores.length > 0 ? (
                                       <div className="flex flex-wrap gap-1">
-                                        {scores.map(s => {
-                                          const dim = dimensions.find(d => d.id === s.dimension_id);
+                                        {scores.map((s) => {
+                                          const dim = dimensions.find(
+                                            (d) => d.id === s.dimension_id,
+                                          );
                                           return (
-                                            <Badge key={s.id} variant="secondary" className="text-xs">
+                                            <Badge
+                                              key={s.id}
+                                              variant="secondary"
+                                              className="text-xs"
+                                            >
                                               {dim?.name}: +{s.score}
                                             </Badge>
                                           );
                                         })}
                                       </div>
                                     ) : (
-                                      <p className="text-xs text-muted-foreground">No scoring configured</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        No scoring configured
+                                      </p>
                                     )}
                                   </div>
                                   <div className="flex gap-1">
-                                    <Button variant="ghost" size="sm" onClick={() => {
-                                      setEditingOptionForScore(opt);
-                                      setScoreDialogOpen(true);
-                                    }}>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditingOptionForScore(opt);
+                                        setScoreDialogOpen(true);
+                                      }}
+                                    >
                                       <Target className="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm" onClick={() => {
-                                      setEditingOption({ questionId: q.id, option: opt });
-                                      setOptionForm({ option_text: opt.option_text });
-                                      setOptionDialogOpen(true);
-                                    }}>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditingOption({ questionId: q.id, option: opt });
+                                        setOptionForm({ option_text: opt.option_text });
+                                        setOptionDialogOpen(true);
+                                      }}
+                                    >
                                       <Edit className="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm" onClick={() => {
-                                      if (confirm("Delete this option?")) deleteOption.mutate(opt.id);
-                                    }}>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        if (confirm("Delete this option?"))
+                                          deleteOption.mutate(opt.id);
+                                      }}
+                                    >
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </div>
@@ -723,33 +910,55 @@ export default function AssessmentBuilderDetail() {
           )}
 
           {/* Option Dialog */}
-          <Dialog open={optionDialogOpen} onOpenChange={(open) => {
-            setOptionDialogOpen(open);
-            if (!open) {
-              setEditingOption({ questionId: "", option: null });
-              setOptionForm({ option_text: "" });
-            }
-          }}>
+          <Dialog
+            open={optionDialogOpen}
+            onOpenChange={(open) => {
+              setOptionDialogOpen(open);
+              if (!open) {
+                setEditingOption({ questionId: "", option: null });
+                setOptionForm({ option_text: "" });
+              }
+            }}
+          >
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{editingOption.option ? "Edit Option" : "Add Option"}</DialogTitle>
               </DialogHeader>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                if (editingOption.option) {
-                  updateOption.mutate({ optId: editingOption.option.id, data: optionForm });
-                } else {
-                  createOption.mutate({ question_id: editingOption.questionId, option_text: optionForm.option_text });
-                }
-              }} className="space-y-4">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (editingOption.option) {
+                    updateOption.mutate({ optId: editingOption.option.id, data: optionForm });
+                  } else {
+                    createOption.mutate({
+                      question_id: editingOption.questionId,
+                      option_text: optionForm.option_text,
+                    });
+                  }
+                }}
+                className="space-y-4"
+              >
                 <div>
                   <Label>Option Text *</Label>
-                  <Textarea value={optionForm.option_text} onChange={(e) => setOptionForm({ option_text: e.target.value })} required rows={2} />
+                  <Textarea
+                    value={optionForm.option_text}
+                    onChange={(e) => setOptionForm({ option_text: e.target.value })}
+                    required
+                    rows={2}
+                  />
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setOptionDialogOpen(false)}>Cancel</Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setOptionDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
                   <Button type="submit" disabled={createOption.isPending || updateOption.isPending}>
-                    {(createOption.isPending || updateOption.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    {(createOption.isPending || updateOption.isPending) && (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    )}
                     {editingOption.option ? "Update" : "Create"}
                   </Button>
                 </div>
@@ -758,10 +967,13 @@ export default function AssessmentBuilderDetail() {
           </Dialog>
 
           {/* Score Dialog */}
-          <Dialog open={scoreDialogOpen} onOpenChange={(open) => {
-            setScoreDialogOpen(open);
-            if (!open) setEditingOptionForScore(null);
-          }}>
+          <Dialog
+            open={scoreDialogOpen}
+            onOpenChange={(open) => {
+              setScoreDialogOpen(open);
+              if (!open) setEditingOptionForScore(null);
+            }}
+          >
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Configure Scoring</DialogTitle>
@@ -773,7 +985,7 @@ export default function AssessmentBuilderDetail() {
                   </p>
                   <p className="font-medium">"{editingOptionForScore.option_text}"</p>
                   <div className="space-y-3">
-                    {dimensions.map(dim => {
+                    {dimensions.map((dim) => {
                       const existing = getScoreForOptionDimension(editingOptionForScore.id, dim.id);
                       return (
                         <div key={dim.id} className="flex items-center justify-between gap-4">
@@ -784,9 +996,16 @@ export default function AssessmentBuilderDetail() {
                               onValueChange={(val) => {
                                 const score = parseInt(val);
                                 if (score === 0 && existing) {
-                                  deleteOptionScore.mutate({ optionId: editingOptionForScore.id, dimensionId: dim.id });
+                                  deleteOptionScore.mutate({
+                                    optionId: editingOptionForScore.id,
+                                    dimensionId: dim.id,
+                                  });
                                 } else if (score > 0) {
-                                  upsertOptionScore.mutate({ option_id: editingOptionForScore.id, dimension_id: dim.id, score });
+                                  upsertOptionScore.mutate({
+                                    option_id: editingOptionForScore.id,
+                                    dimension_id: dim.id,
+                                    score,
+                                  });
                                 }
                               }}
                             >
@@ -794,8 +1013,10 @@ export default function AssessmentBuilderDetail() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {[0, 1, 2, 3, 4, 5].map(n => (
-                                  <SelectItem key={n} value={n.toString()}>{n === 0 ? "None" : `+${n}`}</SelectItem>
+                                {[0, 1, 2, 3, 4, 5].map((n) => (
+                                  <SelectItem key={n} value={n.toString()}>
+                                    {n === 0 ? "None" : `+${n}`}
+                                  </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
@@ -805,7 +1026,9 @@ export default function AssessmentBuilderDetail() {
                     })}
                   </div>
                   {dimensions.length === 0 && (
-                    <p className="text-sm text-muted-foreground italic">Add dimensions first to configure scoring</p>
+                    <p className="text-sm text-muted-foreground italic">
+                      Add dimensions first to configure scoring
+                    </p>
                   )}
                 </div>
               )}
@@ -819,13 +1042,22 @@ export default function AssessmentBuilderDetail() {
             <p className="text-sm text-muted-foreground">
               Define interpretation rules based on dimension scores. Conditions use JSON format.
             </p>
-            <Dialog open={interpretationDialogOpen} onOpenChange={(open) => {
-              setInterpretationDialogOpen(open);
-              if (!open) {
-                setEditingInterpretation(null);
-                setInterpretationForm({ name: "", description: "", interpretation_text: "", conditions: "{}", priority: 0 });
-              }
-            }}>
+            <Dialog
+              open={interpretationDialogOpen}
+              onOpenChange={(open) => {
+                setInterpretationDialogOpen(open);
+                if (!open) {
+                  setEditingInterpretation(null);
+                  setInterpretationForm({
+                    name: "",
+                    description: "",
+                    interpretation_text: "",
+                    conditions: "{}",
+                    priority: 0,
+                  });
+                }
+              }}
+            >
               <DialogTrigger asChild>
                 <Button size="sm">
                   <Plus className="h-4 w-4 mr-2" />
@@ -834,58 +1066,112 @@ export default function AssessmentBuilderDetail() {
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>{editingInterpretation ? "Edit Interpretation" : "Add Interpretation"}</DialogTitle>
+                  <DialogTitle>
+                    {editingInterpretation ? "Edit Interpretation" : "Add Interpretation"}
+                  </DialogTitle>
                 </DialogHeader>
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  if (editingInterpretation) {
-                    updateInterpretation.mutate({ intId: editingInterpretation.id, data: interpretationForm });
-                  } else {
-                    createInterpretation.mutate(interpretationForm);
-                  }
-                }} className="space-y-4">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (editingInterpretation) {
+                      updateInterpretation.mutate({
+                        intId: editingInterpretation.id,
+                        data: interpretationForm,
+                      });
+                    } else {
+                      createInterpretation.mutate(interpretationForm);
+                    }
+                  }}
+                  className="space-y-4"
+                >
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Name *</Label>
-                      <Input value={interpretationForm.name} onChange={(e) => setInterpretationForm({ ...interpretationForm, name: e.target.value })} required placeholder="e.g., High Strategic Thinker" />
+                      <Input
+                        value={interpretationForm.name}
+                        onChange={(e) =>
+                          setInterpretationForm({ ...interpretationForm, name: e.target.value })
+                        }
+                        required
+                        placeholder="e.g., High Strategic Thinker"
+                      />
                     </div>
                     <div>
                       <Label>Priority</Label>
-                      <Input type="number" value={interpretationForm.priority} onChange={(e) => setInterpretationForm({ ...interpretationForm, priority: parseInt(e.target.value) || 0 })} />
-                      <p className="text-xs text-muted-foreground mt-1">Higher priority rules are shown first</p>
+                      <Input
+                        type="number"
+                        value={interpretationForm.priority}
+                        onChange={(e) =>
+                          setInterpretationForm({
+                            ...interpretationForm,
+                            priority: parseInt(e.target.value) || 0,
+                          })
+                        }
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Higher priority rules are shown first
+                      </p>
                     </div>
                   </div>
                   <div>
                     <Label>Description</Label>
-                    <Input value={interpretationForm.description} onChange={(e) => setInterpretationForm({ ...interpretationForm, description: e.target.value })} placeholder="Brief internal description" />
+                    <Input
+                      value={interpretationForm.description}
+                      onChange={(e) =>
+                        setInterpretationForm({
+                          ...interpretationForm,
+                          description: e.target.value,
+                        })
+                      }
+                      placeholder="Brief internal description"
+                    />
                   </div>
                   <div>
                     <Label>Conditions (JSON) *</Label>
                     <Textarea
                       value={interpretationForm.conditions}
-                      onChange={(e) => setInterpretationForm({ ...interpretationForm, conditions: e.target.value })}
+                      onChange={(e) =>
+                        setInterpretationForm({ ...interpretationForm, conditions: e.target.value })
+                      }
                       rows={4}
                       placeholder='{"dimension_name": {"min": 3, "max": 5}}'
                       className="font-mono text-sm"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Example: {`{"Strategic Thinking": {"min": 4}}`} means this applies when Strategic Thinking score is ≥4
+                      Example: {`{"Strategic Thinking": {"min": 4}}`} means this applies when
+                      Strategic Thinking score is ≥4
                     </p>
                   </div>
                   <div>
                     <Label>Interpretation Text *</Label>
                     <Textarea
                       value={interpretationForm.interpretation_text}
-                      onChange={(e) => setInterpretationForm({ ...interpretationForm, interpretation_text: e.target.value })}
+                      onChange={(e) =>
+                        setInterpretationForm({
+                          ...interpretationForm,
+                          interpretation_text: e.target.value,
+                        })
+                      }
                       required
                       rows={4}
                       placeholder="You demonstrate strong strategic thinking abilities..."
                     />
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setInterpretationDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit" disabled={createInterpretation.isPending || updateInterpretation.isPending}>
-                      {(createInterpretation.isPending || updateInterpretation.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setInterpretationDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={createInterpretation.isPending || updateInterpretation.isPending}
+                    >
+                      {(createInterpretation.isPending || updateInterpretation.isPending) && (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      )}
                       {editingInterpretation ? "Update" : "Create"}
                     </Button>
                   </div>
@@ -898,7 +1184,10 @@ export default function AssessmentBuilderDetail() {
             <Card>
               <CardContent className="py-8 text-center">
                 <Lightbulb className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No interpretation rules yet. Add rules to generate personalized insights based on scores.</p>
+                <p className="text-muted-foreground">
+                  No interpretation rules yet. Add rules to generate personalized insights based on
+                  scores.
+                </p>
               </CardContent>
             </Card>
           ) : (
@@ -915,22 +1204,31 @@ export default function AssessmentBuilderDetail() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => {
-                          setEditingInterpretation(int);
-                          setInterpretationForm({
-                            name: int.name,
-                            description: int.description || "",
-                            interpretation_text: int.interpretation_text,
-                            conditions: JSON.stringify(int.conditions, null, 2),
-                            priority: int.priority,
-                          });
-                          setInterpretationDialogOpen(true);
-                        }}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingInterpretation(int);
+                            setInterpretationForm({
+                              name: int.name,
+                              description: int.description || "",
+                              interpretation_text: int.interpretation_text,
+                              conditions: JSON.stringify(int.conditions, null, 2),
+                              priority: int.priority,
+                            });
+                            setInterpretationDialogOpen(true);
+                          }}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => {
-                          if (confirm("Delete this interpretation rule?")) deleteInterpretation.mutate(int.id);
-                        }}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            if (confirm("Delete this interpretation rule?"))
+                              deleteInterpretation.mutate(int.id);
+                          }}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

@@ -6,23 +6,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  FileText, 
-  Link2, 
-  Image, 
-  File, 
-  Video, 
-  Download, 
-  ExternalLink, 
-  Search, 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  FileText,
+  Link2,
+  Image,
+  File,
+  Video,
+  Download,
+  ExternalLink,
+  Search,
   Target,
   CheckSquare,
   BookOpen,
   ClipboardList,
   Lightbulb,
   Globe,
-  User
+  User,
 } from "lucide-react";
 import { usePagination } from "@/hooks/usePagination";
 import {
@@ -47,7 +53,16 @@ interface UnifiedResource {
   file_path?: string | null;
   file_size?: number | null;
   mime_type?: string | null;
-  source: 'goal' | 'task' | 'module_reflection' | 'module_assignment' | 'development_item' | 'shared_library' | 'coach_feedback' | 'module_content' | 'personalized_resource';
+  source:
+    | "goal"
+    | "task"
+    | "module_reflection"
+    | "module_assignment"
+    | "development_item"
+    | "shared_library"
+    | "coach_feedback"
+    | "module_content"
+    | "personalized_resource";
   source_label: string;
   created_at: string;
   context?: string;
@@ -71,18 +86,20 @@ export default function MyResources() {
         .select("*, goals(title)")
         .eq("user_id", user.id);
       if (error) throw error;
-      return (data || []).map((r: any): UnifiedResource => ({
-        id: r.id,
-        title: r.title,
-        description: r.description,
-        resource_type: r.resource_type,
-        url: r.url,
-        file_path: r.file_path,
-        source: 'goal',
-        source_label: 'Goal',
-        created_at: r.created_at,
-        context: r.goals?.title,
-      }));
+      return (data || []).map(
+        (r: any): UnifiedResource => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          resource_type: r.resource_type,
+          url: r.url,
+          file_path: r.file_path,
+          source: "goal",
+          source_label: "Goal",
+          created_at: r.created_at,
+          context: r.goals?.title,
+        }),
+      );
     },
     enabled: !!user?.id,
   });
@@ -97,18 +114,20 @@ export default function MyResources() {
         .select("*, task_notes(content, tasks(title))")
         .eq("user_id", user.id);
       if (error) throw error;
-      return (data || []).map((r: any): UnifiedResource => ({
-        id: r.id,
-        title: r.title,
-        description: r.description,
-        resource_type: r.resource_type,
-        url: r.url,
-        file_path: r.file_path,
-        source: 'task',
-        source_label: 'Task',
-        created_at: r.created_at,
-        context: r.task_notes?.tasks?.title,
-      }));
+      return (data || []).map(
+        (r: any): UnifiedResource => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          resource_type: r.resource_type,
+          url: r.url,
+          file_path: r.file_path,
+          source: "task",
+          source_label: "Task",
+          created_at: r.created_at,
+          context: r.task_notes?.tasks?.title,
+        }),
+      );
     },
     enabled: !!user?.id,
   });
@@ -123,19 +142,21 @@ export default function MyResources() {
         .select("*, module_reflections(modules(title))")
         .eq("user_id", user.id);
       if (error) throw error;
-      return (data || []).map((r: any): UnifiedResource => ({
-        id: r.id,
-        title: r.title,
-        description: r.description,
-        resource_type: r.resource_type,
-        url: r.url,
-        file_path: r.file_path,
-        file_size: r.file_size,
-        source: 'module_reflection',
-        source_label: 'Reflection',
-        created_at: r.created_at,
-        context: r.module_reflections?.modules?.title,
-      }));
+      return (data || []).map(
+        (r: any): UnifiedResource => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          resource_type: r.resource_type,
+          url: r.url,
+          file_path: r.file_path,
+          file_size: r.file_size,
+          source: "module_reflection",
+          source_label: "Reflection",
+          created_at: r.created_at,
+          context: r.module_reflections?.modules?.title,
+        }),
+      );
     },
     enabled: !!user?.id,
   });
@@ -150,20 +171,22 @@ export default function MyResources() {
         .select("*, module_assignments!inner(user_id, modules(title))")
         .eq("module_assignments.user_id", user.id);
       if (error) throw error;
-      return (data || []).map((r: any): UnifiedResource => ({
-        id: r.id,
-        title: r.title,
-        description: r.description,
-        resource_type: r.attachment_type,
-        url: r.url,
-        file_path: r.file_path,
-        file_size: r.file_size,
-        mime_type: r.mime_type,
-        source: 'module_assignment',
-        source_label: 'Assignment',
-        created_at: r.created_at,
-        context: r.module_assignments?.modules?.title,
-      }));
+      return (data || []).map(
+        (r: any): UnifiedResource => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          resource_type: r.attachment_type,
+          url: r.url,
+          file_path: r.file_path,
+          file_size: r.file_size,
+          mime_type: r.mime_type,
+          source: "module_assignment",
+          source_label: "Assignment",
+          created_at: r.created_at,
+          context: r.module_assignments?.modules?.title,
+        }),
+      );
     },
     enabled: !!user?.id,
   });
@@ -179,19 +202,21 @@ export default function MyResources() {
         .eq("user_id", user.id)
         .eq("item_type", "resource");
       if (error) throw error;
-      return (data || []).map((r: any): UnifiedResource => ({
-        id: r.id,
-        title: r.title || "Untitled Resource",
-        description: r.content,
-        resource_type: r.resource_type || 'link',
-        url: r.resource_url,
-        file_path: r.file_path,
-        file_size: r.file_size,
-        mime_type: r.mime_type,
-        source: 'development_item',
-        source_label: 'Development',
-        created_at: r.created_at,
-      }));
+      return (data || []).map(
+        (r: any): UnifiedResource => ({
+          id: r.id,
+          title: r.title || "Untitled Resource",
+          description: r.content,
+          resource_type: r.resource_type || "link",
+          url: r.resource_url,
+          file_path: r.file_path,
+          file_size: r.file_size,
+          mime_type: r.mime_type,
+          source: "development_item",
+          source_label: "Development",
+          created_at: r.created_at,
+        }),
+      );
     },
     enabled: !!user?.id,
   });
@@ -206,20 +231,22 @@ export default function MyResources() {
         .select("*, coach_module_feedback!inner(client_user_id, modules(title))")
         .eq("coach_module_feedback.client_user_id", user.id);
       if (error) throw error;
-      return (data || []).map((r: any): UnifiedResource => ({
-        id: r.id,
-        title: r.title,
-        description: r.description,
-        resource_type: r.attachment_type,
-        url: r.url,
-        file_path: r.file_path,
-        file_size: r.file_size,
-        mime_type: r.mime_type,
-        source: 'coach_feedback',
-        source_label: 'Coach Feedback',
-        created_at: r.created_at,
-        context: r.coach_module_feedback?.modules?.title,
-      }));
+      return (data || []).map(
+        (r: any): UnifiedResource => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          resource_type: r.attachment_type,
+          url: r.url,
+          file_path: r.file_path,
+          file_size: r.file_size,
+          mime_type: r.mime_type,
+          source: "coach_feedback",
+          source_label: "Coach Feedback",
+          created_at: r.created_at,
+          context: r.coach_module_feedback?.modules?.title,
+        }),
+      );
     },
     enabled: !!user?.id,
   });
@@ -234,20 +261,22 @@ export default function MyResources() {
         .select("*, module_client_content!inner(client_user_id, modules(title))")
         .eq("module_client_content.client_user_id", user.id);
       if (error) throw error;
-      return (data || []).map((r: any): UnifiedResource => ({
-        id: r.id,
-        title: r.title,
-        description: r.description,
-        resource_type: r.attachment_type,
-        url: r.url,
-        file_path: r.file_path,
-        file_size: r.file_size,
-        mime_type: r.mime_type,
-        source: 'module_content',
-        source_label: 'Module Content',
-        created_at: r.created_at,
-        context: r.module_client_content?.modules?.title,
-      }));
+      return (data || []).map(
+        (r: any): UnifiedResource => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          resource_type: r.attachment_type,
+          url: r.url,
+          file_path: r.file_path,
+          file_size: r.file_size,
+          mime_type: r.mime_type,
+          source: "module_content",
+          source_label: "Module Content",
+          created_at: r.created_at,
+          context: r.module_client_content?.modules?.title,
+        }),
+      );
     },
     enabled: !!user?.id,
   });
@@ -259,28 +288,32 @@ export default function MyResources() {
       if (!user?.id) return [];
       const { data, error } = await supabase
         .from("module_client_content_resources")
-        .select(`
+        .select(
+          `
           id,
           created_at,
           resource:resource_id(id, title, description, resource_type, url, file_path, file_size, mime_type),
           module_client_content!inner(user_id, module:module_id(title))
-        `)
+        `,
+        )
         .eq("module_client_content.user_id", user.id);
       if (error) throw error;
-      return (data || []).map((r: any): UnifiedResource => ({
-        id: r.id,
-        title: r.resource?.title || 'Resource',
-        description: r.resource?.description,
-        resource_type: r.resource?.resource_type || 'file',
-        url: r.resource?.url,
-        file_path: r.resource?.file_path,
-        file_size: r.resource?.file_size,
-        mime_type: r.resource?.mime_type,
-        source: 'personalized_resource',
-        source_label: 'Personalized Resource',
-        created_at: r.created_at,
-        context: r.module_client_content?.module?.title,
-      }));
+      return (data || []).map(
+        (r: any): UnifiedResource => ({
+          id: r.id,
+          title: r.resource?.title || "Resource",
+          description: r.resource?.description,
+          resource_type: r.resource?.resource_type || "file",
+          url: r.resource?.url,
+          file_path: r.resource?.file_path,
+          file_size: r.resource?.file_size,
+          mime_type: r.resource?.mime_type,
+          source: "personalized_resource",
+          source_label: "Personalized Resource",
+          created_at: r.created_at,
+          context: r.module_client_content?.module?.title,
+        }),
+      );
     },
     enabled: !!user?.id,
   });
@@ -295,19 +328,21 @@ export default function MyResources() {
         .eq("is_active", true)
         .eq("is_published", true);
       if (error) throw error;
-      return (data || []).map((r: any): UnifiedResource => ({
-        id: r.id,
-        title: r.title,
-        description: r.description,
-        resource_type: r.resource_type,
-        url: r.url,
-        file_path: r.file_path,
-        file_size: r.file_size,
-        mime_type: r.mime_type,
-        source: 'shared_library',
-        source_label: 'Shared Library',
-        created_at: r.created_at,
-      }));
+      return (data || []).map(
+        (r: any): UnifiedResource => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          resource_type: r.resource_type,
+          url: r.url,
+          file_path: r.file_path,
+          file_size: r.file_size,
+          mime_type: r.mime_type,
+          source: "shared_library",
+          source_label: "Shared Library",
+          created_at: r.created_at,
+        }),
+      );
     },
   });
 
@@ -324,19 +359,30 @@ export default function MyResources() {
       ...personalizedResources,
       ...sharedLibraryResources,
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [goalResources, taskResources, reflectionResources, assignmentResources, developmentResources, coachFeedbackResources, moduleContentResources, personalizedResources, sharedLibraryResources]);
+  }, [
+    goalResources,
+    taskResources,
+    reflectionResources,
+    assignmentResources,
+    developmentResources,
+    coachFeedbackResources,
+    moduleContentResources,
+    personalizedResources,
+    sharedLibraryResources,
+  ]);
 
   // Filter resources
   const filteredResources = useMemo((): UnifiedResource[] => {
     return allResources.filter((resource) => {
-      const matchesSearch = searchQuery === "" || 
+      const matchesSearch =
+        searchQuery === "" ||
         resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         resource.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         resource.context?.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       const matchesSource = sourceFilter === "all" || resource.source === sourceFilter;
       const matchesType = typeFilter === "all" || resource.resource_type === typeFilter;
-      
+
       return matchesSearch && matchesSource && matchesType;
     });
   }, [allResources, searchQuery, sourceFilter, typeFilter]);
@@ -355,27 +401,40 @@ export default function MyResources() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'link': return <Link2 className="h-4 w-4" />;
-      case 'pdf': 
-      case 'document': return <FileText className="h-4 w-4" />;
-      case 'image': return <Image className="h-4 w-4" />;
-      case 'video': return <Video className="h-4 w-4" />;
-      default: return <File className="h-4 w-4" />;
+      case "link":
+        return <Link2 className="h-4 w-4" />;
+      case "pdf":
+      case "document":
+        return <FileText className="h-4 w-4" />;
+      case "image":
+        return <Image className="h-4 w-4" />;
+      case "video":
+        return <Video className="h-4 w-4" />;
+      default:
+        return <File className="h-4 w-4" />;
     }
   };
 
   const getSourceIcon = (source: string) => {
     switch (source) {
-      case 'goal': return <Target className="h-3 w-3" />;
-      case 'task': return <CheckSquare className="h-3 w-3" />;
-      case 'module_reflection':
-      case 'module_assignment':
-      case 'module_content': return <BookOpen className="h-3 w-3" />;
-      case 'coach_feedback': return <ClipboardList className="h-3 w-3" />;
-      case 'development_item': return <Lightbulb className="h-3 w-3" />;
-      case 'personalized_resource': return <User className="h-3 w-3" />;
-      case 'shared_library': return <Globe className="h-3 w-3" />;
-      default: return <User className="h-3 w-3" />;
+      case "goal":
+        return <Target className="h-3 w-3" />;
+      case "task":
+        return <CheckSquare className="h-3 w-3" />;
+      case "module_reflection":
+      case "module_assignment":
+      case "module_content":
+        return <BookOpen className="h-3 w-3" />;
+      case "coach_feedback":
+        return <ClipboardList className="h-3 w-3" />;
+      case "development_item":
+        return <Lightbulb className="h-3 w-3" />;
+      case "personalized_resource":
+        return <User className="h-3 w-3" />;
+      case "shared_library":
+        return <Globe className="h-3 w-3" />;
+      default:
+        return <User className="h-3 w-3" />;
     }
   };
 
@@ -390,23 +449,27 @@ export default function MyResources() {
     if (!resource.file_path) return;
     try {
       // Try multiple buckets since resources come from different sources
-      const buckets = ['resources', 'goal-resources', 'resource-library', 'module-resources', 'feedback-attachments'];
+      const buckets = [
+        "resources",
+        "goal-resources",
+        "resource-library",
+        "module-resources",
+        "feedback-attachments",
+      ];
       let data: Blob | null = null;
-      
+
       for (const bucket of buckets) {
-        const result = await supabase.storage
-          .from(bucket)
-          .download(resource.file_path);
+        const result = await supabase.storage.from(bucket).download(resource.file_path);
         if (!result.error && result.data) {
           data = result.data;
           break;
         }
       }
-      
+
       if (!data) {
         throw new Error("Failed to download file from storage");
       }
-      
+
       const url = URL.createObjectURL(data);
       const a = document.createElement("a");
       a.href = url;
@@ -431,15 +494,17 @@ export default function MyResources() {
 
   const canViewInBrowser = (mimeType?: string | null) => {
     if (!mimeType) return false;
-    return mimeType.startsWith("image/") || 
-           mimeType === "application/pdf" ||
-           mimeType.startsWith("video/") ||
-           mimeType.startsWith("audio/");
+    return (
+      mimeType.startsWith("image/") ||
+      mimeType === "application/pdf" ||
+      mimeType.startsWith("video/") ||
+      mimeType.startsWith("audio/")
+    );
   };
 
   // Get unique resource types for filter
   const resourceTypes = useMemo(() => {
-    const types = new Set(allResources.map(r => r.resource_type));
+    const types = new Set(allResources.map((r) => r.resource_type));
     return Array.from(types).filter(Boolean).sort();
   }, [allResources]);
 
@@ -453,7 +518,7 @@ export default function MyResources() {
           </p>
         </div>
         <Badge variant="secondary" className="self-start">
-          {filteredResources.length} resource{filteredResources.length !== 1 ? 's' : ''}
+          {filteredResources.length} resource{filteredResources.length !== 1 ? "s" : ""}
         </Badge>
       </div>
 
@@ -563,7 +628,8 @@ export default function MyResources() {
                     {format(new Date(resource.created_at), "MMM d, yyyy")}
                   </p>
                   <div className="flex gap-2 mt-2">
-                    {(resource.url || (resource.file_path && canViewInBrowser(resource.mime_type))) && (
+                    {(resource.url ||
+                      (resource.file_path && canViewInBrowser(resource.mime_type))) && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -607,12 +673,14 @@ export default function MyResources() {
                 <PaginationItem>
                   <PaginationPrevious
                     onClick={() => hasPreviousPage && previousPage()}
-                    className={!hasPreviousPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    className={
+                      !hasPreviousPage ? "pointer-events-none opacity-50" : "cursor-pointer"
+                    }
                   />
                 </PaginationItem>
                 {getPageNumbers().map((pageNum, index) => (
                   <PaginationItem key={index}>
-                    {pageNum === 'ellipsis' ? (
+                    {pageNum === "ellipsis" ? (
                       <PaginationEllipsis />
                     ) : (
                       <PaginationLink

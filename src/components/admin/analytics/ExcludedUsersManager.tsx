@@ -7,8 +7,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { UserMinus, Plus, Trash2, Search, Users } from "lucide-react";
@@ -38,27 +51,29 @@ export function ExcludedUsersManager() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("analytics_excluded_users")
-        .select(`
+        .select(
+          `
           id,
           user_id,
           reason,
           created_at
-        `)
+        `,
+        )
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
       // Fetch profiles separately
       if (data && data.length > 0) {
-        const userIds = data.map(u => u.user_id);
+        const userIds = data.map((u) => u.user_id);
         const { data: profiles } = await supabase
           .from("profiles")
           .select("id, name")
           .in("id", userIds);
 
-        const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-        
-        return data.map(u => ({
+        const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
+
+        return data.map((u) => ({
           ...u,
           profile: profileMap.get(u.user_id) || null,
         })) as ExcludedUser[];
@@ -81,7 +96,7 @@ export function ExcludedUsersManager() {
 
   // Fetch available users to exclude
   const { data: availableUsers, isLoading: isLoadingUsers } = useQuery({
-    queryKey: ["analytics-available-users", debouncedSearch, excludedUsers?.map(u => u.user_id)],
+    queryKey: ["analytics-available-users", debouncedSearch, excludedUsers?.map((u) => u.user_id)],
     queryFn: async () => {
       let query = supabase
         .from("profiles")
@@ -97,8 +112,8 @@ export function ExcludedUsersManager() {
       if (error) throw error;
 
       // Filter out already excluded users
-      const excludedIds = new Set(excludedUsers?.map(u => u.user_id) || []);
-      return (data || []).filter(u => !excludedIds.has(u.id));
+      const excludedIds = new Set(excludedUsers?.map((u) => u.user_id) || []);
+      return (data || []).filter((u) => !excludedIds.has(u.id));
     },
     enabled: isDialogOpen,
   });
@@ -106,13 +121,11 @@ export function ExcludedUsersManager() {
   // Add exclusion mutation
   const addExclusion = useMutation({
     mutationFn: async ({ userId, reason }: { userId: string; reason: string }) => {
-      const { error } = await supabase
-        .from("analytics_excluded_users")
-        .insert({
-          user_id: userId,
-          reason: reason || null,
-          excluded_by: user?.id,
-        });
+      const { error } = await supabase.from("analytics_excluded_users").insert({
+        user_id: userId,
+        reason: reason || null,
+        excluded_by: user?.id,
+      });
 
       if (error) throw error;
     },
@@ -125,17 +138,16 @@ export function ExcludedUsersManager() {
       setReason("");
     },
     onError: (error) => {
-      toast.error("Failed to exclude user: " + (error instanceof Error ? error.message : "Unknown error"));
+      toast.error(
+        "Failed to exclude user: " + (error instanceof Error ? error.message : "Unknown error"),
+      );
     },
   });
 
   // Remove exclusion mutation
   const removeExclusion = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("analytics_excluded_users")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.from("analytics_excluded_users").delete().eq("id", id);
 
       if (error) throw error;
     },
@@ -145,7 +157,9 @@ export function ExcludedUsersManager() {
       toast.success("User removed from exclusion list");
     },
     onError: (error) => {
-      toast.error("Failed to remove exclusion: " + (error instanceof Error ? error.message : "Unknown error"));
+      toast.error(
+        "Failed to remove exclusion: " + (error instanceof Error ? error.message : "Unknown error"),
+      );
     },
   });
 
@@ -220,7 +234,9 @@ export function ExcludedUsersManager() {
                       ))
                     ) : (
                       <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                        {debouncedSearch ? `No users found matching "${debouncedSearch}"` : "No users available"}
+                        {debouncedSearch
+                          ? `No users found matching "${debouncedSearch}"`
+                          : "No users available"}
                       </div>
                     )}
                   </SelectContent>

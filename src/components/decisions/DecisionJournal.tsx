@@ -42,7 +42,9 @@ export function DecisionJournal({ decisionId }: DecisionJournalProps) {
 
   const addMutation = useMutation({
     mutationFn: async (entry: typeof newEntry) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { error } = await supabase.from("decision_journal_entries").insert({
@@ -51,7 +53,7 @@ export function DecisionJournal({ decisionId }: DecisionJournalProps) {
         title: entry.title,
         content: entry.content,
         mood: entry.mood || null,
-        tags: entry.tags ? entry.tags.split(",").map(t => t.trim()) : null,
+        tags: entry.tags ? entry.tags.split(",").map((t) => t.trim()) : null,
       });
 
       if (error) throw error;
@@ -69,10 +71,7 @@ export function DecisionJournal({ decisionId }: DecisionJournalProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async (entryId: string) => {
-      const { error } = await supabase
-        .from("decision_journal_entries")
-        .delete()
-        .eq("id", entryId);
+      const { error } = await supabase.from("decision_journal_entries").delete().eq("id", entryId);
 
       if (error) throw error;
     },

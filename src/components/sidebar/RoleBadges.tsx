@@ -1,18 +1,18 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { Badge } from '@/components/ui/badge';
+import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
 
 const roleColors: Record<string, string> = {
-  admin: 'bg-primary/15 text-primary',
-  instructor: 'bg-chart-1/15 text-chart-1',
-  coach: 'bg-chart-3/15 text-chart-3',
-  client: 'bg-secondary text-secondary-foreground',
+  admin: "bg-primary/15 text-primary",
+  instructor: "bg-chart-1/15 text-chart-1",
+  coach: "bg-chart-3/15 text-chart-3",
+  client: "bg-secondary text-secondary-foreground",
 };
 
 const roleLabels: Record<string, string> = {
-  admin: 'Admin',
-  instructor: 'Instructor',
-  coach: 'Coach',
-  client: 'Client',
+  admin: "Admin",
+  instructor: "Instructor",
+  coach: "Coach",
+  client: "Client",
 };
 
 export function RoleBadges() {
@@ -28,7 +28,7 @@ export function RoleBadges() {
         <Badge
           key={role}
           variant="secondary"
-          className={`text-xs ${roleColors[role] || 'bg-secondary'}`}
+          className={`text-xs ${roleColors[role] || "bg-secondary"}`}
         >
           {roleLabels[role]}
         </Badge>

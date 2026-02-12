@@ -8,12 +8,43 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, FolderOpen, FileText, Loader2, X, GripVertical } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Collection {
   id: string;
@@ -58,9 +89,9 @@ export default function ResourceCollectionsManagement() {
         .from("resource_collections")
         .select("*, resource_collection_items(count)")
         .order("name");
-      
+
       if (error) throw error;
-      
+
       return (data || []).map((c: any) => ({
         ...c,
         resourceCount: c.resource_collection_items?.[0]?.count || 0,
@@ -73,13 +104,13 @@ export default function ResourceCollectionsManagement() {
     queryKey: ["collection-items", managingCollection?.id],
     queryFn: async () => {
       if (!managingCollection) return [];
-      
+
       const { data, error } = await (supabase as any)
         .from("resource_collection_items")
         .select("*, resource_library(id, title, resource_type)")
         .eq("collection_id", managingCollection.id)
         .order("order_index");
-      
+
       if (error) throw error;
       return data as CollectionItem[];
     },
@@ -95,7 +126,7 @@ export default function ResourceCollectionsManagement() {
         .select("id, title, resource_type")
         .eq("is_published", true)
         .order("title");
-      
+
       if (error) throw error;
       return data;
     },
@@ -104,14 +135,12 @@ export default function ResourceCollectionsManagement() {
   // Create collection
   const createMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await (supabase as any)
-        .from("resource_collections")
-        .insert({
-          name: formName,
-          description: formDescription || null,
-          is_active: formIsActive,
-        });
-      
+      const { error } = await (supabase as any).from("resource_collections").insert({
+        name: formName,
+        description: formDescription || null,
+        is_active: formIsActive,
+      });
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -129,7 +158,7 @@ export default function ResourceCollectionsManagement() {
   const updateMutation = useMutation({
     mutationFn: async () => {
       if (!editingCollection) return;
-      
+
       const { error } = await (supabase as any)
         .from("resource_collections")
         .update({
@@ -138,7 +167,7 @@ export default function ResourceCollectionsManagement() {
           is_active: formIsActive,
         })
         .eq("id", editingCollection.id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -155,11 +184,8 @@ export default function ResourceCollectionsManagement() {
   // Delete collection
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
-        .from("resource_collections")
-        .delete()
-        .eq("id", id);
-      
+      const { error } = await (supabase as any).from("resource_collections").delete().eq("id", id);
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -175,19 +201,17 @@ export default function ResourceCollectionsManagement() {
   const addResourceMutation = useMutation({
     mutationFn: async (resourceId: string) => {
       if (!managingCollection) return;
-      
-      const maxOrder = collectionItems?.length 
-        ? Math.max(...collectionItems.map(i => i.order_index)) + 1 
+
+      const maxOrder = collectionItems?.length
+        ? Math.max(...collectionItems.map((i) => i.order_index)) + 1
         : 0;
-      
-      const { error } = await (supabase as any)
-        .from("resource_collection_items")
-        .insert({
-          collection_id: managingCollection.id,
-          resource_id: resourceId,
-          order_index: maxOrder,
-        });
-      
+
+      const { error } = await (supabase as any).from("resource_collection_items").insert({
+        collection_id: managingCollection.id,
+        resource_id: resourceId,
+        order_index: maxOrder,
+      });
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -198,7 +222,11 @@ export default function ResourceCollectionsManagement() {
     },
     onError: (error: any) => {
       if (error.message?.includes("duplicate")) {
-        toast({ title: "Already in collection", description: "This resource is already in this collection", variant: "destructive" });
+        toast({
+          title: "Already in collection",
+          description: "This resource is already in this collection",
+          variant: "destructive",
+        });
       } else {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
@@ -212,7 +240,7 @@ export default function ResourceCollectionsManagement() {
         .from("resource_collection_items")
         .delete()
         .eq("id", itemId);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -238,9 +266,8 @@ export default function ResourceCollectionsManagement() {
     setEditingCollection(collection);
   };
 
-  const availableResources = allResources?.filter(
-    r => !collectionItems?.some(i => i.resource_id === r.id)
-  ) || [];
+  const availableResources =
+    allResources?.filter((r) => !collectionItems?.some((i) => i.resource_id === r.id)) || [];
 
   return (
     <div className="space-y-6">
@@ -286,11 +313,7 @@ export default function ResourceCollectionsManagement() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Switch
-                  id="is_active"
-                  checked={formIsActive}
-                  onCheckedChange={setFormIsActive}
-                />
+                <Switch id="is_active" checked={formIsActive} onCheckedChange={setFormIsActive} />
                 <Label htmlFor="is_active">Active</Label>
               </div>
             </div>
@@ -298,8 +321,8 @@ export default function ResourceCollectionsManagement() {
               <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
                 Cancel
               </Button>
-              <Button 
-                onClick={() => createMutation.mutate()} 
+              <Button
+                onClick={() => createMutation.mutate()}
                 disabled={!formName || createMutation.isPending}
               >
                 {createMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -322,7 +345,12 @@ export default function ResourceCollectionsManagement() {
             <p className="text-muted-foreground mb-4">
               Create your first collection to start grouping resources.
             </p>
-            <Button onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+            <Button
+              onClick={() => {
+                resetForm();
+                setIsCreateOpen(true);
+              }}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Create Collection
             </Button>
@@ -356,7 +384,11 @@ export default function ResourceCollectionsManagement() {
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                        >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </AlertDialogTrigger>
@@ -364,8 +396,8 @@ export default function ResourceCollectionsManagement() {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete Collection?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will delete the collection and all its resource associations. 
-                            Any assessment links to this collection will also be removed.
+                            This will delete the collection and all its resource associations. Any
+                            assessment links to this collection will also be removed.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -389,9 +421,7 @@ export default function ResourceCollectionsManagement() {
                       <FileText className="h-3 w-3 mr-1" />
                       {collection.resourceCount} resources
                     </Badge>
-                    {!collection.is_active && (
-                      <Badge variant="outline">Inactive</Badge>
-                    )}
+                    {!collection.is_active && <Badge variant="outline">Inactive</Badge>}
                   </div>
                   <Button
                     variant="outline"
@@ -408,13 +438,14 @@ export default function ResourceCollectionsManagement() {
       )}
 
       {/* Edit Dialog */}
-      <Dialog open={!!editingCollection} onOpenChange={(open) => !open && setEditingCollection(null)}>
+      <Dialog
+        open={!!editingCollection}
+        onOpenChange={(open) => !open && setEditingCollection(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Collection</DialogTitle>
-            <DialogDescription>
-              Update the collection details.
-            </DialogDescription>
+            <DialogDescription>Update the collection details.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -447,8 +478,8 @@ export default function ResourceCollectionsManagement() {
             <Button variant="outline" onClick={() => setEditingCollection(null)}>
               Cancel
             </Button>
-            <Button 
-              onClick={() => updateMutation.mutate()} 
+            <Button
+              onClick={() => updateMutation.mutate()}
               disabled={!formName || updateMutation.isPending}
             >
               {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -459,7 +490,10 @@ export default function ResourceCollectionsManagement() {
       </Dialog>
 
       {/* Manage Collection Dialog */}
-      <Dialog open={!!managingCollection} onOpenChange={(open) => !open && setManagingCollection(null)}>
+      <Dialog
+        open={!!managingCollection}
+        onOpenChange={(open) => !open && setManagingCollection(null)}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -479,7 +513,9 @@ export default function ResourceCollectionsManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   {availableResources.length === 0 ? (
-                    <SelectItem value="none" disabled>No more resources available</SelectItem>
+                    <SelectItem value="none" disabled>
+                      No more resources available
+                    </SelectItem>
                   ) : (
                     availableResources.map((r) => (
                       <SelectItem key={r.id} value={r.id}>
@@ -529,9 +565,7 @@ export default function ResourceCollectionsManagement() {
                       <TableCell>
                         <GripVertical className="h-4 w-4 text-muted-foreground" />
                       </TableCell>
-                      <TableCell className="font-medium">
-                        {item.resource_library?.title}
-                      </TableCell>
+                      <TableCell className="font-medium">{item.resource_library?.title}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
                           {item.resource_library?.resource_type}
@@ -555,9 +589,7 @@ export default function ResourceCollectionsManagement() {
             )}
           </div>
           <DialogFooter>
-            <Button onClick={() => setManagingCollection(null)}>
-              Done
-            </Button>
+            <Button onClick={() => setManagingCollection(null)}>Done</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,8 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { useCreditBatches } from './useCreditBatches';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { useCreditBatches } from "./useCreditBatches";
 
 /**
  * Legacy interface maintained for backward compatibility.
@@ -47,19 +47,19 @@ interface CreditTransaction {
 
 /**
  * Hook for user credit management.
- * 
+ *
  * **CONSOLIDATED**: Now uses `useCreditBatches` internally for credit calculations.
  * All credit operations go through `get_user_credit_summary_v2` and `consume_credits_fifo`.
  * Legacy API maintained for backward compatibility.
- * 
+ *
  * @deprecated Consider using `useCreditBatches` directly for new code.
  * This hook is maintained for backward compatibility with existing components.
- * 
+ *
  * @example
  * ```tsx
  * // For new code, prefer useCreditBatches:
  * const { totalAvailable, consume, summary } = useCreditBatches();
- * 
+ *
  * // Legacy usage (still supported):
  * const { availableCredits, consumeCredits } = useUserCredits();
  * ```
@@ -84,31 +84,33 @@ export function useUserCredits() {
   } = useCreditBatches();
 
   // Transform batch summary to legacy format for backward compatibility
-  const summary: UserCreditSummary | null = batchSummary ? {
-    available_credits: totalAvailable,
-    total_received: batchSummary.plan_allowance + bonusCredits + programRemaining,
-    total_consumed: batchSummary.period_usage + batchSummary.program_used,
-    reserved_credits: 0, // No longer tracked separately
-    expiring_soon: expiringCredits,
-    has_credit_plan: !!batchSummary.plan_name,
-    plan_name: batchSummary.plan_name,
-    plan_credit_allowance: batchSummary.plan_allowance,
-    program_credit_allowance: programRemaining,
-    total_allowance: batchSummary.plan_allowance + programRemaining,
-  } : null;
+  const summary: UserCreditSummary | null = batchSummary
+    ? {
+        available_credits: totalAvailable,
+        total_received: batchSummary.plan_allowance + bonusCredits + programRemaining,
+        total_consumed: batchSummary.period_usage + batchSummary.program_used,
+        reserved_credits: 0, // No longer tracked separately
+        expiring_soon: expiringCredits,
+        has_credit_plan: !!batchSummary.plan_name,
+        plan_name: batchSummary.plan_name,
+        plan_credit_allowance: batchSummary.plan_allowance,
+        program_credit_allowance: programRemaining,
+        total_allowance: batchSummary.plan_allowance + programRemaining,
+      }
+    : null;
 
   // Fetch available top-up packages
   const { data: packages, isLoading: packagesLoading } = useQuery({
-    queryKey: ['credit-topup-packages'],
+    queryKey: ["credit-topup-packages"],
     queryFn: async (): Promise<TopupPackage[]> => {
       const { data, error } = await supabase
-        .from('credit_topup_packages')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order');
+        .from("credit_topup_packages")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
 
       if (error) {
-        console.error('Error fetching packages:', error);
+        console.error("Error fetching packages:", error);
         return [];
       }
 
@@ -119,19 +121,19 @@ export function useUserCredits() {
 
   // Fetch recent transactions
   const { data: transactions, isLoading: transactionsLoading } = useQuery({
-    queryKey: ['user-credit-transactions', user?.id],
+    queryKey: ["user-credit-transactions", user?.id],
     queryFn: async (): Promise<CreditTransaction[]> => {
       if (!user) return [];
 
       const { data, error } = await supabase
-        .from('user_credit_transactions')
-        .select('id, transaction_type, amount, balance_after, description, action_type, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+        .from("user_credit_transactions")
+        .select("id, transaction_type, amount, balance_after, description, action_type, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
         .limit(50);
 
       if (error) {
-        console.error('Error fetching transactions:', error);
+        console.error("Error fetching transactions:", error);
         return [];
       }
 
@@ -143,7 +145,7 @@ export function useUserCredits() {
   // Purchase top-up mutation
   const purchaseTopup = useMutation({
     mutationFn: async (packageId: string) => {
-      const { data, error } = await supabase.functions.invoke('purchase-credit-topup', {
+      const { data, error } = await supabase.functions.invoke("purchase-credit-topup", {
         body: { packageId },
       });
 
@@ -154,14 +156,14 @@ export function useUserCredits() {
     },
     onSuccess: (data) => {
       if (data.url) {
-        window.open(data.url, '_blank');
+        window.open(data.url, "_blank");
       }
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to initiate purchase',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to initiate purchase",
+        variant: "destructive",
       });
     },
   });
@@ -169,7 +171,7 @@ export function useUserCredits() {
   // Confirm purchase (call after return from Stripe)
   const confirmTopup = useMutation({
     mutationFn: async (sessionId: string) => {
-      const { data, error } = await supabase.functions.invoke('confirm-credit-topup', {
+      const { data, error } = await supabase.functions.invoke("confirm-credit-topup", {
         body: { sessionId },
       });
 
@@ -181,18 +183,18 @@ export function useUserCredits() {
     onSuccess: (data) => {
       if (data.success) {
         toast({
-          title: 'Credits Added!',
+          title: "Credits Added!",
           description: `${data.creditsAdded.toLocaleString()} credits have been added to your account.`,
         });
-        queryClient.invalidateQueries({ queryKey: ['user-credit-summary'] });
-        queryClient.invalidateQueries({ queryKey: ['user-credit-transactions'] });
+        queryClient.invalidateQueries({ queryKey: ["user-credit-summary"] });
+        queryClient.invalidateQueries({ queryKey: ["user-credit-transactions"] });
       }
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to confirm purchase',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to confirm purchase",
+        variant: "destructive",
       });
     },
   });
@@ -209,18 +211,18 @@ export function useUserCredits() {
     actionReferenceId?: string;
     description?: string;
   }) => {
-    if (!user) throw new Error('Not authenticated');
+    if (!user) throw new Error("Not authenticated");
 
     const result = await batchConsume(
       amount,
       undefined, // No specific feature key
       description,
       actionType,
-      actionReferenceId
+      actionReferenceId,
     );
 
     if (!result.success) {
-      throw new Error(result.error || 'Insufficient credits');
+      throw new Error(result.error || "Insufficient credits");
     }
 
     return result;
@@ -229,9 +231,9 @@ export function useUserCredits() {
   // Enroll in program using credits
   const enrollWithCredits = useMutation({
     mutationFn: async (programId: string) => {
-      if (!user) throw new Error('Not authenticated');
+      if (!user) throw new Error("Not authenticated");
 
-      const { data, error } = await supabase.rpc('enroll_with_user_credits', {
+      const { data, error } = await supabase.rpc("enroll_with_user_credits", {
         p_user_id: user.id,
         p_program_id: programId,
       });
@@ -248,18 +250,18 @@ export function useUserCredits() {
     },
     onSuccess: (data) => {
       if (data?.success) {
-        queryClient.invalidateQueries({ queryKey: ['user-credit-summary'] });
-        queryClient.invalidateQueries({ queryKey: ['user-credit-transactions'] });
-        queryClient.invalidateQueries({ queryKey: ['enrollments'] });
-        
+        queryClient.invalidateQueries({ queryKey: ["user-credit-summary"] });
+        queryClient.invalidateQueries({ queryKey: ["user-credit-transactions"] });
+        queryClient.invalidateQueries({ queryKey: ["enrollments"] });
+
         if (data.free_enrollment) {
           toast({
-            title: 'Enrolled!',
-            description: 'You have been enrolled in the program.',
+            title: "Enrolled!",
+            description: "You have been enrolled in the program.",
           });
         } else {
           toast({
-            title: 'Enrolled!',
+            title: "Enrolled!",
             description: `You used ${data.credits_consumed} credits. Remaining balance: ${data.balance_after}`,
           });
         }
@@ -267,9 +269,9 @@ export function useUserCredits() {
     },
     onError: (error: Error) => {
       toast({
-        title: 'Enrollment Failed',
+        title: "Enrollment Failed",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
@@ -300,9 +302,9 @@ export function formatCredits(credits: number): string {
 }
 
 // Utility to format price from cents
-export function formatPriceFromCents(cents: number, currency: string = 'EUR'): string {
-  return new Intl.NumberFormat('en-EU', {
-    style: 'currency',
+export function formatPriceFromCents(cents: number, currency: string = "EUR"): string {
+  return new Intl.NumberFormat("en-EU", {
+    style: "currency",
     currency: currency.toUpperCase(),
   }).format(cents / 100);
 }

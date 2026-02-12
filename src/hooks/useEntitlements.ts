@@ -1,11 +1,11 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Access source priority: add_on > track > org_sponsored > subscription > program_plan
  */
-export type AccessSource = 'subscription' | 'program_plan' | 'add_on' | 'track' | 'org_sponsored';
+export type AccessSource = "subscription" | "program_plan" | "add_on" | "track" | "org_sponsored";
 
 export interface FeatureEntitlement {
   enabled: boolean;
@@ -30,19 +30,19 @@ interface UseEntitlementsResult {
 
 /**
  * Unified entitlements hook that fetches all feature access once and caches it.
- * Consolidates logic from useFeatureAccess, useCombinedFeatureAccess, 
+ * Consolidates logic from useFeatureAccess, useCombinedFeatureAccess,
  * useAssessmentFeatureAccess, and useDecisionFeatureAccess.
- * 
+ *
  * Checks access from:
  * 1. Subscription plans (via profiles.plan_id)
  * 2. Program plans (via client_enrollments.program_plan_id)
  * 3. Add-ons (via user_add_ons)
  * 4. Tracks (via user_tracks + track_features)
  * 5. Org-sponsored plans (via organization_members.sponsored_plan_id)
- * 
+ *
  * For overlapping features, takes the HIGHEST limit and prioritizes source:
  * add_on > track > org_sponsored > subscription > program_plan
- * 
+ *
  * Hybrid model: effective tier = MAX(personal_plan, highest_org_sponsored_tier)
  */
 export function useEntitlements(): UseEntitlementsResult {
@@ -50,7 +50,7 @@ export function useEntitlements(): UseEntitlementsResult {
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['user-entitlements', user?.id],
+    queryKey: ["user-entitlements", user?.id],
     queryFn: async (): Promise<EntitlementsData> => {
       if (!user) {
         return { features: {}, featuresByPrefix: {} };
@@ -59,7 +59,13 @@ export function useEntitlements(): UseEntitlementsResult {
       const entitlements: Record<string, FeatureEntitlement[]> = {};
 
       // Fetch all data in parallel for performance
-      const [subscriptionFeatures, programPlanFeatures, addOnFeatures, trackFeatures, orgSponsoredFeatures] = await Promise.all([
+      const [
+        subscriptionFeatures,
+        programPlanFeatures,
+        addOnFeatures,
+        trackFeatures,
+        orgSponsoredFeatures,
+      ] = await Promise.all([
         fetchSubscriptionFeatures(user.id),
         fetchProgramPlanFeatures(user.id),
         fetchAddOnFeatures(user.id),
@@ -88,11 +94,11 @@ export function useEntitlements(): UseEntitlementsResult {
       const featuresByPrefix: Record<string, Set<string>> = {};
 
       for (const [key, entitlementList] of Object.entries(entitlements)) {
-        const enabled = entitlementList.filter(e => e.enabled);
+        const enabled = entitlementList.filter((e) => e.enabled);
         if (enabled.length === 0) continue;
 
         // Get max limit (null = unlimited)
-        const limits = enabled.map(e => e.limit);
+        const limits = enabled.map((e) => e.limit);
         let maxLimit: number | null = null;
         if (limits.includes(null)) {
           maxLimit = null;
@@ -102,10 +108,16 @@ export function useEntitlements(): UseEntitlementsResult {
         }
 
         // Determine source by priority
-        const sourcePriority: AccessSource[] = ['add_on', 'track', 'org_sponsored', 'subscription', 'program_plan'];
-        let source: AccessSource = 'program_plan';
+        const sourcePriority: AccessSource[] = [
+          "add_on",
+          "track",
+          "org_sponsored",
+          "subscription",
+          "program_plan",
+        ];
+        let source: AccessSource = "program_plan";
         for (const s of sourcePriority) {
-          if (enabled.some(e => e.source === s)) {
+          if (enabled.some((e) => e.source === s)) {
             source = s;
             break;
           }
@@ -114,7 +126,7 @@ export function useEntitlements(): UseEntitlementsResult {
         finalFeatures[key] = { enabled: true, limit: maxLimit, source };
 
         // Group by prefix for quick lookup
-        const prefix = key.split('_')[0];
+        const prefix = key.split("_")[0];
         if (!featuresByPrefix[prefix]) {
           featuresByPrefix[prefix] = new Set();
         }
@@ -149,7 +161,7 @@ export function useEntitlements(): UseEntitlementsResult {
   };
 
   const refetch = () => {
-    queryClient.invalidateQueries({ queryKey: ['user-entitlements', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["user-entitlements", user?.id] });
   };
 
   return {
@@ -165,39 +177,43 @@ export function useEntitlements(): UseEntitlementsResult {
 
 // ============ Helper Functions ============
 
-async function fetchSubscriptionFeatures(userId: string): Promise<Record<string, FeatureEntitlement>> {
+async function fetchSubscriptionFeatures(
+  userId: string,
+): Promise<Record<string, FeatureEntitlement>> {
   const features: Record<string, FeatureEntitlement> = {};
 
   try {
     const { data: profile } = await supabase
-      .from('profiles')
-      .select('plan_id')
-      .eq('id', userId)
+      .from("profiles")
+      .select("plan_id")
+      .eq("id", userId)
       .single();
 
     if (!profile?.plan_id) return features;
 
     const { data: planFeatures } = await supabase
-      .from('plan_features')
-      .select(`
+      .from("plan_features")
+      .select(
+        `
         enabled,
         limit_value,
         features!inner (key)
-      `)
-      .eq('plan_id', profile.plan_id)
-      .eq('enabled', true);
+      `,
+      )
+      .eq("plan_id", profile.plan_id)
+      .eq("enabled", true);
 
     planFeatures?.forEach((pf: any) => {
       if (pf.features?.key) {
         features[pf.features.key] = {
           enabled: true,
           limit: pf.limit_value,
-          source: 'subscription',
+          source: "subscription",
         };
       }
     });
   } catch (error) {
-    console.error('Error fetching subscription features:', error);
+    console.error("Error fetching subscription features:", error);
   }
 
   return features;
@@ -206,28 +222,32 @@ async function fetchSubscriptionFeatures(userId: string): Promise<Record<string,
 function getTierLevel(tier: string | null): number | null {
   if (!tier) return null;
   const tierMap: Record<string, number> = {
-    'essentials': 0,
-    'base': 0,
-    'premium': 1,
-    'professional': 1,
-    'enterprise': 2,
+    essentials: 0,
+    base: 0,
+    premium: 1,
+    professional: 1,
+    enterprise: 2,
   };
   return tierMap[tier.toLowerCase()] ?? null;
 }
 
-async function fetchProgramPlanFeatures(userId: string): Promise<Record<string, FeatureEntitlement>> {
+async function fetchProgramPlanFeatures(
+  userId: string,
+): Promise<Record<string, FeatureEntitlement>> {
   const features: Record<string, FeatureEntitlement> = {};
 
   try {
     const { data: enrollments } = await supabase
-      .from('client_enrollments')
-      .select(`
+      .from("client_enrollments")
+      .select(
+        `
         program_plan_id,
         tier,
         programs!inner(default_program_plan_id)
-      `)
-      .eq('client_user_id', userId)
-      .eq('status', 'active');
+      `,
+      )
+      .eq("client_user_id", userId)
+      .eq("status", "active");
 
     if (!enrollments || enrollments.length === 0) return features;
 
@@ -253,13 +273,13 @@ async function fetchProgramPlanFeatures(userId: string): Promise<Record<string, 
     let tierBasedPlanIds: string[] = [];
     if (tierLevelsToCheck.size > 0) {
       const { data: matchingPlans } = await supabase
-        .from('program_plans')
-        .select('id')
-        .in('tier_level', Array.from(tierLevelsToCheck))
-        .eq('is_active', true);
+        .from("program_plans")
+        .select("id")
+        .in("tier_level", Array.from(tierLevelsToCheck))
+        .eq("is_active", true);
 
       if (matchingPlans) {
-        tierBasedPlanIds = matchingPlans.map(p => p.id);
+        tierBasedPlanIds = matchingPlans.map((p) => p.id);
       }
     }
 
@@ -267,32 +287,38 @@ async function fetchProgramPlanFeatures(userId: string): Promise<Record<string, 
     if (allPlanIds.length === 0) return features;
 
     const { data: planFeatures } = await supabase
-      .from('program_plan_features')
-      .select(`
+      .from("program_plan_features")
+      .select(
+        `
         enabled,
         limit_value,
         features!inner (key)
-      `)
-      .in('program_plan_id', allPlanIds)
-      .eq('enabled', true);
+      `,
+      )
+      .in("program_plan_id", allPlanIds)
+      .eq("enabled", true);
 
     planFeatures?.forEach((pf: any) => {
       if (pf.features?.key) {
         const existing = features[pf.features.key];
         const newLimit = pf.limit_value;
-        
+
         // Keep highest limit
-        if (!existing || (newLimit === null) || (existing.limit !== null && newLimit > existing.limit)) {
+        if (
+          !existing ||
+          newLimit === null ||
+          (existing.limit !== null && newLimit > existing.limit)
+        ) {
           features[pf.features.key] = {
             enabled: true,
             limit: newLimit,
-            source: 'program_plan',
+            source: "program_plan",
           };
         }
       }
     });
   } catch (error) {
-    console.error('Error fetching program plan features:', error);
+    console.error("Error fetching program plan features:", error);
   }
 
   return features;
@@ -303,36 +329,38 @@ async function fetchAddOnFeatures(userId: string): Promise<Record<string, Featur
 
   try {
     const { data: userAddOns } = await supabase
-      .from('user_add_ons')
-      .select('add_on_id, expires_at')
-      .eq('user_id', userId);
+      .from("user_add_ons")
+      .select("add_on_id, expires_at")
+      .eq("user_id", userId);
 
     if (!userAddOns || userAddOns.length === 0) return features;
 
     const activeAddOnIds = userAddOns
-      .filter(ua => !ua.expires_at || new Date(ua.expires_at) > new Date())
-      .map(ua => ua.add_on_id);
+      .filter((ua) => !ua.expires_at || new Date(ua.expires_at) > new Date())
+      .map((ua) => ua.add_on_id);
 
     if (activeAddOnIds.length === 0) return features;
 
     const { data: addOnFeatures } = await supabase
-      .from('add_on_features')
-      .select(`
+      .from("add_on_features")
+      .select(
+        `
         features!inner (key)
-      `)
-      .in('add_on_id', activeAddOnIds);
+      `,
+      )
+      .in("add_on_id", activeAddOnIds);
 
     addOnFeatures?.forEach((af: any) => {
       if (af.features?.key) {
         features[af.features.key] = {
           enabled: true,
           limit: null, // Add-ons typically unlimited
-          source: 'add_on',
+          source: "add_on",
         };
       }
     });
   } catch (error) {
-    console.error('Error fetching add-on features:', error);
+    console.error("Error fetching add-on features:", error);
   }
 
   return features;
@@ -343,49 +371,57 @@ async function fetchTrackFeatures(userId: string): Promise<Record<string, Featur
 
   try {
     const { data: userTracks } = await supabase
-      .from('user_tracks')
-      .select(`
+      .from("user_tracks")
+      .select(
+        `
         track_id,
         is_active,
         tracks!inner (is_active)
-      `)
-      .eq('user_id', userId)
-      .eq('is_active', true);
+      `,
+      )
+      .eq("user_id", userId)
+      .eq("is_active", true);
 
     if (!userTracks || userTracks.length === 0) return features;
 
     const activeTrackIds = userTracks
       .filter((ut: any) => ut.tracks?.is_active)
-      .map(ut => ut.track_id);
+      .map((ut) => ut.track_id);
 
     if (activeTrackIds.length === 0) return features;
 
     const { data: trackFeatures } = await supabase
-      .from('track_features')
-      .select(`
+      .from("track_features")
+      .select(
+        `
         is_enabled,
         limit_value,
         features!inner (key)
-      `)
-      .in('track_id', activeTrackIds)
-      .eq('is_enabled', true);
+      `,
+      )
+      .in("track_id", activeTrackIds)
+      .eq("is_enabled", true);
 
     trackFeatures?.forEach((tf: any) => {
       if (tf.features?.key) {
         const existing = features[tf.features.key];
         const newLimit = tf.limit_value;
 
-        if (!existing || (newLimit === null) || (existing.limit !== null && newLimit > existing.limit)) {
+        if (
+          !existing ||
+          newLimit === null ||
+          (existing.limit !== null && newLimit > existing.limit)
+        ) {
           features[tf.features.key] = {
             enabled: true,
             limit: newLimit,
-            source: 'track',
+            source: "track",
           };
         }
       }
     });
   } catch (error) {
-    console.error('Error fetching track features:', error);
+    console.error("Error fetching track features:", error);
   }
 
   return features;
@@ -395,23 +431,27 @@ async function fetchTrackFeatures(userId: string): Promise<Record<string, Featur
  * Fetch features from org-sponsored plans (highest tier from all active org memberships)
  * Hybrid model: user gets features from their highest org-sponsored tier
  */
-async function fetchOrgSponsoredFeatures(userId: string): Promise<Record<string, FeatureEntitlement>> {
+async function fetchOrgSponsoredFeatures(
+  userId: string,
+): Promise<Record<string, FeatureEntitlement>> {
   const features: Record<string, FeatureEntitlement> = {};
 
   try {
     // Get all active org memberships with sponsored plans
     const { data: memberships } = await supabase
-      .from('organization_members')
-      .select(`
+      .from("organization_members")
+      .select(
+        `
         sponsored_plan_id,
         plans:sponsored_plan_id (
           id,
           tier_level
         )
-      `)
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .not('sponsored_plan_id', 'is', null);
+      `,
+      )
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .not("sponsored_plan_id", "is", null);
 
     if (!memberships || memberships.length === 0) return features;
 
@@ -431,26 +471,28 @@ async function fetchOrgSponsoredFeatures(userId: string): Promise<Record<string,
 
     // Fetch features for the highest tier plan
     const { data: planFeatures } = await supabase
-      .from('plan_features')
-      .select(`
+      .from("plan_features")
+      .select(
+        `
         enabled,
         limit_value,
         features!inner (key)
-      `)
-      .eq('plan_id', highestPlanId)
-      .eq('enabled', true);
+      `,
+      )
+      .eq("plan_id", highestPlanId)
+      .eq("enabled", true);
 
     planFeatures?.forEach((pf: any) => {
       if (pf.features?.key) {
         features[pf.features.key] = {
           enabled: true,
           limit: pf.limit_value,
-          source: 'org_sponsored',
+          source: "org_sponsored",
         };
       }
     });
   } catch (error) {
-    console.error('Error fetching org-sponsored features:', error);
+    console.error("Error fetching org-sponsored features:", error);
   }
 
   return features;
@@ -460,10 +502,16 @@ async function fetchOrgSponsoredFeatures(userId: string): Promise<Record<string,
 
 export async function checkFeatureAccessAsync(
   userId: string,
-  featureKey: string
+  featureKey: string,
 ): Promise<{ hasAccess: boolean; limit: number | null; source: AccessSource | null }> {
   try {
-    const [subscriptionFeatures, programPlanFeatures, addOnFeatures, trackFeatures, orgSponsoredFeatures] = await Promise.all([
+    const [
+      subscriptionFeatures,
+      programPlanFeatures,
+      addOnFeatures,
+      trackFeatures,
+      orgSponsoredFeatures,
+    ] = await Promise.all([
       fetchSubscriptionFeatures(userId),
       fetchProgramPlanFeatures(userId),
       fetchAddOnFeatures(userId),
@@ -493,7 +541,7 @@ export async function checkFeatureAccessAsync(
       trackFeatures[featureKey],
     ].filter(Boolean);
 
-    const limits = allEntitlements.map(e => e.limit);
+    const limits = allEntitlements.map((e) => e.limit);
     let maxLimit: number | null = null;
     if (limits.includes(null)) {
       maxLimit = null;
@@ -504,7 +552,7 @@ export async function checkFeatureAccessAsync(
 
     return { hasAccess: true, limit: maxLimit, source: feature.source };
   } catch (error) {
-    console.error('Error checking feature access:', error);
+    console.error("Error checking feature access:", error);
     return { hasAccess: false, limit: null, source: null };
   }
 }

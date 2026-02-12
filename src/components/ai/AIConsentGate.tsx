@@ -1,14 +1,14 @@
-import { ReactNode } from 'react';
-import { useAIPreferences } from '@/hooks/useAIPreferences';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { AIPrivacyNotice } from './AIPrivacyNotice';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Sparkles, Settings } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ReactNode } from "react";
+import { useAIPreferences } from "@/hooks/useAIPreferences";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { AIPrivacyNotice } from "./AIPrivacyNotice";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Sparkles, Settings } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface AIConsentGateProps {
-  feature: 'insights' | 'recommendations';
+  feature: "insights" | "recommendations";
   title: string;
   description: string;
   children: ReactNode;
@@ -27,9 +27,10 @@ export function AIConsentGate({ feature, title, description, children }: AIConse
     );
   }
 
-  const isEnabled = feature === 'insights' 
-    ? preferences?.ai_insights_enabled 
-    : preferences?.ai_recommendations_enabled;
+  const isEnabled =
+    feature === "insights"
+      ? preferences?.ai_insights_enabled
+      : preferences?.ai_recommendations_enabled;
 
   if (!isEnabled) {
     return (
@@ -43,22 +44,18 @@ export function AIConsentGate({ feature, title, description, children }: AIConse
         </CardHeader>
         <CardContent className="space-y-6">
           <AIPrivacyNotice />
-          
+
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button onClick={() => giveConsent(feature)} size="lg">
               <Sparkles className="mr-2 h-4 w-4" />
-              Enable AI {feature === 'insights' ? 'Insights' : 'Recommendations'}
+              Enable AI {feature === "insights" ? "Insights" : "Recommendations"}
             </Button>
-            <Button 
-              variant="outline" 
-              size="lg"
-              onClick={() => navigate('/account')}
-            >
+            <Button variant="outline" size="lg" onClick={() => navigate("/account")}>
               <Settings className="mr-2 h-4 w-4" />
               Manage AI Settings
             </Button>
           </div>
-          
+
           <p className="text-xs text-center text-muted-foreground">
             You can disable this feature at any time in Account Settings.
           </p>

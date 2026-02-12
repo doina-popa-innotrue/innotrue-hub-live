@@ -4,10 +4,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, X, ChevronDown, ChevronUp, GraduationCap, BookOpen, FileText, Loader2, FolderOpen } from "lucide-react";
+import {
+  Plus,
+  X,
+  ChevronDown,
+  ChevronUp,
+  GraduationCap,
+  BookOpen,
+  FileText,
+  Loader2,
+  FolderOpen,
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface GuidedLearningLinksEditorProps {
@@ -27,7 +43,11 @@ interface LinkedItem {
   resourceCount?: number;
 }
 
-export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: GuidedLearningLinksEditorProps) {
+export function GuidedLearningLinksEditor({
+  entityType,
+  entityId,
+  entityName,
+}: GuidedLearningLinksEditorProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -39,8 +59,10 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
   // Determine table names based on entity type
   const programTable = entityType === "domain" ? "domain_program_links" : "question_program_links";
   const moduleTable = entityType === "domain" ? "domain_module_links" : "question_module_links";
-  const resourceTable = entityType === "domain" ? "domain_resource_links" : "question_resource_links";
-  const collectionTable = entityType === "domain" ? "domain_collection_links" : "question_collection_links";
+  const resourceTable =
+    entityType === "domain" ? "domain_resource_links" : "question_resource_links";
+  const collectionTable =
+    entityType === "domain" ? "domain_collection_links" : "question_collection_links";
   const idColumn = entityType === "domain" ? "domain_id" : "question_id";
 
   // Fetch available programs
@@ -63,11 +85,13 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("program_modules")
-        .select(`
+        .select(
+          `
           id,
           title,
           programs!inner(id, name)
-        `)
+        `,
+        )
         .order("title");
       if (error) throw error;
       return data;
@@ -116,7 +140,7 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
         .from(programTable)
         .select(`id, program_id, programs(id, name)`)
         .eq(idColumn, entityId);
-      
+
       programLinks?.forEach((link: any) => {
         if (link.programs) {
           links.push({
@@ -133,7 +157,7 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
         .from(moduleTable)
         .select(`id, module_id, program_modules(id, title, programs(name))`)
         .eq(idColumn, entityId);
-      
+
       moduleLinks?.forEach((link: any) => {
         if (link.program_modules) {
           links.push({
@@ -151,7 +175,7 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
         .from(resourceTable)
         .select(`id, resource_id, resource_library(id, title)`)
         .eq(idColumn, entityId);
-      
+
       resourceLinks?.forEach((link: any) => {
         if (link.resource_library) {
           links.push({
@@ -166,9 +190,11 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
       // Fetch collection links
       const { data: collectionLinks } = await (supabase as any)
         .from(collectionTable)
-        .select(`id, collection_id, resource_collections(id, name, resource_collection_items(count))`)
+        .select(
+          `id, collection_id, resource_collections(id, name, resource_collection_items(count))`,
+        )
         .eq(idColumn, entityId);
-      
+
       collectionLinks?.forEach((link: any) => {
         if (link.resource_collections) {
           links.push({
@@ -219,8 +245,10 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["guided-learning-links", entityType, entityId] });
-      toast({ description: `${variables.type.charAt(0).toUpperCase() + variables.type.slice(1)} linked successfully` });
-      
+      toast({
+        description: `${variables.type.charAt(0).toUpperCase() + variables.type.slice(1)} linked successfully`,
+      });
+
       // Reset selections
       if (variables.type === "program") setSelectedProgram("");
       if (variables.type === "module") setSelectedModule("");
@@ -229,7 +257,11 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
     },
     onError: (error: any) => {
       if (error.message?.includes("duplicate")) {
-        toast({ title: "Already linked", description: "This item is already linked", variant: "destructive" });
+        toast({
+          title: "Already linked",
+          description: "This item is already linked",
+          variant: "destructive",
+        });
       } else {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
@@ -270,27 +302,43 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
 
   const getIconForType = (type: LinkType) => {
     switch (type) {
-      case "program": return <GraduationCap className="h-3 w-3" />;
-      case "module": return <BookOpen className="h-3 w-3" />;
-      case "resource": return <FileText className="h-3 w-3" />;
-      case "collection": return <FolderOpen className="h-3 w-3" />;
+      case "program":
+        return <GraduationCap className="h-3 w-3" />;
+      case "module":
+        return <BookOpen className="h-3 w-3" />;
+      case "resource":
+        return <FileText className="h-3 w-3" />;
+      case "collection":
+        return <FolderOpen className="h-3 w-3" />;
     }
   };
 
   const getBadgeVariant = (type: LinkType): "default" | "secondary" | "outline" => {
     switch (type) {
-      case "program": return "default";
-      case "module": return "secondary";
-      case "resource": return "outline";
-      case "collection": return "default";
+      case "program":
+        return "default";
+      case "module":
+        return "secondary";
+      case "resource":
+        return "outline";
+      case "collection":
+        return "default";
     }
   };
 
   // Filter out already linked items
-  const availablePrograms = programs?.filter(p => !currentLinks?.some(l => l.type === "program" && l.id === p.id)) || [];
-  const availableModules = modules?.filter(m => !currentLinks?.some(l => l.type === "module" && l.id === m.id)) || [];
-  const availableResources = resources?.filter(r => !currentLinks?.some(l => l.type === "resource" && l.id === r.id)) || [];
-  const availableCollections = collections?.filter((c: any) => !currentLinks?.some(l => l.type === "collection" && l.id === c.id)) || [];
+  const availablePrograms =
+    programs?.filter((p) => !currentLinks?.some((l) => l.type === "program" && l.id === p.id)) ||
+    [];
+  const availableModules =
+    modules?.filter((m) => !currentLinks?.some((l) => l.type === "module" && l.id === m.id)) || [];
+  const availableResources =
+    resources?.filter((r) => !currentLinks?.some((l) => l.type === "resource" && l.id === r.id)) ||
+    [];
+  const availableCollections =
+    collections?.filter(
+      (c: any) => !currentLinks?.some((l) => l.type === "collection" && l.id === c.id),
+    ) || [];
 
   const linkCount = currentLinks?.length || 0;
 
@@ -302,7 +350,9 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
             <span className="font-medium">Guided Learning Resources</span>
             {linkCount > 0 && (
-              <Badge variant="secondary" className="ml-2">{linkCount}</Badge>
+              <Badge variant="secondary" className="ml-2">
+                {linkCount}
+              </Badge>
             )}
           </div>
           {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -310,7 +360,8 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
       </CollapsibleTrigger>
       <CollapsibleContent className="px-4 pb-4">
         <p className="text-sm text-muted-foreground mb-4">
-          Link programs, modules, resources, or collections to guide learners on how to improve in this area.
+          Link programs, modules, resources, or collections to guide learners on how to improve in
+          this area.
         </p>
 
         {linksLoading ? (
@@ -325,8 +376,8 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
                 <Label className="text-xs text-muted-foreground mb-2 block">Linked Resources</Label>
                 <div className="flex flex-wrap gap-2">
                   {currentLinks.map((link) => (
-                    <Badge 
-                      key={link.linkId} 
+                    <Badge
+                      key={link.linkId}
                       variant={getBadgeVariant(link.type)}
                       className={`flex items-center gap-1 pr-1 ${link.type === "collection" ? "bg-primary/80" : ""}`}
                     >
@@ -361,10 +412,18 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
             {/* Add new links */}
             <Tabs defaultValue="collections" className="w-full">
               <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="collections" className="text-xs">Collections</TabsTrigger>
-                <TabsTrigger value="programs" className="text-xs">Programs</TabsTrigger>
-                <TabsTrigger value="modules" className="text-xs">Modules</TabsTrigger>
-                <TabsTrigger value="resources" className="text-xs">Resources</TabsTrigger>
+                <TabsTrigger value="collections" className="text-xs">
+                  Collections
+                </TabsTrigger>
+                <TabsTrigger value="programs" className="text-xs">
+                  Programs
+                </TabsTrigger>
+                <TabsTrigger value="modules" className="text-xs">
+                  Modules
+                </TabsTrigger>
+                <TabsTrigger value="resources" className="text-xs">
+                  Resources
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="collections" className="mt-2">
@@ -375,11 +434,16 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
                     </SelectTrigger>
                     <SelectContent>
                       {availableCollections.length === 0 ? (
-                        <SelectItem value="none" disabled>No collections available</SelectItem>
+                        <SelectItem value="none" disabled>
+                          No collections available
+                        </SelectItem>
                       ) : (
                         availableCollections.map((c: any) => (
                           <SelectItem key={c.id} value={c.id}>
-                            {c.name} <span className="text-muted-foreground">({c.resourceCount} resources)</span>
+                            {c.name}{" "}
+                            <span className="text-muted-foreground">
+                              ({c.resourceCount} resources)
+                            </span>
                           </SelectItem>
                         ))
                       )}
@@ -387,14 +451,21 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
                   </Select>
                   <Button
                     size="icon"
-                    onClick={() => addLinkMutation.mutate({ type: "collection", itemId: selectedCollection })}
+                    onClick={() =>
+                      addLinkMutation.mutate({ type: "collection", itemId: selectedCollection })
+                    }
                     disabled={!selectedCollection || addLinkMutation.isPending}
                   >
-                    {addLinkMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    {addLinkMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Collections group multiple resources together. Changes to the collection are automatically reflected here.
+                  Collections group multiple resources together. Changes to the collection are
+                  automatically reflected here.
                 </p>
               </TabsContent>
 
@@ -406,20 +477,30 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
                     </SelectTrigger>
                     <SelectContent>
                       {availablePrograms.length === 0 ? (
-                        <SelectItem value="none" disabled>No programs available</SelectItem>
+                        <SelectItem value="none" disabled>
+                          No programs available
+                        </SelectItem>
                       ) : (
                         availablePrograms.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name}
+                          </SelectItem>
                         ))
                       )}
                     </SelectContent>
                   </Select>
                   <Button
                     size="icon"
-                    onClick={() => addLinkMutation.mutate({ type: "program", itemId: selectedProgram })}
+                    onClick={() =>
+                      addLinkMutation.mutate({ type: "program", itemId: selectedProgram })
+                    }
                     disabled={!selectedProgram || addLinkMutation.isPending}
                   >
-                    {addLinkMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    {addLinkMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               </TabsContent>
@@ -432,11 +513,14 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
                     </SelectTrigger>
                     <SelectContent>
                       {availableModules.length === 0 ? (
-                        <SelectItem value="none" disabled>No modules available</SelectItem>
+                        <SelectItem value="none" disabled>
+                          No modules available
+                        </SelectItem>
                       ) : (
                         availableModules.map((m: any) => (
                           <SelectItem key={m.id} value={m.id}>
-                            {m.title} <span className="text-muted-foreground">({m.programs?.name})</span>
+                            {m.title}{" "}
+                            <span className="text-muted-foreground">({m.programs?.name})</span>
                           </SelectItem>
                         ))
                       )}
@@ -444,10 +528,16 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
                   </Select>
                   <Button
                     size="icon"
-                    onClick={() => addLinkMutation.mutate({ type: "module", itemId: selectedModule })}
+                    onClick={() =>
+                      addLinkMutation.mutate({ type: "module", itemId: selectedModule })
+                    }
                     disabled={!selectedModule || addLinkMutation.isPending}
                   >
-                    {addLinkMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    {addLinkMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               </TabsContent>
@@ -460,20 +550,30 @@ export function GuidedLearningLinksEditor({ entityType, entityId, entityName }: 
                     </SelectTrigger>
                     <SelectContent>
                       {availableResources.length === 0 ? (
-                        <SelectItem value="none" disabled>No resources available</SelectItem>
+                        <SelectItem value="none" disabled>
+                          No resources available
+                        </SelectItem>
                       ) : (
                         availableResources.map((r) => (
-                          <SelectItem key={r.id} value={r.id}>{r.title}</SelectItem>
+                          <SelectItem key={r.id} value={r.id}>
+                            {r.title}
+                          </SelectItem>
                         ))
                       )}
                     </SelectContent>
                   </Select>
                   <Button
                     size="icon"
-                    onClick={() => addLinkMutation.mutate({ type: "resource", itemId: selectedResource })}
+                    onClick={() =>
+                      addLinkMutation.mutate({ type: "resource", itemId: selectedResource })
+                    }
                     disabled={!selectedResource || addLinkMutation.isPending}
                   >
-                    {addLinkMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    {addLinkMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               </TabsContent>
