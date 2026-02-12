@@ -185,10 +185,11 @@ async function addGroupSessionParticipants(
 ) {
   // Get all members of the group
   const { data: members, error: membersError } = await supabase
-    .from("group_members")
+    .from("group_memberships")
     .select("user_id")
-    .eq("group_id", groupId);
-  
+    .eq("group_id", groupId)
+    .eq("status", "active");
+
   if (membersError) {
     console.error("Error fetching group members:", membersError);
     return;
@@ -378,9 +379,10 @@ async function notifyGroupSessionParticipants(
     
     // Get all group members with their profile info
     const { data: members } = await supabase
-      .from("group_members")
+      .from("group_memberships")
       .select("user_id, profiles!inner(email, name)")
-      .eq("group_id", groupId);
+      .eq("group_id", groupId)
+      .eq("status", "active");
     
     if (!members || members.length === 0) {
       console.log("No group members to notify for session:", sessionId);
@@ -856,9 +858,10 @@ Deno.serve(async (req) => {
               // Auto-add all group members as participants
               if (groupId && createdSessionId) {
                 const { data: members } = await supabase
-                  .from("group_members")
+                  .from("group_memberships")
                   .select("user_id")
-                  .eq("group_id", groupId);
+                  .eq("group_id", groupId)
+                  .eq("status", "active");
                 
                 if (members && members.length > 0) {
                   const participants = (members as { user_id: string }[]).map((m) => ({
