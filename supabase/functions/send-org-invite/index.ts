@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { getStagingRecipient, getStagingSubject } from "../_shared/email-utils.ts";
+import { isValidEmail } from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -89,9 +90,8 @@ serve(async (req) => {
       throw new Error("organization_id and email are required");
     }
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    // Email format validation
+    if (!isValidEmail(email)) {
       throw new Error("Invalid email format");
     }
 

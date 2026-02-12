@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkUserEmailStatus, isAdminNotificationType, ADMIN_NOTIFICATION_TYPES, getStagingRecipients, getStagingSubject } from "../_shared/email-utils.ts";
+import { isValidEmail } from "../_shared/validation.ts";
 
 // CORS headers - allow calls from web app
 const corsHeaders = {
@@ -217,6 +218,22 @@ const handler = async (req: Request): Promise<Response> => {
       groupName, rsvpStatus
     } = requestData;
     
+    // Validate email if provided directly
+    if (email && !isValidEmail(email)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid email format" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Require at least email or userId
+    if (!email && !userId) {
+      return new Response(
+        JSON.stringify({ error: "Either email or userId is required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     // For subscription requests, use planName or addOnName as programName for email template
     const effectiveProgramName = planName || addOnName || programName;
     const formattedTime = new Date(timestamp).toLocaleString();

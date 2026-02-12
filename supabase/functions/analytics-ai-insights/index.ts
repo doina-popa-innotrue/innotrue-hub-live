@@ -63,6 +63,15 @@ serve(async (req) => {
       });
     }
 
+    // Guard against oversized payloads being sent to AI
+    const analyticsJson = JSON.stringify(analyticsData);
+    if (analyticsJson.length > 50_000) {
+      return new Response(JSON.stringify({ error: "Analytics data too large. Please narrow your date range or filters." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { getAIApiKey, AI_ENDPOINT, AI_MODEL } = await import('../_shared/ai-config.ts');
     let aiApiKey: string;
     try {

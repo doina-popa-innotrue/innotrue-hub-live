@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { getStagingRecipient, getStagingSubject } from "../_shared/email-utils.ts";
+import { isValidEmail, validateName } from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -117,6 +118,63 @@ const handler = async (req: Request): Promise<Response> => {
     const resend = new Resend(resendApiKey);
     const { email, name, ratings, notes }: WheelPdfRequest = await req.json();
 
+    // Validate required fields
+    if (!email || !name || !ratings) {
+      return new Response(
+        JSON.stringify({ error: "Email, name, and ratings are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate email format
+    if (!isValidEmail(email)) {
+      return new Response(
+        JSON.stringify({ error: "Please enter a valid email address" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate name
+    const validatedName = validateName(name);
+    if (!validatedName) {
+      return new Response(
+        JSON.stringify({ error: "Please enter a valid name" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate ratings: must be an object with numeric values between 0-10
+    if (typeof ratings !== "object" || Array.isArray(ratings)) {
+      return new Response(
+        JSON.stringify({ error: "Ratings must be an object" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    for (const [key, value] of Object.entries(ratings)) {
+      if (typeof value !== "number" || value < 0 || value > 10 || !isFinite(value)) {
+        return new Response(
+          JSON.stringify({ error: `Invalid rating value for ${key}: must be a number between 0 and 10` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Validate notes length if provided
+    if (notes && (typeof notes !== "string" || notes.length > 5000)) {
+      return new Response(
+        JSON.stringify({ error: "Notes must be a string of at most 5,000 characters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // HTML-escape helper to prevent XSS in email templates
+    const escapeHtml = (str: string): string =>
+      str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
+    // Sanitize user inputs for HTML embedding
+    const safeName = escapeHtml(validatedName);
+    const safeNotes = notes ? escapeHtml(notes) : "";
+
     // Create Supabase client to fetch templates
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -186,18 +244,18 @@ const handler = async (req: Request): Promise<Response> => {
       .map(([key, score]) => `<li style="margin: 8px 0;">${WHEEL_CATEGORIES[key] || key} (${score}/10)</li>`)
       .join('');
 
-    // Build notes section
-    const notesSection = notes 
+    // Build notes section (using HTML-escaped notes)
+    const notesSection = safeNotes
       ? `<h3 style="color: #1f2937; margin: 30px 0 15px 0;">📝 Your Notes</h3>
-         <p style="color: #6b7280; font-style: italic; background: #f9fafb; padding: 15px; border-radius: 8px;">${notes}</p>`
+         <p style="color: #6b7280; font-style: italic; background: #f9fafb; padding: 15px; border-radius: 8px;">${safeNotes}</p>`
       : '';
 
-    // Replace template variables
+    // Replace template variables (using HTML-escaped name)
     const subject = emailTemplate.subject
-      .replace(/\{\{userName\}\}/g, name);
+      .replace(/\{\{userName\}\}/g, safeName);
 
     const htmlContent = emailTemplate.html_content
-      .replace(/\{\{userName\}\}/g, name)
+      .replace(/\{\{userName\}\}/g, safeName)
       .replace(/\{\{average\}\}/g, average)
       .replace(/\{\{highest\}\}/g, highest.toString())
       .replace(/\{\{lowest\}\}/g, lowest.toString())
