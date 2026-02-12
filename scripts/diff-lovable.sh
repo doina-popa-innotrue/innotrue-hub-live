@@ -29,6 +29,40 @@ cd "$REPO_ROOT"
 
 PICK_FILE="$REPO_ROOT/.lovable-diff-pick.txt"
 
+# ---- Files to NEVER import from Lovable (Lovable-specific or config diffs) ----
+EXCLUDE_PATTERNS=(
+  "vite.config.ts"
+  "tsconfig.json"
+  "tsconfig.app.json"
+  "tsconfig.node.json"
+  "eslint.config.js"
+  "components.json"
+  "package.json"
+  "package-lock.json"
+  "bun.lockb"
+  ".gitignore"
+  ".npmrc"
+  ".prettierrc"
+  ".cursorrules"
+  "README.md"
+  "CONTRIBUTING.md"
+  "vitest.config.ts"
+  "src/main.tsx"
+  "src/lib/vitals.ts"
+  "src/components/ErrorBoundary.tsx"
+)
+
+# Check if a file should be excluded
+is_excluded() {
+  local FILE="$1"
+  for PATTERN in "${EXCLUDE_PATTERNS[@]}"; do
+    if [[ "$FILE" == "$PATTERN" ]] || [[ "$FILE" == *"/lovable-tagger"* ]] || [[ "$FILE" == *"lovable"* && "$FILE" == *.ts ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 # ---- Argument validation ----
 if [ $# -lt 1 ]; then
   echo "Usage: $0 <lovable-repo-path> [scope-dir-or-file ...]"
@@ -85,9 +119,16 @@ for SCOPE in "${SCOPES[@]}"; do
   fi
 
   # Find all files in the Lovable scope (excluding node_modules, .git, etc.)
+  SKIPPED_COUNT=0
   while IFS= read -r -d '' FILE; do
     REL_PATH="${FILE#$LOVABLE_REPO/}"
     LIVE_FILE="$REPO_ROOT/$REL_PATH"
+
+    # Skip Lovable-specific files that should never be imported
+    if is_excluded "$REL_PATH"; then
+      SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
+      continue
+    fi
 
     if [ ! -f "$LIVE_FILE" ]; then
       NEW_FILES+=("$REL_PATH")
@@ -129,7 +170,13 @@ printf "  %-14s %d\n" "New files:" "${#NEW_FILES[@]}"
 printf "  %-14s %d\n" "Modified:" "${#MODIFIED_FILES[@]}"
 printf "  %-14s %d\n" "Identical:" "${#IDENTICAL_FILES[@]}"
 printf "  %-14s %d\n" "Only in live:" "${#DELETED_FILES[@]}"
+printf "  %-14s %d\n" "Auto-excluded:" "$SKIPPED_COUNT"
 echo ""
+if [ "$SKIPPED_COUNT" -gt 0 ]; then
+  echo "  (Auto-excluded files: Lovable config, tsconfig, vite.config, main.tsx, etc."
+  echo "   These differ intentionally between Lovable and live repos.)"
+  echo ""
+fi
 
 TOTAL_ACTIONABLE=$(( ${#NEW_FILES[@]} + ${#MODIFIED_FILES[@]} ))
 if [ "$TOTAL_ACTIONABLE" -eq 0 ]; then
