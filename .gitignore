@@ -51,3 +51,6 @@ InnoTrue_Hub_Tier2_Hook_Testing_Guide.md
 lovable-export*.sql
 lovable-export*.json
 .lovable-diff-pick.txt
+
+# Storage backups (kept on Google Drive, not in repo)
+backups/
