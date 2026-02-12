@@ -561,7 +561,7 @@ export function ModuleSessionManager({
 
         // Get module name for the notification
         const moduleResult = await supabase
-          .from("modules" as any)
+          .from("program_modules")
           .select("title, program_id, programs!inner(title)")
           .eq("id", moduleId)
           .single();
@@ -730,7 +730,7 @@ export function ModuleSessionManager({
 
         // Get module name for the notification
         const moduleResult = await supabase
-          .from("modules" as any)
+          .from("program_modules")
           .select("title, program_id, programs!inner(title)")
           .eq("id", moduleId)
           .single();
