@@ -132,6 +132,8 @@ INSERT INTO public.features (key, name, description) VALUES
   ('wheel_of_life', 'Wheel of Life', 'Self-assessment wheel of life tool'),
   ('assessments', 'Assessments', 'Capability assessments and evaluations'),
   ('learning_analytics', 'Learning Analytics', 'Learning progress analytics and insights'),
+  ('programs', 'Programs', 'Access to program enrollments and content'),
+  ('groups', 'Groups', 'Peer groups and collaboration features'),
   ('tasks', 'Tasks', 'Task management and tracking'),
   ('development_items', 'Development Items', 'Track development items and action points'),
   ('development_timeline', 'Development Timeline', 'View development progress over time')
@@ -142,7 +144,7 @@ UPDATE public.features SET is_system = true WHERE key IN (
   'decision_toolkit_basic', 'decision_toolkit_advanced',
   'ai_insights', 'ai_recommendations',
   'goals', 'groups', 'wheel_of_life', 'community',
-  'assessments', 'learning_analytics',
+  'assessments', 'learning_analytics', 'programs',
   'credits', 'skills_map', 'services', 'usage',
   'guided_paths', 'external_courses',
   'tasks', 'development_items', 'development_timeline'
