@@ -23,7 +23,7 @@ CREATE POLICY "Authenticated users can view option scores of active assessments"
       SELECT 1
       FROM public.assessment_options ao
       JOIN public.assessment_questions aq ON aq.id = ao.question_id
-      JOIN public.assessments a ON a.id = aq.assessment_id
+      JOIN public.assessment_definitions a ON a.id = aq.assessment_id
       WHERE ao.id = assessment_option_scores.option_id
         AND a.is_active = true
         AND a.is_public = true
@@ -39,7 +39,7 @@ CREATE POLICY "Authenticated users can view interpretations of active assessment
   USING (
     EXISTS (
       SELECT 1
-      FROM public.assessments a
+      FROM public.assessment_definitions a
       WHERE a.id = assessment_interpretations.assessment_id
         AND a.is_active = true
         AND a.is_public = true
