@@ -31,24 +31,14 @@ type Option = {
   order_index: number;
 };
 
-type OptionScore = {
-  option_id: string;
-  dimension_id: string;
-  score: number;
-};
-
 type Dimension = {
-  id: string;
   name: string;
   description: string | null;
 };
 
 type Interpretation = {
-  id: string;
   name: string;
   interpretation_text: string;
-  conditions: Record<string, { min?: number; max?: number }>;
-  priority: number;
 };
 
 type Step = "intro" | "questions" | "email" | "results";
@@ -118,96 +108,12 @@ export default function PublicAssessment() {
     enabled: questions.length > 0,
   });
 
-  // Fetch option scores
-  const { data: optionScores = [] } = useQuery({
-    queryKey: ["public-assessment-scores", assessment?.id],
-    queryFn: async () => {
-      const optionIds = options.map((o) => o.id);
-      if (optionIds.length === 0) return [];
-      const { data, error } = await supabase
-        .from("assessment_option_scores")
-        .select("*")
-        .in("option_id", optionIds);
-      if (error) throw error;
-      return data as OptionScore[];
-    },
-    enabled: options.length > 0,
-  });
-
-  // Fetch dimensions
-  const { data: dimensions = [] } = useQuery({
-    queryKey: ["public-assessment-dimensions", assessment?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("assessment_dimensions")
-        .select("*")
-        .eq("assessment_id", assessment?.id ?? "")
-        .order("order_index");
-      if (error) throw error;
-      return data as Dimension[];
-    },
-    enabled: !!assessment?.id,
-  });
-
-  // Fetch interpretations
-  const { data: interpretations = [] } = useQuery({
-    queryKey: ["public-assessment-interpretations", assessment?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("assessment_interpretations")
-        .select("*")
-        .eq("assessment_id", assessment?.id ?? "")
-        .order("priority", { ascending: false });
-      if (error) throw error;
-      return data as Interpretation[];
-    },
-    enabled: !!assessment?.id,
-  });
+  const [dimensions, setDimensions] = useState<Dimension[]>([]);
 
   const currentQuestion = questions[currentQuestionIndex];
   const currentOptions = options.filter((o) => o.question_id === currentQuestion?.id);
   const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
   const allAnswered = questions.every((q) => answers[q.id]);
-
-  const calculateScores = () => {
-    const scores: Record<string, number> = {};
-    dimensions.forEach((dim) => {
-      scores[dim.name] = 0;
-    });
-
-    Object.values(answers).forEach((optionId) => {
-      const relevantScores = optionScores.filter((s) => s.option_id === optionId);
-      relevantScores.forEach((s) => {
-        const dim = dimensions.find((d) => d.id === s.dimension_id);
-        if (dim) {
-          scores[dim.name] = (scores[dim.name] || 0) + s.score;
-        }
-      });
-    });
-
-    return scores;
-  };
-
-  const evaluateInterpretations = (scores: Record<string, number>) => {
-    const matched: Interpretation[] = [];
-
-    interpretations.forEach((int) => {
-      let matches = true;
-      const conditions = int.conditions as Record<string, { min?: number; max?: number }>;
-
-      Object.entries(conditions).forEach(([dimName, cond]) => {
-        const score = scores[dimName] || 0;
-        if (cond.min !== undefined && score < cond.min) matches = false;
-        if (cond.max !== undefined && score > cond.max) matches = false;
-      });
-
-      if (matches && Object.keys(conditions).length > 0) {
-        matched.push(int);
-      }
-    });
-
-    return matched.sort((a, b) => b.priority - a.priority);
-  };
 
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
@@ -235,25 +141,24 @@ export default function PublicAssessment() {
     setIsSubmitting(true);
 
     try {
-      const scores = calculateScores();
-      const matched = evaluateInterpretations(scores);
-
-      setDimensionScores(scores);
-      setMatchedInterpretations(matched);
-
-      // Save response
-      const { error } = await supabase.from("assessment_responses").insert({
-        assessment_id: assessment?.id ?? "",
-        email,
-        name: name || null,
-        responses: answers,
-        dimension_scores: scores,
-        interpretations: matched.map((i) => ({ name: i.name, text: i.interpretation_text })),
-        newsletter_consent: newsletterConsent,
-      });
+      const { data: result, error } = await supabase.functions.invoke(
+        "compute-assessment-scores",
+        {
+          body: {
+            assessment_id: assessment?.id,
+            answers,
+            email,
+            name: name || null,
+            newsletter_consent: newsletterConsent,
+          },
+        }
+      );
 
       if (error) throw error;
 
+      setDimensionScores(result.dimension_scores);
+      setDimensions(result.dimensions);
+      setMatchedInterpretations(result.interpretations);
       setStep("results");
     } catch (error: unknown) {
       toast({
@@ -542,8 +447,8 @@ export default function PublicAssessment() {
                   <div>
                     <h3 className="font-medium mb-3">Your Profile Insights</h3>
                     <div className="space-y-4">
-                      {matchedInterpretations.map((int) => (
-                        <div key={int.id} className="p-4 bg-muted/50 rounded-lg">
+                      {matchedInterpretations.map((int, idx) => (
+                        <div key={idx} className="p-4 bg-muted/50 rounded-lg">
                           <Badge className="mb-2">{int.name}</Badge>
                           <p className="text-sm">{int.interpretation_text}</p>
                         </div>
