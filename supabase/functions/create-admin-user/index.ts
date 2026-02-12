@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { isValidEmail, validatePassword, validateName, isValidUUID, isValidEnum } from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -71,6 +72,62 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Validate email format
+    if (!isValidEmail(email)) {
+      return new Response(
+        JSON.stringify({ error: "Please enter a valid email address" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate password strength (skip for placeholder users with generated passwords)
+    if (!isPlaceholder) {
+      const passwordError = validatePassword(password);
+      if (passwordError) {
+        return new Response(
+          JSON.stringify({ error: passwordError }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Validate name
+    const validatedName = validateName(name);
+    if (!validatedName) {
+      return new Response(
+        JSON.stringify({ error: "Please enter a valid name (max 200 characters)" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate optional plan_id if provided
+    if (plan_id && !isValidUUID(plan_id)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid plan ID format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate roles if provided
+    const VALID_ROLES = ["admin", "client", "coach", "instructor"] as const;
+    if (roles && roles.length > 0) {
+      const invalidRole = roles.find(r => !isValidEnum(r, VALID_ROLES));
+      if (invalidRole) {
+        return new Response(
+          JSON.stringify({ error: `Invalid role: ${invalidRole}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Validate realEmail if provided
+    if (realEmail && !isValidEmail(realEmail)) {
+      return new Response(
+        JSON.stringify({ error: "Please enter a valid real email address" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Create Supabase admin client for user creation
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -94,7 +151,7 @@ const handler = async (req: Request): Promise<Response> => {
       email,
       password,
       email_confirm: true, // Auto-confirm email for admin-created users
-      user_metadata: { name, isPlaceholder: isPlaceholder || false }
+      user_metadata: { name: validatedName, isPlaceholder: isPlaceholder || false }
     });
 
     if (createError) {

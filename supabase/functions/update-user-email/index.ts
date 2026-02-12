@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { isValidEmail, isValidUUID, validatePassword } from "../_shared/validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -69,7 +70,37 @@ serve(async (req) => {
     const callerEmail = userData.user.email;
 
     const { targetUserId, newEmail, newPassword } = await req.json();
-    
+
+    // Validate targetUserId format if provided
+    if (targetUserId && !isValidUUID(targetUserId)) {
+      await delayResponse(startTime);
+      return new Response(
+        JSON.stringify({ error: "Invalid user ID format" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate email format if provided
+    if (newEmail && !isValidEmail(newEmail)) {
+      await delayResponse(startTime);
+      return new Response(
+        JSON.stringify({ error: "Please enter a valid email address" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate password strength if provided
+    if (newPassword) {
+      const passwordError = validatePassword(newPassword);
+      if (passwordError) {
+        await delayResponse(startTime);
+        return new Response(
+          JSON.stringify({ error: passwordError }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Get the old email before updating
     let oldEmail: string | null = null;
     if (newEmail && targetUserId) {

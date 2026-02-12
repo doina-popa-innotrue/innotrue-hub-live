@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkUserEmailStatus, getStagingRecipient, getStagingSubject } from "../_shared/email-utils.ts";
+import { isValidUUID } from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,7 +28,37 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { assignmentId, moduleProgressId, assignmentTypeName }: NotificationRequest = await req.json();
 
-    console.log("Processing graded assignment notification:", { assignmentId, moduleProgressId, assignmentTypeName });
+    // Validate required fields
+    if (!assignmentId || !moduleProgressId || !assignmentTypeName) {
+      return new Response(JSON.stringify({ error: "assignmentId, moduleProgressId, and assignmentTypeName are required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate UUID formats
+    if (!isValidUUID(assignmentId) || !isValidUUID(moduleProgressId)) {
+      return new Response(JSON.stringify({ error: "Invalid ID format" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate assignmentTypeName length
+    if (typeof assignmentTypeName !== "string" || assignmentTypeName.length > 500) {
+      return new Response(JSON.stringify({ error: "Invalid assignment type name" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // HTML-escape helper to prevent XSS in email templates
+    const escapeHtml = (str: string): string =>
+      str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
+    const safeAssignmentTypeName = escapeHtml(assignmentTypeName.trim());
+
+    console.log("Processing graded assignment notification:", { assignmentId, moduleProgressId, assignmentTypeName: safeAssignmentTypeName });
 
     // Get assignment details including who graded it
     const { data: assignment, error: assignmentError } = await supabase
@@ -164,19 +195,19 @@ const handler = async (req: Request): Promise<Response> => {
     if (template) {
       // Use database template with variable substitution
       emailSubject = template.subject
-        .replace(/\{\{assignmentName\}\}/g, assignmentTypeName)
+        .replace(/\{\{assignmentName\}\}/g, safeAssignmentTypeName)
         .replace(/\{\{clientName\}\}/g, clientName);
 
       emailHtml = template.html_content
         .replace(/\{\{clientName\}\}/g, clientName)
         .replace(/\{\{instructorName\}\}/g, instructorName)
-        .replace(/\{\{assignmentName\}\}/g, assignmentTypeName)
+        .replace(/\{\{assignmentName\}\}/g, safeAssignmentTypeName)
         .replace(/\{\{moduleName\}\}/g, moduleName)
         .replace(/\{\{programName\}\}/g, programName)
         .replace(/\{\{viewLink\}\}/g, viewLink);
     } else {
       // Fallback to default template
-      emailSubject = `Your Assignment Has Been Reviewed: ${assignmentTypeName}`;
+      emailSubject = `Your Assignment Has Been Reviewed: ${safeAssignmentTypeName}`;
       emailHtml = `
         <!DOCTYPE html>
         <html>
@@ -197,13 +228,13 @@ const handler = async (req: Request): Promise<Response> => {
                 <h1 style="margin: 0;">✅ Your Assignment Has Been Reviewed</h1>
               </div>
               <div class="content">
-                <p>Hi ${clientName},</p>
-                <p>Good news! Your assignment has been reviewed by <strong>${instructorName}</strong>.</p>
-                
+                <p>Hi ${escapeHtml(clientName)},</p>
+                <p>Good news! Your assignment has been reviewed by <strong>${escapeHtml(instructorName)}</strong>.</p>
+
                 <div class="assignment-info">
-                  <p style="margin: 0 0 8px 0;"><strong>Assignment:</strong> ${assignmentTypeName}</p>
-                  <p style="margin: 0 0 8px 0;"><strong>Module:</strong> ${moduleName}</p>
-                  <p style="margin: 0;"><strong>Program:</strong> ${programName}</p>
+                  <p style="margin: 0 0 8px 0;"><strong>Assignment:</strong> ${safeAssignmentTypeName}</p>
+                  <p style="margin: 0 0 8px 0;"><strong>Module:</strong> ${escapeHtml(moduleName)}</p>
+                  <p style="margin: 0;"><strong>Program:</strong> ${escapeHtml(programName)}</p>
                 </div>
                 
                 <p>Log in to view your feedback and assessment results.</p>

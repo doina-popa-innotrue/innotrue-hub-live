@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { getStagingRecipient, getStagingSubject } from "../_shared/email-utils.ts";
+import { isValidEmail, validatePassword, validateName } from "../_shared/validation.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -96,16 +97,52 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Processing signup for email: ${email}`);
 
-    // Validate input
+    // Validate required fields
     if (!email || !password || !name) {
-      // Ensure minimum response time
       const elapsed = Date.now() - startTime;
       if (elapsed < MIN_RESPONSE_TIME) {
         await new Promise(resolve => setTimeout(resolve, MIN_RESPONSE_TIME - elapsed));
       }
-      
       return new Response(
         JSON.stringify({ error: "Email, password, and name are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate email format
+    if (!isValidEmail(email)) {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_RESPONSE_TIME) {
+        await new Promise(resolve => setTimeout(resolve, MIN_RESPONSE_TIME - elapsed));
+      }
+      return new Response(
+        JSON.stringify({ error: "Please enter a valid email address" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate password strength
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_RESPONSE_TIME) {
+        await new Promise(resolve => setTimeout(resolve, MIN_RESPONSE_TIME - elapsed));
+      }
+      return new Response(
+        JSON.stringify({ error: passwordError }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate name
+    const validatedName = validateName(name);
+    if (!validatedName) {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_RESPONSE_TIME) {
+        await new Promise(resolve => setTimeout(resolve, MIN_RESPONSE_TIME - elapsed));
+      }
+      return new Response(
+        JSON.stringify({ error: "Please enter a valid name (max 200 characters)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -132,7 +169,7 @@ const handler = async (req: Request): Promise<Response> => {
       email,
       password,
       email_confirm: false,
-      user_metadata: { name }
+      user_metadata: { name: validatedName }
     });
 
     if (createError) {
@@ -169,7 +206,7 @@ const handler = async (req: Request): Promise<Response> => {
       .insert({
         user_id: userId,
         email,
-        name,
+        name: validatedName,
         verification_token: tokenHash, // Store the hash, not the plain token
         expires_at: expiresAt.toISOString(),
         ip_address: clientIp
@@ -220,12 +257,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Replace template variables
     const htmlContent = emailTemplate.html_content
-      .replace(/\{\{userName\}\}/g, name)
+      .replace(/\{\{userName\}\}/g, validatedName)
       .replace(/\{\{verificationLink\}\}/g, verificationLink)
       .replace(/\{\{systemLogo\}\}/g, systemLogoHtml);
 
     const subject = emailTemplate.subject
-      .replace(/\{\{userName\}\}/g, name);
+      .replace(/\{\{userName\}\}/g, validatedName);
 
     // Send verification email
     const { error: emailError } = await resend.emails.send({
