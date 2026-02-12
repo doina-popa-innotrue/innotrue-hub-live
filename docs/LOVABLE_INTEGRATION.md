@@ -32,10 +32,13 @@ How to safely use Lovable as a prototyping sandbox and promote code/data into th
 
 | Command | Script | Purpose |
 |---------|--------|---------|
-| `npm run import:lovable` | `scripts/import-from-lovable.sh` | Import files from Lovable repo |
+| `npm run diff:lovable` | `scripts/diff-lovable.sh` | **Compare** Lovable vs live, pick files, then import |
+| `npm run import:lovable` | `scripts/import-from-lovable.sh` | Import specific files from Lovable repo (direct) |
 | `npm run cleanup:lovable` | `scripts/cleanup-lovable-code.sh` | Clean up Lovable-generated code |
 | `npm run verify` | `scripts/verify.sh` | Local pre-push check (lint + typecheck + test + build) |
 | — | `scripts/export-lovable-data.sql` | SQL queries for Supabase data export |
+
+> **Recommended:** Use `diff:lovable` instead of `import:lovable` when Lovable changes touch multiple existing files. It shows you exactly what's new vs. modified and lets you pick what to import.
 
 ---
 
@@ -55,7 +58,27 @@ Build your feature in Lovable. Don't worry about:
 
 ### Phase 2: Export Code
 
-Clone or pull the Lovable repo locally, then run the import script:
+Clone or pull the Lovable repo locally, then compare and import:
+
+#### Option A: Diff first, then pick (recommended for widespread changes)
+
+```bash
+# Compare all of src/
+npm run diff:lovable -- /path/to/lovable-repo
+
+# Compare specific directories
+npm run diff:lovable -- /path/to/lovable-repo src/components src/hooks
+```
+
+The diff script will:
+1. Compare every file in the scope between both repos
+2. Categorise as **NEW** (only in Lovable), **MODIFIED** (differs), **IDENTICAL**, or **ONLY IN LIVE**
+3. Show line-change counts for modified files and optionally show diffs
+4. Write a pick-list to `.lovable-diff-pick.txt`
+5. Let you edit the pick-list (remove files you don't want)
+6. Feed selected files to the import script automatically
+
+#### Option B: Direct import (when you know exactly which files)
 
 ```bash
 # Import specific components/hooks/pages
@@ -65,9 +88,9 @@ npm run import:lovable -- /path/to/lovable-repo src/components/NewFeature src/ho
 npm run import:lovable -- /path/to/lovable-repo src/pages/admin/NewSection
 ```
 
-The script will:
+Both options will:
 1. Create a feature branch: `feature/lovable-import-2026-02-12-143022`
-2. Copy the specified files (preserving directory structure)
+2. Copy the selected files (preserving directory structure)
 3. Run the cleanup script automatically
 4. Stage files and show a diff summary
 
@@ -262,7 +285,7 @@ git push
 ## Promotion Checklist
 
 ### Import from Lovable
-- [ ] Files imported via `npm run import:lovable`
+- [ ] Files compared via `npm run diff:lovable` (or imported via `npm run import:lovable`)
 - [ ] Cleanup script ran (auto or manual)
 - [ ] All TypeScript errors resolved (`npm run typecheck` passes)
 - [ ] No `@lovable` references remain
