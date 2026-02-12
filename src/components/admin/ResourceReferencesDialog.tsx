@@ -65,7 +65,7 @@ export function ResourceReferencesDialog({
       if (moduleAssignData && moduleAssignData.length > 0) {
         const moduleIds = moduleAssignData.map((m: any) => m.module_id);
         const { data: modulesData } = (await supabase
-          .from("modules" as any)
+          .from("program_modules")
           .select("id, title, program_id")
           .in("id", moduleIds)) as { data: any[] | null };
 
@@ -114,7 +114,7 @@ export function ResourceReferencesDialog({
           const { data: modulesData } =
             moduleIds.length > 0
               ? ((await supabase
-                  .from("modules" as any)
+                  .from("program_modules")
                   .select("id, title, program_id")
                   .in("id", moduleIds as string[])) as { data: any[] | null })
               : { data: null };
