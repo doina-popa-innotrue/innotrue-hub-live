@@ -16,6 +16,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
+    "diff:lovable": "bash scripts/diff-lovable.sh",
     "import:lovable": "bash scripts/import-from-lovable.sh",
     "cleanup:lovable": "bash scripts/cleanup-lovable-code.sh",
     "verify": "bash scripts/verify.sh"
