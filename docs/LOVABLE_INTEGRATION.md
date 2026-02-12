@@ -1,6 +1,6 @@
 # Lovable Integration Guide
 
-How to safely use Lovable as a prototyping sandbox and promote code/data into the production pipeline.
+How to safely prototype in Lovable and promote code/data into the production pipeline.
 
 ## Architecture
 
@@ -21,142 +21,188 @@ How to safely use Lovable as a prototyping sandbox and promote code/data into th
 
 | Requirement | Details |
 |-------------|---------|
-| Lovable project | With its own Supabase instance that **you own** |
+| Lovable project | With its own Supabase instance that **you own** (ref: `cezlnvdjildzxpyxyabb`) |
 | Live repo cloned | `innotrue-hub-live` at your local machine |
+| Lovable repo cloned | The Lovable GitHub repo, pulled to a local folder |
 | Node.js 20+ | For running scripts |
-| Supabase CLI | Optional, for data export via CLI |
+| Terminal | macOS Terminal, iTerm, or VS Code / Cursor integrated terminal |
 
-> **Important:** Do NOT use the old Lovable-owned Supabase project (`pfwlsxovvqdiwaztqxrj`). Create a fresh one under your own Supabase account.
+> **Important:** Do NOT use the old Lovable-owned Supabase project (`pfwlsxovvqdiwaztqxrj`). Use the fresh one under your own Supabase account.
 
 ## Available Scripts
 
-| Command | Script | Purpose |
-|---------|--------|---------|
-| `npm run diff:lovable` | `scripts/diff-lovable.sh` | **Compare** Lovable vs live, pick files, then import |
-| `npm run import:lovable` | `scripts/import-from-lovable.sh` | Import specific files from Lovable repo (direct) |
-| `npm run cleanup:lovable` | `scripts/cleanup-lovable-code.sh` | Clean up Lovable-generated code |
-| `npm run verify` | `scripts/verify.sh` | Local pre-push check (lint + typecheck + test + build) |
-| — | `scripts/export-lovable-data.sql` | SQL queries for Supabase data export |
-
-> **Recommended:** Use `diff:lovable` instead of `import:lovable` when Lovable changes touch multiple existing files. It shows you exactly what's new vs. modified and lets you pick what to import.
+| Command | What it does |
+|---------|-------------|
+| `npm run diff:lovable` | Compare Lovable repo vs live repo, review differences, pick files to import |
+| `npm run import:lovable` | Import specific files directly (when you know exactly which ones) |
+| `npm run cleanup:lovable` | Run code cleanup on imported files (ESLint, Prettier, TypeScript check) |
+| `npm run verify` | Run full quality check locally (lint + typecheck + test + build) |
 
 ---
 
-## Full Workflow
+## Step-by-Step: Promoting Code from Lovable to Production
 
-### Phase 1: Prototype in Lovable
+### Step 1: Prototype in Lovable
 
-Build your feature in Lovable. Don't worry about:
-- TypeScript strictness (Lovable uses loose types)
-- ESLint compliance
-- Production patterns
+Build your feature in Lovable as you normally would.
 
-**Do** worry about:
-- Using the same directory structure (`src/components/`, `src/hooks/`, `src/pages/`)
-- Using shadcn/ui components (same as the live repo)
-- Keeping your Lovable Supabase schema compatible with the live repo
+**Tips for smoother imports later:**
+- Use the same folder structure as the live repo (`src/components/`, `src/hooks/`, `src/pages/`)
+- Use shadcn/ui components (same library as the live repo)
+- Don't worry about TypeScript strictness or ESLint — the cleanup script handles that
 
-### Phase 2: Export Code
+### Step 2: Pull the Lovable repo to your machine
 
-Clone or pull the Lovable repo locally, then compare and import:
-
-#### Option A: Diff first, then pick (recommended for widespread changes)
+Open Terminal and clone or pull the latest from your Lovable GitHub repo:
 
 ```bash
-# Compare all of src/
-npm run diff:lovable -- /path/to/lovable-repo
+# First time — clone it somewhere on your machine
+git clone https://github.com/YOUR-USERNAME/YOUR-LOVABLE-REPO.git ~/lovable-sandbox
 
-# Compare specific directories
-npm run diff:lovable -- /path/to/lovable-repo src/components src/hooks
+# After that — just pull latest changes
+cd ~/lovable-sandbox
+git pull
 ```
 
-The diff script will:
-1. Compare every file in the scope between both repos
-2. Categorise as **NEW** (only in Lovable), **MODIFIED** (differs), **IDENTICAL**, or **ONLY IN LIVE**
-3. Show line-change counts for modified files and optionally show diffs
-4. Write a pick-list to `.lovable-diff-pick.txt`
-5. Let you edit the pick-list (remove files you don't want)
-6. Feed selected files to the import script automatically
-
-#### Option B: Direct import (when you know exactly which files)
+### Step 3: Open Terminal in the live repo
 
 ```bash
-# Import specific components/hooks/pages
-npm run import:lovable -- /path/to/lovable-repo src/components/NewFeature src/hooks/useNewFeature.ts
-
-# Import a whole directory
-npm run import:lovable -- /path/to/lovable-repo src/pages/admin/NewSection
+cd "/Users/doina/Library/CloudStorage/GoogleDrive-doina.popa@innotrue.com/My Drive/InnoTrue/Work_GDrive/innotrue-hub-live"
 ```
 
-Both options will:
-1. Create a feature branch: `feature/lovable-import-2026-02-12-143022`
-2. Copy the selected files (preserving directory structure)
-3. Run the cleanup script automatically
-4. Stage files and show a diff summary
+Or open the `innotrue-hub-live` folder in Cursor/VS Code and use the integrated terminal.
 
-### Phase 3: Clean Up
-
-The import script runs cleanup automatically. You can also run it manually:
+### Step 4: Run the diff to compare repos
 
 ```bash
-# Clean specific paths
-npm run cleanup:lovable -- src/components/NewFeature
+# Compare everything in src/
+npm run diff:lovable -- ~/lovable-sandbox
 
-# Clean all of src/
-npm run cleanup:lovable
+# Or compare only specific folders
+npm run diff:lovable -- ~/lovable-sandbox src/components src/hooks src/pages
 ```
 
-The cleanup script:
-1. **ESLint `--fix`** — auto-fixes simple violations
-2. **Prettier** — normalizes formatting
-3. **TypeScript check** — reports errors (fix manually)
-4. **Lovable pattern scan** — flags `@lovable`, old URLs, unknown Supabase refs
-5. **`any` type count** — reports for manual cleanup
+**What you'll see:**
 
-**You must manually fix:**
-- TypeScript errors (add proper types)
-- `@lovable` references (remove or replace)
-- Stale URLs (update to `app.innotrue.com`)
-- Unknown Supabase project refs (remove or use env vars)
-- `any` types (replace with proper types where feasible)
+```
+━━━ Summary ━━━
+  New files:     3       ← Files only in Lovable (safe to import)
+  Modified:      12      ← Files that differ between repos (review carefully!)
+  Identical:     87      ← No changes needed
+  Only in live:  5       ← Files only in your live repo (won't be touched)
+```
 
-### Phase 4: PR to develop
+Then for each modified file, you'll see how many lines changed. You can type `y` to see the actual diffs.
+
+### Step 5: Edit the pick-list
+
+The script creates a file called `.lovable-diff-pick.txt` in your project root. It lists all new and modified files.
+
+**Open it** in your editor (Cursor, VS Code, or any text editor) and:
+- **Keep** lines for files you want to import
+- **Delete** lines for files you want to skip (e.g., files you've already improved in the live repo)
+- Lines starting with `#` are comments — they're ignored
+
+Example pick-list:
+```
+# --- NEW FILES (only in Lovable) ---
+src/components/coaching/SessionNotes.tsx        ← keep this (new feature)
+src/hooks/useSessionNotes.ts                    ← keep this
+
+# --- MODIFIED FILES (differ between repos) ---
+# ⚠ These will OVERWRITE your live versions!
+src/components/layout/Sidebar.tsx               ← delete if you don't want to overwrite
+src/pages/Dashboard.tsx                         ← delete if live version is better
+```
+
+**Save the file** when you're done editing.
+
+### Step 6: Confirm the import
+
+Go back to Terminal and **press Enter**. The script will:
+1. Create a new branch: `feature/lovable-import-YYYY-MM-DD-HHMMSS`
+2. Copy only the files you kept in the pick-list
+3. Run the cleanup script automatically (ESLint fix, Prettier, TypeScript check)
+4. Stage everything and show you the diff
+
+### Step 7: Review and fix issues
+
+The cleanup script will show a summary like:
+
+```
+┌────────────────────┬───────┐
+│ Check              │ Count │
+├────────────────────┼───────┤
+│ ESLint auto-fixed  │ 5     │
+│ TypeScript errors  │ 3     │  ← you must fix these manually
+│ Lovable patterns   │ 0     │
+│ `any` types        │ 2     │  ← fix if feasible
+└────────────────────┴───────┘
+```
+
+**Fix any TypeScript errors manually.** Common fixes:
+- Add proper types where Lovable used `any`
+- Add null checks (the live repo has `strictNullChecks` enabled)
+- Remove any `@lovable` references or old Lovable URLs
+
+You can also run cleanup again on specific files:
+```bash
+npm run cleanup:lovable -- src/components/coaching
+```
+
+### Step 8: Verify everything passes locally
 
 ```bash
-# Review the diff
+npm run verify
+```
+
+This runs the same checks as CI: lint → typecheck → tests → build. **All four must pass** before you push.
+
+### Step 9: Commit and push
+
+```bash
+# Review what's staged
 git diff --cached
 
 # Commit
-git commit -m "feat: import NewFeature from Lovable prototype"
+git commit -m "feat: import session notes from Lovable prototype"
 
-# Push
+# Push the feature branch
 git push -u origin feature/lovable-import-2026-02-12-143022
 ```
 
-Create a PR to `develop` on GitHub. CI runs automatically:
+### Step 10: Create a PR to develop
+
+Go to GitHub and create a Pull Request from your feature branch → `develop`.
+
+CI runs automatically and checks:
 - ESLint
-- TypeScript strict mode check
+- TypeScript strict mode
 - 210+ unit tests
 - Production build
 
-### Phase 5: develop → preprod
+**Wait for CI to pass**, then merge the PR.
 
-After the PR is merged to `develop`:
+### Step 11: Promote develop → preprod
+
+After the PR is merged:
 
 ```bash
+git checkout develop
+git pull origin develop
 git checkout preprod
 git merge develop --no-edit
 git push origin preprod
 ```
 
 This triggers:
-- Cloudflare Pages preview deployment
+- Cloudflare Pages preview deployment (you'll get a preview URL)
 - CI quality checks
-- **E2E tests** (Playwright, 14 tests against live preprod)
+- E2E tests (Playwright)
 
-Verify the feature on the preview URL.
+**Test the feature on the preview URL** before moving to production.
 
-### Phase 6: preprod → main (production)
+### Step 12: Promote preprod → main (production)
 
 After QA passes on preprod:
 
@@ -166,32 +212,40 @@ git merge preprod --no-edit
 git push origin main
 ```
 
-Cloudflare Pages deploys to `app.innotrue.com`. Monitor Sentry for errors.
+Cloudflare Pages deploys to `app.innotrue.com`.
+
+**After deploying:**
+- Check Sentry for new errors (monitor for 30 minutes)
+- Verify the feature works on `app.innotrue.com`
+- Check web vitals are normal
 
 ---
 
 ## Data Sync from Lovable Supabase
 
-When you've configured data in your Lovable Supabase (programs, assessments, plans, etc.), you can export and import it.
+If you configured data in Lovable's Supabase (programs, assessments, plans, etc.), you need to sync it separately. Code imports don't touch the database.
 
-### Step 1: Export
+### Step 1: Export data from Lovable Supabase
 
-Open your Lovable Supabase Dashboard → SQL Editor. Run queries from `scripts/export-lovable-data.sql` for the tables you need.
+1. Go to your **Lovable Supabase Dashboard** → SQL Editor
+2. Open `scripts/export-lovable-data.sql` in your editor
+3. Copy and run the queries for the tables you need (e.g., programs, assessment questions)
+4. Copy the JSON output
 
 ### Step 2: Generate SQL
 
-Paste the JSON output to Claude Code with:
+Paste the JSON to Claude Code with this prompt:
 > "Generate idempotent INSERT SQL from this JSON export for [table name]. Use ON CONFLICT patterns matching our seed.sql style."
 
-### Step 3: Apply
+### Step 3: Apply to environments
 
-1. **Review** the generated SQL
-2. **Apply to preprod first** — run in the preprod Supabase SQL Editor
-3. **Verify** the data looks correct
-4. **Apply to prod** — run in the production Supabase SQL Editor
-5. **Update `seed.sql`** — add the data so it survives `supabase db reset`
+1. **Review** the generated SQL carefully
+2. **Run on preprod first** — paste into the preprod Supabase SQL Editor
+3. **Verify** the data looks correct on the preprod app
+4. **Run on prod** — paste into the production Supabase SQL Editor
+5. **Update `seed.sql`** — add the new data so it survives `supabase db reset`
 
-### Safe Tables (configuration/content)
+### Safe tables (OK to sync)
 
 | Category | Tables |
 |----------|--------|
@@ -203,35 +257,15 @@ Paste the JSON output to Claude Code with:
 | Notifications | `notification_categories`, `notification_types` |
 | Content | `email_templates`, `platform_terms`, `wheel_categories`, `system_settings` |
 
-### Never Export (user/runtime data)
+### Never sync (user/runtime data)
 
 `auth.users`, `profiles`, `user_roles`, `client_enrollments`, `module_progress`, `user_credit_balances`, `org_credit_balances`, `sessions`, `notifications`, `user_notification_preferences`, `oauth_tokens`, `audit_log`, `assessment_snapshots`, `assessment_ratings`
 
 ---
 
-## What Belongs Where
-
-| Aspect | Lovable Sandbox | Live Repo |
-|--------|----------------|-----------|
-| Rapid UI prototyping | ✅ Yes | ❌ No |
-| TypeScript strict mode | ❌ No (loose) | ✅ Yes |
-| ESLint / Prettier | ❌ No | ✅ Yes |
-| Production deployment | ❌ Never | ✅ Yes |
-| Database migrations | Experimental only | Source of truth |
-| Edge functions | Prototype only | Production (with CORS, auth, email override) |
-| Unit tests | None | Required (Vitest) |
-| E2E tests | None | Required (Playwright) |
-| CI/CD pipeline | None | GitHub Actions |
-| Error monitoring | None | Sentry |
-| PWA / service worker | None | Configured |
-
----
-
 ## Critical Rules
 
-### Never Do These
-
-1. **NEVER copy Lovable migrations** into the live repo. Lovable generates its own migration files with different IDs and potentially conflicting changes. Instead, manually recreate schema changes as new migrations: `supabase migration new my_change`
+1. **NEVER copy Lovable migrations** into the live repo. Lovable generates migration files with different IDs that will conflict. Instead, recreate schema changes as new migrations: `supabase migration new my_change`
 
 2. **NEVER copy edge functions wholesale.** Lovable edge functions lack the live repo's CORS config, auth patterns, staging email override, and AI provider setup. Import file-by-file and adapt to match `supabase/functions/_shared/` patterns.
 
@@ -239,13 +273,13 @@ Paste the JSON output to Claude Code with:
 
 4. **NEVER skip the cleanup step.** Lovable code with `any` types and missing null checks will break the strict TypeScript build.
 
-5. **NEVER push directly to `main` or `preprod`.** Always go through the feature branch → `develop` → `preprod` → `main` flow.
+5. **NEVER push directly to `main` or `preprod`.** Always go through: feature branch → `develop` → `preprod` → `main`.
 
 ---
 
 ## Rollback Procedures
 
-### Code Rollback
+### Code rollback
 
 **Revert a specific commit:**
 ```bash
@@ -270,7 +304,7 @@ git push
 3. Merge the revert PR
 4. Cloudflare auto-redeploys
 
-### Database Rollback
+### Database rollback
 
 **Config data (programs, plans, features, etc.):**
 - Re-run `supabase/seed.sql` which is fully idempotent (`ON CONFLICT` everywhere)
@@ -282,39 +316,24 @@ git push
 
 ---
 
-## Promotion Checklist
+## Quick Reference Checklist
 
-### Import from Lovable
-- [ ] Files compared via `npm run diff:lovable` (or imported via `npm run import:lovable`)
-- [ ] Cleanup script ran (auto or manual)
-- [ ] All TypeScript errors resolved (`npm run typecheck` passes)
+### Before pushing
+- [ ] `npm run verify` passes (lint + typecheck + test + build)
 - [ ] No `@lovable` references remain
 - [ ] No hardcoded URLs from other environments
 - [ ] No `console.log` statements (use Sentry for error tracking)
 - [ ] `any` types replaced where feasible
-- [ ] Feature branch created with descriptive name
-- [ ] PR to `develop` created
 
-### develop → preprod
+### Before merging to preprod
 - [ ] PR merged to `develop`
-- [ ] CI passes (lint, typecheck, test, build)
-- [ ] Merged `develop` into `preprod`
-- [ ] Cloudflare preview deployment verified
-- [ ] E2E tests pass (14 Playwright tests)
-- [ ] Manual QA on preview URL
+- [ ] CI passes on GitHub
 
-### preprod → main (production)
-- [ ] All QA passed on preprod
-- [ ] Merged `preprod` into `main`
-- [ ] CI passes
-- [ ] Production deployment verified at `app.innotrue.com`
+### Before merging to main
+- [ ] Feature tested on preprod preview URL
+- [ ] E2E tests pass
+
+### After deploying to production
+- [ ] Feature works on `app.innotrue.com`
 - [ ] Sentry shows no new errors (check for 30 minutes)
 - [ ] Web vitals normal (LCP, CLS, INP)
-
-### Data sync (if applicable)
-- [ ] Config data exported from Lovable Supabase
-- [ ] Idempotent SQL generated and reviewed
-- [ ] Applied to preprod first
-- [ ] Verified on preprod
-- [ ] Applied to prod
-- [ ] `seed.sql` updated with new data
