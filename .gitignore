@@ -46,3 +46,7 @@ Screenshot*.png
 InnoTrue_Hub_AI_Development_Workflow.md
 InnoTrue_Hub_Code_Audit.md
 InnoTrue_Hub_Tier2_Hook_Testing_Guide.md
+
+# Lovable import artifacts
+lovable-export*.sql
+lovable-export*.json
