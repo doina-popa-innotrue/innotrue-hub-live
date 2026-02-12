@@ -691,6 +691,7 @@ DECLARE
   v_client1_id UUID := 'c0000000-0000-0000-0000-000000000001';
   v_client2_id UUID := 'c0000000-0000-0000-0000-000000000002';
   v_coach_id UUID := 'd0000000-0000-0000-0000-000000000001';
+  v_instructor_id UUID := 'e0000000-0000-0000-0000-000000000001';
   v_free_plan_id UUID;
   v_pro_plan_id UUID;
   v_elite_plan_id UUID;
@@ -891,6 +892,51 @@ BEGIN
   ON CONFLICT DO NOTHING;
 
   -- =========================================================================
+  -- Demo Instructor: innohub_instructor@innotrue.com
+  -- =========================================================================
+  INSERT INTO auth.users (
+      id, instance_id, email, encrypted_password, email_confirmed_at,
+      raw_app_meta_data, raw_user_meta_data, aud, role, created_at, updated_at,
+      confirmation_token, recovery_token,
+      email_change, email_change_token_new, email_change_token_current, email_change_confirm_status,
+      phone_change, phone_change_token, reauthentication_token
+    ) VALUES (
+      v_instructor_id,
+      '00000000-0000-0000-0000-000000000000',
+      'innohub_instructor@innotrue.com',
+      crypt('DemoPass123!', gen_salt('bf')),
+      now(),
+      '{"provider": "email", "providers": ["email"]}'::jsonb,
+      '{"name": "InnoHub Instructor"}'::jsonb,
+      'authenticated', 'authenticated', now(), now(),
+      '', '',
+      '', '', '', 0,
+      '', '', ''
+    ) ON CONFLICT (id) DO NOTHING;
+
+    INSERT INTO auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
+    VALUES (
+      v_instructor_id, v_instructor_id,
+      jsonb_build_object('sub', v_instructor_id, 'email', 'innohub_instructor@innotrue.com', 'name', 'InnoHub Instructor'),
+      'email', v_instructor_id::text, now(), now(), now()
+    ) ON CONFLICT (provider, provider_id) DO NOTHING;
+
+    INSERT INTO public.profiles (id, name) VALUES (v_instructor_id, 'InnoHub Instructor')
+    ON CONFLICT (id) DO UPDATE SET name = 'InnoHub Instructor';
+
+    UPDATE public.profiles SET plan_id = v_pro_plan_id WHERE id = v_instructor_id;
+
+    INSERT INTO public.user_roles (user_id, role) VALUES (v_instructor_id, 'instructor')
+    ON CONFLICT (user_id, role) DO NOTHING;
+
+    INSERT INTO public.user_credit_balances (user_id, available_credits, total_received, total_consumed)
+    VALUES (v_instructor_id, 150, 150, 0)
+    ON CONFLICT (user_id) DO UPDATE SET
+      available_credits = EXCLUDED.available_credits,
+      total_received = EXCLUDED.total_received,
+      total_consumed = EXCLUDED.total_consumed;
+
+  -- =========================================================================
   -- Module Progress for Sarah (CTA Immersion - 2 modules completed)
   -- =========================================================================
   -- Get Sarah's enrollment
@@ -997,7 +1043,7 @@ ON CONFLICT DO NOTHING;
 -- - 8 notification categories + 34 notification types
 -- - 10 wheel of life categories
 -- - 2 sample programs with 11 total modules
--- - 4 demo users (admin, 2 clients, 1 coach) with enrollments and progress
+-- - 5 demo users (admin, 2 clients, 1 coach, 1 instructor) with enrollments and progress
 -- - 1 platform terms document
 -- =============================================================================
 --
@@ -1006,4 +1052,5 @@ ON CONFLICT DO NOTHING;
 -- Client:  sarah.johnson@demo.innotrue.com / DemoPass123!
 -- Client:  michael.chen@demo.innotrue.com / DemoPass123!
 -- Coach:   emily.parker@demo.innotrue.com / DemoPass123!
+-- Instructor: innohub_instructor@innotrue.com / DemoPass123!
 -- =============================================================================
