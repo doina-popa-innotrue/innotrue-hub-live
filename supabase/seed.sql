@@ -688,6 +688,7 @@ ON CONFLICT (program_id, order_index) DO NOTHING;
 DO $$
 DECLARE
   v_admin_id UUID := 'a0000000-0000-0000-0000-000000000001';
+  v_admin2_id UUID := 'a0000000-0000-0000-0000-000000000002';
   v_client1_id UUID := 'c0000000-0000-0000-0000-000000000001';
   v_client2_id UUID := 'c0000000-0000-0000-0000-000000000002';
   v_coach_id UUID := 'd0000000-0000-0000-0000-000000000001';
@@ -745,6 +746,46 @@ BEGIN
 
   -- Assign admin role
   INSERT INTO public.user_roles (user_id, role) VALUES (v_admin_id, 'admin')
+  ON CONFLICT (user_id, role) DO NOTHING;
+
+  -- =========================================================================
+  -- Admin 2 (test): doinapopade@gmail.com
+  -- =========================================================================
+  INSERT INTO auth.users (
+    id, instance_id, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, aud, role, created_at, updated_at,
+    confirmation_token, recovery_token,
+    email_change, email_change_token_new, email_change_token_current, email_change_confirm_status,
+    phone_change, phone_change_token, reauthentication_token
+  ) VALUES (
+    v_admin2_id,
+    '00000000-0000-0000-0000-000000000000',
+    'doinapopade@gmail.com',
+    '$2a$10$PwGnGw5T7MaVqKuVY0DWKO.gV0YvuN4VhGQjSJWBLhRhIkRzT5RTe', -- DemoPass123!
+    now(),
+    '{"provider": "email", "providers": ["email"]}'::jsonb,
+    '{"name": "Doina Popa (Test)"}'::jsonb,
+    'authenticated', 'authenticated', now(), now(),
+    '', '',
+    '', '', '', 0,
+    '', '', ''
+  ) ON CONFLICT (id) DO NOTHING;
+
+  INSERT INTO auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
+  VALUES (
+    v_admin2_id, v_admin2_id,
+    jsonb_build_object('sub', v_admin2_id, 'email', 'doinapopade@gmail.com', 'name', 'Doina Popa (Test)'),
+    'email', v_admin2_id::text, now(), now(), now()
+  ) ON CONFLICT (provider, provider_id) DO NOTHING;
+
+  INSERT INTO public.profiles (id, name) VALUES (v_admin2_id, 'Doina Popa (Test)')
+  ON CONFLICT (id) DO UPDATE SET name = 'Doina Popa (Test)';
+
+  -- Set admin2 to Elite plan
+  UPDATE public.profiles SET plan_id = v_elite_plan_id WHERE id = v_admin2_id;
+
+  -- Assign admin role
+  INSERT INTO public.user_roles (user_id, role) VALUES (v_admin2_id, 'admin')
   ON CONFLICT (user_id, role) DO NOTHING;
 
   -- =========================================================================
@@ -984,6 +1025,7 @@ BEGIN
   INSERT INTO public.user_credit_balances (user_id, available_credits, total_received, total_consumed)
   VALUES
     (v_admin_id, 750, 750, 0),
+    (v_admin2_id, 750, 750, 0),
     (v_client1_id, 230, 250, 20),
     (v_client2_id, 18, 20, 2),
     (v_coach_id, 245, 250, 5)
@@ -1043,14 +1085,15 @@ ON CONFLICT DO NOTHING;
 -- - 8 notification categories + 34 notification types
 -- - 10 wheel of life categories
 -- - 2 sample programs with 11 total modules
--- - 5 demo users (admin, 2 clients, 1 coach, 1 instructor) with enrollments and progress
+-- - 6 demo users (2 admins, 2 clients, 1 coach, 1 instructor) with enrollments and progress
 -- - 1 platform terms document
 -- =============================================================================
 --
 -- Demo Login Credentials:
--- Admin:   doina.popa@innotrue.com / DemoPass123!
--- Client:  sarah.johnson@demo.innotrue.com / DemoPass123!
--- Client:  michael.chen@demo.innotrue.com / DemoPass123!
--- Coach:   emily.parker@demo.innotrue.com / DemoPass123!
+-- Admin:      doina.popa@innotrue.com / DemoPass123!
+-- Admin:      doinapopade@gmail.com / DemoPass123!
+-- Client:     sarah.johnson@demo.innotrue.com / DemoPass123!
+-- Client:     michael.chen@demo.innotrue.com / DemoPass123!
+-- Coach:      emily.parker@demo.innotrue.com / DemoPass123!
 -- Instructor: innohub_instructor@innotrue.com / DemoPass123!
 -- =============================================================================
