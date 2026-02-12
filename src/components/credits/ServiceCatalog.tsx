@@ -14,11 +14,11 @@ interface ServiceCatalogProps {
   showBalance?: boolean;
 }
 
-export function ServiceCatalog({ 
-  category, 
-  onSelectService, 
+export function ServiceCatalog({
+  category,
+  onSelectService,
   selectedServiceId,
-  showBalance = true 
+  showBalance = true,
 }: ServiceCatalogProps) {
   const { user } = useAuth();
   const { data: services, isLoading } = useCreditServices(category);
@@ -47,12 +47,15 @@ export function ServiceCatalog({
   }
 
   // Group services by category
-  const groupedServices = services.reduce((acc, service) => {
-    const cat = service.category || 'General';
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(service);
-    return acc;
-  }, {} as Record<string, typeof services>);
+  const groupedServices = services.reduce(
+    (acc, service) => {
+      const cat = service.category || "General";
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(service);
+      return acc;
+    },
+    {} as Record<string, typeof services>,
+  );
 
   const balance = summary?.total_available ?? 0;
 
@@ -62,7 +65,7 @@ export function ServiceCatalog({
         <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
           <Coins className="h-5 w-5 text-primary" />
           <span className="font-medium">
-            Your Balance: {isLoadingCredits ? '...' : balance.toLocaleString()} credits
+            Your Balance: {isLoadingCredits ? "..." : balance.toLocaleString()} credits
           </span>
         </div>
       )}
@@ -112,9 +115,9 @@ function ServiceCard({ service, isSelected, onSelect, userBalance }: ServiceCard
   return (
     <Card
       className={`transition-all ${
-        isSelectable ? 'cursor-pointer hover:border-primary/50' : ''
-      } ${isSelected ? 'border-primary ring-1 ring-primary' : ''} ${
-        !canAfford && isSelectable ? 'opacity-60' : ''
+        isSelectable ? "cursor-pointer hover:border-primary/50" : ""
+      } ${isSelected ? "border-primary ring-1 ring-primary" : ""} ${
+        !canAfford && isSelectable ? "opacity-60" : ""
       }`}
       onClick={() => {
         if (isSelectable && canAfford) {
@@ -150,10 +153,7 @@ function ServiceCard({ service, isSelected, onSelect, userBalance }: ServiceCard
             )}
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
-            <Badge 
-              variant={canAfford ? "default" : "secondary"} 
-              className="font-mono text-sm"
-            >
+            <Badge variant={canAfford ? "default" : "secondary"} className="font-mono text-sm">
               <Coins className="h-3.5 w-3.5 mr-1" />
               {service.credit_cost}
             </Badge>
@@ -170,11 +170,11 @@ function ServiceCard({ service, isSelected, onSelect, userBalance }: ServiceCard
   );
 }
 
-export function ServiceCostDisplay({ 
-  serviceId, 
-  showDiscount = true 
-}: { 
-  serviceId: string; 
+export function ServiceCostDisplay({
+  serviceId,
+  showDiscount = true,
+}: {
+  serviceId: string;
   showDiscount?: boolean;
 }) {
   const { getServiceCost } = useCreditService();
@@ -188,7 +188,8 @@ export function ServiceCostDisplay({
     return null;
   }
 
-  const hasDiscount = showDiscount && cost.has_track_discount && cost.effective_cost !== cost.base_cost;
+  const hasDiscount =
+    showDiscount && cost.has_track_discount && cost.effective_cost !== cost.base_cost;
 
   return (
     <span className="inline-flex items-center gap-1.5">
@@ -197,7 +198,9 @@ export function ServiceCostDisplay({
         <>
           <span className="line-through text-muted-foreground">{cost.base_cost}</span>
           <span className="font-medium text-primary">{cost.effective_cost}</span>
-          <Badge variant="secondary" className="text-xs">Discount</Badge>
+          <Badge variant="secondary" className="text-xs">
+            Discount
+          </Badge>
         </>
       ) : (
         <span className="font-medium">{cost.effective_cost}</span>

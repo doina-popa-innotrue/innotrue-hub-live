@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ClipboardCheck, Clock, ArrowRight, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ClipboardCheck, Clock, ArrowRight, Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface AssignmentSummary {
   total: number;
@@ -35,53 +35,46 @@ export function PendingAssignmentsWidget() {
     try {
       setLoading(true);
 
-      const showInstructor = userRole === 'instructor';
-      const showCoach = userRole === 'coach';
-      const userId = user?.id ?? '';
+      const showInstructor = userRole === "instructor";
+      const showCoach = userRole === "coach";
+      const userId = user?.id ?? "";
 
-      const programInstructorPromise = showInstructor && userRoles.includes('instructor') && userId
-        ? supabase
-            .from('program_instructors')
-            .select('program_id')
-            .eq('instructor_id', userId)
-        : Promise.resolve({ data: [], error: null });
+      const programInstructorPromise =
+        showInstructor && userRoles.includes("instructor") && userId
+          ? supabase.from("program_instructors").select("program_id").eq("instructor_id", userId)
+          : Promise.resolve({ data: [], error: null });
 
-      const programCoachPromise = showCoach && userRoles.includes('coach') && userId
-        ? supabase
-            .from('program_coaches')
-            .select('program_id')
-            .eq('coach_id', userId)
-        : Promise.resolve({ data: [], error: null });
+      const programCoachPromise =
+        showCoach && userRoles.includes("coach") && userId
+          ? supabase.from("program_coaches").select("program_id").eq("coach_id", userId)
+          : Promise.resolve({ data: [], error: null });
 
-      const moduleInstructorPromise = showInstructor && userRoles.includes('instructor') && userId
-        ? supabase
-            .from('module_instructors')
-            .select('module_id')
-            .eq('instructor_id', userId)
-        : Promise.resolve({ data: [], error: null });
+      const moduleInstructorPromise =
+        showInstructor && userRoles.includes("instructor") && userId
+          ? supabase.from("module_instructors").select("module_id").eq("instructor_id", userId)
+          : Promise.resolve({ data: [], error: null });
 
-      const moduleCoachPromise = showCoach && userRoles.includes('coach') && userId
-        ? supabase
-            .from('module_coaches')
-            .select('module_id')
-            .eq('coach_id', userId)
-        : Promise.resolve({ data: [], error: null });
+      const moduleCoachPromise =
+        showCoach && userRoles.includes("coach") && userId
+          ? supabase.from("module_coaches").select("module_id").eq("coach_id", userId)
+          : Promise.resolve({ data: [], error: null });
 
-      const [instructorPrograms, coachPrograms, instructorModules, coachModules] = await Promise.all([
-        programInstructorPromise,
-        programCoachPromise,
-        moduleInstructorPromise,
-        moduleCoachPromise,
-      ]);
+      const [instructorPrograms, coachPrograms, instructorModules, coachModules] =
+        await Promise.all([
+          programInstructorPromise,
+          programCoachPromise,
+          moduleInstructorPromise,
+          moduleCoachPromise,
+        ]);
 
       const programIds = new Set([
-        ...(instructorPrograms.data || []).map(p => p.program_id),
-        ...(coachPrograms.data || []).map(p => p.program_id),
+        ...(instructorPrograms.data || []).map((p) => p.program_id),
+        ...(coachPrograms.data || []).map((p) => p.program_id),
       ]);
 
       const moduleIds = new Set([
-        ...(instructorModules.data || []).map(m => m.module_id),
-        ...(coachModules.data || []).map(m => m.module_id),
+        ...(instructorModules.data || []).map((m) => m.module_id),
+        ...(coachModules.data || []).map((m) => m.module_id),
       ]);
 
       if (programIds.size === 0 && moduleIds.size === 0) {
@@ -93,12 +86,12 @@ export function PendingAssignmentsWidget() {
       let allModuleIds = new Set(moduleIds);
       if (programIds.size > 0) {
         const { data: programModules } = await supabase
-          .from('program_modules')
-          .select('id')
-          .in('program_id', Array.from(programIds))
-          .eq('is_active', true);
-        
-        programModules?.forEach(m => allModuleIds.add(m.id));
+          .from("program_modules")
+          .select("id")
+          .in("program_id", Array.from(programIds))
+          .eq("is_active", true);
+
+        programModules?.forEach((m) => allModuleIds.add(m.id));
       }
 
       if (allModuleIds.size === 0) {
@@ -108,9 +101,9 @@ export function PendingAssignmentsWidget() {
       }
 
       const { data: moduleProgressData } = await supabase
-        .from('module_progress')
-        .select('id')
-        .in('module_id', Array.from(allModuleIds));
+        .from("module_progress")
+        .select("id")
+        .in("module_id", Array.from(allModuleIds));
 
       if (!moduleProgressData || moduleProgressData.length === 0) {
         setSummary({ total: 0, overdue: 0, dueSoon: 0, recent: 0 });
@@ -118,13 +111,13 @@ export function PendingAssignmentsWidget() {
         return;
       }
 
-      const progressIds = moduleProgressData.map(mp => mp.id);
+      const progressIds = moduleProgressData.map((mp) => mp.id);
 
       const { data: assignments, error } = await supabase
-        .from('module_assignments')
-        .select('id, created_at, status')
-        .in('module_progress_id', progressIds)
-        .in('status', ['submitted', 'pending', 'in_progress', 'draft']);
+        .from("module_assignments")
+        .select("id, created_at, status")
+        .in("module_progress_id", progressIds)
+        .in("status", ["submitted", "pending", "in_progress", "draft"]);
 
       if (error) throw error;
 
@@ -139,10 +132,12 @@ export function PendingAssignmentsWidget() {
       let dueSoon = 0;
       let recent = 0;
 
-      assignments.forEach(a => {
+      assignments.forEach((a) => {
         const createdAt = new Date(a.created_at);
-        const daysPending = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-        
+        const daysPending = Math.floor(
+          (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
+        );
+
         if (daysPending >= 7) overdue++;
         else if (daysPending >= 3) dueSoon++;
         else recent++;
@@ -155,7 +150,7 @@ export function PendingAssignmentsWidget() {
         recent,
       });
     } catch (error) {
-      console.error('Error loading assignment summary:', error);
+      console.error("Error loading assignment summary:", error);
     } finally {
       setLoading(false);
     }
@@ -186,14 +181,10 @@ export function PendingAssignmentsWidget() {
             Pending Assignments
           </CardTitle>
           {summary.total > 0 && (
-            <Badge variant={summary.overdue > 0 ? 'destructive' : 'default'}>
-              {summary.total}
-            </Badge>
+            <Badge variant={summary.overdue > 0 ? "destructive" : "default"}>{summary.total}</Badge>
           )}
         </div>
-        <CardDescription>
-          Client assignments awaiting your review
-        </CardDescription>
+        <CardDescription>Client assignments awaiting your review</CardDescription>
       </CardHeader>
       <CardContent>
         {summary.total === 0 ? (
@@ -222,10 +213,10 @@ export function PendingAssignmentsWidget() {
               </div>
             </div>
 
-            <Button 
-              variant="outline" 
-              className="w-full" 
-              onClick={() => navigate('/teaching/assignments')}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate("/teaching/assignments")}
             >
               View All Assignments
               <ArrowRight className="h-4 w-4 ml-2" />

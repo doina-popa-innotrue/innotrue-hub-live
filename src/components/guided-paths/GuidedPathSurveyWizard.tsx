@@ -1,17 +1,17 @@
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import type { Json } from '@/integrations/supabase/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import type { Json } from "@/integrations/supabase/types";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface SurveyQuestion {
   id: string;
@@ -43,13 +43,13 @@ interface Props {
   onCancel: () => void;
 }
 
-export function GuidedPathSurveyWizard({ 
-  familyId, 
-  familyName, 
-  questions, 
+export function GuidedPathSurveyWizard({
+  familyId,
+  familyName,
+  questions,
   templates,
   onComplete,
-  onCancel 
+  onCancel,
 }: Props) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -58,7 +58,7 @@ export function GuidedPathSurveyWizard({
 
   const totalSteps = questions.length;
   const currentQuestion = questions[currentStep];
-  const progress = totalSteps > 0 ? ((currentStep) / totalSteps) * 100 : 0;
+  const progress = totalSteps > 0 ? (currentStep / totalSteps) * 100 : 0;
 
   // Evaluate template conditions based on responses
   function evaluateConditions(): string[] {
@@ -79,28 +79,28 @@ export function GuidedPathSurveyWizard({
         const conditionValue = condition.value;
 
         switch (condition.operator) {
-          case 'equals':
+          case "equals":
             return userAnswer === conditionValue;
-          case 'not_equals':
+          case "not_equals":
             return userAnswer !== conditionValue;
-          case 'in':
+          case "in":
             if (Array.isArray(conditionValue)) {
               return conditionValue.includes(userAnswer);
             }
             return false;
-          case 'not_in':
+          case "not_in":
             if (Array.isArray(conditionValue)) {
               return !conditionValue.includes(userAnswer);
             }
             return true;
-          case 'contains':
+          case "contains":
             if (Array.isArray(userAnswer)) {
               return userAnswer.includes(conditionValue);
             }
             return false;
-          case 'before': {
+          case "before": {
             // Date comparison: user's date is before condition date
-            if (typeof userAnswer === 'string' && typeof conditionValue === 'string') {
+            if (typeof userAnswer === "string" && typeof conditionValue === "string") {
               const userDate = new Date(userAnswer);
               const condDate = new Date(conditionValue);
               // Validate dates are valid before comparing
@@ -110,9 +110,9 @@ export function GuidedPathSurveyWizard({
             }
             return false;
           }
-          case 'after': {
+          case "after": {
             // Date comparison: user's date is after condition date
-            if (typeof userAnswer === 'string' && typeof conditionValue === 'string') {
+            if (typeof userAnswer === "string" && typeof conditionValue === "string") {
               const userDate = new Date(userAnswer);
               const condDate = new Date(conditionValue);
               // Validate dates are valid before comparing
@@ -141,27 +141,27 @@ export function GuidedPathSurveyWizard({
   const saveSurveyMutation = useMutation({
     mutationFn: async () => {
       if (!user) {
-        throw new Error('You must be logged in to complete this survey');
+        throw new Error("You must be logged in to complete this survey");
       }
-      
+
       const selectedTemplateIds = evaluateConditions();
-      
-      const { error } = await supabase
-        .from('guided_path_survey_responses')
-        .insert([{
+
+      const { error } = await supabase.from("guided_path_survey_responses").insert([
+        {
           user_id: user.id,
           family_id: familyId,
           responses: responses as Json,
           selected_template_ids: selectedTemplateIds,
           completed_at: new Date().toISOString(),
-        }]);
+        },
+      ]);
 
       if (error) throw error;
       return selectedTemplateIds;
     },
     onSuccess: (selectedTemplateIds) => {
-      queryClient.invalidateQueries({ queryKey: ['guided-path-survey-responses'] });
-      toast.success('Survey completed! Generating your personalized path...');
+      queryClient.invalidateQueries({ queryKey: ["guided-path-survey-responses"] });
+      toast.success("Survey completed! Generating your personalized path...");
       onComplete(selectedTemplateIds);
     },
     onError: (error: Error) => {
@@ -172,7 +172,7 @@ export function GuidedPathSurveyWizard({
   function handleBooleanChange(value: string) {
     setResponses((prev) => ({
       ...prev,
-      [currentQuestion.id]: value === 'true',
+      [currentQuestion.id]: value === "true",
     }));
   }
 
@@ -203,7 +203,7 @@ export function GuidedPathSurveyWizard({
   function canProceed(): boolean {
     if (!currentQuestion.is_required) return true;
     const answer = responses[currentQuestion.id];
-    if (answer === undefined || answer === null || answer === '') return false;
+    if (answer === undefined || answer === null || answer === "") return false;
     if (Array.isArray(answer) && answer.length === 0) return false;
     return true;
   }
@@ -231,19 +231,18 @@ export function GuidedPathSurveyWizard({
       <Card>
         <CardHeader>
           <CardTitle>{familyName}</CardTitle>
-          <CardDescription>
-            Ready to start your guided path
-          </CardDescription>
+          <CardDescription>Ready to start your guided path</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            This path has {templates.length} template{templates.length !== 1 ? 's' : ''} ready for you.
+            This path has {templates.length} template{templates.length !== 1 ? "s" : ""} ready for
+            you.
           </p>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onCancel}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={() => saveSurveyMutation.mutate()}
               disabled={saveSurveyMutation.isPending}
             >
@@ -288,29 +287,33 @@ export function GuidedPathSurveyWizard({
         </div>
 
         <div className="space-y-3">
-          {currentQuestion.question_type === 'boolean' && (
+          {currentQuestion.question_type === "boolean" && (
             <RadioGroup
-              value={String(responses[currentQuestion.id] ?? '')}
+              value={String(responses[currentQuestion.id] ?? "")}
               onValueChange={handleBooleanChange}
             >
               <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
                 <RadioGroupItem value="true" id="yes" />
-                <Label htmlFor="yes" className="cursor-pointer flex-1">Yes</Label>
+                <Label htmlFor="yes" className="cursor-pointer flex-1">
+                  Yes
+                </Label>
               </div>
               <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
                 <RadioGroupItem value="false" id="no" />
-                <Label htmlFor="no" className="cursor-pointer flex-1">No</Label>
+                <Label htmlFor="no" className="cursor-pointer flex-1">
+                  No
+                </Label>
               </div>
             </RadioGroup>
           )}
 
-          {currentQuestion.question_type === 'single_choice' && currentQuestion.options && (
+          {currentQuestion.question_type === "single_choice" && currentQuestion.options && (
             <RadioGroup
-              value={String(responses[currentQuestion.id] ?? '')}
+              value={String(responses[currentQuestion.id] ?? "")}
               onValueChange={handleSingleChoiceChange}
             >
               {currentQuestion.options.map((option) => (
-                <div 
+                <div
                   key={option.value}
                   className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
                 >
@@ -323,13 +326,13 @@ export function GuidedPathSurveyWizard({
             </RadioGroup>
           )}
 
-          {currentQuestion.question_type === 'multi_choice' && currentQuestion.options && (
+          {currentQuestion.question_type === "multi_choice" && currentQuestion.options && (
             <div className="space-y-2">
               {currentQuestion.options.map((option) => {
                 const currentValues = (responses[currentQuestion.id] as string[]) || [];
                 const isChecked = currentValues.includes(option.value);
                 return (
-                  <div 
+                  <div
                     key={option.value}
                     className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
                     onClick={() => handleMultiChoiceChange(option.value, !isChecked)}
@@ -337,7 +340,7 @@ export function GuidedPathSurveyWizard({
                     <Checkbox
                       id={option.value}
                       checked={isChecked}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         handleMultiChoiceChange(option.value, checked as boolean)
                       }
                     />
@@ -350,10 +353,10 @@ export function GuidedPathSurveyWizard({
             </div>
           )}
 
-          {currentQuestion.question_type === 'date' && (
+          {currentQuestion.question_type === "date" && (
             <Input
               type="date"
-              value={(responses[currentQuestion.id] as string) || ''}
+              value={(responses[currentQuestion.id] as string) || ""}
               onChange={(e) => handleDateChange(e.target.value)}
             />
           )}
@@ -362,12 +365,9 @@ export function GuidedPathSurveyWizard({
         <div className="flex justify-between pt-4">
           <Button variant="outline" onClick={handleBack}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            {currentStep === 0 ? 'Cancel' : 'Back'}
+            {currentStep === 0 ? "Cancel" : "Back"}
           </Button>
-          <Button 
-            onClick={handleNext}
-            disabled={!canProceed() || saveSurveyMutation.isPending}
-          >
+          <Button onClick={handleNext} disabled={!canProceed() || saveSurveyMutation.isPending}>
             {saveSurveyMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

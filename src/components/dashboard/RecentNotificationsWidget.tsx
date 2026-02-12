@@ -1,11 +1,11 @@
-import { useNotifications } from '@/hooks/useNotifications';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Bell, CheckCircle, Calendar, FileText, FilePlus, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useNotifications } from "@/hooks/useNotifications";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Bell, CheckCircle, Calendar, FileText, FilePlus, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { formatDistanceToNow } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const notificationIcons: Record<string, React.ElementType> = {
   assignment_graded: FileText,
@@ -19,11 +19,9 @@ export function RecentNotificationsWidget() {
   const navigate = useNavigate();
 
   // Get recent unread notifications (max 5)
-  const recentUnread = notifications
-    .filter(n => !n.is_read)
-    .slice(0, 5);
+  const recentUnread = notifications.filter((n) => !n.is_read).slice(0, 5);
 
-  const handleNotificationClick = (notification: typeof notifications[0]) => {
+  const handleNotificationClick = (notification: (typeof notifications)[0]) => {
     markAsRead(notification.id);
     if (notification.link) {
       navigate(notification.link);
@@ -64,10 +62,10 @@ export function RecentNotificationsWidget() {
               </Badge>
             )}
           </CardTitle>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => navigate('/notifications')}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/notifications")}
             className="text-sm"
           >
             View All
@@ -77,9 +75,9 @@ export function RecentNotificationsWidget() {
       </CardHeader>
       <CardContent className="space-y-3">
         {recentUnread.map((notification) => {
-          const typeKey = notification.notification_types?.key || 'default';
+          const typeKey = notification.notification_types?.key || "default";
           const Icon = notificationIcons[typeKey] || notificationIcons.default;
-          
+
           return (
             <div
               key={notification.id}

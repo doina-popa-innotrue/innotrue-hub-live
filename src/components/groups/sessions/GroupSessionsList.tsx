@@ -1,45 +1,51 @@
-import { useState, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash2, Loader2, Calendar } from 'lucide-react';
-import { GroupSessionCard } from './GroupSessionCard';
-import { GroupSessionForm } from './GroupSessionForm';
-import { SessionFormData, getEmptySessionForm } from '@/hooks/useGroupSessionMutations';
-import { addMonths, isAfter, isBefore, startOfDay, format } from 'date-fns';
-import { getNextRecurringDate } from '@/lib/recurringDates';
+import { useState, useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Trash2, Loader2, Calendar } from "lucide-react";
+import { GroupSessionCard } from "./GroupSessionCard";
+import { GroupSessionForm } from "./GroupSessionForm";
+import { SessionFormData, getEmptySessionForm } from "@/hooks/useGroupSessionMutations";
+import { addMonths, isAfter, isBefore, startOfDay, format } from "date-fns";
+import { getNextRecurringDate } from "@/lib/recurringDates";
 
 // Helper functions for session filtering
 const isSameDay = (date1: Date, date2: Date): boolean => {
-  return date1.getFullYear() === date2.getFullYear() &&
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
     date1.getMonth() === date2.getMonth() &&
-    date1.getDate() === date2.getDate();
+    date1.getDate() === date2.getDate()
+  );
 };
 
 const getUpcomingSessionsWithOccurrences = (sessions: any[]): any[] => {
   if (!sessions) return [];
-  
+
   const now = new Date();
   const maxEndDate = addMonths(now, 3);
   const result: any[] = [];
-  
+
   for (const session of sessions) {
     const sessionDate = new Date(session.session_date);
-    
-    if (session.status === 'scheduled' && (isAfter(sessionDate, now) || isSameDay(sessionDate, now))) {
+
+    if (
+      session.status === "scheduled" &&
+      (isAfter(sessionDate, now) || isSameDay(sessionDate, now))
+    ) {
       result.push(session);
     }
-    
+
     if (session.is_recurring && session.recurrence_pattern && !session.parent_session_id) {
       let nextDate = sessionDate;
       let occurrenceCount = 0;
       const maxOccurrences = 10;
-      
+
       while (occurrenceCount < maxOccurrences) {
         nextDate = getNextRecurringDate(nextDate, session.recurrence_pattern);
-        
+
         if (isAfter(nextDate, maxEndDate)) break;
-        if (session.recurrence_end_date && isAfter(nextDate, new Date(session.recurrence_end_date))) break;
-        
+        if (session.recurrence_end_date && isAfter(nextDate, new Date(session.recurrence_end_date)))
+          break;
+
         if (isAfter(nextDate, now) || isSameDay(nextDate, now)) {
           result.push({
             ...session,
@@ -53,17 +59,24 @@ const getUpcomingSessionsWithOccurrences = (sessions: any[]): any[] => {
       }
     }
   }
-  
-  return result.sort((a, b) => new Date(a.session_date).getTime() - new Date(b.session_date).getTime());
+
+  return result.sort(
+    (a, b) => new Date(a.session_date).getTime() - new Date(b.session_date).getTime(),
+  );
 };
 
 const getPastSessions = (sessions: any[]): any[] => {
   if (!sessions) return [];
   const now = new Date();
-  return sessions.filter(session => {
-    const sessionDate = new Date(session.session_date);
-    return session.status === 'completed' || (isBefore(sessionDate, startOfDay(now)) && session.status !== 'scheduled');
-  }).sort((a, b) => new Date(b.session_date).getTime() - new Date(a.session_date).getTime());
+  return sessions
+    .filter((session) => {
+      const sessionDate = new Date(session.session_date);
+      return (
+        session.status === "completed" ||
+        (isBefore(sessionDate, startOfDay(now)) && session.status !== "scheduled")
+      );
+    })
+    .sort((a, b) => new Date(b.session_date).getTime() - new Date(a.session_date).getTime());
 };
 
 interface GroupSessionsListProps {
@@ -74,7 +87,11 @@ interface GroupSessionsListProps {
   linkPrefix?: string;
   calcomMappingName?: string;
   // Session mutations
-  onCreateSession: (formData: SessionFormData, timezone?: string, useGoogleCalendar?: boolean) => Promise<void>;
+  onCreateSession: (
+    formData: SessionFormData,
+    timezone?: string,
+    useGoogleCalendar?: boolean,
+  ) => Promise<void>;
   onEditSession?: (session: any, formData: SessionFormData, updateAll: boolean) => void;
   onDeleteSession?: (session: any, deleteAll: boolean) => void;
   onStatusChange?: (sessionId: string, status: string) => void;
@@ -100,7 +117,7 @@ export function GroupSessionsList({
   groupId,
   userTimezone,
   isAdmin = false,
-  linkPrefix = '/groups',
+  linkPrefix = "/groups",
   calcomMappingName,
   onCreateSession,
   onEditSession,
@@ -122,29 +139,35 @@ export function GroupSessionsList({
   const [editingSession, setEditingSession] = useState<any>(null);
   const [updateAllFuture, setUpdateAllFuture] = useState(false);
   const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(new Set());
-  
+
   // Local state for timezone and google calendar (admin features)
   const [sessionTimezone, setSessionTimezone] = useState(initialTimezone || userTimezone);
   const [useGoogleCalendar, setUseGoogleCalendar] = useState(initialUseGoogleCalendar);
 
   const upcomingSessions = useMemo(() => getUpcomingSessionsWithOccurrences(sessions), [sessions]);
-  const pastSessions = useMemo(() => (isAdmin || showPastSessions) ? getPastSessions(sessions) : [], [sessions, isAdmin, showPastSessions]);
+  const pastSessions = useMemo(
+    () => (isAdmin || showPastSessions ? getPastSessions(sessions) : []),
+    [sessions, isAdmin, showPastSessions],
+  );
   // Only real sessions (not generated) for selection
-  const realSessions = useMemo(() => sessions?.filter(s => !s.isGeneratedOccurrence) || [], [sessions]);
+  const realSessions = useMemo(
+    () => sessions?.filter((s) => !s.isGeneratedOccurrence) || [],
+    [sessions],
+  );
 
   const handleOpenForm = (session?: any) => {
     if (session) {
       const sessionDate = new Date(session.session_date);
       setSessionForm({
         title: session.title,
-        description: session.description || '',
-        session_date: format(sessionDate, 'yyyy-MM-dd'),
-        session_time: format(sessionDate, 'HH:mm'),
+        description: session.description || "",
+        session_date: format(sessionDate, "yyyy-MM-dd"),
+        session_time: format(sessionDate, "HH:mm"),
         duration_minutes: String(session.duration_minutes || 60),
-        location: session.location || '',
+        location: session.location || "",
         is_recurring: false,
-        recurrence_pattern: '',
-        recurrence_end_date: '',
+        recurrence_pattern: "",
+        recurrence_end_date: "",
       });
       setEditingSession(session);
     } else {
@@ -173,7 +196,11 @@ export function GroupSessionsList({
     if (editingSession && onEditSession) {
       onEditSession(editingSession, sessionForm, updateAllFuture);
     } else {
-      await onCreateSession(sessionForm, showTimezone ? sessionTimezone : undefined, showGoogleCalendarOption ? useGoogleCalendar : undefined);
+      await onCreateSession(
+        sessionForm,
+        showTimezone ? sessionTimezone : undefined,
+        showGoogleCalendarOption ? useGoogleCalendar : undefined,
+      );
     }
     handleCloseForm();
     // Reset timezone and google calendar options for next creation
@@ -182,7 +209,7 @@ export function GroupSessionsList({
   };
 
   const toggleSessionSelection = (sessionId: string) => {
-    setSelectedSessionIds(prev => {
+    setSelectedSessionIds((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(sessionId)) {
         newSet.delete(sessionId);
@@ -197,7 +224,7 @@ export function GroupSessionsList({
     if (selectedSessionIds.size === realSessions.length) {
       setSelectedSessionIds(new Set());
     } else {
-      setSelectedSessionIds(new Set(realSessions.map(s => s.id)));
+      setSelectedSessionIds(new Set(realSessions.map((s) => s.id)));
     }
   };
 
@@ -214,7 +241,9 @@ export function GroupSessionsList({
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start">
         <div className="space-y-1">
-          <h3 className="text-lg font-semibold">{isAdmin ? 'Group Sessions' : 'Upcoming Sessions'}</h3>
+          <h3 className="text-lg font-semibold">
+            {isAdmin ? "Group Sessions" : "Upcoming Sessions"}
+          </h3>
           {calcomMappingName && (
             <p className="text-sm text-muted-foreground flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5" />
@@ -225,9 +254,9 @@ export function GroupSessionsList({
         <div className="flex flex-wrap gap-2">
           {/* Bulk delete button (admin only) */}
           {isAdmin && selectedSessionIds.size > 0 && onBulkDelete && (
-            <Button 
-              size="sm" 
-              variant="destructive" 
+            <Button
+              size="sm"
+              variant="destructive"
               onClick={handleBulkDelete}
               disabled={isBulkDeleting}
             >
@@ -236,7 +265,7 @@ export function GroupSessionsList({
               Delete ({selectedSessionIds.size})
             </Button>
           )}
-          
+
           {/* Select all checkbox (admin only) */}
           {isAdmin && realSessions.length > 0 && (
             <div className="flex items-center gap-2">
@@ -247,10 +276,11 @@ export function GroupSessionsList({
               <span className="text-sm text-muted-foreground">Select all</span>
             </div>
           )}
-          
+
           {/* Add Session button */}
           <Button size="sm" onClick={() => handleOpenForm()}>
-            <Plus className="mr-2 h-4 w-4" />Add Session
+            <Plus className="mr-2 h-4 w-4" />
+            Add Session
           </Button>
         </div>
       </div>

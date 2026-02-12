@@ -1,4 +1,4 @@
-import { useEffect, useRef, ReactNode } from 'react';
+import { useEffect, useRef, ReactNode } from "react";
 
 interface FocusTrapProps {
   /** Content to trap focus within */
@@ -8,22 +8,22 @@ interface FocusTrapProps {
   /** Restore focus to previously focused element on deactivation */
   restoreFocus?: boolean;
   /** Element to focus initially (selector or 'first'/'last') */
-  initialFocus?: string | 'first' | 'last';
+  initialFocus?: string | "first" | "last";
 }
 
 const FOCUSABLE_ELEMENTS = [
-  'button:not([disabled])',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
-  'a[href]',
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "a[href]",
   '[tabindex]:not([tabindex="-1"])',
-].join(',');
+].join(",");
 
 /**
  * Focus trap component for modal dialogs and overlays.
  * Traps keyboard focus within the container while active.
- * 
+ *
  * @example
  * ```tsx
  * <FocusTrap active={isModalOpen} restoreFocus>
@@ -34,11 +34,11 @@ const FOCUSABLE_ELEMENTS = [
  * </FocusTrap>
  * ```
  */
-export function FocusTrap({ 
-  children, 
-  active = true, 
+export function FocusTrap({
+  children,
+  active = true,
   restoreFocus = true,
-  initialFocus = 'first',
+  initialFocus = "first",
 }: FocusTrapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
@@ -58,9 +58,9 @@ export function FocusTrap({
     // Set initial focus
     const focusableElements = getFocusableElements();
     if (focusableElements.length > 0) {
-      if (initialFocus === 'first') {
+      if (initialFocus === "first") {
         focusableElements[0].focus();
-      } else if (initialFocus === 'last') {
+      } else if (initialFocus === "last") {
         focusableElements[focusableElements.length - 1].focus();
       } else {
         const target = containerRef.current?.querySelector(initialFocus) as HTMLElement;
@@ -74,7 +74,7 @@ export function FocusTrap({
 
     // Handle keyboard navigation
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return;
+      if (e.key !== "Tab") return;
 
       const focusableElements = getFocusableElements();
       if (focusableElements.length === 0) return;
@@ -91,11 +91,11 @@ export function FocusTrap({
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      
+      document.removeEventListener("keydown", handleKeyDown);
+
       // Restore focus
       if (restoreFocus && previousActiveElement.current) {
         previousActiveElement.current.focus();
@@ -103,9 +103,5 @@ export function FocusTrap({
     };
   }, [active, initialFocus, restoreFocus]);
 
-  return (
-    <div ref={containerRef}>
-      {children}
-    </div>
-  );
+  return <div ref={containerRef}>{children}</div>;
 }

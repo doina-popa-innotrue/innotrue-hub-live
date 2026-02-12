@@ -3,7 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { GraduationCap, BookOpen, FileText, ChevronDown, ChevronRight, ExternalLink, FolderOpen, Lock, AlertCircle } from "lucide-react";
+import {
+  GraduationCap,
+  BookOpen,
+  FileText,
+  ChevronDown,
+  ChevronRight,
+  ExternalLink,
+  FolderOpen,
+  Lock,
+  AlertCircle,
+} from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useGuidedResourceAccess, AccessStatus } from "@/hooks/useGuidedResourceAccess";
@@ -27,7 +37,11 @@ interface GuidedResource {
   fromCollection?: string;
 }
 
-export function GuidedLearningSection({ domainId, questionIds, domainName }: GuidedLearningSectionProps) {
+export function GuidedLearningSection({
+  domainId,
+  questionIds,
+  domainName,
+}: GuidedLearningSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const navigate = useNavigate();
 
@@ -53,7 +67,7 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
         .select("program_id, programs(id, name)")
         .eq("domain_id", domainId)
         .order("order_index");
-      
+
       domainPrograms?.forEach((link: any) => {
         if (link.programs) {
           addResource({
@@ -71,7 +85,7 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
         .select("module_id, program_modules(id, title, program_id, programs(id, name))")
         .eq("domain_id", domainId)
         .order("order_index");
-      
+
       domainModules?.forEach((link: any) => {
         if (link.program_modules) {
           addResource({
@@ -91,7 +105,7 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
         .select("resource_id, resource_library(id, title)")
         .eq("domain_id", domainId)
         .order("order_index");
-      
+
       domainResources?.forEach((link: any) => {
         if (link.resource_library) {
           addResource({
@@ -106,7 +120,8 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
       // Fetch domain-level collection links and resolve their resources
       const { data: domainCollections } = await (supabase as any)
         .from("domain_collection_links")
-        .select(`
+        .select(
+          `
           collection_id,
           resource_collections(
             id, 
@@ -116,10 +131,11 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
               resource_library(id, title)
             )
           )
-        `)
+        `,
+        )
         .eq("domain_id", domainId)
         .order("order_index");
-      
+
       domainCollections?.forEach((link: any) => {
         if (link.resource_collections?.resource_collection_items) {
           link.resource_collections.resource_collection_items.forEach((item: any) => {
@@ -143,7 +159,7 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
           .select("program_id, programs(id, name)")
           .in("question_id", questionIds)
           .order("order_index");
-        
+
         questionPrograms?.forEach((link: any) => {
           if (link.programs) {
             addResource({
@@ -160,7 +176,7 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
           .select("module_id, program_modules(id, title, program_id, programs(id, name))")
           .in("question_id", questionIds)
           .order("order_index");
-        
+
         questionModules?.forEach((link: any) => {
           if (link.program_modules) {
             addResource({
@@ -179,7 +195,7 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
           .select("resource_id, resource_library(id, title)")
           .in("question_id", questionIds)
           .order("order_index");
-        
+
         questionResources?.forEach((link: any) => {
           if (link.resource_library) {
             addResource({
@@ -194,7 +210,8 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
         // Fetch question-level collection links and resolve their resources
         const { data: questionCollections } = await (supabase as any)
           .from("question_collection_links")
-          .select(`
+          .select(
+            `
             collection_id,
             resource_collections(
               id, 
@@ -204,10 +221,11 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
                 resource_library(id, title)
               )
             )
-          `)
+          `,
+          )
           .in("question_id", questionIds)
           .order("order_index");
-        
+
         questionCollections?.forEach((link: any) => {
           if (link.resource_collections?.resource_collection_items) {
             link.resource_collections.resource_collection_items.forEach((item: any) => {
@@ -251,7 +269,7 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
   const { data: accessMap } = useGuidedResourceAccess(
     [...new Set(programIds)],
     [...new Set(moduleIds)],
-    moduleToProgram
+    moduleToProgram,
   );
 
   // Don't render if no resources
@@ -261,9 +279,12 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
 
   const getIconForType = (type: LinkType) => {
     switch (type) {
-      case "program": return <GraduationCap className="h-3.5 w-3.5 text-primary" />;
-      case "module": return <BookOpen className="h-3.5 w-3.5 text-secondary-foreground" />;
-      case "resource": return <FileText className="h-3.5 w-3.5 text-muted-foreground" />;
+      case "program":
+        return <GraduationCap className="h-3.5 w-3.5 text-primary" />;
+      case "module":
+        return <BookOpen className="h-3.5 w-3.5 text-secondary-foreground" />;
+      case "resource":
+        return <FileText className="h-3.5 w-3.5 text-muted-foreground" />;
     }
   };
 
@@ -271,22 +292,25 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
     if (resource.type === "resource") {
       return { status: "accessible" };
     }
-    
-    const key = resource.type === "program" 
-      ? `program-${resource.programId}` 
-      : `module-${resource.moduleId}`;
-    
+
+    const key =
+      resource.type === "program" ? `program-${resource.programId}` : `module-${resource.moduleId}`;
+
     const accessInfo = accessMap?.get(key);
     return { status: accessInfo?.status || "accessible", info: accessInfo };
   };
 
-  const handleResourceClick = (resource: GuidedResource, accessStatus: AccessStatus, programId?: string) => {
+  const handleResourceClick = (
+    resource: GuidedResource,
+    accessStatus: AccessStatus,
+    programId?: string,
+  ) => {
     if (accessStatus === "not_enrolled" && programId) {
       // Navigate to Explore Programs filtered to this program
       navigate(`/explore-programs?highlight=${programId}`);
       return;
     }
-    
+
     // For accessible resources, navigate normally
     if (accessStatus === "accessible") {
       if (resource.type === "program") {
@@ -309,7 +333,10 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
         );
       case "tier_locked":
         return (
-          <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/20">
+          <Badge
+            variant="outline"
+            className="text-xs bg-destructive/10 text-destructive border-destructive/20"
+          >
             <Lock className="h-3 w-3 mr-1" />
             {info?.requiredTier || "Upgrade Required"}
           </Badge>
@@ -342,8 +369,8 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
   };
 
   return (
-    <Collapsible 
-      open={isExpanded} 
+    <Collapsible
+      open={isExpanded}
       onOpenChange={setIsExpanded}
       className="mt-3 border rounded-lg bg-muted/30"
     >
@@ -351,7 +378,9 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
         <div className="flex items-center gap-2">
           <GraduationCap className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium">Development Resources</span>
-          <Badge variant="secondary" className="text-xs">{resources.length}</Badge>
+          <Badge variant="secondary" className="text-xs">
+            {resources.length}
+          </Badge>
         </div>
         {isExpanded ? (
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -380,8 +409,8 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
                             resource.type === "program"
                               ? `/programs/${resource.programId}`
                               : resource.type === "module"
-                              ? `/modules/${resource.moduleId}`
-                              : `/resources/${resource.resourceId}`
+                                ? `/modules/${resource.moduleId}`
+                                : `/resources/${resource.resourceId}`
                           }
                           className="flex items-center gap-2 p-2 rounded-md hover:bg-background transition-colors group"
                         >
@@ -406,7 +435,13 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
                         </Link>
                       ) : (
                         <button
-                          onClick={() => handleResourceClick(resource, status, info?.programId || resource.programId)}
+                          onClick={() =>
+                            handleResourceClick(
+                              resource,
+                              status,
+                              info?.programId || resource.programId,
+                            )
+                          }
                           disabled={!isClickable}
                           className={`flex items-center gap-2 p-2 rounded-md w-full text-left transition-colors ${
                             isClickable
@@ -417,7 +452,9 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
                           {getIconForType(resource.type)}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className={`text-sm font-medium truncate ${isClickable ? "group-hover:text-primary transition-colors" : ""}`}>
+                              <span
+                                className={`text-sm font-medium truncate ${isClickable ? "group-hover:text-primary transition-colors" : ""}`}
+                              >
                                 {resource.name}
                               </span>
                               {getStatusBadge(status, info)}
@@ -435,7 +472,9 @@ export function GuidedLearningSection({ domainId, questionIds, domainName }: Gui
                             )}
                           </div>
                           {isClickable && status === "not_enrolled" && (
-                            <span className="text-xs text-primary whitespace-nowrap">View in Explore →</span>
+                            <span className="text-xs text-primary whitespace-nowrap">
+                              View in Explore →
+                            </span>
                           )}
                         </button>
                       )}

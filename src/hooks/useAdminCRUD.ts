@@ -1,9 +1,9 @@
-import { useState, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
-type OrderDirection = 'asc' | 'desc';
+type OrderDirection = "asc" | "desc";
 
 interface UseAdminCRUDOptions<T> {
   /** The Supabase table name */
@@ -29,27 +29,27 @@ interface UseAdminCRUDResult<T, TFormData> {
   data: T[] | undefined;
   isLoading: boolean;
   error: Error | null;
-  
+
   // Dialog state
   isDialogOpen: boolean;
   setIsDialogOpen: (open: boolean) => void;
   editingItem: T | null;
-  
+
   // Form state
   formData: TFormData;
   setFormData: React.Dispatch<React.SetStateAction<TFormData>>;
   resetForm: () => void;
-  
+
   // Convenience methods
   openCreate: () => void;
   openEdit: (item: T) => void;
-  
+
   // Actions
   handleEdit: (item: T) => void;
   /** Submit handler - can pass event or form data directly */
   handleSubmit: (eventOrData: React.FormEvent | TFormData) => void;
   handleDelete: (id: string, confirmMessage?: string) => void;
-  
+
   // Mutation states
   isCreating: boolean;
   isUpdating: boolean;
@@ -57,7 +57,7 @@ interface UseAdminCRUDResult<T, TFormData> {
   isMutating: boolean;
   /** Alias for isMutating */
   isSubmitting: boolean;
-  
+
   // Utilities
   refetch: () => void;
 }
@@ -65,7 +65,7 @@ interface UseAdminCRUDResult<T, TFormData> {
 /**
  * Generic hook for Admin CRUD operations.
  * Provides standardized data fetching, mutations, dialog state, and form handling.
- * 
+ *
  * @example
  * ```tsx
  * const {
@@ -94,15 +94,15 @@ export function useAdminCRUD<T extends { id: string }, TFormData extends Record<
     initialFormData: TFormData;
     /** Map an item to form data for edit mode */
     mapItemToForm: (item: T) => TFormData;
-  }
+  },
 ): UseAdminCRUDResult<T, TFormData> {
   const {
     tableName,
     queryKey,
-    orderBy = 'name',
-    orderDirection = 'asc',
-    select = '*',
-    entityName = 'Item',
+    orderBy = "name",
+    orderDirection = "asc",
+    select = "*",
+    entityName = "Item",
     filters = [],
     transform,
     initialFormData,
@@ -115,7 +115,7 @@ export function useAdminCRUD<T extends { id: string }, TFormData extends Record<
   // Dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<T | null>(null);
-  
+
   // Form state
   const [formData, setFormData] = useState<TFormData>(initialFormData);
 
@@ -126,7 +126,7 @@ export function useAdminCRUD<T extends { id: string }, TFormData extends Record<
       let query = supabase
         .from(tableName as any)
         .select(select)
-        .order(orderBy as string, { ascending: orderDirection === 'asc' });
+        .order(orderBy as string, { ascending: orderDirection === "asc" });
 
       // Apply filters
       for (const filter of filters) {
@@ -135,7 +135,7 @@ export function useAdminCRUD<T extends { id: string }, TFormData extends Record<
 
       const { data, error } = await query;
       if (error) throw error;
-      
+
       return transform ? transform(data as any[]) : (data as unknown as T[]);
     },
   });
@@ -143,9 +143,7 @@ export function useAdminCRUD<T extends { id: string }, TFormData extends Record<
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: TFormData) => {
-      const { error } = await supabase
-        .from(tableName as any)
-        .insert([data as any]);
+      const { error } = await supabase.from(tableName as any).insert([data as any]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -154,7 +152,7 @@ export function useAdminCRUD<T extends { id: string }, TFormData extends Record<
       handleCloseDialog();
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -164,7 +162,7 @@ export function useAdminCRUD<T extends { id: string }, TFormData extends Record<
       const { error } = await supabase
         .from(tableName as any)
         .update(data as any)
-        .eq('id', id);
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -173,7 +171,7 @@ export function useAdminCRUD<T extends { id: string }, TFormData extends Record<
       handleCloseDialog();
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -183,7 +181,7 @@ export function useAdminCRUD<T extends { id: string }, TFormData extends Record<
       const { error } = await supabase
         .from(tableName as any)
         .delete()
-        .eq('id', id);
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -191,7 +189,7 @@ export function useAdminCRUD<T extends { id: string }, TFormData extends Record<
       toast({ description: `${entityName} deleted successfully` });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -206,86 +204,102 @@ export function useAdminCRUD<T extends { id: string }, TFormData extends Record<
     resetForm();
   }, [resetForm]);
 
-  const handleEdit = useCallback((item: T) => {
-    setEditingItem(item);
-    setFormData(mapItemToForm(item));
-    setIsDialogOpen(true);
-  }, [mapItemToForm]);
+  const handleEdit = useCallback(
+    (item: T) => {
+      setEditingItem(item);
+      setFormData(mapItemToForm(item));
+      setIsDialogOpen(true);
+    },
+    [mapItemToForm],
+  );
 
   const openCreate = useCallback(() => {
     resetForm();
     setIsDialogOpen(true);
   }, [resetForm]);
 
-  const openEdit = useCallback((item: T) => {
-    handleEdit(item);
-  }, [handleEdit]);
+  const openEdit = useCallback(
+    (item: T) => {
+      handleEdit(item);
+    },
+    [handleEdit],
+  );
 
-  const handleSubmit = useCallback((eventOrData: React.FormEvent | TFormData) => {
-    // If it's a form event, prevent default
-    if (eventOrData && typeof eventOrData === 'object' && 'preventDefault' in eventOrData) {
-      eventOrData.preventDefault();
-      if (editingItem) {
-        updateMutation.mutate({ id: editingItem.id, data: formData });
+  const handleSubmit = useCallback(
+    (eventOrData: React.FormEvent | TFormData) => {
+      // If it's a form event, prevent default
+      if (eventOrData && typeof eventOrData === "object" && "preventDefault" in eventOrData) {
+        eventOrData.preventDefault();
+        if (editingItem) {
+          updateMutation.mutate({ id: editingItem.id, data: formData });
+        } else {
+          createMutation.mutate(formData);
+        }
       } else {
-        createMutation.mutate(formData);
+        // Direct form data passed
+        if (editingItem) {
+          updateMutation.mutate({ id: editingItem.id, data: eventOrData as TFormData });
+        } else {
+          createMutation.mutate(eventOrData as TFormData);
+        }
       }
-    } else {
-      // Direct form data passed
-      if (editingItem) {
-        updateMutation.mutate({ id: editingItem.id, data: eventOrData as TFormData });
-      } else {
-        createMutation.mutate(eventOrData as TFormData);
-      }
-    }
-  }, [editingItem, formData, createMutation, updateMutation]);
+    },
+    [editingItem, formData, createMutation, updateMutation],
+  );
 
-  const handleDelete = useCallback((id: string, confirmMessage?: string) => {
-    const message = confirmMessage || `Delete this ${entityName.toLowerCase()}?`;
-    if (confirm(message)) {
-      deleteMutation.mutate(id);
-    }
-  }, [entityName, deleteMutation]);
+  const handleDelete = useCallback(
+    (id: string, confirmMessage?: string) => {
+      const message = confirmMessage || `Delete this ${entityName.toLowerCase()}?`;
+      if (confirm(message)) {
+        deleteMutation.mutate(id);
+      }
+    },
+    [entityName, deleteMutation],
+  );
 
   // Custom setIsDialogOpen that resets form appropriately
-  const setDialogOpen = useCallback((open: boolean) => {
-    if (open && !editingItem) {
-      // Opening for create mode - reset form
-      resetForm();
-    } else if (!open) {
-      // Closing - reset form
-      resetForm();
-    }
-    setIsDialogOpen(open);
-  }, [resetForm, editingItem]);
+  const setDialogOpen = useCallback(
+    (open: boolean) => {
+      if (open && !editingItem) {
+        // Opening for create mode - reset form
+        resetForm();
+      } else if (!open) {
+        // Closing - reset form
+        resetForm();
+      }
+      setIsDialogOpen(open);
+    },
+    [resetForm, editingItem],
+  );
 
-  const isMutating = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
+  const isMutating =
+    createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
 
   return {
     data,
     isLoading,
     error: error as Error | null,
-    
+
     isDialogOpen,
     setIsDialogOpen: setDialogOpen,
     editingItem,
-    
+
     formData,
     setFormData,
     resetForm,
-    
+
     openCreate,
     openEdit,
     handleEdit,
     handleSubmit,
     handleDelete,
-    
+
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
     isMutating,
     isSubmitting: isMutating,
-    
+
     refetch,
   };
 }
@@ -298,17 +312,15 @@ export function useAdminCount(
   queryKey: string,
   groupByColumn: string,
   filterColumn?: string,
-  filterValue?: any
+  filterValue?: any,
 ) {
   return useQuery({
     queryKey: [queryKey],
     queryFn: async () => {
-      let query = supabase
-        .from(tableName as any)
-        .select(groupByColumn);
+      let query = supabase.from(tableName as any).select(groupByColumn);
 
       if (filterColumn && filterValue !== undefined) {
-        query = query.not(filterColumn, 'is', null);
+        query = query.not(filterColumn, "is", null);
       }
 
       const { data, error } = await query;
@@ -331,11 +343,7 @@ export function useAdminCount(
 /**
  * Hook for toggle mutations (e.g., toggle active status)
  */
-export function useAdminToggle(
-  tableName: string,
-  queryKey: string,
-  entityName = 'Item'
-) {
+export function useAdminToggle(tableName: string, queryKey: string, entityName = "Item") {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -344,15 +352,15 @@ export function useAdminToggle(
       const { error } = await supabase
         .from(tableName as any)
         .update({ [column]: value } as any)
-        .eq('id', id);
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [queryKey] });
-      toast({ description: `${entityName} ${variables.value ? 'activated' : 'deactivated'}` });
+      toast({ description: `${entityName} ${variables.value ? "activated" : "deactivated"}` });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 }

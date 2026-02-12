@@ -1,5 +1,5 @@
-import DOMPurify from 'dompurify';
-import { cn } from '@/lib/utils';
+import DOMPurify from "dompurify";
+import { cn } from "@/lib/utils";
 
 interface RichTextDisplayProps {
   content: string;
@@ -11,25 +11,42 @@ interface RichTextDisplayProps {
  * Use this to display rich text content that was created with the RichTextEditor.
  */
 export function RichTextDisplay({ content, className }: RichTextDisplayProps) {
-  if (!content || content === '<p></p>') {
+  if (!content || content === "<p></p>") {
     return null;
   }
 
   // Sanitize HTML to prevent XSS attacks
   const sanitizedContent = DOMPurify.sanitize(content, {
-    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'ul', 'ol', 'li', 'blockquote', 'a', 'code', 'pre'],
-    ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
-    ADD_ATTR: ['target'],
+    ALLOWED_TAGS: [
+      "p",
+      "br",
+      "strong",
+      "em",
+      "u",
+      "s",
+      "h1",
+      "h2",
+      "h3",
+      "ul",
+      "ol",
+      "li",
+      "blockquote",
+      "a",
+      "code",
+      "pre",
+    ],
+    ALLOWED_ATTR: ["href", "target", "rel", "class"],
+    ADD_ATTR: ["target"],
   });
 
   // Add target="_blank" and rel="noopener noreferrer" to all links for security
   const processedContent = sanitizedContent.replace(
-    /<a /g, 
-    '<a target="_blank" rel="noopener noreferrer" '
+    /<a /g,
+    '<a target="_blank" rel="noopener noreferrer" ',
   );
 
   return (
-    <div 
+    <div
       className={cn(
         "prose prose-sm max-w-none dark:prose-invert",
         "[&_a]:text-primary [&_a]:underline",
@@ -41,7 +58,7 @@ export function RichTextDisplay({ content, className }: RichTextDisplayProps) {
         "[&_p]:my-1",
         "[&_p:first-child]:mt-0",
         "[&_p:last-child]:mb-0",
-        className
+        className,
       )}
       dangerouslySetInnerHTML={{ __html: processedContent }}
     />

@@ -1,12 +1,21 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Edit2, FileText } from 'lucide-react';
-import { format } from 'date-fns';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Trash2, Edit2, FileText } from "lucide-react";
+import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Reflection {
   id: string;
@@ -25,7 +34,7 @@ export default function GoalReflections({ goalId }: GoalReflectionsProps) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -36,18 +45,18 @@ export default function GoalReflections({ goalId }: GoalReflectionsProps) {
   const fetchReflections = async () => {
     try {
       const { data, error } = await supabase
-        .from('goal_reflections')
-        .select('*')
-        .eq('goal_id', goalId)
-        .order('created_at', { ascending: false });
+        .from("goal_reflections")
+        .select("*")
+        .eq("goal_id", goalId)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setReflections(data || []);
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to load reflections',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load reflections",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -59,35 +68,37 @@ export default function GoalReflections({ goalId }: GoalReflectionsProps) {
 
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
       if (editingId) {
         const { error } = await supabase
-          .from('goal_reflections')
+          .from("goal_reflections")
           .update({ content, updated_at: new Date().toISOString() })
-          .eq('id', editingId);
+          .eq("id", editingId);
 
         if (error) throw error;
-        toast({ title: 'Success', description: 'Reflection updated successfully' });
+        toast({ title: "Success", description: "Reflection updated successfully" });
       } else {
         const { error } = await supabase
-          .from('goal_reflections')
+          .from("goal_reflections")
           .insert([{ goal_id: goalId, user_id: user.id, content }]);
 
         if (error) throw error;
-        toast({ title: 'Success', description: 'Reflection added successfully' });
+        toast({ title: "Success", description: "Reflection added successfully" });
       }
 
-      setContent('');
+      setContent("");
       setShowForm(false);
       setEditingId(null);
       fetchReflections();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to save reflection',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to save reflection",
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -104,19 +115,16 @@ export default function GoalReflections({ goalId }: GoalReflectionsProps) {
     if (!deleteId) return;
 
     try {
-      const { error } = await supabase
-        .from('goal_reflections')
-        .delete()
-        .eq('id', deleteId);
+      const { error } = await supabase.from("goal_reflections").delete().eq("id", deleteId);
 
       if (error) throw error;
-      toast({ title: 'Success', description: 'Reflection deleted successfully' });
+      toast({ title: "Success", description: "Reflection deleted successfully" });
       fetchReflections();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to delete reflection',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to delete reflection",
+        variant: "destructive",
       });
     } finally {
       setDeleteId(null);
@@ -126,7 +134,7 @@ export default function GoalReflections({ goalId }: GoalReflectionsProps) {
   const handleCancel = () => {
     setShowForm(false);
     setEditingId(null);
-    setContent('');
+    setContent("");
   };
 
   if (loading) {
@@ -164,7 +172,7 @@ export default function GoalReflections({ goalId }: GoalReflectionsProps) {
                 Cancel
               </Button>
               <Button onClick={handleSave} disabled={saving || !content.trim()}>
-                {saving ? 'Saving...' : editingId ? 'Update' : 'Save'}
+                {saving ? "Saving..." : editingId ? "Update" : "Save"}
               </Button>
             </div>
           </div>
@@ -184,24 +192,20 @@ export default function GoalReflections({ goalId }: GoalReflectionsProps) {
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="text-xs text-muted-foreground space-y-1">
-                    <div>Created: {format(new Date(reflection.created_at), 'MMM d, yyyy h:mm a')}</div>
+                    <div>
+                      Created: {format(new Date(reflection.created_at), "MMM d, yyyy h:mm a")}
+                    </div>
                     {reflection.updated_at !== reflection.created_at && (
-                      <div>Updated: {format(new Date(reflection.updated_at), 'MMM d, yyyy h:mm a')}</div>
+                      <div>
+                        Updated: {format(new Date(reflection.updated_at), "MMM d, yyyy h:mm a")}
+                      </div>
                     )}
                   </div>
                   <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(reflection)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(reflection)}>
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setDeleteId(reflection.id)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteId(reflection.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
@@ -223,7 +227,10 @@ export default function GoalReflections({ goalId }: GoalReflectionsProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

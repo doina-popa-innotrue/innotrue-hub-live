@@ -1,20 +1,34 @@
-import { useAdminCRUD, useAdminToggle } from '@/hooks/useAdminCRUD';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Tags } from 'lucide-react';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { useAdminCRUD, useAdminToggle } from "@/hooks/useAdminCRUD";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { Pencil, Trash2, Tags } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import {
   AdminPageHeader,
   AdminLoadingState,
   AdminEmptyState,
   AdminFormActions,
-} from '@/components/admin';
-import { IconPicker, DynamicIcon } from '@/components/admin/IconPicker';
+} from "@/components/admin";
+import { IconPicker, DynamicIcon } from "@/components/admin/IconPicker";
 
 interface AnnouncementCategory {
   id: string;
@@ -36,22 +50,22 @@ type FormData = {
 };
 
 const initialFormData: FormData = {
-  name: '',
-  label: '',
-  icon: 'Info',
-  color: 'blue',
+  name: "",
+  label: "",
+  icon: "Info",
+  color: "blue",
   is_active: true,
 };
 
 const colorOptions = [
-  { name: 'blue', label: 'Blue' },
-  { name: 'green', label: 'Green' },
-  { name: 'amber', label: 'Amber' },
-  { name: 'orange', label: 'Orange' },
-  { name: 'red', label: 'Red' },
-  { name: 'purple', label: 'Purple' },
-  { name: 'pink', label: 'Pink' },
-  { name: 'indigo', label: 'Indigo' },
+  { name: "blue", label: "Blue" },
+  { name: "green", label: "Green" },
+  { name: "amber", label: "Amber" },
+  { name: "orange", label: "Orange" },
+  { name: "red", label: "Red" },
+  { name: "purple", label: "Purple" },
+  { name: "pink", label: "Pink" },
+  { name: "indigo", label: "Indigo" },
 ];
 
 export default function AnnouncementCategoriesManagement() {
@@ -69,21 +83,25 @@ export default function AnnouncementCategoriesManagement() {
     handleDelete,
     isSubmitting,
   } = useAdminCRUD<AnnouncementCategory, FormData>({
-    tableName: 'announcement_categories',
-    queryKey: 'announcement-categories',
-    entityName: 'Announcement category',
-    orderBy: 'display_order',
+    tableName: "announcement_categories",
+    queryKey: "announcement-categories",
+    entityName: "Announcement category",
+    orderBy: "display_order",
     initialFormData,
     mapItemToForm: (category) => ({
       name: category.name,
       label: category.label,
-      icon: category.icon || 'Info',
-      color: category.color || 'blue',
+      icon: category.icon || "Info",
+      color: category.color || "blue",
       is_active: category.is_active,
     }),
   });
 
-  const toggleActive = useAdminToggle('announcement_categories', 'announcement-categories', 'Announcement category');
+  const toggleActive = useAdminToggle(
+    "announcement_categories",
+    "announcement-categories",
+    "Announcement category",
+  );
 
   const formContent = (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -92,14 +110,18 @@ export default function AnnouncementCategoriesManagement() {
         <Input
           id="name"
           value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
+          onChange={(e) =>
+            setFormData({ ...formData, name: e.target.value.toLowerCase().replace(/\s+/g, "_") })
+          }
           required
           placeholder="e.g., feature_launch"
           disabled={!!editingItem}
         />
-        <p className="text-xs text-muted-foreground">Used internally, cannot be changed after creation</p>
+        <p className="text-xs text-muted-foreground">
+          Used internally, cannot be changed after creation
+        </p>
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="label">Display Label</Label>
         <Input
@@ -116,7 +138,7 @@ export default function AnnouncementCategoriesManagement() {
         value={formData.icon}
         onChange={(icon) => setFormData({ ...formData, icon })}
       />
-      
+
       <div className="space-y-2">
         <Label>Color Theme</Label>
         <div className="flex flex-wrap gap-2">
@@ -124,7 +146,7 @@ export default function AnnouncementCategoriesManagement() {
             <Button
               key={color.name}
               type="button"
-              variant={formData.color === color.name ? 'default' : 'outline'}
+              variant={formData.color === color.name ? "default" : "outline"}
               size="sm"
               onClick={() => setFormData({ ...formData, color: color.name })}
             >
@@ -179,7 +201,7 @@ export default function AnnouncementCategoriesManagement() {
           description="Manage categories for organizing announcements (e.g., Just Launched, Coming Soon)"
           isDialogOpen={isDialogOpen}
           onDialogOpenChange={setIsDialogOpen}
-          dialogTitle={editingItem ? 'Edit Category' : 'Create Category'}
+          dialogTitle={editingItem ? "Edit Category" : "Create Category"}
           dialogContent={formContent}
           createButtonLabel="New Category"
         />
@@ -187,7 +209,9 @@ export default function AnnouncementCategoriesManagement() {
         <Card>
           <CardHeader>
             <CardTitle>All Categories</CardTitle>
-            <CardDescription>Categories help organize and visually distinguish different types of announcements.</CardDescription>
+            <CardDescription>
+              Categories help organize and visually distinguish different types of announcements.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {categories.length === 0 ? (
@@ -214,11 +238,13 @@ export default function AnnouncementCategoriesManagement() {
                   {categories.map((category) => (
                     <TableRow key={category.id}>
                       <TableCell>
-                        <DynamicIcon name={category.icon || 'Info'} className="h-5 w-5" />
+                        <DynamicIcon name={category.icon || "Info"} className="h-5 w-5" />
                       </TableCell>
                       <TableCell className="font-medium">{category.label}</TableCell>
                       <TableCell>
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{category.name}</code>
+                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                          {category.name}
+                        </code>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{category.color}</Badge>
@@ -226,7 +252,13 @@ export default function AnnouncementCategoriesManagement() {
                       <TableCell>
                         <Switch
                           checked={category.is_active}
-                          onCheckedChange={() => toggleActive.mutate({ id: category.id, column: 'is_active', value: !category.is_active })}
+                          onCheckedChange={() =>
+                            toggleActive.mutate({
+                              id: category.id,
+                              column: "is_active",
+                              value: !category.is_active,
+                            })
+                          }
                         />
                       </TableCell>
                       <TableCell>
@@ -234,11 +266,16 @@ export default function AnnouncementCategoriesManagement() {
                           <Button variant="ghost" size="sm" onClick={() => openEdit(category)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="text-destructive"
-                            onClick={() => handleDelete(category.id, `Delete "${category.label}"? Announcements using this category will have their category cleared.`)}
+                            onClick={() =>
+                              handleDelete(
+                                category.id,
+                                `Delete "${category.label}"? Announcements using this category will have their category cleared.`,
+                              )
+                            }
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

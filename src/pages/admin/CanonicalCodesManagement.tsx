@@ -1,20 +1,27 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Link2, Search, Copy, Check, BookOpen, Filter } from 'lucide-react';
-import { toast } from 'sonner';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Link2, Search, Copy, Check, BookOpen, Filter } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CanonicalCodeEntry {
   canonicalCode: string;
@@ -38,8 +45,8 @@ export default function CanonicalCodesManagement() {
   const [allModules, setAllModules] = useState<any[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [programFilter, setProgramFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [programFilter, setProgramFilter] = useState<string>("all");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [showUnlinkedOnly, setShowUnlinkedOnly] = useState(false);
 
@@ -51,8 +58,9 @@ export default function CanonicalCodesManagement() {
     try {
       // Fetch all modules with their programs
       const { data: modulesData, error: modulesError } = await supabase
-        .from('program_modules')
-        .select(`
+        .from("program_modules")
+        .select(
+          `
           id,
           title,
           canonical_code,
@@ -63,31 +71,32 @@ export default function CanonicalCodesManagement() {
             id,
             name
           )
-        `)
-        .eq('is_active', true)
-        .order('title');
+        `,
+        )
+        .eq("is_active", true)
+        .order("title");
 
       if (modulesError) throw modulesError;
 
       // Fetch all programs for filter
       const { data: programsData } = await supabase
-        .from('programs')
-        .select('id, name')
-        .eq('is_active', true)
-        .order('name');
+        .from("programs")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
 
       setPrograms(programsData || []);
       setAllModules(modulesData || []);
 
       // Group by canonical_code
-      const codeMap = new Map<string, CanonicalCodeEntry['modules']>();
-      
+      const codeMap = new Map<string, CanonicalCodeEntry["modules"]>();
+
       for (const module of modulesData || []) {
         const code = module.canonical_code;
         if (code) {
           // Extract TalentLMS course ID if present
           const links = module.links as Array<{ type: string; url: string }> | null;
-          const talentLmsLink = links?.find(l => l.type === 'talentlms');
+          const talentLmsLink = links?.find((l) => l.type === "talentlms");
           const match = talentLmsLink?.url.match(/id:(\d+)/);
           const talentLmsCourseId = match?.[1] || null;
 
@@ -117,8 +126,8 @@ export default function CanonicalCodesManagement() {
 
       setEntries(entriesArray);
     } catch (error) {
-      console.error('Error fetching canonical codes:', error);
-      toast.error('Failed to load canonical codes');
+      console.error("Error fetching canonical codes:", error);
+      toast.error("Failed to load canonical codes");
     } finally {
       setLoading(false);
     }
@@ -128,37 +137,37 @@ export default function CanonicalCodesManagement() {
     try {
       await navigator.clipboard.writeText(code);
       setCopiedCode(code);
-      toast.success('Copied to clipboard');
+      toast.success("Copied to clipboard");
       setTimeout(() => setCopiedCode(null), 2000);
     } catch (error) {
-      toast.error('Failed to copy');
+      toast.error("Failed to copy");
     }
   };
 
   // Filter entries
-  const filteredEntries = entries.filter(entry => {
-    const matchesSearch = 
+  const filteredEntries = entries.filter((entry) => {
+    const matchesSearch =
       entry.canonicalCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.modules.some(m => 
-        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.programName.toLowerCase().includes(searchQuery.toLowerCase())
+      entry.modules.some(
+        (m) =>
+          m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          m.programName.toLowerCase().includes(searchQuery.toLowerCase()),
       );
-    
-    const matchesProgram = 
-      programFilter === 'all' || 
-      entry.modules.some(m => m.programId === programFilter);
+
+    const matchesProgram =
+      programFilter === "all" || entry.modules.some((m) => m.programId === programFilter);
 
     return matchesSearch && matchesProgram;
   });
 
   // Get unlinked modules (modules without canonical codes)
-  const unlinkedModules = allModules.filter(m => !m.canonical_code);
-  const filteredUnlinkedModules = unlinkedModules.filter(m => {
-    const matchesSearch = 
+  const unlinkedModules = allModules.filter((m) => !m.canonical_code);
+  const filteredUnlinkedModules = unlinkedModules.filter((m) => {
+    const matchesSearch =
       m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.programs.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesProgram = programFilter === 'all' || m.program_id === programFilter;
+
+    const matchesProgram = programFilter === "all" || m.program_id === programFilter;
 
     return matchesSearch && matchesProgram;
   });
@@ -178,9 +187,7 @@ export default function CanonicalCodesManagement() {
         <Link2 className="h-8 w-8 text-primary" />
         <div>
           <h1 className="text-2xl font-bold">Canonical Codes</h1>
-          <p className="text-muted-foreground">
-            View and manage module linkages across programs
-          </p>
+          <p className="text-muted-foreground">View and manage module linkages across programs</p>
         </div>
       </div>
 
@@ -237,7 +244,7 @@ export default function CanonicalCodesManagement() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Programs</SelectItem>
-            {programs.map(program => (
+            {programs.map((program) => (
               <SelectItem key={program.id} value={program.id}>
                 {program.name}
               </SelectItem>
@@ -245,12 +252,12 @@ export default function CanonicalCodesManagement() {
           </SelectContent>
         </Select>
         <Button
-          variant={showUnlinkedOnly ? 'default' : 'outline'}
+          variant={showUnlinkedOnly ? "default" : "outline"}
           onClick={() => setShowUnlinkedOnly(!showUnlinkedOnly)}
           className="gap-2"
         >
           <Filter className="h-4 w-4" />
-          {showUnlinkedOnly ? 'Show All' : 'Show Unlinked'}
+          {showUnlinkedOnly ? "Show All" : "Show Unlinked"}
         </Button>
       </div>
 
@@ -269,9 +276,9 @@ export default function CanonicalCodesManagement() {
           <CardContent>
             {filteredUnlinkedModules.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
-                {searchQuery || programFilter !== 'all' 
-                  ? 'No unlinked modules match your filters'
-                  : 'All modules have canonical codes assigned!'}
+                {searchQuery || programFilter !== "all"
+                  ? "No unlinked modules match your filters"
+                  : "All modules have canonical codes assigned!"}
               </p>
             ) : (
               <Table>
@@ -283,7 +290,7 @@ export default function CanonicalCodesManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUnlinkedModules.map(module => (
+                  {filteredUnlinkedModules.map((module) => (
                     <TableRow key={module.id}>
                       <TableCell className="font-medium">{module.title}</TableCell>
                       <TableCell>
@@ -307,19 +314,20 @@ export default function CanonicalCodesManagement() {
               Linked Modules by Canonical Code
             </CardTitle>
             <CardDescription>
-              Modules with the same canonical code are treated as equivalent for cross-program completion tracking
+              Modules with the same canonical code are treated as equivalent for cross-program
+              completion tracking
             </CardDescription>
           </CardHeader>
           <CardContent>
             {filteredEntries.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
-                {searchQuery || programFilter !== 'all' 
-                  ? 'No canonical codes match your filters'
-                  : 'No canonical codes have been assigned yet'}
+                {searchQuery || programFilter !== "all"
+                  ? "No canonical codes match your filters"
+                  : "No canonical codes have been assigned yet"}
               </p>
             ) : (
               <div className="space-y-6">
-                {filteredEntries.map(entry => (
+                {filteredEntries.map((entry) => (
                   <div key={entry.canonicalCode} className="rounded-lg border p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
@@ -340,7 +348,7 @@ export default function CanonicalCodesManagement() {
                         </Button>
                       </div>
                       <Badge variant="secondary">
-                        {entry.modules.length} module{entry.modules.length !== 1 ? 's' : ''}
+                        {entry.modules.length} module{entry.modules.length !== 1 ? "s" : ""}
                       </Badge>
                     </div>
                     <Table>
@@ -353,7 +361,7 @@ export default function CanonicalCodesManagement() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {entry.modules.map(module => (
+                        {entry.modules.map((module) => (
                           <TableRow key={module.id}>
                             <TableCell className="font-medium">{module.title}</TableCell>
                             <TableCell>

@@ -5,7 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, ThumbsUp, ThumbsDown, ListTodo } from "lucide-react";
@@ -21,8 +28,17 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
   const queryClient = useQueryClient();
   const [newOption, setNewOption] = useState({ label: "", description: "" });
   const [expandedOption, setExpandedOption] = useState<string | null>(null);
-  const [taskDialog, setTaskDialog] = useState<{ open: boolean; optionId: string | null }>({ open: false, optionId: null });
-  const [newTask, setNewTask] = useState({ title: "", description: "", importance: false, urgency: false, dueDate: "" });
+  const [taskDialog, setTaskDialog] = useState<{ open: boolean; optionId: string | null }>({
+    open: false,
+    optionId: null,
+  });
+  const [newTask, setNewTask] = useState({
+    title: "",
+    description: "",
+    importance: false,
+    urgency: false,
+    dueDate: "",
+  });
 
   // Fetch options with pros and cons
   const { data: options } = useQuery({
@@ -30,11 +46,13 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("decision_options")
-        .select(`
+        .select(
+          `
           *,
           decision_pros(*),
           decision_cons(*)
-        `)
+        `,
+        )
         .eq("decision_id", decisionId)
         .order("created_at", { ascending: true });
 
@@ -47,7 +65,9 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
   const { data: tasks } = useQuery({
     queryKey: ["option-tasks", decisionId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
@@ -99,7 +119,15 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
   });
 
   const addPro = useMutation({
-    mutationFn: async ({ optionId, text, weight }: { optionId: string; text: string; weight: number }) => {
+    mutationFn: async ({
+      optionId,
+      text,
+      weight,
+    }: {
+      optionId: string;
+      text: string;
+      weight: number;
+    }) => {
       const { error } = await supabase.from("decision_pros").insert({
         decision_id: decisionId,
         option_id: optionId,
@@ -115,7 +143,15 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
   });
 
   const addCon = useMutation({
-    mutationFn: async ({ optionId, text, weight }: { optionId: string; text: string; weight: number }) => {
+    mutationFn: async ({
+      optionId,
+      text,
+      weight,
+    }: {
+      optionId: string;
+      text: string;
+      weight: number;
+    }) => {
       const { error } = await supabase.from("decision_cons").insert({
         decision_id: decisionId,
         option_id: optionId,
@@ -153,11 +189,24 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
   });
 
   const createTask = useMutation({
-    mutationFn: async (data: { title: string; description: string; importance: boolean; urgency: boolean; dueDate: string; optionId: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+    mutationFn: async (data: {
+      title: string;
+      description: string;
+      importance: boolean;
+      urgency: boolean;
+      dueDate: string;
+      optionId: string;
+    }) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      let quadrant: "important_urgent" | "important_not_urgent" | "not_important_urgent" | "not_important_not_urgent";
+      let quadrant:
+        | "important_urgent"
+        | "important_not_urgent"
+        | "not_important_urgent"
+        | "not_important_not_urgent";
       if (data.importance && data.urgency) quadrant = "important_urgent";
       else if (data.importance && !data.urgency) quadrant = "important_not_urgent";
       else if (!data.importance && data.urgency) quadrant = "not_important_urgent";
@@ -188,7 +237,7 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
   });
 
   const calculateScore = (optionId: string) => {
-    const option = options?.find(o => o.id === optionId);
+    const option = options?.find((o) => o.id === optionId);
     if (!option) return { prosScore: 0, consScore: 0, net: 0 };
 
     const prosScore = (option.decision_pros || []).reduce((sum, p) => sum + (p.weight || 3), 0);
@@ -215,7 +264,10 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
             value={newOption.label}
             onChange={(e) => setNewOption({ ...newOption, label: e.target.value })}
           />
-          <Button onClick={() => createOption.mutate(newOption)} disabled={!newOption.label || createOption.isPending}>
+          <Button
+            onClick={() => createOption.mutate(newOption)}
+            disabled={!newOption.label || createOption.isPending}
+          >
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -225,7 +277,7 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
       <div className="space-y-4">
         {options?.map((option) => {
           const scores = calculateScore(option.id);
-          const optionTasks = tasks?.filter(t => t.option_id === option.id) || [];
+          const optionTasks = tasks?.filter((t) => t.option_id === option.id) || [];
 
           return (
             <Card key={option.id}>
@@ -242,8 +294,13 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
                         <ThumbsDown className="h-3 w-3 mr-1" />
                         {scores.consScore}
                       </Badge>
-                      <Badge variant={scores.net > 0 ? "default" : scores.net < 0 ? "destructive" : "outline"}>
-                        Net: {scores.net > 0 ? "+" : ""}{scores.net}
+                      <Badge
+                        variant={
+                          scores.net > 0 ? "default" : scores.net < 0 ? "destructive" : "outline"
+                        }
+                      >
+                        Net: {scores.net > 0 ? "+" : ""}
+                        {scores.net}
                       </Badge>
                     </div>
                   </div>
@@ -259,7 +316,9 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setExpandedOption(expandedOption === option.id ? null : option.id)}
+                      onClick={() =>
+                        setExpandedOption(expandedOption === option.id ? null : option.id)
+                      }
                     >
                       {expandedOption === option.id ? "Collapse" : "Expand"}
                     </Button>
@@ -276,16 +335,31 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
                       Tasks for this option:
                     </h4>
                     <div className="space-y-2">
-                      {optionTasks.map(task => (
-                        <div key={task.id} className="flex items-center justify-between p-2 border rounded-md bg-muted/50">
+                      {optionTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          className="flex items-center justify-between p-2 border rounded-md bg-muted/50"
+                        >
                           <div className="flex-1">
                             <p className="font-medium text-sm">{task.title}</p>
-                            {task.description && <p className="text-xs text-muted-foreground">{task.description}</p>}
+                            {task.description && (
+                              <p className="text-xs text-muted-foreground">{task.description}</p>
+                            )}
                           </div>
                           <div className="flex gap-1">
-                            {task.importance && <Badge variant="secondary" className="text-xs">Important</Badge>}
-                            {task.urgency && <Badge variant="secondary" className="text-xs">Urgent</Badge>}
-                            <Badge variant="outline" className="text-xs">{task.status}</Badge>
+                            {task.importance && (
+                              <Badge variant="secondary" className="text-xs">
+                                Important
+                              </Badge>
+                            )}
+                            {task.urgency && (
+                              <Badge variant="secondary" className="text-xs">
+                                Urgent
+                              </Badge>
+                            )}
+                            <Badge variant="outline" className="text-xs">
+                              {task.status}
+                            </Badge>
                           </div>
                         </div>
                       ))}
@@ -299,7 +373,12 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
                       <Label>Description</Label>
                       <Textarea
                         value={option.description || ""}
-                        onChange={(e) => updateOption.mutate({ id: option.id, updates: { description: e.target.value } })}
+                        onChange={(e) =>
+                          updateOption.mutate({
+                            id: option.id,
+                            updates: { description: e.target.value },
+                          })
+                        }
                         placeholder="Describe this option..."
                       />
                     </div>
@@ -308,7 +387,12 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
                       <Label>Emotional Response</Label>
                       <Textarea
                         value={option.emotion_notes || ""}
-                        onChange={(e) => updateOption.mutate({ id: option.id, updates: { emotion_notes: e.target.value } })}
+                        onChange={(e) =>
+                          updateOption.mutate({
+                            id: option.id,
+                            updates: { emotion_notes: e.target.value },
+                          })
+                        }
                         placeholder="How does this option feel?"
                       />
                     </div>
@@ -322,9 +406,14 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
                         </Label>
                         <div className="space-y-2">
                           {option.decision_pros?.map((pro) => (
-                            <div key={pro.id} className="flex items-center gap-2 p-2 border rounded-md">
+                            <div
+                              key={pro.id}
+                              className="flex items-center gap-2 p-2 border rounded-md"
+                            >
                               <span className="flex-1 text-sm">{pro.text}</span>
-                              <Badge variant="outline" className="text-xs">W: {pro.weight || 3}</Badge>
+                              <Badge variant="outline" className="text-xs">
+                                W: {pro.weight || 3}
+                              </Badge>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -337,7 +426,9 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
                           ))}
                           <AddProCon
                             type="pro"
-                            onAdd={(text) => addPro.mutate({ optionId: option.id, text, weight: 3 })}
+                            onAdd={(text) =>
+                              addPro.mutate({ optionId: option.id, text, weight: 3 })
+                            }
                           />
                         </div>
                       </div>
@@ -350,9 +441,14 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
                         </Label>
                         <div className="space-y-2">
                           {option.decision_cons?.map((con) => (
-                            <div key={con.id} className="flex items-center gap-2 p-2 border rounded-md">
+                            <div
+                              key={con.id}
+                              className="flex items-center gap-2 p-2 border rounded-md"
+                            >
                               <span className="flex-1 text-sm">{con.text}</span>
-                              <Badge variant="outline" className="text-xs">W: {con.weight || 3}</Badge>
+                              <Badge variant="outline" className="text-xs">
+                                W: {con.weight || 3}
+                              </Badge>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -365,7 +461,9 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
                           ))}
                           <AddProCon
                             type="con"
-                            onAdd={(text) => addCon.mutate({ optionId: option.id, text, weight: 3 })}
+                            onAdd={(text) =>
+                              addCon.mutate({ optionId: option.id, text, weight: 3 })
+                            }
                           />
                         </div>
                       </div>
@@ -390,7 +488,10 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
       </div>
 
       {/* Task Creation Dialog */}
-      <Dialog open={taskDialog.open} onOpenChange={(open) => setTaskDialog({ open, optionId: null })}>
+      <Dialog
+        open={taskDialog.open}
+        onOpenChange={(open) => setTaskDialog({ open, optionId: null })}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create Task for Option</DialogTitle>
@@ -446,7 +547,10 @@ export function OptionsAnalysis({ decisionId }: OptionsAnalysisProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setTaskDialog({ open: false, optionId: null })}>
+            <Button
+              variant="outline"
+              onClick={() => setTaskDialog({ open: false, optionId: null })}
+            >
               Cancel
             </Button>
             <Button

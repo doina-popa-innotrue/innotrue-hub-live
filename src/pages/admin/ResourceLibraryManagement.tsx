@@ -1,25 +1,67 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Loader2, Plus, Edit2, Trash2, FileText, Link as LinkIcon, Image, Video, Download, Eye, EyeOff, Lock, Unlock, ChevronDown, Globe, Shield, Settings, Sparkles, ExternalLink, Tag } from 'lucide-react';
-import { ResourceCreditConfig } from '@/components/admin/ResourceCreditConfig';
-import { ResourceSkillsManager } from '@/components/admin/ResourceSkillsManager';
-import { ResourceReferencesDialog } from '@/components/admin/ResourceReferencesDialog';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Loader2,
+  Plus,
+  Edit2,
+  Trash2,
+  FileText,
+  Link as LinkIcon,
+  Image,
+  Video,
+  Download,
+  Eye,
+  EyeOff,
+  Lock,
+  Unlock,
+  ChevronDown,
+  Globe,
+  Shield,
+  Settings,
+  Sparkles,
+  ExternalLink,
+  Tag,
+} from "lucide-react";
+import { ResourceCreditConfig } from "@/components/admin/ResourceCreditConfig";
+import { ResourceSkillsManager } from "@/components/admin/ResourceSkillsManager";
+import { ResourceReferencesDialog } from "@/components/admin/ResourceReferencesDialog";
+import { toast } from "sonner";
+import { format } from "date-fns";
 
 interface Resource {
   id: string;
@@ -62,13 +104,13 @@ interface Program {
 }
 
 const resourceTypes = [
-  { value: 'document', label: 'Document', icon: FileText },
-  { value: 'link', label: 'Link', icon: LinkIcon },
-  { value: 'image', label: 'Image', icon: Image },
-  { value: 'video', label: 'Video', icon: Video },
-  { value: 'template', label: 'Template', icon: FileText },
-  { value: 'cheatsheet', label: 'Cheatsheet', icon: FileText },
-  { value: 'report', label: 'Report', icon: FileText },
+  { value: "document", label: "Document", icon: FileText },
+  { value: "link", label: "Link", icon: LinkIcon },
+  { value: "image", label: "Image", icon: Image },
+  { value: "video", label: "Video", icon: Video },
+  { value: "template", label: "Template", icon: FileText },
+  { value: "cheatsheet", label: "Cheatsheet", icon: FileText },
+  { value: "report", label: "Report", icon: FileText },
 ];
 
 export default function ResourceLibraryManagement() {
@@ -79,119 +121,128 @@ export default function ResourceLibraryManagement() {
   const [planConfigResource, setPlanConfigResource] = useState<Resource | null>(null);
   const [uploading, setUploading] = useState(false);
   const [programsOpen, setProgramsOpen] = useState(false);
-  const [filterProgram, setFilterProgram] = useState<string>('all');
-  const [filterSkill, setFilterSkill] = useState<string>('all');
-  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterProgram, setFilterProgram] = useState<string>("all");
+  const [filterSkill, setFilterSkill] = useState<string>("all");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
   const [referencesResource, setReferencesResource] = useState<Resource | null>(null);
-  
+
   const [formData, setFormData] = useState({
-    canonical_id: '',
-    title: '',
-    description: '',
-    resource_type: 'document',
-    url: '',
+    canonical_id: "",
+    title: "",
+    description: "",
+    resource_type: "document",
+    url: "",
     file: null as File | null,
     downloadable: true,
     program_ids: [] as string[],
     skill_ids: [] as string[],
-    category_id: '' as string,
+    category_id: "" as string,
   });
 
   const { data: programs } = useQuery({
-    queryKey: ['programs-list'],
+    queryKey: ["programs-list"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('programs')
-        .select('id, name, slug')
-        .eq('is_active', true)
-        .order('name');
-      
+        .from("programs")
+        .select("id, name, slug")
+        .eq("is_active", true)
+        .order("name");
+
       if (error) throw error;
       return data as Program[];
     },
   });
 
   const { data: skills } = useQuery({
-    queryKey: ['skills-list'],
+    queryKey: ["skills-list"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('skills')
-        .select('id, name, category')
-        .order('name');
+        .from("skills")
+        .select("id, name, category")
+        .order("name");
       if (error) throw error;
       return data;
     },
   });
 
   const { data: categories } = useQuery({
-    queryKey: ['resource-categories'],
+    queryKey: ["resource-categories"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('resource_categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order');
+        .from("resource_categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
       if (error) throw error;
       return data as Category[];
     },
   });
 
   const { data: resources, isLoading } = useQuery({
-    queryKey: ['resource-library'],
+    queryKey: ["resource-library"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('resource_library')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
+        .from("resource_library")
+        .select("*")
+        .order("created_at", { ascending: false });
+
       if (error) throw error;
-      
+
       // Fetch program assignments for all resources
-      const resourceIds = data.map(r => r.id);
+      const resourceIds = data.map((r) => r.id);
       const { data: programLinks } = await supabase
-        .from('resource_library_programs')
-        .select('resource_id, program_id')
-        .in('resource_id', resourceIds);
+        .from("resource_library_programs")
+        .select("resource_id, program_id")
+        .in("resource_id", resourceIds);
 
       // Fetch skill assignments
       const { data: skillLinks } = await supabase
-        .from('resource_library_skills')
-        .select('resource_id, skill_id')
-        .in('resource_id', resourceIds);
-      
+        .from("resource_library_skills")
+        .select("resource_id, skill_id")
+        .in("resource_id", resourceIds);
+
       // Map program and skill IDs to resources
-      const resourcesWithLinks = data.map(resource => ({
+      const resourcesWithLinks = data.map((resource) => ({
         ...resource,
-        program_ids: programLinks?.filter(pl => pl.resource_id === resource.id).map(pl => pl.program_id) || [],
-        skill_ids: skillLinks?.filter(sl => sl.resource_id === resource.id).map(sl => sl.skill_id) || [],
+        program_ids:
+          programLinks?.filter((pl) => pl.resource_id === resource.id).map((pl) => pl.program_id) ||
+          [],
+        skill_ids:
+          skillLinks?.filter((sl) => sl.resource_id === resource.id).map((sl) => sl.skill_id) || [],
       }));
-      
+
       return resourcesWithLinks as Resource[];
     },
   });
 
   // Filter resources based on selected filters
-  const filteredResources = resources?.filter(resource => {
+  const filteredResources = resources?.filter((resource) => {
     // Program filter
-    if (filterProgram !== 'all') {
-      if (filterProgram === 'public' && (resource.program_ids?.length || 0) > 0) return false;
-      if (filterProgram === 'gated' && (resource.program_ids?.length || 0) === 0) return false;
-      if (filterProgram !== 'public' && filterProgram !== 'gated' && !resource.program_ids?.includes(filterProgram)) return false;
+    if (filterProgram !== "all") {
+      if (filterProgram === "public" && (resource.program_ids?.length || 0) > 0) return false;
+      if (filterProgram === "gated" && (resource.program_ids?.length || 0) === 0) return false;
+      if (
+        filterProgram !== "public" &&
+        filterProgram !== "gated" &&
+        !resource.program_ids?.includes(filterProgram)
+      )
+        return false;
     }
     // Skill filter
-    if (filterSkill !== 'all' && !resource.skill_ids?.includes(filterSkill)) return false;
+    if (filterSkill !== "all" && !resource.skill_ids?.includes(filterSkill)) return false;
     // Category filter
-    if (filterCategory !== 'all') {
-      if (filterCategory === 'uncategorized' && resource.category_id) return false;
-      if (filterCategory !== 'uncategorized' && resource.category_id !== filterCategory) return false;
+    if (filterCategory !== "all") {
+      if (filterCategory === "uncategorized" && resource.category_id) return false;
+      if (filterCategory !== "uncategorized" && resource.category_id !== filterCategory)
+        return false;
     }
     return true;
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      if (!user) throw new Error('Not authenticated');
-      
+      if (!user) throw new Error("Not authenticated");
+
       let file_path: string | null = null;
       let file_name: string | null = null;
       let file_size: number | null = null;
@@ -199,15 +250,15 @@ export default function ResourceLibraryManagement() {
 
       if (data.file) {
         setUploading(true);
-        const fileExt = data.file.name.split('.').pop();
+        const fileExt = data.file.name.split(".").pop();
         const fileName = `${data.canonical_id}-${Date.now()}.${fileExt}`;
-        
+
         const { error: uploadError } = await supabase.storage
-          .from('resource-library')
+          .from("resource-library")
           .upload(fileName, data.file);
-        
+
         if (uploadError) throw uploadError;
-        
+
         file_path = fileName;
         file_name = data.file.name;
         file_size = data.file.size;
@@ -216,7 +267,7 @@ export default function ResourceLibraryManagement() {
       }
 
       const { data: newResource, error } = await supabase
-        .from('resource_library')
+        .from("resource_library")
         .insert({
           canonical_id: data.canonical_id,
           title: data.title,
@@ -233,19 +284,19 @@ export default function ResourceLibraryManagement() {
           is_published: false,
           downloadable: data.downloadable,
         })
-        .select('id')
+        .select("id")
         .single();
 
       if (error) throw error;
 
       // Add program assignments if any
       if (data.program_ids.length > 0 && newResource) {
-        const programLinks = data.program_ids.map(pid => ({
-            resource_id: newResource.id,
-            program_id: pid
-          }));
+        const programLinks = data.program_ids.map((pid) => ({
+          resource_id: newResource.id,
+          program_id: pid,
+        }));
         const { error: linkError } = await supabase
-          .from('resource_library_programs')
+          .from("resource_library_programs")
           .insert(programLinks);
 
         if (linkError) throw linkError;
@@ -253,31 +304,37 @@ export default function ResourceLibraryManagement() {
 
       // Add skill assignments if any
       if (data.skill_ids.length > 0 && newResource) {
-        const skillLinks = data.skill_ids.map(sid => ({
-            resource_id: newResource.id,
-            skill_id: sid
-          }));
+        const skillLinks = data.skill_ids.map((sid) => ({
+          resource_id: newResource.id,
+          skill_id: sid,
+        }));
         const { error: skillError } = await supabase
-          .from('resource_library_skills')
+          .from("resource_library_skills")
           .insert(skillLinks);
 
         if (skillError) throw skillError;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['resource-library'] });
+      queryClient.invalidateQueries({ queryKey: ["resource-library"] });
       setDialogOpen(false);
       resetForm();
-      toast.success('Resource created successfully');
+      toast.success("Resource created successfully");
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to create resource');
+      toast.error(error.message || "Failed to create resource");
       setUploading(false);
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<typeof formData> & { file?: File | null } }) => {
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<typeof formData> & { file?: File | null };
+    }) => {
       let updateData: Record<string, any> = {
         canonical_id: data.canonical_id,
         title: data.title,
@@ -289,15 +346,15 @@ export default function ResourceLibraryManagement() {
 
       if (data.file) {
         setUploading(true);
-        const fileExt = data.file.name.split('.').pop();
+        const fileExt = data.file.name.split(".").pop();
         const fileName = `${data.canonical_id}-${Date.now()}.${fileExt}`;
-        
+
         const { error: uploadError } = await supabase.storage
-          .from('resource-library')
+          .from("resource-library")
           .upload(fileName, data.file);
-        
+
         if (uploadError) throw uploadError;
-        
+
         updateData.file_path = fileName;
         updateData.file_name = data.file.name;
         updateData.file_size = data.file.size;
@@ -305,22 +362,19 @@ export default function ResourceLibraryManagement() {
         setUploading(false);
       }
 
-      const { error } = await supabase
-        .from('resource_library')
-        .update(updateData)
-        .eq('id', id);
+      const { error } = await supabase.from("resource_library").update(updateData).eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['resource-library'] });
+      queryClient.invalidateQueries({ queryKey: ["resource-library"] });
       setDialogOpen(false);
       setEditingResource(null);
       resetForm();
-      toast.success('Resource updated successfully');
+      toast.success("Resource updated successfully");
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to update resource');
+      toast.error(error.message || "Failed to update resource");
       setUploading(false);
     },
   });
@@ -328,36 +382,33 @@ export default function ResourceLibraryManagement() {
   const togglePublishMutation = useMutation({
     mutationFn: async ({ id, is_published }: { id: string; is_published: boolean }) => {
       const { error } = await supabase
-        .from('resource_library')
+        .from("resource_library")
         .update({ is_published })
-        .eq('id', id);
+        .eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['resource-library'] });
-      toast.success('Resource visibility updated');
+      queryClient.invalidateQueries({ queryKey: ["resource-library"] });
+      toast.success("Resource visibility updated");
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to update resource');
+      toast.error(error.message || "Failed to update resource");
     },
   });
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase
-        .from('resource_library')
-        .update({ is_active })
-        .eq('id', id);
+      const { error } = await supabase.from("resource_library").update({ is_active }).eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['resource-library'] });
-      toast.success('Resource status updated');
+      queryClient.invalidateQueries({ queryKey: ["resource-library"] });
+      toast.success("Resource status updated");
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to update resource');
+      toast.error(error.message || "Failed to update resource");
     },
   });
 
@@ -365,62 +416,58 @@ export default function ResourceLibraryManagement() {
     mutationFn: async (resource: Resource) => {
       // Delete file from storage if exists
       if (resource.file_path) {
-        await supabase.storage
-          .from('resource-library')
-          .remove([resource.file_path]);
+        await supabase.storage.from("resource-library").remove([resource.file_path]);
       }
 
-      const { error } = await supabase
-        .from('resource_library')
-        .delete()
-        .eq('id', resource.id);
+      const { error } = await supabase.from("resource_library").delete().eq("id", resource.id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['resource-library'] });
-      toast.success('Resource deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ["resource-library"] });
+      toast.success("Resource deleted successfully");
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to delete resource');
+      toast.error(error.message || "Failed to delete resource");
     },
   });
 
   const updateProgramsMutation = useMutation({
-    mutationFn: async ({ resourceId, programIds }: { resourceId: string; programIds: string[] }) => {
+    mutationFn: async ({
+      resourceId,
+      programIds,
+    }: {
+      resourceId: string;
+      programIds: string[];
+    }) => {
       // Delete existing links
-      await supabase
-        .from('resource_library_programs')
-        .delete()
-        .eq('resource_id', resourceId);
-      
+      await supabase.from("resource_library_programs").delete().eq("resource_id", resourceId);
+
       // Insert new links
       if (programIds.length > 0) {
-        const links = programIds.map(pid => ({ resource_id: resourceId, program_id: pid }));
-        const { error } = await supabase
-          .from('resource_library_programs')
-          .insert(links);
+        const links = programIds.map((pid) => ({ resource_id: resourceId, program_id: pid }));
+        const { error } = await supabase.from("resource_library_programs").insert(links);
 
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['resource-library'] });
+      queryClient.invalidateQueries({ queryKey: ["resource-library"] });
     },
   });
 
   const resetForm = () => {
     setFormData({
-      canonical_id: '',
-      title: '',
-      description: '',
-      resource_type: 'document',
-      url: '',
+      canonical_id: "",
+      title: "",
+      description: "",
+      resource_type: "document",
+      url: "",
       file: null,
       downloadable: true,
       program_ids: [],
       skill_ids: [],
-      category_id: '',
+      category_id: "",
     });
     setProgramsOpen(false);
   };
@@ -430,14 +477,14 @@ export default function ResourceLibraryManagement() {
     setFormData({
       canonical_id: resource.canonical_id,
       title: resource.title,
-      description: resource.description || '',
+      description: resource.description || "",
       resource_type: resource.resource_type,
-      url: resource.url || '',
+      url: resource.url || "",
       file: null,
       downloadable: resource.downloadable,
       program_ids: resource.program_ids || [],
       skill_ids: resource.skill_ids || [],
-      category_id: resource.category_id || '',
+      category_id: resource.category_id || "",
     });
     setProgramsOpen((resource.program_ids?.length || 0) > 0);
     setDialogOpen(true);
@@ -445,49 +492,50 @@ export default function ResourceLibraryManagement() {
 
   const handleSubmit = async () => {
     if (!formData.canonical_id.trim() || !formData.title.trim()) {
-      toast.error('Please fill in required fields');
+      toast.error("Please fill in required fields");
       return;
     }
 
     if (editingResource) {
-      updateMutation.mutate({ id: editingResource.id, data: formData }, {
-        onSuccess: async () => {
-          // Update program assignments
-          updateProgramsMutation.mutate({ 
-            resourceId: editingResource.id, 
-            programIds: formData.program_ids 
-          });
-          
-          // Update skill assignments
-          await supabase
-            .from('resource_library_skills')
-            .delete()
-            .eq('resource_id', editingResource.id);
-          
-          if (formData.skill_ids.length > 0) {
-            const skillLinks = formData.skill_ids.map(sid => ({
-                resource_id: editingResource.id,
-                skill_id: sid
-              }));
+      updateMutation.mutate(
+        { id: editingResource.id, data: formData },
+        {
+          onSuccess: async () => {
+            // Update program assignments
+            updateProgramsMutation.mutate({
+              resourceId: editingResource.id,
+              programIds: formData.program_ids,
+            });
+
+            // Update skill assignments
             await supabase
-              .from('resource_library_skills')
-              .insert(skillLinks);
-          }
-          
-          queryClient.invalidateQueries({ queryKey: ['resource-library'] });
-        }
-      });
+              .from("resource_library_skills")
+              .delete()
+              .eq("resource_id", editingResource.id);
+
+            if (formData.skill_ids.length > 0) {
+              const skillLinks = formData.skill_ids.map((sid) => ({
+                resource_id: editingResource.id,
+                skill_id: sid,
+              }));
+              await supabase.from("resource_library_skills").insert(skillLinks);
+            }
+
+            queryClient.invalidateQueries({ queryKey: ["resource-library"] });
+          },
+        },
+      );
     } else {
       createMutation.mutate(formData);
     }
   };
 
   const toggleProgramSelection = (programId: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       program_ids: prev.program_ids.includes(programId)
-        ? prev.program_ids.filter(id => id !== programId)
-        : [...prev.program_ids, programId]
+        ? prev.program_ids.filter((id) => id !== programId)
+        : [...prev.program_ids, programId],
     }));
   };
 
@@ -495,18 +543,18 @@ export default function ResourceLibraryManagement() {
     if (!resource.file_path) return;
 
     const { data, error } = await supabase.storage
-      .from('resource-library')
+      .from("resource-library")
       .download(resource.file_path);
 
     if (error) {
-      toast.error('Failed to download file');
+      toast.error("Failed to download file");
       return;
     }
 
     const url = URL.createObjectURL(data);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = resource.file_name || 'download';
+    a.download = resource.file_name || "download";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -514,13 +562,13 @@ export default function ResourceLibraryManagement() {
   };
 
   const getTypeIcon = (type: string) => {
-    const typeConfig = resourceTypes.find(t => t.value === type);
+    const typeConfig = resourceTypes.find((t) => t.value === type);
     const Icon = typeConfig?.icon || FileText;
     return <Icon className="h-4 w-4" />;
   };
 
   const formatFileSize = (bytes: number | null) => {
-    if (!bytes) return '';
+    if (!bytes) return "";
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -539,15 +587,20 @@ export default function ResourceLibraryManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Resource Library</h1>
-          <p className="text-muted-foreground">Manage reusable resources that can be assigned to modules</p>
+          <p className="text-muted-foreground">
+            Manage reusable resources that can be assigned to modules
+          </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) {
-            setEditingResource(null);
-            resetForm();
-          }
-        }}>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              setEditingResource(null);
+              resetForm();
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -556,9 +609,9 @@ export default function ResourceLibraryManagement() {
           </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingResource ? 'Edit Resource' : 'Add New Resource'}</DialogTitle>
+              <DialogTitle>{editingResource ? "Edit Resource" : "Add New Resource"}</DialogTitle>
               <DialogDescription>
-                {editingResource ? 'Update resource details' : 'Create a new reusable resource'}
+                {editingResource ? "Update resource details" : "Create a new reusable resource"}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -567,7 +620,12 @@ export default function ResourceLibraryManagement() {
                 <Input
                   id="canonical_id"
                   value={formData.canonical_id}
-                  onChange={(e) => setFormData({ ...formData, canonical_id: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      canonical_id: e.target.value.toLowerCase().replace(/\s+/g, "-"),
+                    })
+                  }
                   placeholder="e.g., getting-started-guide"
                 />
                 <p className="text-xs text-muted-foreground">Unique identifier for this resource</p>
@@ -620,8 +678,10 @@ export default function ResourceLibraryManagement() {
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
                   <Select
-                    value={formData.category_id || 'none'}
-                    onValueChange={(value) => setFormData({ ...formData, category_id: value === 'none' ? '' : value })}
+                    value={formData.category_id || "none"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, category_id: value === "none" ? "" : value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
@@ -658,7 +718,9 @@ export default function ResourceLibraryManagement() {
                   <Input
                     id="file"
                     type="file"
-                    onChange={(e) => setFormData({ ...formData, file: e.target.files?.[0] || null })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, file: e.target.files?.[0] || null })
+                    }
                     className="flex-1"
                   />
                 </div>
@@ -711,7 +773,9 @@ export default function ResourceLibraryManagement() {
                         </>
                       )}
                     </span>
-                    <ChevronDown className={`h-4 w-4 transition-transform ${programsOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${programsOpen ? "rotate-180" : ""}`}
+                    />
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-2 pt-2">
@@ -726,10 +790,7 @@ export default function ResourceLibraryManagement() {
                           checked={formData.program_ids.includes(program.id)}
                           onCheckedChange={() => toggleProgramSelection(program.id)}
                         />
-                        <label
-                          htmlFor={`program-${program.id}`}
-                          className="text-sm cursor-pointer"
-                        >
+                        <label htmlFor={`program-${program.id}`} className="text-sm cursor-pointer">
                           {program.name}
                         </label>
                       </div>
@@ -745,21 +806,21 @@ export default function ResourceLibraryManagement() {
                 inline
                 resourceId=""
                 selectedSkillIds={formData.skill_ids}
-                onSkillsChange={(ids) => setFormData(prev => ({ ...prev, skill_ids: ids }))}
+                onSkillsChange={(ids) => setFormData((prev) => ({ ...prev, skill_ids: ids }))}
               />
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button 
-                onClick={handleSubmit} 
+              <Button
+                onClick={handleSubmit}
                 disabled={createMutation.isPending || updateMutation.isPending || uploading}
               >
                 {(createMutation.isPending || updateMutation.isPending || uploading) && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 )}
-                {uploading ? 'Uploading...' : editingResource ? 'Update' : 'Create'}
+                {uploading ? "Uploading..." : editingResource ? "Update" : "Create"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -773,7 +834,8 @@ export default function ResourceLibraryManagement() {
               <CardTitle>All Resources</CardTitle>
               <CardDescription>
                 {filteredResources?.length || 0} resources
-                {(filterProgram !== 'all' || filterSkill !== 'all' || filterCategory !== 'all') && ` (filtered)`}
+                {(filterProgram !== "all" || filterSkill !== "all" || filterCategory !== "all") &&
+                  ` (filtered)`}
               </CardDescription>
             </div>
             <div className="flex gap-2 flex-wrap">
@@ -784,7 +846,7 @@ export default function ResourceLibraryManagement() {
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
                   <SelectItem value="uncategorized">Uncategorized</SelectItem>
-                  {categories?.map(cat => (
+                  {categories?.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.name}
                     </SelectItem>
@@ -797,7 +859,7 @@ export default function ResourceLibraryManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Skills</SelectItem>
-                  {skills?.map(skill => (
+                  {skills?.map((skill) => (
                     <SelectItem key={skill.id} value={skill.id}>
                       {skill.name}
                     </SelectItem>
@@ -812,7 +874,7 @@ export default function ResourceLibraryManagement() {
                   <SelectItem value="all">All Resources</SelectItem>
                   <SelectItem value="public">Public Only</SelectItem>
                   <SelectItem value="gated">Gated Only</SelectItem>
-                  {programs?.map(program => (
+                  {programs?.map((program) => (
                     <SelectItem key={program.id} value={program.id}>
                       {program.name}
                     </SelectItem>
@@ -862,7 +924,8 @@ export default function ResourceLibraryManagement() {
                       {resource.category_id ? (
                         <Badge variant="outline" className="gap-1">
                           <Tag className="h-3 w-3" />
-                          {categories?.find(c => c.id === resource.category_id)?.name || 'Unknown'}
+                          {categories?.find((c) => c.id === resource.category_id)?.name ||
+                            "Unknown"}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground text-sm">—</span>
@@ -915,9 +978,9 @@ export default function ResourceLibraryManagement() {
                           </div>
                         </div>
                       ) : resource.url ? (
-                        <a 
-                          href={resource.url} 
-                          target="_blank" 
+                        <a
+                          href={resource.url}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="text-primary hover:underline flex items-center gap-1"
                         >
@@ -929,7 +992,10 @@ export default function ResourceLibraryManagement() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={resource.downloadable ? 'outline' : 'secondary'} className="gap-1">
+                      <Badge
+                        variant={resource.downloadable ? "outline" : "secondary"}
+                        className="gap-1"
+                      >
                         {resource.downloadable ? (
                           <>
                             <Unlock className="h-3 w-3" />
@@ -947,12 +1013,12 @@ export default function ResourceLibraryManagement() {
                       <div className="flex items-center gap-2">
                         <Switch
                           checked={resource.is_active}
-                          onCheckedChange={(checked) => 
+                          onCheckedChange={(checked) =>
                             toggleActiveMutation.mutate({ id: resource.id, is_active: checked })
                           }
                         />
-                        <Badge variant={resource.is_active ? 'default' : 'secondary'}>
-                          {resource.is_active ? 'Active' : 'Inactive'}
+                        <Badge variant={resource.is_active ? "default" : "secondary"}>
+                          {resource.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </div>
                     </TableCell>
@@ -960,10 +1026,12 @@ export default function ResourceLibraryManagement() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => togglePublishMutation.mutate({ 
-                          id: resource.id, 
-                          is_published: !resource.is_published 
-                        })}
+                        onClick={() =>
+                          togglePublishMutation.mutate({
+                            id: resource.id,
+                            is_published: !resource.is_published,
+                          })
+                        }
                       >
                         {resource.is_published ? (
                           <>
@@ -979,7 +1047,7 @@ export default function ResourceLibraryManagement() {
                       </Button>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(resource.created_at), 'MMM d, yyyy')}
+                      {format(new Date(resource.created_at), "MMM d, yyyy")}
                     </TableCell>
                     <TableCell className="text-right sticky right-0 bg-background">
                       <div className="flex items-center justify-end gap-1 pl-2 border-l">
@@ -1000,18 +1068,14 @@ export default function ResourceLibraryManagement() {
                         >
                           <Settings className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(resource)}
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(resource)}>
                           <Edit2 className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            if (confirm('Are you sure you want to delete this resource?')) {
+                            if (confirm("Are you sure you want to delete this resource?")) {
                               deleteMutation.mutate(resource);
                             }
                           }}
@@ -1029,7 +1093,10 @@ export default function ResourceLibraryManagement() {
       </Card>
 
       {/* Plan Config Dialog */}
-      <Dialog open={!!planConfigResource} onOpenChange={(open) => !open && setPlanConfigResource(null)}>
+      <Dialog
+        open={!!planConfigResource}
+        onOpenChange={(open) => !open && setPlanConfigResource(null)}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Plan Access Settings</DialogTitle>
@@ -1045,7 +1112,7 @@ export default function ResourceLibraryManagement() {
               isConsumable={planConfigResource.is_consumable}
               creditCost={(planConfigResource as any).credit_cost ?? 1}
               onUpdate={() => {
-                queryClient.invalidateQueries({ queryKey: ['resource-library'] });
+                queryClient.invalidateQueries({ queryKey: ["resource-library"] });
                 setPlanConfigResource(null);
               }}
             />

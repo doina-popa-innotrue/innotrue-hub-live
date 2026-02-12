@@ -73,9 +73,15 @@ export function ModuleSelfAssessment({ moduleId, enrollmentId }: ModuleSelfAsses
     return null;
   }
 
-  const completedSelfSnapshot = snapshots?.find(s => s.status === "completed" && s.is_self_assessment);
-  const completedEvaluatorSnapshot = snapshots?.find(s => s.status === "completed" && !s.is_self_assessment);
-  const inProgressSnapshot = snapshots?.find(s => (s.status === "in_progress" || s.status === "draft") && s.is_self_assessment);
+  const completedSelfSnapshot = snapshots?.find(
+    (s) => s.status === "completed" && s.is_self_assessment,
+  );
+  const completedEvaluatorSnapshot = snapshots?.find(
+    (s) => s.status === "completed" && !s.is_self_assessment,
+  );
+  const inProgressSnapshot = snapshots?.find(
+    (s) => (s.status === "in_progress" || s.status === "draft") && s.is_self_assessment,
+  );
 
   const handleStartAssessment = () => {
     // Navigate to the assessment page with enrollment context
@@ -89,7 +95,9 @@ export function ModuleSelfAssessment({ moduleId, enrollmentId }: ModuleSelfAsses
 
   const handleContinueAssessment = () => {
     if (inProgressSnapshot) {
-      navigate(`/capabilities/${assessment.id}?snapshot_id=${inProgressSnapshot.id}&enrollment_id=${enrollmentId}`);
+      navigate(
+        `/capabilities/${assessment.id}?snapshot_id=${inProgressSnapshot.id}&enrollment_id=${enrollmentId}`,
+      );
     }
   };
 
@@ -136,18 +144,24 @@ export function ModuleSelfAssessment({ moduleId, enrollmentId }: ModuleSelfAsses
             {completedSelfSnapshot && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <User className="h-4 w-4" />
-                <span>Self-evaluation completed {format(new Date(completedSelfSnapshot.completed_at!), "MMM d, yyyy")}</span>
+                <span>
+                  Self-evaluation completed{" "}
+                  {format(new Date(completedSelfSnapshot.completed_at!), "MMM d, yyyy")}
+                </span>
               </div>
             )}
             {completedEvaluatorSnapshot && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <UserCheck className="h-4 w-4" />
-                <span>Evaluator graded {format(new Date(completedEvaluatorSnapshot.completed_at!), "MMM d, yyyy")}</span>
+                <span>
+                  Evaluator graded{" "}
+                  {format(new Date(completedEvaluatorSnapshot.completed_at!), "MMM d, yyyy")}
+                </span>
               </div>
             )}
           </div>
         )}
-        
+
         <div className="flex gap-2">
           {hasAnyCompleted ? (
             <>

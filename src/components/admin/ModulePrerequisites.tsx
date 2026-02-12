@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
-import { Plus, X, Link2 } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { Plus, X, Link2 } from "lucide-react";
 
 interface ModulePrerequisitesProps {
   moduleId: string;
@@ -24,10 +30,14 @@ interface Prerequisite {
   prerequisite_module?: Module;
 }
 
-export function ModulePrerequisites({ moduleId, programId, currentModuleOrderIndex }: ModulePrerequisitesProps) {
+export function ModulePrerequisites({
+  moduleId,
+  programId,
+  currentModuleOrderIndex,
+}: ModulePrerequisitesProps) {
   const [prerequisites, setPrerequisites] = useState<Prerequisite[]>([]);
   const [availableModules, setAvailableModules] = useState<Module[]>([]);
-  const [selectedModuleId, setSelectedModuleId] = useState<string>('');
+  const [selectedModuleId, setSelectedModuleId] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,17 +49,17 @@ export function ModulePrerequisites({ moduleId, programId, currentModuleOrderInd
 
     // Fetch all modules in the program (except the current one)
     const { data: modulesData } = await supabase
-      .from('program_modules')
-      .select('id, title, order_index')
-      .eq('program_id', programId)
-      .neq('id', moduleId)
-      .order('order_index');
+      .from("program_modules")
+      .select("id, title, order_index")
+      .eq("program_id", programId)
+      .neq("id", moduleId)
+      .order("order_index");
 
     // Fetch existing prerequisites for this module
     const { data: prereqsData } = await supabase
-      .from('module_prerequisites')
-      .select('id, prerequisite_module_id')
-      .eq('module_id', moduleId);
+      .from("module_prerequisites")
+      .select("id, prerequisite_module_id")
+      .eq("module_id", moduleId);
 
     if (modulesData) {
       setAvailableModules(modulesData);
@@ -57,9 +67,9 @@ export function ModulePrerequisites({ moduleId, programId, currentModuleOrderInd
 
     if (prereqsData && modulesData) {
       // Enrich prerequisites with module data
-      const enrichedPrereqs = prereqsData.map(prereq => ({
+      const enrichedPrereqs = prereqsData.map((prereq) => ({
         ...prereq,
-        prerequisite_module: modulesData.find(m => m.id === prereq.prerequisite_module_id)
+        prerequisite_module: modulesData.find((m) => m.id === prereq.prerequisite_module_id),
       }));
       setPrerequisites(enrichedPrereqs);
     } else {
@@ -73,46 +83,43 @@ export function ModulePrerequisites({ moduleId, programId, currentModuleOrderInd
     if (!selectedModuleId) return;
 
     const { data, error } = await supabase
-      .from('module_prerequisites')
+      .from("module_prerequisites")
       .insert({
         module_id: moduleId,
-        prerequisite_module_id: selectedModuleId
+        prerequisite_module_id: selectedModuleId,
       })
       .select();
 
     if (error) {
-      if (error.code === '23505') {
-        toast.error('This prerequisite already exists');
+      if (error.code === "23505") {
+        toast.error("This prerequisite already exists");
       } else {
-        toast.error('Failed to add prerequisite');
-        console.error('Prerequisite insert error:', error);
+        toast.error("Failed to add prerequisite");
+        console.error("Prerequisite insert error:", error);
       }
     } else if (!data || data.length === 0) {
-      toast.error('Failed to add prerequisite - you may not have permission');
+      toast.error("Failed to add prerequisite - you may not have permission");
     } else {
-      toast.success('Prerequisite added');
-      setSelectedModuleId('');
+      toast.success("Prerequisite added");
+      setSelectedModuleId("");
       fetchData();
     }
   }
 
   async function removePrerequisite(prereqId: string) {
-    const { error } = await supabase
-      .from('module_prerequisites')
-      .delete()
-      .eq('id', prereqId);
+    const { error } = await supabase.from("module_prerequisites").delete().eq("id", prereqId);
 
     if (error) {
-      toast.error('Failed to remove prerequisite');
+      toast.error("Failed to remove prerequisite");
     } else {
-      toast.success('Prerequisite removed');
+      toast.success("Prerequisite removed");
       fetchData();
     }
   }
 
   // Filter out modules that are already prerequisites
-  const prereqModuleIds = new Set(prerequisites.map(p => p.prerequisite_module_id));
-  const selectableModules = availableModules.filter(m => !prereqModuleIds.has(m.id));
+  const prereqModuleIds = new Set(prerequisites.map((p) => p.prerequisite_module_id));
+  const selectableModules = availableModules.filter((m) => !prereqModuleIds.has(m.id));
 
   if (loading) {
     return <div className="text-sm text-muted-foreground">Loading prerequisites...</div>;
@@ -142,7 +149,9 @@ export function ModulePrerequisites({ moduleId, programId, currentModuleOrderInd
           ))}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">No prerequisites set. This module is available immediately.</p>
+        <p className="text-xs text-muted-foreground">
+          No prerequisites set. This module is available immediately.
+        </p>
       )}
 
       {selectableModules.length > 0 && (

@@ -1,27 +1,27 @@
-import { Check, ChevronDown } from 'lucide-react';
-import { useAuth, UserRoleType } from '@/contexts/AuthContext';
+import { Check, ChevronDown } from "lucide-react";
+import { useAuth, UserRoleType } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 const roleLabels: Record<string, string> = {
-  admin: 'Platform Admin',
-  org_admin: 'Org Admin',
-  instructor: 'Instructor',
-  coach: 'Coach',
-  client: 'Client',
+  admin: "Platform Admin",
+  org_admin: "Org Admin",
+  instructor: "Instructor",
+  coach: "Coach",
+  client: "Client",
 };
 
 const roleIcons: Record<string, string> = {
-  admin: '👑',
-  org_admin: '🏢',
-  instructor: '🎓',
-  coach: '💼',
-  client: '👤',
+  admin: "👑",
+  org_admin: "🏢",
+  instructor: "🎓",
+  coach: "💼",
+  client: "👤",
 };
 
 export function RoleSwitcher() {
@@ -34,7 +34,7 @@ export function RoleSwitcher() {
 
   // Get display label for org_admin (include org name if available)
   const getDisplayLabel = (role: string) => {
-    if (role === 'org_admin' && organizationMembership) {
+    if (role === "org_admin" && organizationMembership) {
       return `${organizationMembership.organization_name} Admin`;
     }
     return roleLabels[role] || role;
@@ -43,13 +43,10 @@ export function RoleSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          className="w-full justify-between bg-background hover:bg-accent"
-        >
+        <Button variant="outline" className="w-full justify-between bg-background hover:bg-accent">
           <span className="flex items-center gap-2">
-            <span>{roleIcons[userRole || 'client']}</span>
-            <span className="font-medium truncate">{getDisplayLabel(userRole || 'client')}</span>
+            <span>{roleIcons[userRole || "client"]}</span>
+            <span className="font-medium truncate">{getDisplayLabel(userRole || "client")}</span>
           </span>
           <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
         </Button>

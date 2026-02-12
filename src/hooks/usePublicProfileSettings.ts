@@ -38,7 +38,9 @@ export function usePublicProfileSettings() {
   const { data: settings, isLoading: settingsLoading } = useQuery({
     queryKey: ["public-profile-settings"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
@@ -55,7 +57,9 @@ export function usePublicProfileSettings() {
   const { data: publicInterests, isLoading: interestsLoading } = useQuery({
     queryKey: ["public-profile-interests"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
@@ -70,15 +74,18 @@ export function usePublicProfileSettings() {
 
   const upsertSettings = useMutation({
     mutationFn: async (updates: Partial<PublicProfileSettings>) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase
-        .from("public_profile_settings")
-        .upsert({
+      const { error } = await supabase.from("public_profile_settings").upsert(
+        {
           user_id: user.id,
           ...updates,
-        }, { onConflict: "user_id" });
+        },
+        { onConflict: "user_id" },
+      );
 
       if (error) throw error;
     },
@@ -92,18 +99,26 @@ export function usePublicProfileSettings() {
   });
 
   const togglePublicInterest = useMutation({
-    mutationFn: async ({ type, value, isPublic }: { type: string; value: string; isPublic: boolean }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+    mutationFn: async ({
+      type,
+      value,
+      isPublic,
+    }: {
+      type: string;
+      value: string;
+      isPublic: boolean;
+    }) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       if (isPublic) {
-        const { error } = await supabase
-          .from("public_profile_interests")
-          .insert({
-            user_id: user.id,
-            interest_type: type,
-            item_value: value,
-          });
+        const { error } = await supabase.from("public_profile_interests").insert({
+          user_id: user.id,
+          interest_type: type,
+          item_value: value,
+        });
         if (error) throw error;
       } else {
         const { error } = await supabase
@@ -124,7 +139,9 @@ export function usePublicProfileSettings() {
   });
 
   const checkSlugAvailability = async (slug: string): Promise<boolean> => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return false;
 
     const { data, error } = await supabase

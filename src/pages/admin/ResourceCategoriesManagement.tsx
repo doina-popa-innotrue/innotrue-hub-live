@@ -1,4 +1,4 @@
-import { useAdminCRUD } from '@/hooks/useAdminCRUD';
+import { useAdminCRUD } from "@/hooks/useAdminCRUD";
 import {
   AdminPageHeader,
   AdminLoadingState,
@@ -7,15 +7,15 @@ import {
   AdminTable,
   AdminTableColumn,
   AdminTableActions,
-} from '@/components/admin';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { FolderOpen } from 'lucide-react';
+} from "@/components/admin";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { FolderOpen } from "lucide-react";
 
 interface ResourceCategory {
   id: string;
@@ -37,22 +37,22 @@ interface FormData {
 }
 
 const initialFormData: FormData = {
-  name: '',
-  description: '',
-  color: 'gray',
+  name: "",
+  description: "",
+  color: "gray",
   display_order: 0,
   is_active: true,
 };
 
 const colorOptions = [
-  { name: 'gray', label: 'Gray', class: 'bg-gray-500' },
-  { name: 'blue', label: 'Blue', class: 'bg-blue-500' },
-  { name: 'green', label: 'Green', class: 'bg-green-500' },
-  { name: 'yellow', label: 'Yellow', class: 'bg-yellow-500' },
-  { name: 'orange', label: 'Orange', class: 'bg-orange-500' },
-  { name: 'red', label: 'Red', class: 'bg-red-500' },
-  { name: 'purple', label: 'Purple', class: 'bg-purple-500' },
-  { name: 'pink', label: 'Pink', class: 'bg-pink-500' },
+  { name: "gray", label: "Gray", class: "bg-gray-500" },
+  { name: "blue", label: "Blue", class: "bg-blue-500" },
+  { name: "green", label: "Green", class: "bg-green-500" },
+  { name: "yellow", label: "Yellow", class: "bg-yellow-500" },
+  { name: "orange", label: "Orange", class: "bg-orange-500" },
+  { name: "red", label: "Red", class: "bg-red-500" },
+  { name: "purple", label: "Purple", class: "bg-purple-500" },
+  { name: "pink", label: "Pink", class: "bg-pink-500" },
 ];
 
 export default function ResourceCategoriesManagement() {
@@ -70,15 +70,15 @@ export default function ResourceCategoriesManagement() {
     handleDelete,
     isSubmitting,
   } = useAdminCRUD<ResourceCategory, FormData>({
-    tableName: 'resource_categories',
-    queryKey: 'resource-categories',
-    entityName: 'Resource category',
-    orderBy: 'display_order',
+    tableName: "resource_categories",
+    queryKey: "resource-categories",
+    entityName: "Resource category",
+    orderBy: "display_order",
     initialFormData,
     mapItemToForm: (category) => ({
       name: category.name,
-      description: category.description || '',
-      color: category.color || 'gray',
+      description: category.description || "",
+      color: category.color || "gray",
       display_order: category.display_order,
       is_active: category.is_active,
     }),
@@ -86,12 +86,12 @@ export default function ResourceCategoriesManagement() {
 
   const columns: AdminTableColumn<ResourceCategory>[] = [
     {
-      key: 'name',
-      header: 'Name',
+      key: "name",
+      header: "Name",
       accessor: (category) => (
         <div className="flex items-center gap-2">
           <div
-            className={`w-3 h-3 rounded-full ${colorOptions.find((c) => c.name === category.color)?.class || 'bg-gray-500'}`}
+            className={`w-3 h-3 rounded-full ${colorOptions.find((c) => c.name === category.color)?.class || "bg-gray-500"}`}
           />
           <span className="font-medium">{category.name}</span>
         </div>
@@ -99,26 +99,24 @@ export default function ResourceCategoriesManagement() {
       sortable: true,
     },
     {
-      key: 'description',
-      header: 'Description',
+      key: "description",
+      header: "Description",
       accessor: (category) => (
-        <span className="text-muted-foreground text-sm">
-          {category.description || '—'}
-        </span>
+        <span className="text-muted-foreground text-sm">{category.description || "—"}</span>
       ),
     },
     {
-      key: 'display_order',
-      header: 'Order',
-      accessor: 'display_order',
+      key: "display_order",
+      header: "Order",
+      accessor: "display_order",
       sortable: true,
     },
     {
-      key: 'is_active',
-      header: 'Status',
+      key: "is_active",
+      header: "Status",
       accessor: (category) => (
-        <Badge variant={category.is_active ? 'default' : 'secondary'}>
-          {category.is_active ? 'Active' : 'Inactive'}
+        <Badge variant={category.is_active ? "default" : "secondary"}>
+          {category.is_active ? "Active" : "Inactive"}
         </Badge>
       ),
     },
@@ -155,7 +153,7 @@ export default function ResourceCategoriesManagement() {
             <Button
               key={color.name}
               type="button"
-              variant={formData.color === color.name ? 'default' : 'outline'}
+              variant={formData.color === color.name ? "default" : "outline"}
               size="sm"
               className="gap-2"
               onClick={() => setFormData({ ...formData, color: color.name })}
@@ -173,7 +171,9 @@ export default function ResourceCategoriesManagement() {
           id="display_order"
           type="number"
           value={formData.display_order}
-          onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
+          onChange={(e) =>
+            setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })
+          }
         />
         <p className="text-xs text-muted-foreground">Lower numbers appear first</p>
       </div>
@@ -209,7 +209,7 @@ export default function ResourceCategoriesManagement() {
         description="Manage categories for organizing resources in the library"
         isDialogOpen={isDialogOpen}
         onDialogOpenChange={setIsDialogOpen}
-        dialogTitle={editingItem ? 'Edit Category' : 'Add Category'}
+        dialogTitle={editingItem ? "Edit Category" : "Add Category"}
         dialogContent={formContent}
         createButtonLabel="Add Category"
       />
@@ -234,9 +234,9 @@ export default function ResourceCategoriesManagement() {
           )}
           emptyState={{
             icon: FolderOpen,
-            title: 'No categories yet',
-            description: 'Create your first resource category to organize your library',
-            actionLabel: 'Add Category',
+            title: "No categories yet",
+            description: "Create your first resource category to organize your library",
+            actionLabel: "Add Category",
             onAction: openCreate,
           }}
         />

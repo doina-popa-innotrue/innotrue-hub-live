@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ClipboardList, ChevronRight, Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ClipboardList, ChevronRight, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface AssignedScenarioItemProps {
   scenarioTemplateId: string;
@@ -33,10 +33,10 @@ export function AssignedScenarioItem({
     try {
       // First, check if an assignment already exists for this user and template
       const { data: existingAssignment, error: fetchError } = await supabase
-        .from('scenario_assignments')
-        .select('id')
-        .eq('template_id', scenarioTemplateId)
-        .eq('user_id', user.id)
+        .from("scenario_assignments")
+        .select("id")
+        .eq("template_id", scenarioTemplateId)
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (fetchError) throw fetchError;
@@ -49,24 +49,24 @@ export function AssignedScenarioItem({
 
       // Create a new assignment
       const { data: newAssignment, error: createError } = await supabase
-        .from('scenario_assignments')
+        .from("scenario_assignments")
         .insert({
           template_id: scenarioTemplateId,
           user_id: user.id,
           module_id: moduleId,
           enrollment_id: enrollmentId || null,
-          status: 'draft',
+          status: "draft",
         })
-        .select('id')
+        .select("id")
         .single();
 
       if (createError) throw createError;
 
-      toast.success('Scenario started!');
+      toast.success("Scenario started!");
       navigate(`/scenarios/${newAssignment.id}`);
     } catch (error: any) {
-      console.error('Error accessing scenario:', error);
-      toast.error('Failed to access scenario');
+      console.error("Error accessing scenario:", error);
+      toast.error("Failed to access scenario");
     } finally {
       setIsLoading(false);
     }

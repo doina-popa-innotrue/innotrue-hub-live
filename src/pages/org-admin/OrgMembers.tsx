@@ -1,19 +1,50 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { UserPlus, Trash2, Users, Clock, Mail, RefreshCw, Crown } from 'lucide-react';
-import { format } from 'date-fns';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { UserPlus, Trash2, Users, Clock, Mail, RefreshCw, Crown } from "lucide-react";
+import { format } from "date-fns";
 
 interface Plan {
   id: string;
@@ -24,7 +55,7 @@ interface Plan {
 interface Member {
   id: string;
   user_id: string;
-  role: 'org_admin' | 'org_manager' | 'org_member';
+  role: "org_admin" | "org_manager" | "org_member";
   is_active: boolean;
   created_at: string;
   sponsored_plan_id: string | null;
@@ -37,7 +68,7 @@ interface Member {
 interface PendingInvite {
   id: string;
   email: string;
-  role: 'org_admin' | 'org_manager' | 'org_member';
+  role: "org_admin" | "org_manager" | "org_member";
   expires_at: string;
   created_at: string;
   accepted_at: string | null;
@@ -52,35 +83,39 @@ export default function OrgMembers() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'org_admin' | 'org_manager' | 'org_member'>('org_member');
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"org_admin" | "org_manager" | "org_member">(
+    "org_member",
+  );
   const [inviting, setInviting] = useState(false);
   const [allowMemberInvites, setAllowMemberInvites] = useState(false);
-  
+
   // Sponsored seat limits
-  const [seatUsage, setSeatUsage] = useState<{ used: number; max: number | null }>({ used: 0, max: 0 });
+  const [seatUsage, setSeatUsage] = useState<{ used: number; max: number | null }>({
+    used: 0,
+    max: 0,
+  });
   const [canAssignSeats, setCanAssignSeats] = useState(false);
 
   // Check if current user can invite: org_admin always can, org_manager only if allowMemberInvites is enabled
-  const canInvite = organizationMembership?.role === 'org_admin' || 
-    (organizationMembership?.role === 'org_manager' && allowMemberInvites);
+  const canInvite =
+    organizationMembership?.role === "org_admin" ||
+    (organizationMembership?.role === "org_manager" && allowMemberInvites);
 
   // Only org_admin can change roles and manage members
-  const isOrgAdmin = organizationMembership?.role === 'org_admin';
+  const isOrgAdmin = organizationMembership?.role === "org_admin";
 
   // Get available roles for the dropdown based on current user's role
   const getAvailableRoles = () => {
     if (isOrgAdmin) {
       return [
-        { value: 'org_member', label: 'Member' },
-        { value: 'org_manager', label: 'Manager' },
-        { value: 'org_admin', label: 'Admin' },
+        { value: "org_member", label: "Member" },
+        { value: "org_manager", label: "Manager" },
+        { value: "org_admin", label: "Admin" },
       ];
     }
     // Managers can only assign member roles (not promote to manager or admin)
-    return [
-      { value: 'org_member', label: 'Member' },
-    ];
+    return [{ value: "org_member", label: "Member" }];
   };
 
   useEffect(() => {
@@ -95,58 +130,61 @@ export default function OrgMembers() {
 
   const loadSeatUsage = async () => {
     if (!organizationMembership?.organization_id) return;
-    
+
     try {
       // Get used seats
-      const { data: usedData } = await supabase
-        .rpc('get_org_sponsored_seat_count', { p_organization_id: organizationMembership.organization_id });
-      
+      const { data: usedData } = await supabase.rpc("get_org_sponsored_seat_count", {
+        p_organization_id: organizationMembership.organization_id,
+      });
+
       // Get max seats
-      const { data: maxData } = await supabase
-        .rpc('get_org_max_sponsored_seats', { p_organization_id: organizationMembership.organization_id });
-      
+      const { data: maxData } = await supabase.rpc("get_org_max_sponsored_seats", {
+        p_organization_id: organizationMembership.organization_id,
+      });
+
       // Check if can assign more
-      const { data: canAssign } = await supabase
-        .rpc('can_assign_sponsored_seat', { p_organization_id: organizationMembership.organization_id });
-      
-      setSeatUsage({ 
-        used: usedData || 0, 
-        max: maxData === null ? null : (maxData || 0) 
+      const { data: canAssign } = await supabase.rpc("can_assign_sponsored_seat", {
+        p_organization_id: organizationMembership.organization_id,
+      });
+
+      setSeatUsage({
+        used: usedData || 0,
+        max: maxData === null ? null : maxData || 0,
       });
       setCanAssignSeats(canAssign || false);
     } catch (error) {
-      console.error('Error loading seat usage:', error);
+      console.error("Error loading seat usage:", error);
     }
   };
 
   const loadPlans = async () => {
     try {
       const { data } = await supabase
-        .from('plans')
-        .select('id, name, tier_level')
-        .eq('is_active', true)
-        .order('tier_level');
-      
+        .from("plans")
+        .select("id, name, tier_level")
+        .eq("is_active", true)
+        .order("tier_level");
+
       setPlans(data || []);
     } catch (error) {
-      console.error('Error loading plans:', error);
+      console.error("Error loading plans:", error);
     }
   };
 
   const loadOrgSettings = async () => {
     if (!organizationMembership?.organization_id) return;
-    
+
     try {
       const { data } = await supabase
-        .from('organizations')
-        .select('settings')
-        .eq('id', organizationMembership.organization_id)
+        .from("organizations")
+        .select("settings")
+        .eq("id", organizationMembership.organization_id)
         .single();
-      
+
       const settings = data?.settings as { allowMemberInvites?: boolean } | null;
       setAllowMemberInvites(settings?.allowMemberInvites ?? false);
     } catch (error) {
-      console.error('Error loading org settings:', error);
+      console.error("Error loading org settings:", error);
     }
   };
 
@@ -156,55 +194,59 @@ export default function OrgMembers() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('organization_members')
-        .select(`
+        .from("organization_members")
+        .select(
+          `
           id,
           user_id,
           role,
           is_active,
           created_at,
           sponsored_plan_id
-        `)
-        .eq('organization_id', organizationMembership.organization_id)
-        .order('created_at', { ascending: false });
+        `,
+        )
+        .eq("organization_id", organizationMembership.organization_id)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
       // Fetch profiles for each member
-      const memberIds = data?.map(m => m.user_id) || [];
+      const memberIds = data?.map((m) => m.user_id) || [];
       const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, name')
-        .in('id', memberIds);
+        .from("profiles")
+        .select("id, name")
+        .in("id", memberIds);
 
       // Fetch sponsored plans
-      const sponsoredPlanIds = data?.filter(m => m.sponsored_plan_id).map(m => m.sponsored_plan_id!) || [];
+      const sponsoredPlanIds =
+        data?.filter((m) => m.sponsored_plan_id).map((m) => m.sponsored_plan_id!) || [];
       let sponsoredPlans: Plan[] = [];
       if (sponsoredPlanIds.length > 0) {
         const { data: plansData } = await supabase
-          .from('plans')
-          .select('id, name, tier_level')
-          .in('id', sponsoredPlanIds);
+          .from("plans")
+          .select("id, name, tier_level")
+          .in("id", sponsoredPlanIds);
         sponsoredPlans = plansData || [];
       }
 
-      const membersWithProfiles = data?.map(member => ({
-        ...member,
-        profile: {
-          name: profiles?.find(p => p.id === member.user_id)?.name || null,
-        },
-        sponsored_plan: member.sponsored_plan_id 
-          ? sponsoredPlans.find(p => p.id === member.sponsored_plan_id) || null
-          : null,
-      })) || [];
+      const membersWithProfiles =
+        data?.map((member) => ({
+          ...member,
+          profile: {
+            name: profiles?.find((p) => p.id === member.user_id)?.name || null,
+          },
+          sponsored_plan: member.sponsored_plan_id
+            ? sponsoredPlans.find((p) => p.id === member.sponsored_plan_id) || null
+            : null,
+        })) || [];
 
       setMembers(membersWithProfiles);
     } catch (error) {
-      console.error('Error loading members:', error);
+      console.error("Error loading members:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to load organization members',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load organization members",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -216,17 +258,17 @@ export default function OrgMembers() {
 
     try {
       const { data, error } = await supabase
-        .from('organization_invites')
-        .select('id, email, role, expires_at, created_at, accepted_at')
-        .eq('organization_id', organizationMembership.organization_id)
-        .is('accepted_at', null)
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
+        .from("organization_invites")
+        .select("id, email, role, expires_at, created_at, accepted_at")
+        .eq("organization_id", organizationMembership.organization_id)
+        .is("accepted_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setPendingInvites((data || []) as PendingInvite[]);
     } catch (error) {
-      console.error('Error loading invites:', error);
+      console.error("Error loading invites:", error);
     }
   };
 
@@ -235,7 +277,7 @@ export default function OrgMembers() {
 
     setInviting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-org-invite', {
+      const { data, error } = await supabase.functions.invoke("send-org-invite", {
         body: {
           organization_id: organizationMembership.organization_id,
           email: inviteEmail,
@@ -247,19 +289,19 @@ export default function OrgMembers() {
       if (data?.error) throw new Error(data.error);
 
       toast({
-        title: 'Invitation Sent',
+        title: "Invitation Sent",
         description: data?.message || `An invitation has been sent to ${inviteEmail}`,
       });
       setInviteDialogOpen(false);
-      setInviteEmail('');
-      setInviteRole('org_member');
+      setInviteEmail("");
+      setInviteRole("org_member");
       loadPendingInvites();
     } catch (error: any) {
-      console.error('Error inviting member:', error);
+      console.error("Error inviting member:", error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to send invitation',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to send invitation",
+        variant: "destructive",
       });
     } finally {
       setInviting(false);
@@ -270,7 +312,7 @@ export default function OrgMembers() {
     if (!organizationMembership?.organization_id) return;
 
     try {
-      const { data, error } = await supabase.functions.invoke('send-org-invite', {
+      const { data, error } = await supabase.functions.invoke("send-org-invite", {
         body: {
           organization_id: organizationMembership.organization_id,
           email: invite.email,
@@ -282,40 +324,37 @@ export default function OrgMembers() {
       if (data?.error) throw new Error(data.error);
 
       toast({
-        title: 'Invitation Resent',
+        title: "Invitation Resent",
         description: `A new invitation has been sent to ${invite.email}`,
       });
       loadPendingInvites();
     } catch (error: any) {
-      console.error('Error resending invite:', error);
+      console.error("Error resending invite:", error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to resend invitation',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to resend invitation",
+        variant: "destructive",
       });
     }
   };
 
   const handleCancelInvite = async (inviteId: string) => {
     try {
-      const { error } = await supabase
-        .from('organization_invites')
-        .delete()
-        .eq('id', inviteId);
+      const { error } = await supabase.from("organization_invites").delete().eq("id", inviteId);
 
       if (error) throw error;
 
       toast({
-        title: 'Invitation Cancelled',
-        description: 'The invitation has been cancelled',
+        title: "Invitation Cancelled",
+        description: "The invitation has been cancelled",
       });
       loadPendingInvites();
     } catch (error) {
-      console.error('Error cancelling invite:', error);
+      console.error("Error cancelling invite:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to cancel invitation',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to cancel invitation",
+        variant: "destructive",
       });
     }
   };
@@ -324,21 +363,21 @@ export default function OrgMembers() {
     // Security check: only org_admin can remove members
     if (!isOrgAdmin) {
       toast({
-        title: 'Permission Denied',
-        description: 'Only organization admins can remove members',
-        variant: 'destructive',
+        title: "Permission Denied",
+        description: "Only organization admins can remove members",
+        variant: "destructive",
       });
       return;
     }
 
     // Check if trying to remove the last admin
-    if (memberRole === 'org_admin') {
-      const adminCount = activeMembers.filter(m => m.role === 'org_admin').length;
+    if (memberRole === "org_admin") {
+      const adminCount = activeMembers.filter((m) => m.role === "org_admin").length;
       if (adminCount <= 1) {
         toast({
-          title: 'Cannot Remove',
-          description: 'You cannot remove the last admin from the organization',
-          variant: 'destructive',
+          title: "Cannot Remove",
+          description: "You cannot remove the last admin from the organization",
+          variant: "destructive",
         });
         return;
       }
@@ -346,68 +385,75 @@ export default function OrgMembers() {
 
     try {
       const { error } = await supabase
-        .from('organization_members')
+        .from("organization_members")
         .update({ is_active: false })
-        .eq('id', memberId);
+        .eq("id", memberId);
 
       if (error) throw error;
 
       toast({
-        title: 'Member Removed',
-        description: 'The member has been removed from the organization',
+        title: "Member Removed",
+        description: "The member has been removed from the organization",
       });
       loadMembers();
     } catch (error) {
-      console.error('Error removing member:', error);
+      console.error("Error removing member:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to remove member',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to remove member",
+        variant: "destructive",
       });
     }
   };
 
-  const handleRoleChange = async (memberId: string, newRole: 'org_admin' | 'org_manager' | 'org_member') => {
+  const handleRoleChange = async (
+    memberId: string,
+    newRole: "org_admin" | "org_manager" | "org_member",
+  ) => {
     // Security check: only org_admin can promote to org_admin or org_manager
-    if (!isOrgAdmin && (newRole === 'org_admin' || newRole === 'org_manager')) {
+    if (!isOrgAdmin && (newRole === "org_admin" || newRole === "org_manager")) {
       toast({
-        title: 'Permission Denied',
-        description: 'Only organization admins can assign admin or manager roles',
-        variant: 'destructive',
+        title: "Permission Denied",
+        description: "Only organization admins can assign admin or manager roles",
+        variant: "destructive",
       });
       return;
     }
 
     try {
       const { error } = await supabase
-        .from('organization_members')
+        .from("organization_members")
         .update({ role: newRole })
-        .eq('id', memberId);
+        .eq("id", memberId);
 
       if (error) throw error;
 
       toast({
-        title: 'Role Updated',
-        description: 'Member role has been updated',
+        title: "Role Updated",
+        description: "Member role has been updated",
       });
       loadMembers();
     } catch (error) {
-      console.error('Error updating role:', error);
+      console.error("Error updating role:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to update member role',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update member role",
+        variant: "destructive",
       });
     }
   };
 
-  const handleSponsoredPlanChange = async (memberId: string, planId: string | null, currentPlanId: string | null) => {
+  const handleSponsoredPlanChange = async (
+    memberId: string,
+    planId: string | null,
+    currentPlanId: string | null,
+  ) => {
     // Security check: only org_admin can assign sponsored plans
     if (!isOrgAdmin) {
       toast({
-        title: 'Permission Denied',
-        description: 'Only organization admins can assign sponsored plans',
-        variant: 'destructive',
+        title: "Permission Denied",
+        description: "Only organization admins can assign sponsored plans",
+        variant: "destructive",
       });
       return;
     }
@@ -415,116 +461,118 @@ export default function OrgMembers() {
     // Check seat limits when assigning (not when removing)
     if (planId && !currentPlanId && !canAssignSeats) {
       toast({
-        title: 'Seat Limit Reached',
-        description: seatUsage.max === 0 
-          ? 'Your plan does not include sponsored seats. Upgrade to add sponsored access for members.'
-          : `You've used all ${seatUsage.max} sponsored seats included in your plan. Upgrade to add more.`,
-        variant: 'destructive',
+        title: "Seat Limit Reached",
+        description:
+          seatUsage.max === 0
+            ? "Your plan does not include sponsored seats. Upgrade to add sponsored access for members."
+            : `You've used all ${seatUsage.max} sponsored seats included in your plan. Upgrade to add more.`,
+        variant: "destructive",
       });
       return;
     }
 
     try {
       const { error } = await supabase
-        .from('organization_members')
+        .from("organization_members")
         .update({ sponsored_plan_id: planId })
-        .eq('id', memberId);
+        .eq("id", memberId);
 
       if (error) throw error;
 
       toast({
-        title: 'Sponsored Plan Updated',
-        description: planId 
-          ? 'Member now has org-sponsored platform access' 
-          : 'Org-sponsored access removed',
+        title: "Sponsored Plan Updated",
+        description: planId
+          ? "Member now has org-sponsored platform access"
+          : "Org-sponsored access removed",
       });
-      
+
       // Check if we should send seat limit alerts (only when assigning, not removing)
       if (planId && !currentPlanId && seatUsage.max !== null && seatUsage.max > 0) {
         const newUsed = seatUsage.used + 1;
         const percentUsed = Math.round((newUsed / seatUsage.max) * 100);
-        
+
         // Send alert at 80% or 100% thresholds
         if (percentUsed >= 80) {
           // Get org name for the email
           const { data: orgData } = await supabase
-            .from('organizations')
-            .select('name')
-            .eq('id', organizationMembership.organization_id)
+            .from("organizations")
+            .select("name")
+            .eq("id", organizationMembership.organization_id)
             .single();
-          
-          const alertType = percentUsed >= 100 ? 'org_seat_limit_reached' : 'org_seat_limit_warning';
-          
+
+          const alertType =
+            percentUsed >= 100 ? "org_seat_limit_reached" : "org_seat_limit_warning";
+
           // Get current user's profile for the email
           const { data: profile } = await supabase
-            .from('profiles')
-            .select('name')
-            .eq('id', user?.id)
+            .from("profiles")
+            .select("name")
+            .eq("id", user?.id)
             .single();
-          
+
           // Send the notification (fire and forget - don't block UI)
-          supabase.functions.invoke('send-notification-email', {
-            body: {
-              userId: user?.id,
-              name: profile?.name || 'Admin',
-              type: alertType,
-              timestamp: new Date().toISOString(),
-              organizationName: orgData?.name || 'Your Organization',
-              usedSeats: newUsed,
-              maxSeats: seatUsage.max,
-              percentUsed: percentUsed,
-            },
-          }).then(({ error }) => {
-            if (error) console.error('Failed to send seat limit alert:', error);
-            else console.log(`Sent ${alertType} email alert`);
-          });
+          supabase.functions
+            .invoke("send-notification-email", {
+              body: {
+                userId: user?.id,
+                name: profile?.name || "Admin",
+                type: alertType,
+                timestamp: new Date().toISOString(),
+                organizationName: orgData?.name || "Your Organization",
+                usedSeats: newUsed,
+                maxSeats: seatUsage.max,
+                percentUsed: percentUsed,
+              },
+            })
+            .then(({ error }) => {
+              if (error) console.error("Failed to send seat limit alert:", error);
+              else console.log(`Sent ${alertType} email alert`);
+            });
         }
       }
-      
+
       loadMembers();
       loadSeatUsage(); // Refresh seat count
     } catch (error) {
-      console.error('Error updating sponsored plan:', error);
+      console.error("Error updating sponsored plan:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to update sponsored plan',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update sponsored plan",
+        variant: "destructive",
       });
     }
   };
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
-      case 'org_admin':
-        return 'default';
-      case 'org_manager':
-        return 'secondary';
+      case "org_admin":
+        return "default";
+      case "org_manager":
+        return "secondary";
       default:
-        return 'outline';
+        return "outline";
     }
   };
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'org_admin':
-        return 'Admin';
-      case 'org_manager':
-        return 'Manager';
+      case "org_admin":
+        return "Admin";
+      case "org_manager":
+        return "Manager";
       default:
-        return 'Member';
+        return "Member";
     }
   };
 
-  const activeMembers = members.filter(m => m.is_active);
+  const activeMembers = members.filter((m) => m.is_active);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Members</h1>
-          <p className="text-muted-foreground">
-            Manage your organization's team members
-          </p>
+          <p className="text-muted-foreground">Manage your organization's team members</p>
         </div>
         {canInvite && (
           <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
@@ -534,48 +582,46 @@ export default function OrgMembers() {
                 Invite Member
               </Button>
             </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Invite Team Member</DialogTitle>
-              <DialogDescription>
-                Send an invitation to join your organization
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="colleague@company.com"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                />
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Invite Team Member</DialogTitle>
+                <DialogDescription>Send an invitation to join your organization</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="colleague@company.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as any)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="org_member">Member</SelectItem>
+                      <SelectItem value="org_manager">Manager</SelectItem>
+                      <SelectItem value="org_admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as any)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="org_member">Member</SelectItem>
-                    <SelectItem value="org_manager">Manager</SelectItem>
-                    <SelectItem value="org_admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleInviteMember} disabled={inviting || !inviteEmail}>
-                {inviting ? 'Sending...' : 'Send Invite'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleInviteMember} disabled={inviting || !inviteEmail}>
+                  {inviting ? "Sending..." : "Send Invite"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         )}
       </div>
 
@@ -602,18 +648,18 @@ export default function OrgMembers() {
                 <span>{activeMembers.length} active members</span>
                 <span className="flex items-center gap-1 text-sm">
                   <Crown className="h-3.5 w-3.5 text-amber-500" />
-                  Sponsored seats: {seatUsage.used} / {seatUsage.max === null ? '∞' : seatUsage.max}
+                  Sponsored seats: {seatUsage.used} / {seatUsage.max === null ? "∞" : seatUsage.max}
                   {seatUsage.max !== null && seatUsage.used >= seatUsage.max && (
-                    <Badge variant="secondary" className="ml-2 text-xs">Limit reached</Badge>
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      Limit reached
+                    </Badge>
                   )}
                 </span>
               </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Loading members...
-                </div>
+                <div className="text-center py-8 text-muted-foreground">Loading members...</div>
               ) : activeMembers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   No members found. Invite your first team member!
@@ -637,11 +683,11 @@ export default function OrgMembers() {
                           <div className="flex items-center gap-2">
                             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                               <span className="text-sm font-medium text-primary">
-                                {member.profile?.name?.[0]?.toUpperCase() || '?'}
+                                {member.profile?.name?.[0]?.toUpperCase() || "?"}
                               </span>
                             </div>
                             <span className="font-medium">
-                              {member.profile?.name || 'Unknown User'}
+                              {member.profile?.name || "Unknown User"}
                             </span>
                           </div>
                         </TableCell>
@@ -673,8 +719,14 @@ export default function OrgMembers() {
                         <TableCell>
                           {isOrgAdmin ? (
                             <Select
-                              value={member.sponsored_plan_id || 'none'}
-                              onValueChange={(v) => handleSponsoredPlanChange(member.id, v === 'none' ? null : v, member.sponsored_plan_id)}
+                              value={member.sponsored_plan_id || "none"}
+                              onValueChange={(v) =>
+                                handleSponsoredPlanChange(
+                                  member.id,
+                                  v === "none" ? null : v,
+                                  member.sponsored_plan_id,
+                                )
+                              }
                             >
                               <SelectTrigger className="w-36">
                                 {member.sponsored_plan ? (
@@ -713,7 +765,7 @@ export default function OrgMembers() {
                           <Badge variant="default">Active</Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {format(new Date(member.created_at), 'MMM d, yyyy')}
+                          {format(new Date(member.created_at), "MMM d, yyyy")}
                         </TableCell>
                         <TableCell className="text-right">
                           {isOrgAdmin && (
@@ -727,8 +779,9 @@ export default function OrgMembers() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Remove Member</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Are you sure you want to remove this member from your organization?
-                                    They will lose access to all organization resources.
+                                    Are you sure you want to remove this member from your
+                                    organization? They will lose access to all organization
+                                    resources.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -760,15 +813,11 @@ export default function OrgMembers() {
                 <Mail className="h-5 w-5" />
                 Pending Invitations
               </CardTitle>
-              <CardDescription>
-                {pendingInvites.length} pending invites
-              </CardDescription>
+              <CardDescription>{pendingInvites.length} pending invites</CardDescription>
             </CardHeader>
             <CardContent>
               {pendingInvites.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No pending invitations
-                </div>
+                <div className="text-center py-8 text-muted-foreground">No pending invitations</div>
               ) : (
                 <Table>
                   <TableHeader>
@@ -795,10 +844,10 @@ export default function OrgMembers() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {format(new Date(invite.expires_at), 'MMM d, yyyy')}
+                          {format(new Date(invite.expires_at), "MMM d, yyyy")}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {format(new Date(invite.created_at), 'MMM d, yyyy')}
+                          {format(new Date(invite.created_at), "MMM d, yyyy")}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">

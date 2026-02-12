@@ -1,4 +1,4 @@
-import { PlatformTermsManager } from '@/components/admin/PlatformTermsManager';
+import { PlatformTermsManager } from "@/components/admin/PlatformTermsManager";
 
 export default function PlatformTermsManagement() {
   return (

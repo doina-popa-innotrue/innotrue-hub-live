@@ -1,13 +1,20 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { Calendar as CalendarIcon, Users, ChevronRight, Edit } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { Calendar as CalendarIcon, Users, ChevronRight, Edit } from "lucide-react";
 
 interface ScheduledProgram {
   id: string;
@@ -44,10 +51,10 @@ export default function ProgramCalendar() {
   const loadPrograms = async () => {
     try {
       const { data, error } = await supabase
-        .from('programs')
-        .select('id, name, category, scheduled_dates')
-        .eq('is_active', true)
-        .order('name');
+        .from("programs")
+        .select("id, name, category, scheduled_dates")
+        .eq("is_active", true)
+        .order("name");
 
       if (error) throw error;
 
@@ -63,11 +70,11 @@ export default function ProgramCalendar() {
 
       setPrograms(programsWithSchedules);
     } catch (error) {
-      console.error('Error loading programs:', error);
+      console.error("Error loading programs:", error);
       toast({
-        title: 'Error loading programs',
-        description: 'Failed to fetch scheduled programs',
-        variant: 'destructive',
+        title: "Error loading programs",
+        description: "Failed to fetch scheduled programs",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -90,7 +97,7 @@ export default function ProgramCalendar() {
     setIsSaving(true);
     try {
       const program = programs.find((p) => p.id === editingSchedule.programId);
-      if (!program) throw new Error('Program not found');
+      if (!program) throw new Error("Program not found");
 
       const updatedSchedules = program.scheduled_dates.map((sd) =>
         sd.id === editingSchedule.scheduleId
@@ -100,29 +107,29 @@ export default function ProgramCalendar() {
               date: editingSchedule.date,
               capacity: editingSchedule.capacity,
             }
-          : sd
+          : sd,
       );
 
       const { error } = await supabase
-        .from('programs')
+        .from("programs")
         .update({ scheduled_dates: updatedSchedules })
-        .eq('id', editingSchedule.programId);
+        .eq("id", editingSchedule.programId);
 
       if (error) throw error;
 
       toast({
-        title: 'Schedule updated',
-        description: 'Program schedule has been updated successfully',
+        title: "Schedule updated",
+        description: "Program schedule has been updated successfully",
       });
 
       await loadPrograms();
       setEditingSchedule(null);
     } catch (error) {
-      console.error('Error updating schedule:', error);
+      console.error("Error updating schedule:", error);
       toast({
-        title: 'Error updating schedule',
-        description: 'Failed to update program schedule',
-        variant: 'destructive',
+        title: "Error updating schedule",
+        description: "Failed to update program schedule",
+        variant: "destructive",
       });
     } finally {
       setIsSaving(false);
@@ -131,18 +138,18 @@ export default function ProgramCalendar() {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'cta':
-        return 'bg-purple-500/10 text-purple-500';
-      case 'leadership':
-        return 'bg-blue-500/10 text-blue-500';
-      case 'executive':
-        return 'bg-orange-500/10 text-orange-500';
-      case 'ai':
-        return 'bg-cyan-500/10 text-cyan-500';
-      case 'deep-dive':
-        return 'bg-pink-500/10 text-pink-500';
+      case "cta":
+        return "bg-purple-500/10 text-purple-500";
+      case "leadership":
+        return "bg-blue-500/10 text-blue-500";
+      case "executive":
+        return "bg-orange-500/10 text-orange-500";
+      case "ai":
+        return "bg-cyan-500/10 text-cyan-500";
+      case "deep-dive":
+        return "bg-pink-500/10 text-pink-500";
       default:
-        return 'bg-muted text-muted-foreground';
+        return "bg-muted text-muted-foreground";
     }
   };
 
@@ -152,7 +159,7 @@ export default function ProgramCalendar() {
     programs.forEach((program) => {
       program.scheduled_dates.forEach((schedule) => {
         const date = new Date(schedule.date);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
         if (!grouped[monthKey]) grouped[monthKey] = [];
         grouped[monthKey].push({ program, schedule });
       });
@@ -192,10 +199,10 @@ export default function ProgramCalendar() {
       ) : (
         <div className="space-y-8">
           {monthlyGroups.map(([monthKey, items]) => {
-            const [year, month] = monthKey.split('-');
+            const [year, month] = monthKey.split("-");
             const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleString(
-              'default',
-              { month: 'long', year: 'numeric' }
+              "default",
+              { month: "long", year: "numeric" },
             );
 
             return (
@@ -210,7 +217,10 @@ export default function ProgramCalendar() {
                 <CardContent>
                   <div className="space-y-3">
                     {items
-                      .sort((a, b) => new Date(a.schedule.date).getTime() - new Date(b.schedule.date).getTime())
+                      .sort(
+                        (a, b) =>
+                          new Date(a.schedule.date).getTime() - new Date(b.schedule.date).getTime(),
+                      )
                       .map(({ program, schedule }) => {
                         const date = new Date(schedule.date);
                         const capacity = schedule.capacity || 0;
@@ -225,26 +235,27 @@ export default function ProgramCalendar() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <div className="font-medium truncate">{program.name}</div>
-                                <Badge className={getCategoryColor(program.category)} variant="outline">
+                                <Badge
+                                  className={getCategoryColor(program.category)}
+                                  variant="outline"
+                                >
                                   {program.category}
                                 </Badge>
                               </div>
-                              <div className="text-sm text-muted-foreground">
-                                {schedule.title}
-                              </div>
+                              <div className="text-sm text-muted-foreground">{schedule.title}</div>
                             </div>
 
                             <div className="flex items-center gap-4">
                               <div className="text-right">
                                 <div className="font-medium">
-                                  {date.toLocaleDateString('en-US', {
-                                    weekday: 'short',
-                                    month: 'short',
-                                    day: 'numeric',
+                                  {date.toLocaleDateString("en-US", {
+                                    weekday: "short",
+                                    month: "short",
+                                    day: "numeric",
                                   })}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                  {date.toLocaleDateString('en-US', { year: 'numeric' })}
+                                  {date.toLocaleDateString("en-US", { year: "numeric" })}
                                 </div>
                               </div>
 
@@ -252,7 +263,7 @@ export default function ProgramCalendar() {
                                 <div className="flex items-center gap-2">
                                   <Users className="h-4 w-4 text-muted-foreground" />
                                   <div className="text-sm">
-                                    <span className={isFull ? 'text-destructive font-medium' : ''}>
+                                    <span className={isFull ? "text-destructive font-medium" : ""}>
                                       {enrolled}
                                     </span>
                                     <span className="text-muted-foreground"> / {capacity}</span>
@@ -308,9 +319,7 @@ export default function ProgramCalendar() {
                   id="date"
                   type="date"
                   value={editingSchedule.date}
-                  onChange={(e) =>
-                    setEditingSchedule({ ...editingSchedule, date: e.target.value })
-                  }
+                  onChange={(e) => setEditingSchedule({ ...editingSchedule, date: e.target.value })}
                 />
               </div>
 
@@ -337,7 +346,7 @@ export default function ProgramCalendar() {
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {isSaving ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -15,7 +15,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, FileText, Target, Loader2, StickyNote, Upload, Library, Link as LinkIcon, X } from "lucide-react";
+import {
+  BookOpen,
+  FileText,
+  Target,
+  Loader2,
+  StickyNote,
+  Upload,
+  Library,
+  Link as LinkIcon,
+  X,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -78,7 +88,7 @@ export function DevelopmentItemDialog({
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [itemType, setItemType] = useState<"reflection" | "note" | "resource" | "action_item">(
-    allowedTypes?.[0] || "reflection"
+    allowedTypes?.[0] || "reflection",
   );
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -86,9 +96,9 @@ export function DevelopmentItemDialog({
   const [dueDate, setDueDate] = useState("");
   const [selectedGoalId, setSelectedGoalId] = useState<string>(goalId || "");
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string>(milestoneId || "");
-  
+
   // Resource type: 'url', 'file', or 'library'
-  const [resourceMode, setResourceMode] = useState<'url' | 'file' | 'library'>('url');
+  const [resourceMode, setResourceMode] = useState<"url" | "file" | "library">("url");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedLibraryResource, setSelectedLibraryResource] = useState<{
     id: string;
@@ -123,20 +133,22 @@ export function DevelopmentItemDialog({
     queryKey: ["user-goals-for-linking", forUserId || user?.id, isInstructorMode ? user?.id : null],
     queryFn: async () => {
       if (!user?.id) return [];
-      
+
       if (isInstructorMode) {
         // Instructor viewing client's goals - only show goals shared with this instructor
         const { data, error } = await supabase
           .from("goal_shares")
-          .select(`
+          .select(
+            `
             goal_id,
             goals!inner (id, title)
-          `)
+          `,
+          )
           .eq("shared_with_user_id", user.id)
           .eq("goals.user_id", forUserId);
-        
+
         if (error) throw error;
-        return data?.map(s => s.goals).filter(Boolean) || [];
+        return data?.map((s) => s.goals).filter(Boolean) || [];
       } else {
         // Client viewing their own goals
         const { data, error } = await supabase
@@ -173,7 +185,7 @@ export function DevelopmentItemDialog({
     setContent("");
     setResourceUrl("");
     setDueDate("");
-    setResourceMode('url');
+    setResourceMode("url");
     setSelectedFile(null);
     setSelectedLibraryResource(null);
     if (!goalId) setSelectedGoalId("");
@@ -186,11 +198,19 @@ export function DevelopmentItemDialog({
     if (!file) return;
 
     // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 
-                        'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
-    
-    if (!validTypes.includes(file.type) && !file.type.startsWith('text/')) {
+    const validTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ];
+
+    if (!validTypes.includes(file.type) && !file.type.startsWith("text/")) {
       toast({
         title: "Invalid file type",
         description: "Please upload an image, PDF, or document file",
@@ -216,20 +236,26 @@ export function DevelopmentItemDialog({
   };
 
   // Upload file to storage
-  const uploadFile = async (file: File, targetUserId: string): Promise<{ filePath: string; fileSize: number; mimeType: string }> => {
-    const fileExt = file.name.split('.').pop();
+  const uploadFile = async (
+    file: File,
+    targetUserId: string,
+  ): Promise<{ filePath: string; fileSize: number; mimeType: string }> => {
+    const fileExt = file.name.split(".").pop();
     const fileName = `${targetUserId}/${Date.now()}.${fileExt}`;
 
-    const { error } = await supabase.storage
-      .from('development-item-files')
-      .upload(fileName, file);
+    const { error } = await supabase.storage.from("development-item-files").upload(fileName, file);
 
     if (error) throw error;
     return { filePath: fileName, fileSize: file.size, mimeType: file.type };
   };
 
   // Handle library resource selection
-  const handleLibraryResourceSelect = (resource: { id: string; title: string; description: string | null; resource_type: string }) => {
+  const handleLibraryResourceSelect = (resource: {
+    id: string;
+    title: string;
+    description: string | null;
+    resource_type: string;
+  }) => {
     setSelectedLibraryResource(resource);
     if (!title) {
       setTitle(resource.title);
@@ -253,8 +279,8 @@ export function DevelopmentItemDialog({
         let filePath: string | null = null;
         let fileSize: number | null = null;
         let mimeType: string | null = null;
-        
-        if (itemType === "resource" && resourceMode === 'file' && selectedFile) {
+
+        if (itemType === "resource" && resourceMode === "file" && selectedFile) {
           const uploadResult = await uploadFile(selectedFile, forUserId);
           filePath = uploadResult.filePath;
           fileSize = uploadResult.fileSize;
@@ -268,18 +294,21 @@ export function DevelopmentItemDialog({
             snapshotId: snapshotId && snapshotId !== "standalone" ? snapshotId : null,
             questionId: questionId || null,
             domainId: domainId || null,
-            goalId: (selectedGoalId || goalId) || null,
-            milestoneId: (selectedMilestoneId || milestoneId) || null,
+            goalId: selectedGoalId || goalId || null,
+            milestoneId: selectedMilestoneId || milestoneId || null,
             itemType,
             title: title || null,
             content: content || null,
-            resourceUrl: resourceMode === 'url' ? (resourceUrl || null) : null,
+            resourceUrl: resourceMode === "url" ? resourceUrl || null : null,
             dueDate: dueDate || null,
             // New file/library fields
             filePath,
             fileSize,
             mimeType,
-            libraryResourceId: resourceMode === 'library' && selectedLibraryResource ? selectedLibraryResource.id : null,
+            libraryResourceId:
+              resourceMode === "library" && selectedLibraryResource
+                ? selectedLibraryResource.id
+                : null,
             resourceMode,
           },
         });
@@ -300,17 +329,17 @@ export function DevelopmentItemDialog({
       };
 
       if (itemType === "resource") {
-        if (resourceMode === 'file' && selectedFile) {
+        if (resourceMode === "file" && selectedFile) {
           // Upload file first
           const { filePath, fileSize, mimeType } = await uploadFile(selectedFile, targetUserId);
           itemData.file_path = filePath;
           itemData.file_size = fileSize;
           itemData.mime_type = mimeType;
-          itemData.resource_type = mimeType.startsWith('image/') ? 'image' : 'file';
-        } else if (resourceMode === 'library' && selectedLibraryResource) {
+          itemData.resource_type = mimeType.startsWith("image/") ? "image" : "file";
+        } else if (resourceMode === "library" && selectedLibraryResource) {
           // Link to library resource
           itemData.library_resource_id = selectedLibraryResource.id;
-          itemData.resource_type = 'library';
+          itemData.resource_type = "library";
         } else {
           // URL-based resource
           itemData.resource_url = resourceUrl || null;
@@ -336,48 +365,40 @@ export function DevelopmentItemDialog({
       // Create link to snapshot ONLY if not linking to a specific question or domain
       // (question/domain links already tie the item to the snapshot context)
       if (snapshotId && snapshotId !== "standalone" && !questionId && !domainId) {
-        const { error: linkError } = await supabase
-          .from("development_item_snapshot_links")
-          .insert({
-            development_item_id: item.id,
-            snapshot_id: snapshotId,
-          });
+        const { error: linkError } = await supabase.from("development_item_snapshot_links").insert({
+          development_item_id: item.id,
+          snapshot_id: snapshotId,
+        });
         if (linkError) throw linkError;
       }
 
       // Create link to module progress if available
       if (moduleProgressId) {
-        const { error: linkError } = await supabase
-          .from("development_item_module_links")
-          .insert({
-            development_item_id: item.id,
-            module_progress_id: moduleProgressId,
-          });
+        const { error: linkError } = await supabase.from("development_item_module_links").insert({
+          development_item_id: item.id,
+          module_progress_id: moduleProgressId,
+        });
         if (linkError) throw linkError;
       }
 
       // Create link to capability question
       if (questionId && snapshotId && snapshotId !== "standalone") {
-        const { error: linkError } = await supabase
-          .from("development_item_question_links")
-          .insert({
-            development_item_id: item.id,
-            question_id: questionId,
-            snapshot_id: snapshotId,
-          });
+        const { error: linkError } = await supabase.from("development_item_question_links").insert({
+          development_item_id: item.id,
+          question_id: questionId,
+          snapshot_id: snapshotId,
+        });
 
         if (linkError) throw linkError;
       }
 
       // Create link to capability domain
       if (domainId && !questionId && snapshotId && snapshotId !== "standalone") {
-        const { error: linkError } = await supabase
-          .from("development_item_domain_links")
-          .insert({
-            development_item_id: item.id,
-            domain_id: domainId,
-            snapshot_id: snapshotId,
-          });
+        const { error: linkError } = await supabase.from("development_item_domain_links").insert({
+          development_item_id: item.id,
+          domain_id: domainId,
+          snapshot_id: snapshotId,
+        });
 
         if (linkError) throw linkError;
       }
@@ -385,12 +406,10 @@ export function DevelopmentItemDialog({
       // Create link to goal
       const finalGoalId = selectedGoalId || goalId;
       if (finalGoalId) {
-        const { error: linkError } = await supabase
-          .from("development_item_goal_links")
-          .insert({
-            development_item_id: item.id,
-            goal_id: finalGoalId,
-          });
+        const { error: linkError } = await supabase.from("development_item_goal_links").insert({
+          development_item_id: item.id,
+          goal_id: finalGoalId,
+        });
 
         if (linkError) throw linkError;
       }
@@ -458,7 +477,7 @@ export function DevelopmentItemDialog({
       // Update goal link if changed
       const finalGoalId = selectedGoalId || goalId;
       const existingGoalId = editItem.goal_links?.[0]?.goal_id;
-      
+
       if (finalGoalId !== existingGoalId) {
         // Remove old link
         if (existingGoalId) {
@@ -470,19 +489,17 @@ export function DevelopmentItemDialog({
         }
         // Add new link
         if (finalGoalId) {
-          await supabase
-            .from("development_item_goal_links")
-            .insert({
-              development_item_id: editItem.id,
-              goal_id: finalGoalId,
-            });
+          await supabase.from("development_item_goal_links").insert({
+            development_item_id: editItem.id,
+            goal_id: finalGoalId,
+          });
         }
       }
 
       // Update milestone link if changed
       const finalMilestoneId = selectedMilestoneId || milestoneId;
       const existingMilestoneId = editItem.milestone_links?.[0]?.milestone_id;
-      
+
       if (finalMilestoneId !== existingMilestoneId) {
         // Remove old link
         if (existingMilestoneId) {
@@ -494,12 +511,10 @@ export function DevelopmentItemDialog({
         }
         // Add new link
         if (finalMilestoneId) {
-          await supabase
-            .from("development_item_milestone_links")
-            .insert({
-              development_item_id: editItem.id,
-              milestone_id: finalMilestoneId,
-            });
+          await supabase.from("development_item_milestone_links").insert({
+            development_item_id: editItem.id,
+            milestone_id: finalMilestoneId,
+          });
         }
       }
 
@@ -534,17 +549,21 @@ export function DevelopmentItemDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{dialogTitle || `${isEditing ? "Edit" : "Add"} Development Item`}</DialogTitle>
+          <DialogTitle>
+            {dialogTitle || `${isEditing ? "Edit" : "Add"} Development Item`}
+          </DialogTitle>
           <DialogDescription>
-            {dialogDescription || (isEditing 
-              ? "Update your development item details"
-              : "Add a reflection, resource, or action item to support your growth"
-            )}
+            {dialogDescription ||
+              (isEditing
+                ? "Update your development item details"
+                : "Add a reflection, resource, or action item to support your growth")}
           </DialogDescription>
         </DialogHeader>
 
         <Tabs value={itemType} onValueChange={(v) => !isEditing && setItemType(v as any)}>
-          <TabsList className={`grid w-full ${allowedTypes ? `grid-cols-${allowedTypes.length}` : "grid-cols-4"} ${isEditing ? "opacity-60 pointer-events-none" : ""}`}>
+          <TabsList
+            className={`grid w-full ${allowedTypes ? `grid-cols-${allowedTypes.length}` : "grid-cols-4"} ${isEditing ? "opacity-60 pointer-events-none" : ""}`}
+          >
             {(!allowedTypes || allowedTypes.includes("reflection")) && (
               <TabsTrigger value="reflection" className="flex items-center gap-1 text-xs">
                 <FileText className="h-3 w-3" />
@@ -574,7 +593,10 @@ export function DevelopmentItemDialog({
           <TabsContent value="reflection" className="space-y-4 mt-4">
             <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
               <strong className="text-foreground">What you learned or how you've grown.</strong>
-              <p className="mt-1">Reflections capture insights, self-awareness, and transformational moments from your experiences.</p>
+              <p className="mt-1">
+                Reflections capture insights, self-awareness, and transformational moments from your
+                experiences.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="reflection-title">Title (optional)</Label>
@@ -600,7 +622,10 @@ export function DevelopmentItemDialog({
           <TabsContent value="note" className="space-y-4 mt-4">
             <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
               <strong className="text-foreground">What happened or what you observed.</strong>
-              <p className="mt-1">Notes capture information, observations, or ideas for future reference—quick and factual.</p>
+              <p className="mt-1">
+                Notes capture information, observations, or ideas for future reference—quick and
+                factual.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="note-title">Title *</Label>
@@ -633,30 +658,30 @@ export function DevelopmentItemDialog({
             <div className="flex gap-1 p-1 bg-muted rounded-lg">
               <Button
                 type="button"
-                variant={resourceMode === 'url' ? 'default' : 'ghost'}
+                variant={resourceMode === "url" ? "default" : "ghost"}
                 size="sm"
                 className="flex-1"
-                onClick={() => setResourceMode('url')}
+                onClick={() => setResourceMode("url")}
               >
                 <LinkIcon className="h-3 w-3 mr-1" />
                 URL
               </Button>
               <Button
                 type="button"
-                variant={resourceMode === 'file' ? 'default' : 'ghost'}
+                variant={resourceMode === "file" ? "default" : "ghost"}
                 size="sm"
                 className="flex-1"
-                onClick={() => setResourceMode('file')}
+                onClick={() => setResourceMode("file")}
               >
                 <Upload className="h-3 w-3 mr-1" />
                 File
               </Button>
               <Button
                 type="button"
-                variant={resourceMode === 'library' ? 'default' : 'ghost'}
+                variant={resourceMode === "library" ? "default" : "ghost"}
                 size="sm"
                 className="flex-1"
-                onClick={() => setResourceMode('library')}
+                onClick={() => setResourceMode("library")}
               >
                 <Library className="h-3 w-3 mr-1" />
                 Library
@@ -664,7 +689,7 @@ export function DevelopmentItemDialog({
             </div>
 
             {/* URL Mode */}
-            {resourceMode === 'url' && (
+            {resourceMode === "url" && (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="resource-title">Resource Title *</Label>
@@ -689,7 +714,7 @@ export function DevelopmentItemDialog({
             )}
 
             {/* File Mode */}
-            {resourceMode === 'file' && (
+            {resourceMode === "file" && (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="file-title">Resource Title *</Label>
@@ -745,7 +770,7 @@ export function DevelopmentItemDialog({
             )}
 
             {/* Library Mode */}
-            {resourceMode === 'library' && (
+            {resourceMode === "library" && (
               <>
                 <div className="space-y-2">
                   <Label>Select from Library</Label>
@@ -753,9 +778,13 @@ export function DevelopmentItemDialog({
                     <div className="flex items-center gap-2 p-3 border rounded-lg bg-background">
                       <Library className="h-4 w-4 text-muted-foreground" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{selectedLibraryResource.title}</p>
+                        <p className="text-sm font-medium truncate">
+                          {selectedLibraryResource.title}
+                        </p>
                         {selectedLibraryResource.description && (
-                          <p className="text-xs text-muted-foreground truncate">{selectedLibraryResource.description}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {selectedLibraryResource.description}
+                          </p>
                         )}
                       </div>
                       <Badge variant="secondary" className="text-xs capitalize shrink-0">
@@ -811,7 +840,10 @@ export function DevelopmentItemDialog({
           <TabsContent value="action_item" className="space-y-4 mt-4">
             <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
               <strong className="text-foreground">A concrete next step or commitment.</strong>
-              <p className="mt-1">Action items are specific to-dos with optional due dates that you can track to completion.</p>
+              <p className="mt-1">
+                Action items are specific to-dos with optional due dates that you can track to
+                completion.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="action-title">Action *</Label>
@@ -850,15 +882,19 @@ export function DevelopmentItemDialog({
             <div>
               <Label className="text-sm font-medium">Link to Goal (optional)</Label>
               <p className="text-xs text-muted-foreground mt-1">
-                Select a goal to link this item. If the goal has milestones, you can also link to a specific milestone.
+                Select a goal to link this item. If the goal has milestones, you can also link to a
+                specific milestone.
               </p>
             </div>
-            
+
             <div className="space-y-2">
-              <Select value={selectedGoalId || "__none__"} onValueChange={(value) => {
-                setSelectedGoalId(value === "__none__" ? "" : value);
-                setSelectedMilestoneId(""); // Reset milestone when goal changes
-              }}>
+              <Select
+                value={selectedGoalId || "__none__"}
+                onValueChange={(value) => {
+                  setSelectedGoalId(value === "__none__" ? "" : value);
+                  setSelectedMilestoneId(""); // Reset milestone when goal changes
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a goal..." />
                 </SelectTrigger>
@@ -875,8 +911,15 @@ export function DevelopmentItemDialog({
 
             {selectedGoalId && milestones && milestones.length > 0 && (
               <div className="space-y-2">
-                <Label htmlFor="milestone-select" className="text-xs text-muted-foreground">Link to Milestone (optional)</Label>
-                <Select value={selectedMilestoneId || "__none__"} onValueChange={(value) => setSelectedMilestoneId(value === "__none__" ? "" : value)}>
+                <Label htmlFor="milestone-select" className="text-xs text-muted-foreground">
+                  Link to Milestone (optional)
+                </Label>
+                <Select
+                  value={selectedMilestoneId || "__none__"}
+                  onValueChange={(value) =>
+                    setSelectedMilestoneId(value === "__none__" ? "" : value)
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a milestone..." />
                   </SelectTrigger>
@@ -904,11 +947,10 @@ export function DevelopmentItemDialog({
               isPending ||
               (itemType === "reflection" && !content.trim()) ||
               (itemType === "note" && !title.trim()) ||
-              (itemType === "resource" && (
-                (resourceMode === 'url' && (!title.trim() || !resourceUrl.trim())) ||
-                (resourceMode === 'file' && (!title.trim() || !selectedFile)) ||
-                (resourceMode === 'library' && !selectedLibraryResource)
-              )) ||
+              (itemType === "resource" &&
+                ((resourceMode === "url" && (!title.trim() || !resourceUrl.trim())) ||
+                  (resourceMode === "file" && (!title.trim() || !selectedFile)) ||
+                  (resourceMode === "library" && !selectedLibraryResource))) ||
               (itemType === "action_item" && !title.trim())
             }
           >

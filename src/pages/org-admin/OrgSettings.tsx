@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
-import { Building2, Save, Settings, Globe, Bell } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+import { Building2, Save, Settings, Globe, Bell } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 interface OrgSettingsData {
   notifyOnMemberJoin?: boolean;
@@ -35,9 +35,9 @@ export default function OrgSettings() {
   const [saving, setSaving] = useState(false);
   const [organization, setOrganization] = useState<OrganizationSettings | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    website: '',
+    name: "",
+    description: "",
+    website: "",
     notifyOnMemberJoin: true,
     notifyOnEnrollment: true,
     allowMemberInvites: false,
@@ -55,35 +55,36 @@ export default function OrgSettings() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('organizations')
-        .select('*')
-        .eq('id', organizationMembership.organization_id)
+        .from("organizations")
+        .select("*")
+        .eq("id", organizationMembership.organization_id)
         .single();
 
       if (error) throw error;
 
-      const settings = (data.settings && typeof data.settings === 'object' && !Array.isArray(data.settings)) 
-        ? data.settings as OrgSettingsData 
-        : {};
+      const settings =
+        data.settings && typeof data.settings === "object" && !Array.isArray(data.settings)
+          ? (data.settings as OrgSettingsData)
+          : {};
 
       setOrganization({
         ...data,
         settings,
       } as OrganizationSettings);
       setFormData({
-        name: data.name || '',
-        description: data.description || '',
-        website: data.website || '',
+        name: data.name || "",
+        description: data.description || "",
+        website: data.website || "",
         notifyOnMemberJoin: settings?.notifyOnMemberJoin ?? true,
         notifyOnEnrollment: settings?.notifyOnEnrollment ?? true,
         allowMemberInvites: settings?.allowMemberInvites ?? false,
       });
     } catch (error) {
-      console.error('Error loading organization:', error);
+      console.error("Error loading organization:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to load organization settings',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load organization settings",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -96,7 +97,7 @@ export default function OrgSettings() {
     setSaving(true);
     try {
       const { error } = await supabase
-        .from('organizations')
+        .from("organizations")
         .update({
           name: formData.name,
           description: formData.description || null,
@@ -109,21 +110,21 @@ export default function OrgSettings() {
           },
           updated_at: new Date().toISOString(),
         })
-        .eq('id', organization.id);
+        .eq("id", organization.id);
 
       if (error) throw error;
 
       toast({
-        title: 'Settings Saved',
-        description: 'Your organization settings have been updated',
+        title: "Settings Saved",
+        description: "Your organization settings have been updated",
       });
       loadOrganization();
     } catch (error) {
-      console.error('Error saving settings:', error);
+      console.error("Error saving settings:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to save settings',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to save settings",
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -142,9 +143,7 @@ export default function OrgSettings() {
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your organization's settings and preferences
-        </p>
+        <p className="text-muted-foreground">Manage your organization's settings and preferences</p>
       </div>
 
       <Card>
@@ -153,9 +152,7 @@ export default function OrgSettings() {
             <Building2 className="h-5 w-5" />
             Organization Details
           </CardTitle>
-          <CardDescription>
-            Basic information about your organization
-          </CardDescription>
+          <CardDescription>Basic information about your organization</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -169,12 +166,7 @@ export default function OrgSettings() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="slug">URL Slug</Label>
-            <Input
-              id="slug"
-              value={organization?.slug || ''}
-              disabled
-              className="bg-muted"
-            />
+            <Input id="slug" value={organization?.slug || ""} disabled className="bg-muted" />
             <p className="text-xs text-muted-foreground">
               The URL slug cannot be changed after creation
             </p>
@@ -254,9 +246,7 @@ export default function OrgSettings() {
             <Settings className="h-5 w-5" />
             Permissions
           </CardTitle>
-          <CardDescription>
-            Control what members can do in your organization
-          </CardDescription>
+          <CardDescription>Control what members can do in your organization</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
@@ -279,7 +269,7 @@ export default function OrgSettings() {
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
           <Save className="h-4 w-4 mr-2" />
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving ? "Saving..." : "Save Changes"}
         </Button>
       </div>
     </div>

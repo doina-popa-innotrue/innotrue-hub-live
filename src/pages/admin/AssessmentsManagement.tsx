@@ -7,8 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Loader2, ExternalLink, DollarSign } from "lucide-react";
@@ -81,17 +93,15 @@ export default function AssessmentsManagement() {
       url: formData.url || null,
       cost: formData.cost ? parseFloat(formData.cost) : null,
     };
-    
+
     if (editingItem) {
       const { error } = await supabase
-        .from('psychometric_assessments')
+        .from("psychometric_assessments")
         .update(submitData)
-        .eq('id', editingItem.id);
+        .eq("id", editingItem.id);
       if (error) throw error;
     } else {
-      const { error } = await supabase
-        .from('psychometric_assessments')
-        .insert(submitData);
+      const { error } = await supabase.from("psychometric_assessments").insert(submitData);
       if (error) throw error;
     }
     setIsDialogOpen(false);
@@ -116,9 +126,7 @@ export default function AssessmentsManagement() {
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold">Psychometric Assessments</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage available assessments for clients
-          </p>
+          <p className="text-muted-foreground mt-2">Manage available assessments for clients</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -129,9 +137,7 @@ export default function AssessmentsManagement() {
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>
-                {editingItem ? "Edit Assessment" : "Add Assessment"}
-              </DialogTitle>
+              <DialogTitle>{editingItem ? "Edit Assessment" : "Add Assessment"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleFormSubmit} className="space-y-4">
               <div>
@@ -282,9 +288,9 @@ export default function AssessmentsManagement() {
                       )}
                     </div>
                     {assessment.url && (
-                      <a 
-                        href={assessment.url} 
-                        target="_blank" 
+                      <a
+                        href={assessment.url}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-primary hover:underline inline-flex items-center gap-1"
                       >
@@ -294,18 +300,10 @@ export default function AssessmentsManagement() {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => openEdit(assessment)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(assessment)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(assessment.id)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(assessment.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

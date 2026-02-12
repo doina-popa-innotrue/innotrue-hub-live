@@ -10,8 +10,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, X, Loader2, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -89,20 +101,22 @@ export default function AssignmentTypesManagement() {
     queryKey: "assignment-types",
     tableName: "module_assignment_types",
     entityName: "Assignment type",
-    orderBy: 'created_at',
-    orderDirection: 'desc',
+    orderBy: "created_at",
+    orderDirection: "desc",
     initialFormData: defaultFormData,
     mapItemToForm: (type) => ({
       name: type.name,
       description: type.description || "",
       is_active: type.is_active,
-      structure: type.structure.length > 0 ? type.structure : [{ ...defaultField, id: crypto.randomUUID() }],
+      structure:
+        type.structure.length > 0 ? type.structure : [{ ...defaultField, id: crypto.randomUUID() }],
       scoring_assessment_id: type.scoring_assessment_id,
     }),
-    transform: (data) => data.map((d: any) => ({
-      ...d,
-      structure: (d.structure || []) as unknown as AssignmentField[],
-    })),
+    transform: (data) =>
+      data.map((d: any) => ({
+        ...d,
+        structure: (d.structure || []) as unknown as AssignmentField[],
+      })),
   });
 
   const handleSubmit = (e?: React.FormEvent) => {
@@ -141,11 +155,11 @@ export default function AssignmentTypesManagement() {
 
   const handleClone = (type: AssignmentType) => {
     // Clone with new UUIDs for fields and prefixed name
-    const clonedStructure = type.structure.map(field => ({
+    const clonedStructure = type.structure.map((field) => ({
       ...field,
       id: crypto.randomUUID(),
     }));
-    
+
     setFormData({
       name: `${type.name} (Copy)`,
       description: type.description || "",
@@ -158,13 +172,20 @@ export default function AssignmentTypesManagement() {
 
   const getFieldTypeBadgeColor = (type: AssignmentField["type"]) => {
     switch (type) {
-      case "text": return "bg-blue-100 text-blue-800";
-      case "textarea": return "bg-green-100 text-green-800";
-      case "number": return "bg-purple-100 text-purple-800";
-      case "rating": return "bg-orange-100 text-orange-800";
-      case "checkbox": return "bg-pink-100 text-pink-800";
-      case "select": return "bg-cyan-100 text-cyan-800";
-      default: return "bg-muted text-muted-foreground";
+      case "text":
+        return "bg-blue-100 text-blue-800";
+      case "textarea":
+        return "bg-green-100 text-green-800";
+      case "number":
+        return "bg-purple-100 text-purple-800";
+      case "rating":
+        return "bg-orange-100 text-orange-800";
+      case "checkbox":
+        return "bg-pink-100 text-pink-800";
+      case "select":
+        return "bg-cyan-100 text-cyan-800";
+      default:
+        return "bg-muted text-muted-foreground";
     }
   };
 
@@ -173,7 +194,9 @@ export default function AssignmentTypesManagement() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Assignment Types</h1>
-          <p className="text-muted-foreground">Define structured assignment templates for modules</p>
+          <p className="text-muted-foreground">
+            Define structured assignment templates for modules
+          </p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" /> Add Assignment Type
@@ -181,7 +204,9 @@ export default function AssignmentTypesManagement() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
       ) : assignmentTypes?.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
@@ -201,10 +226,20 @@ export default function AssignmentTypesManagement() {
                     </Badge>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="icon" onClick={() => handleClone(type)} title="Clone">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleClone(type)}
+                      title="Clone"
+                    >
                       <Copy className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="icon" onClick={() => openEdit(type)} title="Edit">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => openEdit(type)}
+                      title="Edit"
+                    >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
@@ -221,14 +256,16 @@ export default function AssignmentTypesManagement() {
                     </Button>
                   </div>
                 </div>
-                {type.description && (
-                  <CardDescription>{type.description}</CardDescription>
-                )}
+                {type.description && <CardDescription>{type.description}</CardDescription>}
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
                   {type.structure.map((field, idx) => (
-                    <Badge key={idx} variant="outline" className={getFieldTypeBadgeColor(field.type)}>
+                    <Badge
+                      key={idx}
+                      variant="outline"
+                      className={getFieldTypeBadgeColor(field.type)}
+                    >
                       {field.label} ({field.type}){field.required && " *"}
                     </Badge>
                   ))}
@@ -242,7 +279,9 @@ export default function AssignmentTypesManagement() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingItem ? "Edit Assignment Type" : "Create Assignment Type"}</DialogTitle>
+            <DialogTitle>
+              {editingItem ? "Edit Assignment Type" : "Create Assignment Type"}
+            </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -275,9 +314,11 @@ export default function AssignmentTypesManagement() {
               </div>
               <div>
                 <Label htmlFor="scoring_assessment">Instructor Scoring Assessment</Label>
-                <Select 
-                  value={formData.scoring_assessment_id || 'none'} 
-                  onValueChange={(v) => setFormData({ ...formData, scoring_assessment_id: v === 'none' ? null : v })}
+                <Select
+                  value={formData.scoring_assessment_id || "none"}
+                  onValueChange={(v) =>
+                    setFormData({ ...formData, scoring_assessment_id: v === "none" ? null : v })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="None - use form fields only" />
@@ -292,7 +333,8 @@ export default function AssignmentTypesManagement() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Optional. Link a capability assessment template for instructors to score client submissions.
+                  Optional. Link a capability assessment template for instructors to score client
+                  submissions.
                 </p>
               </div>
             </div>
@@ -352,7 +394,9 @@ export default function AssignmentTypesManagement() {
                               <Input
                                 type="number"
                                 value={field.min ?? (field.type === "rating" ? 1 : "")}
-                                onChange={(e) => updateField(index, { min: Number(e.target.value) })}
+                                onChange={(e) =>
+                                  updateField(index, { min: Number(e.target.value) })
+                                }
                               />
                             </div>
                             <div>
@@ -360,7 +404,9 @@ export default function AssignmentTypesManagement() {
                               <Input
                                 type="number"
                                 value={field.max ?? (field.type === "rating" ? 5 : "")}
-                                onChange={(e) => updateField(index, { max: Number(e.target.value) })}
+                                onChange={(e) =>
+                                  updateField(index, { max: Number(e.target.value) })
+                                }
                               />
                             </div>
                           </div>
@@ -373,7 +419,10 @@ export default function AssignmentTypesManagement() {
                               defaultValue={field.options?.join(", ") ?? ""}
                               onBlur={(e) =>
                                 updateField(index, {
-                                  options: e.target.value.split(",").map((o) => o.trim()).filter(Boolean),
+                                  options: e.target.value
+                                    .split(",")
+                                    .map((o) => o.trim())
+                                    .filter(Boolean),
                                 })
                               }
                               placeholder="Option 1, Option 2, Option 3"

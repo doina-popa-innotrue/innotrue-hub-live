@@ -20,7 +20,9 @@ export function InterestsValuesForm() {
   const { data: userInterests, isLoading } = useQuery({
     queryKey: ["user-interests"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
@@ -35,16 +37,24 @@ export function InterestsValuesForm() {
   });
 
   const upsertMutation = useMutation({
-    mutationFn: async (updates: { interests?: string[]; values?: string[]; drives?: string[]; is_private?: boolean }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+    mutationFn: async (updates: {
+      interests?: string[];
+      values?: string[];
+      drives?: string[];
+      is_private?: boolean;
+    }) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase
-        .from("user_interests")
-        .upsert({
+      const { error } = await supabase.from("user_interests").upsert(
+        {
           user_id: user.id,
           ...updates,
-        }, { onConflict: "user_id" });
+        },
+        { onConflict: "user_id" },
+      );
 
       if (error) throw error;
     },
@@ -70,7 +80,7 @@ export function InterestsValuesForm() {
 
   const handleRemoveInterest = (interest: string) => {
     const current = userInterests?.interests || [];
-    upsertMutation.mutate({ interests: current.filter(i => i !== interest) });
+    upsertMutation.mutate({ interests: current.filter((i) => i !== interest) });
   };
 
   const handleAddValue = () => {
@@ -82,7 +92,7 @@ export function InterestsValuesForm() {
 
   const handleRemoveValue = (value: string) => {
     const current = userInterests?.values || [];
-    upsertMutation.mutate({ values: current.filter(v => v !== value) });
+    upsertMutation.mutate({ values: current.filter((v) => v !== value) });
   };
 
   const handleAddDrive = () => {
@@ -94,7 +104,7 @@ export function InterestsValuesForm() {
 
   const handleRemoveDrive = (drive: string) => {
     const current = userInterests?.drives || [];
-    upsertMutation.mutate({ drives: current.filter(d => d !== drive) });
+    upsertMutation.mutate({ drives: current.filter((d) => d !== drive) });
   };
 
   if (isLoading) {

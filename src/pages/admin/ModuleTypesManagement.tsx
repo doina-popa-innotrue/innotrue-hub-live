@@ -1,8 +1,8 @@
-import { useAdminCRUD } from '@/hooks/useAdminCRUD';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Blocks } from 'lucide-react';
+import { useAdminCRUD } from "@/hooks/useAdminCRUD";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Blocks } from "lucide-react";
 import {
   AdminPageHeader,
   AdminLoadingState,
@@ -10,8 +10,8 @@ import {
   AdminTable,
   AdminTableActions,
   AdminBreadcrumb,
-} from '@/components/admin';
-import type { AdminTableColumn } from '@/components/admin';
+} from "@/components/admin";
+import type { AdminTableColumn } from "@/components/admin";
 
 interface ModuleType {
   id: string;
@@ -26,8 +26,8 @@ type FormData = {
 };
 
 const initialFormData: FormData = {
-  name: '',
-  description: '',
+  name: "",
+  description: "",
 };
 
 export default function ModuleTypesManagement() {
@@ -45,28 +45,28 @@ export default function ModuleTypesManagement() {
     handleDelete,
     isSubmitting,
   } = useAdminCRUD<ModuleType, FormData>({
-    tableName: 'module_types',
-    queryKey: 'module-types',
-    entityName: 'Module type',
-    orderBy: 'name',
+    tableName: "module_types",
+    queryKey: "module-types",
+    entityName: "Module type",
+    orderBy: "name",
     initialFormData,
     mapItemToForm: (type) => ({
       name: type.name,
-      description: type.description || '',
+      description: type.description || "",
     }),
   });
 
   const columns: AdminTableColumn<ModuleType>[] = [
     {
-      key: 'name',
-      header: 'Name',
-      accessor: 'name',
+      key: "name",
+      header: "Name",
+      accessor: "name",
       sortable: true,
-      className: 'font-medium capitalize',
+      className: "font-medium capitalize",
     },
     {
-      key: 'description',
-      header: 'Description',
+      key: "description",
+      header: "Description",
       accessor: (item) => item.description || null,
       hideOnMobile: true,
     },
@@ -108,16 +108,14 @@ export default function ModuleTypesManagement() {
 
   return (
     <div className="space-y-6">
-      <AdminBreadcrumb
-        items={[{ label: 'Module Types' }]}
-      />
+      <AdminBreadcrumb items={[{ label: "Module Types" }]} />
 
       <AdminPageHeader
         title="Module Types"
         description="Manage the types of modules that can be created in programs"
         isDialogOpen={isDialogOpen}
         onDialogOpenChange={setIsDialogOpen}
-        dialogTitle={editingItem ? 'Edit Module Type' : 'Create Module Type'}
+        dialogTitle={editingItem ? "Edit Module Type" : "Create Module Type"}
         dialogContent={formContent}
         createButtonLabel="New Module Type"
       />
@@ -130,14 +128,16 @@ export default function ModuleTypesManagement() {
         renderActions={(type) => (
           <AdminTableActions
             onEdit={() => openEdit(type)}
-            onDelete={() => handleDelete(type.id, `Delete "${type.name}"? This action cannot be undone.`)}
+            onDelete={() =>
+              handleDelete(type.id, `Delete "${type.name}"? This action cannot be undone.`)
+            }
           />
         )}
         emptyState={{
           icon: Blocks,
-          title: 'No module types yet',
-          description: 'Create your first module type.',
-          actionLabel: 'New Module Type',
+          title: "No module types yet",
+          description: "Create your first module type.",
+          actionLabel: "New Module Type",
           onAction: openCreate,
         }}
       />

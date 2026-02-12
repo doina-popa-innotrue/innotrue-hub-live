@@ -1,19 +1,41 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, FolderTree, FileQuestion, ArrowUpDown } from 'lucide-react';
-import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, Pencil, Trash2, FolderTree, FileQuestion, ArrowUpDown } from "lucide-react";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface Family {
   id: string;
@@ -39,10 +61,10 @@ interface FormData {
 }
 
 const defaultFormData: FormData = {
-  name: '',
-  description: '',
-  slug: '',
-  icon: '',
+  name: "",
+  description: "",
+  slug: "",
+  icon: "",
   is_active: true,
 };
 
@@ -56,12 +78,12 @@ export default function GuidedPathFamilies() {
   const [formData, setFormData] = useState<FormData>(defaultFormData);
 
   const { data: families = [], isLoading } = useQuery({
-    queryKey: ['guided-path-families'],
+    queryKey: ["guided-path-families"],
     queryFn: async () => {
       const { data: familiesData, error } = await supabase
-        .from('guided_path_template_families')
-        .select('*')
-        .order('order_index');
+        .from("guided_path_template_families")
+        .select("*")
+        .order("order_index");
 
       if (error) throw error;
 
@@ -70,13 +92,13 @@ export default function GuidedPathFamilies() {
         (familiesData || []).map(async (family) => {
           const [questionsResult, templatesResult] = await Promise.all([
             supabase
-              .from('family_survey_questions')
-              .select('id', { count: 'exact', head: true })
-              .eq('family_id', family.id),
+              .from("family_survey_questions")
+              .select("id", { count: "exact", head: true })
+              .eq("family_id", family.id),
             supabase
-              .from('guided_path_templates')
-              .select('id', { count: 'exact', head: true })
-              .eq('family_id', family.id),
+              .from("guided_path_templates")
+              .select("id", { count: "exact", head: true })
+              .eq("family_id", family.id),
           ]);
 
           return {
@@ -86,7 +108,7 @@ export default function GuidedPathFamilies() {
               templates: templatesResult.count || 0,
             },
           };
-        })
+        }),
       );
 
       return familiesWithCounts as Family[];
@@ -95,21 +117,19 @@ export default function GuidedPathFamilies() {
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const { error } = await supabase
-        .from('guided_path_template_families')
-        .insert({
-          name: data.name,
-          description: data.description || null,
-          slug: data.slug,
-          icon: data.icon || null,
-          is_active: data.is_active,
-          order_index: families.length,
-        });
+      const { error } = await supabase.from("guided_path_template_families").insert({
+        name: data.name,
+        description: data.description || null,
+        slug: data.slug,
+        icon: data.icon || null,
+        is_active: data.is_active,
+        order_index: families.length,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Family created successfully');
-      queryClient.invalidateQueries({ queryKey: ['guided-path-families'] });
+      toast.success("Family created successfully");
+      queryClient.invalidateQueries({ queryKey: ["guided-path-families"] });
       setDialogOpen(false);
       setFormData(defaultFormData);
     },
@@ -121,7 +141,7 @@ export default function GuidedPathFamilies() {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: FormData }) => {
       const { error } = await supabase
-        .from('guided_path_template_families')
+        .from("guided_path_template_families")
         .update({
           name: data.name,
           description: data.description || null,
@@ -129,12 +149,12 @@ export default function GuidedPathFamilies() {
           icon: data.icon || null,
           is_active: data.is_active,
         })
-        .eq('id', id);
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Family updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['guided-path-families'] });
+      toast.success("Family updated successfully");
+      queryClient.invalidateQueries({ queryKey: ["guided-path-families"] });
       setDialogOpen(false);
       setEditingFamily(null);
       setFormData(defaultFormData);
@@ -146,15 +166,12 @@ export default function GuidedPathFamilies() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('guided_path_template_families')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from("guided_path_template_families").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Family deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['guided-path-families'] });
+      toast.success("Family deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["guided-path-families"] });
       setDeleteDialogOpen(false);
       setDeletingFamily(null);
     },
@@ -173,9 +190,9 @@ export default function GuidedPathFamilies() {
     setEditingFamily(family);
     setFormData({
       name: family.name,
-      description: family.description || '',
+      description: family.description || "",
       slug: family.slug,
-      icon: family.icon || '',
+      icon: family.icon || "",
       is_active: family.is_active,
     });
     setDialogOpen(true);
@@ -184,7 +201,7 @@ export default function GuidedPathFamilies() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!formData.name.trim() || !formData.slug.trim()) {
-      toast.error('Name and slug are required');
+      toast.error("Name and slug are required");
       return;
     }
 
@@ -198,8 +215,8 @@ export default function GuidedPathFamilies() {
   function generateSlug(name: string) {
     return name
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
   }
 
   if (isLoading) {
@@ -246,9 +263,7 @@ export default function GuidedPathFamilies() {
             <TableBody>
               {families.map((family) => (
                 <TableRow key={family.id}>
-                  <TableCell className="text-muted-foreground">
-                    {family.order_index + 1}
-                  </TableCell>
+                  <TableCell className="text-muted-foreground">{family.order_index + 1}</TableCell>
                   <TableCell>
                     <div>
                       <p className="font-medium">{family.name}</p>
@@ -260,9 +275,7 @@ export default function GuidedPathFamilies() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <code className="text-sm bg-muted px-2 py-1 rounded">
-                      {family.slug}
-                    </code>
+                    <code className="text-sm bg-muted px-2 py-1 rounded">{family.slug}</code>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="gap-1">
@@ -277,8 +290,8 @@ export default function GuidedPathFamilies() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={family.is_active ? 'default' : 'secondary'}>
-                      {family.is_active ? 'Active' : 'Inactive'}
+                    <Badge variant={family.is_active ? "default" : "secondary"}>
+                      {family.is_active ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -290,11 +303,7 @@ export default function GuidedPathFamilies() {
                       >
                         Configure
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditDialog(family)}
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(family)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
@@ -328,13 +337,11 @@ export default function GuidedPathFamilies() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingFamily ? 'Edit Family' : 'Create Family'}
-            </DialogTitle>
+            <DialogTitle>{editingFamily ? "Edit Family" : "Create Family"}</DialogTitle>
             <DialogDescription>
               {editingFamily
-                ? 'Update the template family details'
-                : 'Create a new template family to group related paths'}
+                ? "Update the template family details"
+                : "Create a new template family to group related paths"}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -359,9 +366,7 @@ export default function GuidedPathFamilies() {
               <Input
                 id="slug"
                 value={formData.slug}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, slug: e.target.value }))
-                }
+                onChange={(e) => setFormData((prev) => ({ ...prev, slug: e.target.value }))}
                 placeholder="e.g., salesforce-cta"
               />
               <p className="text-xs text-muted-foreground">
@@ -373,9 +378,7 @@ export default function GuidedPathFamilies() {
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, description: e.target.value }))
-                }
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="Describe this path family..."
                 rows={3}
               />
@@ -385,9 +388,7 @@ export default function GuidedPathFamilies() {
               <Input
                 id="icon"
                 value={formData.icon}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, icon: e.target.value }))
-                }
+                onChange={(e) => setFormData((prev) => ({ ...prev, icon: e.target.value }))}
                 placeholder="e.g., trophy, target, rocket"
               />
             </div>
@@ -402,18 +403,11 @@ export default function GuidedPathFamilies() {
               <Label htmlFor="is_active">Active</Label>
             </div>
             <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
-                {editingFamily ? 'Update' : 'Create'}
+              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                {editingFamily ? "Update" : "Create"}
               </Button>
             </div>
           </form>
@@ -426,8 +420,8 @@ export default function GuidedPathFamilies() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Family</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deletingFamily?.name}"? This will
-              also delete all survey questions and unlink associated templates.
+              Are you sure you want to delete "{deletingFamily?.name}"? This will also delete all
+              survey questions and unlink associated templates.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

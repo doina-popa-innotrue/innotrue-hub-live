@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from 'sonner';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Shield } from 'lucide-react';
-import CryptoJS from 'crypto-js';
-import { RichTextDisplay } from '@/components/ui/rich-text-display';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Shield } from "lucide-react";
+import CryptoJS from "crypto-js";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
 
 interface ProgramTerms {
   id: string;
@@ -28,7 +28,11 @@ interface TermsAcceptanceGateProps {
   onTermsLoaded?: (hasTerms: boolean, needsAcceptance: boolean) => void;
 }
 
-export function TermsAcceptanceGate({ programId, children, onTermsLoaded }: TermsAcceptanceGateProps) {
+export function TermsAcceptanceGate({
+  programId,
+  children,
+  onTermsLoaded,
+}: TermsAcceptanceGateProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [currentTerms, setCurrentTerms] = useState<ProgramTerms | null>(null);
@@ -51,10 +55,10 @@ export function TermsAcceptanceGate({ programId, children, onTermsLoaded }: Term
     try {
       // Fetch current terms for this program
       const { data: terms, error: termsError } = await supabase
-        .from('program_terms')
-        .select('*')
-        .eq('program_id', programId)
-        .eq('is_current', true)
+        .from("program_terms")
+        .select("*")
+        .eq("program_id", programId)
+        .eq("is_current", true)
         .maybeSingle();
 
       if (termsError) throw termsError;
@@ -70,10 +74,10 @@ export function TermsAcceptanceGate({ programId, children, onTermsLoaded }: Term
 
       // Check if user has accepted current terms
       const { data: acceptance, error: acceptanceError } = await supabase
-        .from('user_program_terms_acceptance')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('program_terms_id', terms.id)
+        .from("user_program_terms_acceptance")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("program_terms_id", terms.id)
         .maybeSingle();
 
       if (acceptanceError) throw acceptanceError;
@@ -85,10 +89,10 @@ export function TermsAcceptanceGate({ programId, children, onTermsLoaded }: Term
         if (terms.is_blocking_on_first_access) {
           // Check if user has accepted ANY previous version
           const { data: anyAcceptance } = await supabase
-            .from('user_program_terms_acceptance')
-            .select('*, program_terms!inner(program_id)')
-            .eq('user_id', user.id)
-            .eq('program_terms.program_id', programId)
+            .from("user_program_terms_acceptance")
+            .select("*, program_terms!inner(program_id)")
+            .eq("user_id", user.id)
+            .eq("program_terms.program_id", programId)
             .limit(1);
 
           if (anyAcceptance && anyAcceptance.length > 0) {
@@ -108,8 +112,8 @@ export function TermsAcceptanceGate({ programId, children, onTermsLoaded }: Term
         onTermsLoaded?.(true, false);
       }
     } catch (error: any) {
-      console.error('Error checking terms acceptance:', error);
-      toast.error('Failed to check terms acceptance');
+      console.error("Error checking terms acceptance:", error);
+      toast.error("Failed to check terms acceptance");
     } finally {
       setLoading(false);
     }
@@ -122,25 +126,23 @@ export function TermsAcceptanceGate({ programId, children, onTermsLoaded }: Term
     try {
       const contentHash = CryptoJS.SHA256(currentTerms.content_html).toString();
 
-      const { error } = await supabase
-        .from('user_program_terms_acceptance')
-        .insert({
-          user_id: user.id,
-          program_terms_id: currentTerms.id,
-          ip_address: null, // Could be fetched from a service if needed
-          user_agent: navigator.userAgent,
-          content_hash: contentHash
-        });
+      const { error } = await supabase.from("user_program_terms_acceptance").insert({
+        user_id: user.id,
+        program_terms_id: currentTerms.id,
+        ip_address: null, // Could be fetched from a service if needed
+        user_agent: navigator.userAgent,
+        content_hash: contentHash,
+      });
 
       if (error) throw error;
 
-      toast.success('Terms accepted successfully');
+      toast.success("Terms accepted successfully");
       setShowBlockingModal(false);
       setShowUpdateBanner(false);
       setUserAcceptance({ accepted: true });
     } catch (error: any) {
-      console.error('Error accepting terms:', error);
-      toast.error('Failed to accept terms');
+      console.error("Error accepting terms:", error);
+      toast.error("Failed to accept terms");
     } finally {
       setAccepting(false);
     }
@@ -168,7 +170,7 @@ export function TermsAcceptanceGate({ programId, children, onTermsLoaded }: Term
             <ScrollArea className="h-[300px] w-full rounded-md border p-4">
               <RichTextDisplay content={currentTerms.content_html} />
             </ScrollArea>
-            
+
             <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
               <Checkbox
                 id="agree-terms"
@@ -180,12 +182,8 @@ export function TermsAcceptanceGate({ programId, children, onTermsLoaded }: Term
               </label>
             </div>
 
-            <Button 
-              onClick={acceptTerms} 
-              disabled={!agreed || accepting}
-              className="w-full"
-            >
-              {accepting ? 'Processing...' : 'Agree & Continue'}
+            <Button onClick={acceptTerms} disabled={!agreed || accepting} className="w-full">
+              {accepting ? "Processing..." : "Agree & Continue"}
             </Button>
           </CardContent>
         </Card>
@@ -197,11 +195,7 @@ export function TermsAcceptanceGate({ programId, children, onTermsLoaded }: Term
     <>
       {/* Non-blocking update banner */}
       {showUpdateBanner && currentTerms && (
-        <TermsUpdateBanner 
-          terms={currentTerms} 
-          onAccept={acceptTerms}
-          accepting={accepting}
-        />
+        <TermsUpdateBanner terms={currentTerms} onAccept={acceptTerms} accepting={accepting} />
       )}
       {children}
     </>
@@ -235,7 +229,7 @@ function TermsUpdateBanner({ terms, onAccept, accepting }: TermsUpdateBannerProp
             <ScrollArea className="h-[300px] w-full rounded-md border p-4">
               <RichTextDisplay content={terms.content_html} />
             </ScrollArea>
-            
+
             <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
               <Checkbox
                 id="agree-updated-terms"
@@ -248,19 +242,11 @@ function TermsUpdateBanner({ terms, onAccept, accepting }: TermsUpdateBannerProp
             </div>
 
             <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                onClick={() => setShowModal(false)}
-                className="flex-1"
-              >
+              <Button variant="outline" onClick={() => setShowModal(false)} className="flex-1">
                 Review Later
               </Button>
-              <Button 
-                onClick={onAccept} 
-                disabled={!agreed || accepting}
-                className="flex-1"
-              >
-                {accepting ? 'Processing...' : 'Accept Updated Terms'}
+              <Button onClick={onAccept} disabled={!agreed || accepting} className="flex-1">
+                {accepting ? "Processing..." : "Accept Updated Terms"}
               </Button>
             </div>
           </CardContent>
@@ -276,14 +262,12 @@ function TermsUpdateBanner({ terms, onAccept, accepting }: TermsUpdateBannerProp
         <div>
           <p className="font-medium text-sm">Updated Terms Available</p>
           <p className="text-xs text-muted-foreground">
-            The terms and conditions for this program have been updated. Please review and accept the new terms.
+            The terms and conditions for this program have been updated. Please review and accept
+            the new terms.
           </p>
         </div>
       </div>
-      <Button 
-        size="sm" 
-        onClick={() => setShowModal(true)}
-      >
+      <Button size="sm" onClick={() => setShowModal(true)}>
         Review & Accept
       </Button>
     </div>

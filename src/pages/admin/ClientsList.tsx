@@ -1,15 +1,45 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useNavigate } from 'react-router-dom';
-import { MoreVertical, UserCheck, UserX, Trash2 } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
+import { MoreVertical, UserCheck, UserX, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 interface Client {
   id: string;
@@ -42,17 +72,17 @@ export default function ClientsList() {
   async function fetchClients() {
     // Fetch status markers
     const { data: markers } = await supabase
-      .from('status_markers')
-      .select('id, name')
-      .eq('is_active', true)
-      .order('display_order');
+      .from("status_markers")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("display_order");
     setStatusMarkers(markers || []);
 
     // Get all users with client role from user_roles table
     const { data: clientRoles } = await supabase
-      .from('user_roles')
-      .select('user_id')
-      .eq('role', 'client');
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "client");
 
     if (!clientRoles || clientRoles.length === 0) {
       setClients([]);
@@ -60,51 +90,51 @@ export default function ClientsList() {
       const enrichedClients = await Promise.all(
         clientRoles.map(async (roleEntry) => {
           const { data: profile } = await supabase
-            .from('profiles')
-            .select('name, id, plan_id, plans(id, name, key)')
-            .eq('id', roleEntry.user_id)
+            .from("profiles")
+            .select("name, id, plan_id, plans(id, name, key)")
+            .eq("id", roleEntry.user_id)
             .single();
 
           const { data: clientProfile } = await supabase
-            .from('client_profiles')
-            .select('id, status, status_marker')
-            .eq('user_id', roleEntry.user_id)
+            .from("client_profiles")
+            .select("id, status, status_marker")
+            .eq("user_id", roleEntry.user_id)
             .maybeSingle();
-          
+
           const { count } = await supabase
-            .from('client_enrollments')
-            .select('id', { count: 'exact', head: true })
-            .eq('client_user_id', roleEntry.user_id)
-            .eq('status', 'active');
+            .from("client_enrollments")
+            .select("id", { count: "exact", head: true })
+            .eq("client_user_id", roleEntry.user_id)
+            .eq("status", "active");
 
           // Get assigned coaches
           const { data: coachRelations } = await supabase
-            .from('client_coaches')
-            .select('coach_id')
-            .eq('client_id', roleEntry.user_id);
+            .from("client_coaches")
+            .select("coach_id")
+            .eq("client_id", roleEntry.user_id);
 
           let coaches: { id: string; name: string }[] = [];
           if (coachRelations && coachRelations.length > 0) {
-            const coachIds = coachRelations.map(c => c.coach_id);
+            const coachIds = coachRelations.map((c) => c.coach_id);
             const { data: coachProfiles } = await supabase
-              .from('profiles')
-              .select('id, name')
-              .in('id', coachIds);
+              .from("profiles")
+              .select("id, name")
+              .in("id", coachIds);
             coaches = coachProfiles || [];
           }
 
           return {
             id: clientProfile?.id || roleEntry.user_id,
             user_id: roleEntry.user_id,
-            status: clientProfile?.status || 'active',
+            status: clientProfile?.status || "active",
             status_marker: clientProfile?.status_marker || null,
-            profiles: { name: profile?.name || 'Unknown', id: roleEntry.user_id },
-            user_email: '',
+            profiles: { name: profile?.name || "Unknown", id: roleEntry.user_id },
+            user_email: "",
             enrollmentCount: count || 0,
             coaches,
             plan: profile?.plans || null,
           };
-        })
+        }),
       );
 
       setClients(enrichedClients as Client[]);
@@ -118,16 +148,16 @@ export default function ClientsList() {
   }, []);
 
   async function toggleUserStatus(userId: string, currentStatus: string) {
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    const newStatus = currentStatus === "active" ? "inactive" : "active";
     const { error } = await supabase
-      .from('client_profiles')
+      .from("client_profiles")
       .update({ status: newStatus })
-      .eq('user_id', userId);
+      .eq("user_id", userId);
 
     if (error) {
-      toast.error('Failed to update user status');
+      toast.error("Failed to update user status");
     } else {
-      toast.success(`User ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
+      toast.success(`User ${newStatus === "active" ? "activated" : "deactivated"}`);
       fetchClients();
     }
   }
@@ -137,20 +167,20 @@ export default function ClientsList() {
 
     try {
       // Call secure edge function to delete user
-      const { error } = await supabase.functions.invoke('delete-user', {
+      const { error } = await supabase.functions.invoke("delete-user", {
         body: { userId: userToDelete },
       });
 
       if (error) throw error;
 
-      toast.success('User deleted successfully');
+      toast.success("User deleted successfully");
       setDeleteDialogOpen(false);
       setUserToDelete(null);
       fetchClients();
     } catch (error: unknown) {
-      console.error('Delete user error:', error);
+      console.error("Delete user error:", error);
       const err = error as { message?: string };
-      toast.error(err.message || 'Failed to delete user');
+      toast.error(err.message || "Failed to delete user");
     }
   }
 
@@ -173,7 +203,8 @@ export default function ClientsList() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Clients</h1>
         <p className="text-muted-foreground mt-1">
-          Manage client accounts. Use Users Management to create placeholder users for clients not yet registered.
+          Manage client accounts. Use Users Management to create placeholder users for clients not
+          yet registered.
         </p>
       </div>
 
@@ -214,7 +245,7 @@ export default function ClientsList() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={client.status === 'active' ? 'default' : 'secondary'}>
+                    <Badge variant={client.status === "active" ? "default" : "secondary"}>
                       {client.status}
                     </Badge>
                   </TableCell>
@@ -222,7 +253,9 @@ export default function ClientsList() {
                     {client.coaches.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {client.coaches.map((coach) => (
-                          <Badge key={coach.id} variant="outline">{coach.name}</Badge>
+                          <Badge key={coach.id} variant="outline">
+                            {coach.name}
+                          </Badge>
                         ))}
                       </div>
                     ) : (
@@ -248,8 +281,10 @@ export default function ClientsList() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => toggleUserStatus(client.user_id, client.status)}>
-                            {client.status === 'active' ? (
+                          <DropdownMenuItem
+                            onClick={() => toggleUserStatus(client.user_id, client.status)}
+                          >
+                            {client.status === "active" ? (
                               <>
                                 <UserX className="mr-2 h-4 w-4" />
                                 Deactivate
@@ -261,7 +296,7 @@ export default function ClientsList() {
                               </>
                             )}
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => {
                               setUserToDelete(client.user_id);
@@ -294,15 +329,14 @@ export default function ClientsList() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the user account and all associated data including enrollments and progress. This action cannot be undone.
+              This will permanently delete the user account and all associated data including
+              enrollments and progress. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setUserToDelete(null)}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteUser} 
+            <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete

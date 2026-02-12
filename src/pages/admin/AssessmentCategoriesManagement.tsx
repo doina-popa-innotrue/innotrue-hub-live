@@ -1,18 +1,18 @@
-import { useAdminCRUD } from '@/hooks/useAdminCRUD';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { Edit, Trash2, FolderTree } from 'lucide-react';
+import { useAdminCRUD } from "@/hooks/useAdminCRUD";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2, FolderTree } from "lucide-react";
 import {
   AdminPageHeader,
   AdminLoadingState,
   AdminEmptyState,
   AdminFormActions,
-} from '@/components/admin';
+} from "@/components/admin";
 
 type AssessmentCategory = {
   id: string;
@@ -31,8 +31,8 @@ type FormData = {
 };
 
 const initialFormData: FormData = {
-  name: '',
-  description: '',
+  name: "",
+  description: "",
   order_index: 0,
   is_active: true,
 };
@@ -52,14 +52,14 @@ export default function AssessmentCategoriesManagement() {
     handleDelete,
     isSubmitting,
   } = useAdminCRUD<AssessmentCategory, FormData>({
-    tableName: 'assessment_categories',
-    queryKey: 'admin-assessment-categories',
-    entityName: 'Category',
-    orderBy: 'order_index',
+    tableName: "assessment_categories",
+    queryKey: "admin-assessment-categories",
+    entityName: "Category",
+    orderBy: "order_index",
     initialFormData,
     mapItemToForm: (category) => ({
       name: category.name,
-      description: category.description || '',
+      description: category.description || "",
       order_index: category.order_index,
       is_active: category.is_active,
     }),
@@ -126,7 +126,7 @@ export default function AssessmentCategoriesManagement() {
         description="Manage categories for capability, leadership, and other assessment types"
         isDialogOpen={isDialogOpen}
         onDialogOpenChange={setIsDialogOpen}
-        dialogTitle={editingItem ? 'Edit Category' : 'Create Category'}
+        dialogTitle={editingItem ? "Edit Category" : "Create Category"}
         dialogContent={formContent}
         createButtonLabel="New Category"
       />
@@ -163,11 +163,7 @@ export default function AssessmentCategoriesManagement() {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => openEdit(category)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(category)}>
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button

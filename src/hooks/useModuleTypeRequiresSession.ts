@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UseModuleTypeRequiresSessionOptions {
   moduleType: string | null | undefined;
@@ -15,10 +15,10 @@ interface ModuleTypeSessionCapability {
 
 /**
  * Hook to determine if a module type supports live sessions.
- * 
+ *
  * Session capability is determined by checking if the module type
  * has an active mapping in calcom_event_type_mappings table.
- * 
+ *
  * This is a data-driven approach that avoids hardcoding:
  * - If a module type has an active Cal.com mapping → sessions are supported
  * - If no mapping exists → this is a self-study module (e.g., content, learning)
@@ -28,7 +28,7 @@ export function useModuleTypeRequiresSession({
   enabled = true,
 }: UseModuleTypeRequiresSessionOptions) {
   return useQuery({
-    queryKey: ['module-type-session-capability', moduleType],
+    queryKey: ["module-type-session-capability", moduleType],
     queryFn: async (): Promise<ModuleTypeSessionCapability> => {
       if (!moduleType) {
         return {
@@ -41,14 +41,14 @@ export function useModuleTypeRequiresSession({
 
       // Check if this module type has an active Cal.com event type mapping
       const { data: mapping, error } = await supabase
-        .from('calcom_event_type_mappings')
-        .select('id, calcom_event_type_name')
-        .eq('module_type', moduleType)
-        .eq('is_active', true)
+        .from("calcom_event_type_mappings")
+        .select("id, calcom_event_type_name")
+        .eq("module_type", moduleType)
+        .eq("is_active", true)
         .maybeSingle();
 
       if (error) {
-        console.error('Error checking module type session capability:', error);
+        console.error("Error checking module type session capability:", error);
         return {
           requiresSession: false,
           hasMapping: false,
@@ -78,13 +78,13 @@ export function useModuleTypeRequiresSession({
 export function useModuleRequiresSession(moduleId: string | undefined, enabled = true) {
   // First fetch the module's type
   const { data: moduleData, isLoading: isLoadingModule } = useQuery({
-    queryKey: ['module-type-for-session-check', moduleId],
+    queryKey: ["module-type-for-session-check", moduleId],
     queryFn: async () => {
       if (!moduleId) return null;
       const { data, error } = await supabase
-        .from('program_modules')
-        .select('module_type')
-        .eq('id', moduleId)
+        .from("program_modules")
+        .select("module_type")
+        .eq("id", moduleId)
         .single();
       if (error) throw error;
       return data;

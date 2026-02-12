@@ -10,12 +10,12 @@ interface FAQSearchProps {
   totalCount?: number;
 }
 
-export function FAQSearch({ 
-  searchQuery, 
-  onSearchChange, 
+export function FAQSearch({
+  searchQuery,
+  onSearchChange,
   placeholder = "Search FAQ...",
   resultCount,
-  totalCount
+  totalCount,
 }: FAQSearchProps) {
   return (
     <div className="space-y-2">

@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import type {
   ScenarioTemplate,
   ScenarioSection,
@@ -10,7 +10,7 @@ import type {
   ScenarioTemplateFormData,
   ScenarioSectionFormData,
   SectionParagraphFormData,
-} from '@/types/scenarios';
+} from "@/types/scenarios";
 
 // ============================================================================
 // Template Hooks
@@ -18,16 +18,18 @@ import type {
 
 export function useScenarioTemplates() {
   return useQuery({
-    queryKey: ['scenario-templates'],
+    queryKey: ["scenario-templates"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('scenario_templates')
-        .select(`
+        .from("scenario_templates")
+        .select(
+          `
           *,
            capability_assessments(id, name, slug, rating_scale),
            scenario_categories(id, name, color)
-        `)
-        .order('created_at', { ascending: false });
+        `,
+        )
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as ScenarioTemplate[];
@@ -37,17 +39,19 @@ export function useScenarioTemplates() {
 
 export function useScenarioTemplate(id: string | undefined) {
   return useQuery({
-    queryKey: ['scenario-template', id],
+    queryKey: ["scenario-template", id],
     queryFn: async () => {
       if (!id) return null;
       const { data, error } = await supabase
-        .from('scenario_templates')
-        .select(`
+        .from("scenario_templates")
+        .select(
+          `
           *,
            capability_assessments(id, name, slug, rating_scale),
            scenario_categories(id, name, color)
-        `)
-        .eq('id', id)
+        `,
+        )
+        .eq("id", id)
         .single();
 
       if (error) throw error;
@@ -65,11 +69,14 @@ export function useScenarioTemplateMutations() {
   const createMutation = useMutation({
     mutationFn: async (data: ScenarioTemplateFormData) => {
       const { data: result, error } = await supabase
-        .from('scenario_templates')
+        .from("scenario_templates")
         .insert({
           ...data,
           description: data.description || null,
-          capability_assessment_id: data.capability_assessment_id && data.capability_assessment_id !== 'none' ? data.capability_assessment_id : null,
+          capability_assessment_id:
+            data.capability_assessment_id && data.capability_assessment_id !== "none"
+              ? data.capability_assessment_id
+              : null,
           created_by: user?.id,
         })
         .select()
@@ -79,75 +86,75 @@ export function useScenarioTemplateMutations() {
       return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scenario-templates'] });
-      toast({ description: 'Scenario template created' });
+      queryClient.invalidateQueries({ queryKey: ["scenario-templates"] });
+      toast({ description: "Scenario template created" });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<ScenarioTemplateFormData> }) => {
       const { error } = await supabase
-        .from('scenario_templates')
+        .from("scenario_templates")
         .update({
           ...data,
           description: data.description || null,
-          capability_assessment_id: data.capability_assessment_id && data.capability_assessment_id !== 'none' ? data.capability_assessment_id : null,
+          capability_assessment_id:
+            data.capability_assessment_id && data.capability_assessment_id !== "none"
+              ? data.capability_assessment_id
+              : null,
         })
-        .eq('id', id);
+        .eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scenario-templates'] });
-      queryClient.invalidateQueries({ queryKey: ['scenario-template'] });
-      toast({ description: 'Scenario template updated' });
+      queryClient.invalidateQueries({ queryKey: ["scenario-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["scenario-template"] });
+      toast({ description: "Scenario template updated" });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   const lockMutation = useMutation({
     mutationFn: async ({ id, lock }: { id: string; lock: boolean }) => {
       const { error } = await supabase
-        .from('scenario_templates')
+        .from("scenario_templates")
         .update({
           is_locked: lock,
           locked_by: lock ? user?.id : null,
           locked_at: lock ? new Date().toISOString() : null,
         })
-        .eq('id', id);
+        .eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: (_, { lock }) => {
-      queryClient.invalidateQueries({ queryKey: ['scenario-templates'] });
-      queryClient.invalidateQueries({ queryKey: ['scenario-template'] });
-      toast({ description: lock ? 'Template locked' : 'Template unlocked' });
+      queryClient.invalidateQueries({ queryKey: ["scenario-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["scenario-template"] });
+      toast({ description: lock ? "Template locked" : "Template unlocked" });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('scenario_templates')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from("scenario_templates").delete().eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scenario-templates'] });
-      toast({ description: 'Scenario template deleted' });
+      queryClient.invalidateQueries({ queryKey: ["scenario-templates"] });
+      toast({ description: "Scenario template deleted" });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -160,14 +167,14 @@ export function useScenarioTemplateMutations() {
 
 export function useScenarioSections(templateId: string | undefined) {
   return useQuery({
-    queryKey: ['scenario-sections', templateId],
+    queryKey: ["scenario-sections", templateId],
     queryFn: async () => {
       if (!templateId) return [];
       const { data, error } = await supabase
-        .from('scenario_sections')
-        .select('*')
-        .eq('template_id', templateId)
-        .order('order_index');
+        .from("scenario_sections")
+        .select("*")
+        .eq("template_id", templateId)
+        .order("order_index");
 
       if (error) throw error;
       return data as ScenarioSection[];
@@ -183,7 +190,7 @@ export function useScenarioSectionMutations(templateId: string) {
   const createMutation = useMutation({
     mutationFn: async (data: ScenarioSectionFormData) => {
       const { data: result, error } = await supabase
-        .from('scenario_sections')
+        .from("scenario_sections")
         .insert({
           template_id: templateId,
           ...data,
@@ -196,65 +203,59 @@ export function useScenarioSectionMutations(templateId: string) {
       return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scenario-sections', templateId] });
-      toast({ description: 'Section created' });
+      queryClient.invalidateQueries({ queryKey: ["scenario-sections", templateId] });
+      toast({ description: "Section created" });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<ScenarioSectionFormData> }) => {
       const { error } = await supabase
-        .from('scenario_sections')
+        .from("scenario_sections")
         .update({
           ...data,
           instructions: data.instructions || null,
         })
-        .eq('id', id);
+        .eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scenario-sections', templateId] });
-      toast({ description: 'Section updated' });
+      queryClient.invalidateQueries({ queryKey: ["scenario-sections", templateId] });
+      toast({ description: "Section updated" });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('scenario_sections')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from("scenario_sections").delete().eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scenario-sections', templateId] });
-      toast({ description: 'Section deleted' });
+      queryClient.invalidateQueries({ queryKey: ["scenario-sections", templateId] });
+      toast({ description: "Section deleted" });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   const reorderMutation = useMutation({
     mutationFn: async (orderedIds: string[]) => {
-      const updates = orderedIds.map((id, index) => 
-        supabase
-          .from('scenario_sections')
-          .update({ order_index: index })
-          .eq('id', id)
+      const updates = orderedIds.map((id, index) =>
+        supabase.from("scenario_sections").update({ order_index: index }).eq("id", id),
       );
       await Promise.all(updates);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scenario-sections', templateId] });
+      queryClient.invalidateQueries({ queryKey: ["scenario-sections", templateId] });
     },
   });
 
@@ -267,12 +268,13 @@ export function useScenarioSectionMutations(templateId: string) {
 
 export function useSectionParagraphs(sectionId: string | undefined) {
   return useQuery({
-    queryKey: ['section-paragraphs', sectionId],
+    queryKey: ["section-paragraphs", sectionId],
     queryFn: async () => {
       if (!sectionId) return [];
       const { data, error } = await supabase
-        .from('section_paragraphs')
-        .select(`
+        .from("section_paragraphs")
+        .select(
+          `
           *,
           paragraph_question_links(
             *,
@@ -284,9 +286,10 @@ export function useSectionParagraphs(sectionId: string | undefined) {
               capability_domains(id, name)
             )
           )
-        `)
-        .eq('section_id', sectionId)
-        .order('order_index');
+        `,
+        )
+        .eq("section_id", sectionId)
+        .order("order_index");
 
       if (error) throw error;
       return data as (SectionParagraph & { paragraph_question_links: ParagraphQuestionLink[] })[];
@@ -302,7 +305,7 @@ export function useSectionParagraphMutations(sectionId: string) {
   const createMutation = useMutation({
     mutationFn: async (data: SectionParagraphFormData) => {
       const { data: result, error } = await supabase
-        .from('section_paragraphs')
+        .from("section_paragraphs")
         .insert({
           section_id: sectionId,
           ...data,
@@ -314,47 +317,41 @@ export function useSectionParagraphMutations(sectionId: string) {
       return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['section-paragraphs', sectionId] });
-      toast({ description: 'Paragraph created' });
+      queryClient.invalidateQueries({ queryKey: ["section-paragraphs", sectionId] });
+      toast({ description: "Paragraph created" });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<SectionParagraphFormData> }) => {
-      const { error } = await supabase
-        .from('section_paragraphs')
-        .update(data)
-        .eq('id', id);
+      const { error } = await supabase.from("section_paragraphs").update(data).eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['section-paragraphs', sectionId] });
-      toast({ description: 'Paragraph updated' });
+      queryClient.invalidateQueries({ queryKey: ["section-paragraphs", sectionId] });
+      toast({ description: "Paragraph updated" });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('section_paragraphs')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from("section_paragraphs").delete().eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['section-paragraphs', sectionId] });
-      toast({ description: 'Paragraph deleted' });
+      queryClient.invalidateQueries({ queryKey: ["section-paragraphs", sectionId] });
+      toast({ description: "Paragraph deleted" });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -371,40 +368,35 @@ export function useQuestionLinkMutations(paragraphId: string, sectionId: string)
 
   const addLinkMutation = useMutation({
     mutationFn: async ({ questionId, weight = 1.0 }: { questionId: string; weight?: number }) => {
-      const { error } = await supabase
-        .from('paragraph_question_links')
-        .insert({
-          paragraph_id: paragraphId,
-          question_id: questionId,
-          weight,
-        });
+      const { error } = await supabase.from("paragraph_question_links").insert({
+        paragraph_id: paragraphId,
+        question_id: questionId,
+        weight,
+      });
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['section-paragraphs', sectionId] });
-      toast({ description: 'Question linked' });
+      queryClient.invalidateQueries({ queryKey: ["section-paragraphs", sectionId] });
+      toast({ description: "Question linked" });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   const removeLinkMutation = useMutation({
     mutationFn: async (linkId: string) => {
-      const { error } = await supabase
-        .from('paragraph_question_links')
-        .delete()
-        .eq('id', linkId);
+      const { error } = await supabase.from("paragraph_question_links").delete().eq("id", linkId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['section-paragraphs', sectionId] });
-      toast({ description: 'Question unlinked' });
+      queryClient.invalidateQueries({ queryKey: ["section-paragraphs", sectionId] });
+      toast({ description: "Question unlinked" });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 

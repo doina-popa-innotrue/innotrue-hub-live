@@ -43,11 +43,11 @@ export function DevelopmentHubWidget({ goals, decisions, tasks }: DevelopmentHub
   const topTask = tasks[0];
 
   const highPriorityDecisions = decisions.filter(
-    (d) => d.importance === "high" || d.importance === "critical"
+    (d) => d.importance === "high" || d.importance === "critical",
   ).length;
 
   const urgentTasks = tasks.filter(
-    (t) => t.quadrant === "do_first" || t.quadrant === "schedule"
+    (t) => t.quadrant === "do_first" || t.quadrant === "schedule",
   ).length;
 
   return (
@@ -80,9 +80,7 @@ export function DevelopmentHubWidget({ goals, decisions, tasks }: DevelopmentHub
             </div>
             {topGoal ? (
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground line-clamp-1">
-                  Top: {topGoal.title}
-                </p>
+                <p className="text-sm text-muted-foreground line-clamp-1">Top: {topGoal.title}</p>
                 <p className="text-xs text-muted-foreground">
                   {topGoal.progress_percentage}% complete
                 </p>
@@ -117,9 +115,7 @@ export function DevelopmentHubWidget({ goals, decisions, tasks }: DevelopmentHub
                   Top: {topDecision.title}
                 </p>
                 {highPriorityDecisions > 0 && (
-                  <p className="text-xs text-destructive">
-                    {highPriorityDecisions} high priority
-                  </p>
+                  <p className="text-xs text-destructive">{highPriorityDecisions} high priority</p>
                 )}
               </div>
             ) : (
@@ -148,14 +144,8 @@ export function DevelopmentHubWidget({ goals, decisions, tasks }: DevelopmentHub
             </div>
             {topTask ? (
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground line-clamp-1">
-                  Next: {topTask.title}
-                </p>
-                {urgentTasks > 0 && (
-                  <p className="text-xs text-warning">
-                    {urgentTasks} urgent
-                  </p>
-                )}
+                <p className="text-sm text-muted-foreground line-clamp-1">Next: {topTask.title}</p>
+                {urgentTasks > 0 && <p className="text-xs text-warning">{urgentTasks} urgent</p>}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No upcoming tasks</p>

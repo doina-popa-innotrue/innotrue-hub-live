@@ -1,22 +1,22 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-import { Plus, Pencil, Eye, Trash2, Check, Shield } from 'lucide-react';
-import DOMPurify from 'dompurify';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Plus, Pencil, Eye, Trash2, Check, Shield } from "lucide-react";
+import DOMPurify from "dompurify";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,8 +26,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
+} from "@/components/ui/alert-dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -35,7 +35,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 
 interface OrganizationTerms {
   id: string;
@@ -63,13 +63,13 @@ export function OrganizationTermsManager({ organizationId }: OrganizationTermsMa
   const [previewTerm, setPreviewTerm] = useState<OrganizationTerms | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [acceptanceStats, setAcceptanceStats] = useState<Record<string, number>>({});
-  
+
   // Form state
-  const [title, setTitle] = useState('');
-  const [contentHtml, setContentHtml] = useState('');
+  const [title, setTitle] = useState("");
+  const [contentHtml, setContentHtml] = useState("");
   const [isBlockingOnFirstAccess, setIsBlockingOnFirstAccess] = useState(true);
   const [isBlockingOnUpdate, setIsBlockingOnUpdate] = useState(false);
-  const [effectiveFrom, setEffectiveFrom] = useState('');
+  const [effectiveFrom, setEffectiveFrom] = useState("");
   const [isCurrent, setIsCurrent] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -80,10 +80,10 @@ export function OrganizationTermsManager({ organizationId }: OrganizationTermsMa
   async function fetchTerms() {
     try {
       const { data, error } = await supabase
-        .from('organization_terms' as any)
-        .select('*')
-        .eq('organization_id', organizationId)
-        .order('version', { ascending: false });
+        .from("organization_terms" as any)
+        .select("*")
+        .eq("organization_id", organizationId)
+        .order("version", { ascending: false });
 
       if (error) throw error;
       const termsData = (data || []) as unknown as OrganizationTerms[];
@@ -94,16 +94,16 @@ export function OrganizationTermsManager({ organizationId }: OrganizationTermsMa
         const stats: Record<string, number> = {};
         for (const term of termsData) {
           const { count } = await supabase
-            .from('user_organization_terms_acceptance' as any)
-            .select('*', { count: 'exact', head: true })
-            .eq('organization_terms_id', term.id);
+            .from("user_organization_terms_acceptance" as any)
+            .select("*", { count: "exact", head: true })
+            .eq("organization_terms_id", term.id);
           stats[term.id] = count || 0;
         }
         setAcceptanceStats(stats);
       }
     } catch (error: any) {
-      console.error('Error fetching terms:', error);
-      toast.error('Failed to load terms');
+      console.error("Error fetching terms:", error);
+      toast.error("Failed to load terms");
     } finally {
       setLoading(false);
     }
@@ -111,11 +111,11 @@ export function OrganizationTermsManager({ organizationId }: OrganizationTermsMa
 
   function openCreateDialog() {
     setEditingTerm(null);
-    setTitle('');
-    setContentHtml('');
+    setTitle("");
+    setContentHtml("");
     setIsBlockingOnFirstAccess(true);
     setIsBlockingOnUpdate(false);
-    setEffectiveFrom(new Date().toISOString().split('T')[0]);
+    setEffectiveFrom(new Date().toISOString().split("T")[0]);
     setIsCurrent(terms.length === 0);
     setOpenDialog(true);
   }
@@ -126,14 +126,14 @@ export function OrganizationTermsManager({ organizationId }: OrganizationTermsMa
     setContentHtml(term.content_html);
     setIsBlockingOnFirstAccess(term.is_blocking_on_first_access);
     setIsBlockingOnUpdate(term.is_blocking_on_update);
-    setEffectiveFrom(term.effective_from.split('T')[0]);
+    setEffectiveFrom(term.effective_from.split("T")[0]);
     setIsCurrent(term.is_current);
     setOpenDialog(true);
   }
 
   async function handleSave() {
     if (!title.trim() || !contentHtml.trim()) {
-      toast.error('Please fill in title and content');
+      toast.error("Please fill in title and content");
       return;
     }
 
@@ -141,44 +141,42 @@ export function OrganizationTermsManager({ organizationId }: OrganizationTermsMa
     try {
       if (editingTerm) {
         const { error } = await supabase
-          .from('organization_terms' as any)
+          .from("organization_terms" as any)
           .update({
             title,
             content_html: contentHtml,
             is_blocking_on_first_access: isBlockingOnFirstAccess,
             is_blocking_on_update: isBlockingOnUpdate,
             effective_from: effectiveFrom,
-            is_current: isCurrent
+            is_current: isCurrent,
           })
-          .eq('id', editingTerm.id);
+          .eq("id", editingTerm.id);
 
         if (error) throw error;
-        toast.success('Terms updated successfully');
+        toast.success("Terms updated successfully");
       } else {
-        const maxVersion = terms.length > 0 ? Math.max(...terms.map(t => t.version)) : 0;
+        const maxVersion = terms.length > 0 ? Math.max(...terms.map((t) => t.version)) : 0;
 
-        const { error } = await supabase
-          .from('organization_terms' as any)
-          .insert({
-            organization_id: organizationId,
-            version: maxVersion + 1,
-            title,
-            content_html: contentHtml,
-            is_blocking_on_first_access: isBlockingOnFirstAccess,
-            is_blocking_on_update: isBlockingOnUpdate,
-            effective_from: effectiveFrom,
-            is_current: isCurrent
-          });
+        const { error } = await supabase.from("organization_terms" as any).insert({
+          organization_id: organizationId,
+          version: maxVersion + 1,
+          title,
+          content_html: contentHtml,
+          is_blocking_on_first_access: isBlockingOnFirstAccess,
+          is_blocking_on_update: isBlockingOnUpdate,
+          effective_from: effectiveFrom,
+          is_current: isCurrent,
+        });
 
         if (error) throw error;
-        toast.success('Terms created successfully');
+        toast.success("Terms created successfully");
       }
 
       setOpenDialog(false);
       fetchTerms();
     } catch (error: any) {
-      console.error('Error saving terms:', error);
-      toast.error('Failed to save terms');
+      console.error("Error saving terms:", error);
+      toast.error("Failed to save terms");
     } finally {
       setSaving(false);
     }
@@ -187,33 +185,33 @@ export function OrganizationTermsManager({ organizationId }: OrganizationTermsMa
   async function handleDelete(termId: string) {
     try {
       const { error } = await supabase
-        .from('organization_terms' as any)
+        .from("organization_terms" as any)
         .delete()
-        .eq('id', termId);
+        .eq("id", termId);
 
       if (error) throw error;
-      toast.success('Terms deleted successfully');
+      toast.success("Terms deleted successfully");
       setDeleteConfirm(null);
       fetchTerms();
     } catch (error: any) {
-      console.error('Error deleting terms:', error);
-      toast.error('Failed to delete terms');
+      console.error("Error deleting terms:", error);
+      toast.error("Failed to delete terms");
     }
   }
 
   async function setAsCurrent(termId: string) {
     try {
       const { error } = await supabase
-        .from('organization_terms' as any)
+        .from("organization_terms" as any)
         .update({ is_current: true })
-        .eq('id', termId);
+        .eq("id", termId);
 
       if (error) throw error;
-      toast.success('Terms set as current');
+      toast.success("Terms set as current");
       fetchTerms();
     } catch (error: any) {
-      console.error('Error setting current terms:', error);
-      toast.error('Failed to update terms');
+      console.error("Error setting current terms:", error);
+      toast.error("Failed to update terms");
     }
   }
 
@@ -348,12 +346,12 @@ export function OrganizationTermsManager({ organizationId }: OrganizationTermsMa
             <DialogTitle>
               {editingTerm
                 ? `Edit Terms (Version ${editingTerm.version})`
-                : 'Create New Terms Version'}
+                : "Create New Terms Version"}
             </DialogTitle>
             <DialogDescription>
               {editingTerm
-                ? 'Update this version of terms and conditions'
-                : 'Create a new version of terms and conditions for your organization'}
+                ? "Update this version of terms and conditions"
+                : "Create a new version of terms and conditions for your organization"}
             </DialogDescription>
           </DialogHeader>
 
@@ -411,10 +409,7 @@ export function OrganizationTermsManager({ organizationId }: OrganizationTermsMa
                       Require existing members to accept updated terms before continuing
                     </p>
                   </div>
-                  <Switch
-                    checked={isBlockingOnUpdate}
-                    onCheckedChange={setIsBlockingOnUpdate}
-                  />
+                  <Switch checked={isBlockingOnUpdate} onCheckedChange={setIsBlockingOnUpdate} />
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -435,7 +430,7 @@ export function OrganizationTermsManager({ organizationId }: OrganizationTermsMa
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : editingTerm ? 'Update' : 'Create'}
+              {saving ? "Saving..." : editingTerm ? "Update" : "Create"}
             </Button>
           </div>
         </DialogContent>
@@ -447,9 +442,8 @@ export function OrganizationTermsManager({ organizationId }: OrganizationTermsMa
           <DialogHeader className="shrink-0">
             <DialogTitle>{previewTerm?.title}</DialogTitle>
             <DialogDescription>
-              Version {previewTerm?.version} • Effective from{' '}
-              {previewTerm &&
-                new Date(previewTerm.effective_from).toLocaleDateString()}
+              Version {previewTerm?.version} • Effective from{" "}
+              {previewTerm && new Date(previewTerm.effective_from).toLocaleDateString()}
             </DialogDescription>
           </DialogHeader>
 
@@ -457,7 +451,7 @@ export function OrganizationTermsManager({ organizationId }: OrganizationTermsMa
             <div
               className="prose prose-sm max-w-none dark:prose-invert"
               dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(previewTerm?.content_html || ''),
+                __html: DOMPurify.sanitize(previewTerm?.content_html || ""),
               }}
             />
           </ScrollArea>
@@ -470,8 +464,8 @@ export function OrganizationTermsManager({ organizationId }: OrganizationTermsMa
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Terms Version?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this version of terms. This action cannot be undone.
-              Any acceptance records for this version will also be removed.
+              This will permanently delete this version of terms. This action cannot be undone. Any
+              acceptance records for this version will also be removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

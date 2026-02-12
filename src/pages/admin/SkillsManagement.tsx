@@ -1,24 +1,48 @@
-import { useState } from 'react';
-import { useAdminCRUD } from '@/hooks/useAdminCRUD';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Sparkles, Check, ChevronsUpDown } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { cn } from '@/lib/utils';
+import { useState } from "react";
+import { useAdminCRUD } from "@/hooks/useAdminCRUD";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Pencil, Trash2, Sparkles, Check, ChevronsUpDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import {
   AdminPageHeader,
   AdminLoadingState,
   AdminEmptyState,
   AdminFormActions,
-} from '@/components/admin';
-import { useSkillCategories, useSkillCategoryLookup } from '@/hooks/useSkillCategories';
+} from "@/components/admin";
+import { useSkillCategories, useSkillCategoryLookup } from "@/hooks/useSkillCategories";
 
 interface Skill {
   id: string;
@@ -35,12 +59,14 @@ type FormData = {
   category_id: string;
 };
 
-const initialFormData: FormData = { name: '', description: '', category_id: '' };
+const initialFormData: FormData = { name: "", description: "", category_id: "" };
 
 export default function SkillsManagement() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
-  const { data: skillCategories = [], isLoading: categoriesLoading } = useSkillCategories({ activeOnly: false });
+  const { data: skillCategories = [], isLoading: categoriesLoading } = useSkillCategories({
+    activeOnly: false,
+  });
   const { lookup: categoryLookup } = useSkillCategoryLookup();
 
   const {
@@ -57,15 +83,15 @@ export default function SkillsManagement() {
     handleDelete,
     isSubmitting,
   } = useAdminCRUD<Skill, FormData>({
-    tableName: 'skills',
-    queryKey: 'skills',
-    entityName: 'Skill',
-    orderBy: 'name',
+    tableName: "skills",
+    queryKey: "skills",
+    entityName: "Skill",
+    orderBy: "name",
     initialFormData,
     mapItemToForm: (skill) => ({
       name: skill.name,
-      description: skill.description || '',
-      category_id: skill.category_id || '',
+      description: skill.description || "",
+      category_id: skill.category_id || "",
     }),
   });
 
@@ -73,25 +99,28 @@ export default function SkillsManagement() {
     if (skill.category_id && categoryLookup[skill.category_id]) {
       return categoryLookup[skill.category_id].name;
     }
-    return skill.category || 'Uncategorized'; // Fallback to legacy field
+    return skill.category || "Uncategorized"; // Fallback to legacy field
   };
 
-  const filteredSkills = skills.filter(skill => {
+  const filteredSkills = skills.filter((skill) => {
     const categoryName = getCategoryName(skill);
     return (
       skill.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       categoryName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (skill.description?.toLowerCase().includes(searchQuery.toLowerCase()))
+      skill.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
 
   // Group skills by category
-  const skillsByCategory = filteredSkills.reduce((acc, skill) => {
-    const categoryName = getCategoryName(skill);
-    if (!acc[categoryName]) acc[categoryName] = [];
-    acc[categoryName].push(skill);
-    return acc;
-  }, {} as Record<string, Skill[]>);
+  const skillsByCategory = filteredSkills.reduce(
+    (acc, skill) => {
+      const categoryName = getCategoryName(skill);
+      if (!acc[categoryName]) acc[categoryName] = [];
+      acc[categoryName].push(skill);
+      return acc;
+    },
+    {} as Record<string, Skill[]>,
+  );
 
   const categoryNames = Object.keys(skillsByCategory).sort();
 
@@ -131,14 +160,14 @@ export default function SkillsManagement() {
                   <CommandItem
                     value=""
                     onSelect={() => {
-                      setFormData({ ...formData, category_id: '' });
+                      setFormData({ ...formData, category_id: "" });
                       setCategoryPopoverOpen(false);
                     }}
                   >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4",
-                        !formData.category_id ? "opacity-100" : "opacity-0"
+                        !formData.category_id ? "opacity-100" : "opacity-0",
                       )}
                     />
                     Uncategorized
@@ -155,7 +184,7 @@ export default function SkillsManagement() {
                       <Check
                         className={cn(
                           "mr-2 h-4 w-4",
-                          formData.category_id === cat.id ? "opacity-100" : "opacity-0"
+                          formData.category_id === cat.id ? "opacity-100" : "opacity-0",
                         )}
                       />
                       <span className="flex items-center gap-2">
@@ -167,7 +196,9 @@ export default function SkillsManagement() {
                         )}
                         {cat.name}
                         {!cat.is_active && (
-                          <Badge variant="secondary" className="text-xs ml-1">inactive</Badge>
+                          <Badge variant="secondary" className="text-xs ml-1">
+                            inactive
+                          </Badge>
                         )}
                       </span>
                     </CommandItem>
@@ -209,7 +240,7 @@ export default function SkillsManagement() {
         description="Define skills that can be awarded to users upon module completion"
         isDialogOpen={isDialogOpen}
         onDialogOpenChange={setIsDialogOpen}
-        dialogTitle={editingItem ? 'Edit Skill' : 'Add New Skill'}
+        dialogTitle={editingItem ? "Edit Skill" : "Add New Skill"}
         dialogContent={formContent}
         createButtonLabel="Add Skill"
         actions={<Sparkles className="h-8 w-8 text-primary" />}
@@ -262,15 +293,11 @@ export default function SkillsManagement() {
                         <TableRow key={skill.id}>
                           <TableCell className="font-medium">{skill.name}</TableCell>
                           <TableCell className="text-muted-foreground">
-                            {skill.description || '—'}
+                            {skill.description || "—"}
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => openEdit(skill)}
-                              >
+                              <Button size="icon" variant="ghost" onClick={() => openEdit(skill)}>
                                 <Pencil className="h-4 w-4" />
                               </Button>
                               <AlertDialog>
@@ -283,7 +310,8 @@ export default function SkillsManagement() {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Skill</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete "{skill.name}"? This will also remove it from any modules and users who have acquired it.
+                                      Are you sure you want to delete "{skill.name}"? This will also
+                                      remove it from any modules and users who have acquired it.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>

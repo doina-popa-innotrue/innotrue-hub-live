@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Trash2, ExternalLink } from 'lucide-react';
-import { InterestsValuesForm } from '@/components/profile/InterestsValuesForm';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Plus, Trash2, ExternalLink } from "lucide-react";
+import { InterestsValuesForm } from "@/components/profile/InterestsValuesForm";
 
 interface Education {
   institution: string;
@@ -38,15 +38,17 @@ export default function PersonalProfile() {
   const [desiredTargetRole, setDesiredTargetRole] = useState<string | null>(null);
   const [education, setEducation] = useState<Education[]>([]);
   const [certifications, setCertifications] = useState<Certification[]>([]);
-  const [externalCredentialProfiles, setExternalCredentialProfiles] = useState<ExternalCredentialProfile[]>([]);
+  const [externalCredentialProfiles, setExternalCredentialProfiles] = useState<
+    ExternalCredentialProfile[]
+  >([]);
   const [futureVision, setFutureVision] = useState("");
   const [constraints, setConstraints] = useState("");
-  
+
   // Privacy settings
   const [futureVisionPrivate, setFutureVisionPrivate] = useState(false);
   const [constraintsPrivate, setConstraintsPrivate] = useState(false);
   const [desiredTargetRolePrivate, setDesiredTargetRolePrivate] = useState(false);
-  
+
   // Social links state
   const [linkedinUrl, setLinkedinUrl] = useState<string | null>(null);
   const [xUrl, setXUrl] = useState<string | null>(null);
@@ -54,7 +56,7 @@ export default function PersonalProfile() {
   const [youtubeUrl, setYoutubeUrl] = useState<string | null>(null);
   const [instagramUrl, setInstagramUrl] = useState<string | null>(null);
   const [facebookUrl, setFacebookUrl] = useState<string | null>(null);
-  
+
   // External credential profile state
   const [savingExternalCredentials, setSavingExternalCredentials] = useState(false);
 
@@ -68,9 +70,9 @@ export default function PersonalProfile() {
     if (!user) return;
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
         .single();
 
       if (error) throw error;
@@ -79,7 +81,9 @@ export default function PersonalProfile() {
       setDesiredTargetRole(data.desired_target_role || null);
       setEducation((data.education as unknown as Education[]) || []);
       setCertifications((data.certifications as unknown as Certification[]) || []);
-      setExternalCredentialProfiles((data.external_credential_profiles as unknown as ExternalCredentialProfile[]) || []);
+      setExternalCredentialProfiles(
+        (data.external_credential_profiles as unknown as ExternalCredentialProfile[]) || [],
+      );
       setFutureVision(data.future_vision || "");
       setConstraints(data.constraints || "");
       setFutureVisionPrivate(data.future_vision_private || false);
@@ -93,9 +97,9 @@ export default function PersonalProfile() {
       setFacebookUrl(data.facebook_url || null);
     } catch (error: any) {
       toast({
-        title: 'Error loading profile',
+        title: "Error loading profile",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -107,7 +111,7 @@ export default function PersonalProfile() {
       setSaving(true);
 
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update({
           bio,
           desired_target_role: desiredTargetRole,
@@ -119,19 +123,19 @@ export default function PersonalProfile() {
           education: education as any,
           certifications: certifications as any,
         })
-        .eq('id', user?.id ?? '');
+        .eq("id", user?.id ?? "");
 
       if (error) throw error;
 
       toast({
-        title: 'Profile updated',
-        description: 'Your personal profile has been saved successfully.',
+        title: "Profile updated",
+        description: "Your personal profile has been saved successfully.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error saving profile',
+        title: "Error saving profile",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -143,7 +147,7 @@ export default function PersonalProfile() {
       setSavingSocialLinks(true);
 
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update({
           linkedin_url: linkedinUrl || null,
           x_url: xUrl || null,
@@ -152,19 +156,19 @@ export default function PersonalProfile() {
           instagram_url: instagramUrl || null,
           facebook_url: facebookUrl || null,
         })
-        .eq('id', user?.id ?? '');
+        .eq("id", user?.id ?? "");
 
       if (error) throw error;
 
       toast({
-        title: 'Social links updated',
-        description: 'Your social media links have been saved.',
+        title: "Social links updated",
+        description: "Your social media links have been saved.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error saving social links',
+        title: "Error saving social links",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setSavingSocialLinks(false);
@@ -176,23 +180,23 @@ export default function PersonalProfile() {
       setSavingExternalCredentials(true);
 
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update({
           external_credential_profiles: externalCredentialProfiles as any,
         })
-        .eq('id', user?.id ?? '');
+        .eq("id", user?.id ?? "");
 
       if (error) throw error;
 
       toast({
-        title: 'External credentials updated',
-        description: 'Your external credential profiles have been saved.',
+        title: "External credentials updated",
+        description: "Your external credential profiles have been saved.",
       });
     } catch (error: any) {
       toast({
-        title: 'Error saving external credentials',
+        title: "Error saving external credentials",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setSavingExternalCredentials(false);
@@ -200,21 +204,28 @@ export default function PersonalProfile() {
   };
 
   const addExternalCredentialProfile = () => {
-    setExternalCredentialProfiles([...externalCredentialProfiles, { platform: '', profile_url: '' }]);
+    setExternalCredentialProfiles([
+      ...externalCredentialProfiles,
+      { platform: "", profile_url: "" },
+    ]);
   };
 
   const removeExternalCredentialProfile = (index: number) => {
     setExternalCredentialProfiles(externalCredentialProfiles.filter((_, i) => i !== index));
   };
 
-  const updateExternalCredentialProfile = (index: number, field: keyof ExternalCredentialProfile, value: string) => {
+  const updateExternalCredentialProfile = (
+    index: number,
+    field: keyof ExternalCredentialProfile,
+    value: string,
+  ) => {
     const newProfiles = [...externalCredentialProfiles];
     newProfiles[index] = { ...newProfiles[index], [field]: value };
     setExternalCredentialProfiles(newProfiles);
   };
 
   const addEducation = () => {
-    setEducation([...education, { institution: '', degree: '', year: '' }]);
+    setEducation([...education, { institution: "", degree: "", year: "" }]);
   };
 
   const removeEducation = (index: number) => {
@@ -228,7 +239,7 @@ export default function PersonalProfile() {
   };
 
   const addCertification = () => {
-    setCertifications([...certifications, { name: '', url: '', platform: '' }]);
+    setCertifications([...certifications, { name: "", url: "", platform: "" }]);
   };
 
   const removeCertification = (index: number) => {
@@ -267,7 +278,7 @@ export default function PersonalProfile() {
             <Textarea
               id="bio"
               placeholder="Share your background, interests, and goals..."
-              value={bio || ''}
+              value={bio || ""}
               onChange={(e) => setBio(e.target.value)}
               rows={4}
             />
@@ -277,7 +288,7 @@ export default function PersonalProfile() {
             <Input
               id="desired-target-role"
               placeholder="e.g., Chief Technology Officer, VP of Engineering..."
-              value={desiredTargetRole || ''}
+              value={desiredTargetRole || ""}
               onChange={(e) => setDesiredTargetRole(e.target.value)}
             />
             <p className="text-sm text-muted-foreground">
@@ -289,7 +300,10 @@ export default function PersonalProfile() {
                 checked={desiredTargetRolePrivate}
                 onCheckedChange={setDesiredTargetRolePrivate}
               />
-              <Label htmlFor="desired-target-role-private" className="text-sm text-muted-foreground">
+              <Label
+                htmlFor="desired-target-role-private"
+                className="text-sm text-muted-foreground"
+              >
                 Keep private (only visible to you and admins)
               </Label>
             </div>
@@ -304,7 +318,8 @@ export default function PersonalProfile() {
               rows={5}
             />
             <p className="text-sm text-muted-foreground">
-              This helps personalize AI insights and course recommendations to align with your aspirations
+              This helps personalize AI insights and course recommendations to align with your
+              aspirations
             </p>
             <div className="flex items-center gap-2 mt-2">
               <Switch
@@ -327,7 +342,8 @@ export default function PersonalProfile() {
               rows={5}
             />
             <p className="text-sm text-muted-foreground">
-              Share any personal circumstances that may affect your availability, mobility, or decision-making. This helps AI provide more realistic and considerate recommendations.
+              Share any personal circumstances that may affect your availability, mobility, or
+              decision-making. This helps AI provide more realistic and considerate recommendations.
             </p>
             <div className="flex items-center gap-2 mt-2">
               <Switch
@@ -354,7 +370,7 @@ export default function PersonalProfile() {
             <Input
               id="linkedin"
               placeholder="https://linkedin.com/in/username"
-              value={linkedinUrl || ''}
+              value={linkedinUrl || ""}
               onChange={(e) => setLinkedinUrl(e.target.value)}
             />
           </div>
@@ -363,7 +379,7 @@ export default function PersonalProfile() {
             <Input
               id="x"
               placeholder="https://x.com/username"
-              value={xUrl || ''}
+              value={xUrl || ""}
               onChange={(e) => setXUrl(e.target.value)}
             />
           </div>
@@ -372,7 +388,7 @@ export default function PersonalProfile() {
             <Input
               id="bluesky"
               placeholder="https://bsky.app/profile/username"
-              value={blueskyUrl || ''}
+              value={blueskyUrl || ""}
               onChange={(e) => setBlueskyUrl(e.target.value)}
             />
           </div>
@@ -381,7 +397,7 @@ export default function PersonalProfile() {
             <Input
               id="youtube"
               placeholder="https://youtube.com/@username"
-              value={youtubeUrl || ''}
+              value={youtubeUrl || ""}
               onChange={(e) => setYoutubeUrl(e.target.value)}
             />
           </div>
@@ -390,7 +406,7 @@ export default function PersonalProfile() {
             <Input
               id="instagram"
               placeholder="https://instagram.com/username"
-              value={instagramUrl || ''}
+              value={instagramUrl || ""}
               onChange={(e) => setInstagramUrl(e.target.value)}
             />
           </div>
@@ -399,7 +415,7 @@ export default function PersonalProfile() {
             <Input
               id="facebook"
               placeholder="https://facebook.com/username"
-              value={facebookUrl || ''}
+              value={facebookUrl || ""}
               onChange={(e) => setFacebookUrl(e.target.value)}
             />
           </div>
@@ -415,7 +431,9 @@ export default function PersonalProfile() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>External Credentials</CardTitle>
-              <CardDescription>Link to your credential profiles (Credly, Trailhead, Accredible, etc.)</CardDescription>
+              <CardDescription>
+                Link to your credential profiles (Credly, Trailhead, Accredible, etc.)
+              </CardDescription>
             </div>
             <Button onClick={addExternalCredentialProfile} size="sm">
               <Plus className="h-4 w-4 mr-2" />
@@ -440,7 +458,9 @@ export default function PersonalProfile() {
                 <Label>Platform</Label>
                 <Input
                   value={profile.platform}
-                  onChange={(e) => updateExternalCredentialProfile(index, 'platform', e.target.value)}
+                  onChange={(e) =>
+                    updateExternalCredentialProfile(index, "platform", e.target.value)
+                  }
                   placeholder="e.g., Credly, Trailhead, Accredible"
                 />
               </div>
@@ -449,7 +469,9 @@ export default function PersonalProfile() {
                 <div className="flex gap-2">
                   <Input
                     value={profile.profile_url}
-                    onChange={(e) => updateExternalCredentialProfile(index, 'profile_url', e.target.value)}
+                    onChange={(e) =>
+                      updateExternalCredentialProfile(index, "profile_url", e.target.value)
+                    }
                     placeholder="https://www.credly.com/users/..."
                   />
                   {profile.profile_url && (
@@ -465,7 +487,8 @@ export default function PersonalProfile() {
           ))}
           {externalCredentialProfiles.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">
-              No external credential profiles added yet. Add your Credly, Trailhead, or other credential profiles to showcase your achievements.
+              No external credential profiles added yet. Add your Credly, Trailhead, or other
+              credential profiles to showcase your achievements.
             </p>
           )}
           {externalCredentialProfiles.length > 0 && (
@@ -495,11 +518,7 @@ export default function PersonalProfile() {
             <div key={index} className="space-y-3 p-4 border rounded-lg">
               <div className="flex justify-between items-start">
                 <h4 className="font-medium">Education {index + 1}</h4>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeEducation(index)}
-                >
+                <Button variant="ghost" size="sm" onClick={() => removeEducation(index)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -507,7 +526,7 @@ export default function PersonalProfile() {
                 <Label>Institution</Label>
                 <Input
                   value={edu.institution}
-                  onChange={(e) => updateEducation(index, 'institution', e.target.value)}
+                  onChange={(e) => updateEducation(index, "institution", e.target.value)}
                   placeholder="University name"
                 />
               </div>
@@ -515,7 +534,7 @@ export default function PersonalProfile() {
                 <Label>Degree</Label>
                 <Input
                   value={edu.degree}
-                  onChange={(e) => updateEducation(index, 'degree', e.target.value)}
+                  onChange={(e) => updateEducation(index, "degree", e.target.value)}
                   placeholder="Bachelor of Science"
                 />
               </div>
@@ -523,7 +542,7 @@ export default function PersonalProfile() {
                 <Label>Year</Label>
                 <Input
                   value={edu.year}
-                  onChange={(e) => updateEducation(index, 'year', e.target.value)}
+                  onChange={(e) => updateEducation(index, "year", e.target.value)}
                   placeholder="2020"
                 />
               </div>
@@ -550,11 +569,7 @@ export default function PersonalProfile() {
             <div key={index} className="space-y-3 p-4 border rounded-lg">
               <div className="flex justify-between items-start">
                 <h4 className="font-medium">Certification {index + 1}</h4>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeCertification(index)}
-                >
+                <Button variant="ghost" size="sm" onClick={() => removeCertification(index)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -562,7 +577,7 @@ export default function PersonalProfile() {
                 <Label>Certification Name</Label>
                 <Input
                   value={cert.name}
-                  onChange={(e) => updateCertification(index, 'name', e.target.value)}
+                  onChange={(e) => updateCertification(index, "name", e.target.value)}
                   placeholder="AWS Certified Solutions Architect"
                 />
               </div>
@@ -570,7 +585,7 @@ export default function PersonalProfile() {
                 <Label>Platform</Label>
                 <Input
                   value={cert.platform}
-                  onChange={(e) => updateCertification(index, 'platform', e.target.value)}
+                  onChange={(e) => updateCertification(index, "platform", e.target.value)}
                   placeholder="Credly, Accredible, etc."
                 />
               </div>
@@ -578,7 +593,7 @@ export default function PersonalProfile() {
                 <Label>Badge URL</Label>
                 <Input
                   value={cert.url}
-                  onChange={(e) => updateCertification(index, 'url', e.target.value)}
+                  onChange={(e) => updateCertification(index, "url", e.target.value)}
                   placeholder="https://..."
                 />
               </div>

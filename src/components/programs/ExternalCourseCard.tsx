@@ -55,12 +55,7 @@ export function ExternalCourseCard({ course, onEdit, onDelete }: ExternalCourseC
             <p className="text-sm text-muted-foreground">{course.provider}</p>
           </div>
           <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onEdit(course)}
-              className="h-8 w-8"
-            >
+            <Button variant="ghost" size="icon" onClick={() => onEdit(course)} className="h-8 w-8">
               <Pencil className="h-4 w-4" />
             </Button>
             <Button

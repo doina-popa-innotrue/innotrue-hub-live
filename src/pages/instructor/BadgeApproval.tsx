@@ -1,23 +1,23 @@
-import { useState, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from 'sonner';
-import { Award, Check, Loader2, User, ExternalLink, AlertTriangle, FileText } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
-import { useBulkScenarioCertificationCheck } from '@/hooks/useScenarioCertification';
+import { useState, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
+import { Award, Check, Loader2, User, ExternalLink, AlertTriangle, FileText } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { useBulkScenarioCertificationCheck } from "@/hooks/useScenarioCertification";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -25,13 +25,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface PendingBadge {
   id: string;
@@ -74,16 +69,16 @@ export default function BadgeApproval() {
   const [credentialUrls, setCredentialUrls] = useState<Record<string, Record<string, string>>>({});
 
   const { data: pendingBadges, isLoading } = useQuery({
-    queryKey: ['pending-badge-approvals', user?.id],
+    queryKey: ["pending-badge-approvals", user?.id],
     queryFn: async () => {
       if (!user) return [];
 
       // Get programs where user is primary instructor
       const { data: instructorPrograms } = await supabase
-        .from('program_instructors')
-        .select('program_id')
-        .eq('instructor_id', user.id)
-        .eq('is_primary', true);
+        .from("program_instructors")
+        .select("program_id")
+        .eq("instructor_id", user.id)
+        .eq("is_primary", true);
 
       if (!instructorPrograms || instructorPrograms.length === 0) return [];
 
@@ -91,8 +86,9 @@ export default function BadgeApproval() {
 
       // Get pending badges for those programs
       const { data, error } = await supabase
-        .from('client_badges')
-        .select(`
+        .from("client_badges")
+        .select(
+          `
           *,
           profiles!client_badges_user_id_fkey (
             id,
@@ -113,24 +109,25 @@ export default function BadgeApproval() {
             image_path,
             program_badge_credentials (*)
           )
-        `)
-        .eq('status', 'pending_approval')
-        .in('program_badges.program_id', programIds);
+        `,
+        )
+        .eq("status", "pending_approval")
+        .in("program_badges.program_id", programIds);
 
       if (error) throw error;
 
       // Filter to only include badges where program_badges is not null
       return (data || []).filter(
-        (badge) => badge.program_badges !== null
+        (badge) => badge.program_badges !== null,
       ) as unknown as PendingBadge[];
     },
     enabled: !!user,
   });
 
   // Check certification requirements for all pending badges
-  const enrollmentIds = useMemo(() => 
-    pendingBadges?.map(b => b.enrollment_id).filter(Boolean) ?? [],
-    [pendingBadges]
+  const enrollmentIds = useMemo(
+    () => pendingBadges?.map((b) => b.enrollment_id).filter(Boolean) ?? [],
+    [pendingBadges],
   );
   const { data: certificationChecks } = useBulkScenarioCertificationCheck(enrollmentIds);
 
@@ -140,13 +137,13 @@ export default function BadgeApproval() {
 
       // Update badges to approved/issued status
       const { error: updateError } = await supabase
-        .from('client_badges')
+        .from("client_badges")
         .update({
-          status: 'issued',
+          status: "issued",
           issued_at: now,
           issued_by: user?.id,
         })
-        .in('id', badgeIds);
+        .in("id", badgeIds);
 
       if (updateError) throw updateError;
 
@@ -174,7 +171,7 @@ export default function BadgeApproval() {
 
       if (credentialsToInsert.length > 0) {
         const { error: credError } = await supabase
-          .from('client_badge_credentials')
+          .from("client_badge_credentials")
           .insert(credentialsToInsert);
 
         if (credError) throw credError;
@@ -185,11 +182,11 @@ export default function BadgeApproval() {
         const badge = pendingBadges?.find((b) => b.id === badgeId);
         if (badge) {
           try {
-            await supabase.functions.invoke('send-notification-email', {
+            await supabase.functions.invoke("send-notification-email", {
               body: {
                 userId: badge.user_id,
                 name: badge.profiles.name,
-                type: 'badge_issued',
+                type: "badge_issued",
                 timestamp: now,
                 programName: badge.client_enrollments.programs.name,
                 badgeName: badge.program_badges.name,
@@ -197,7 +194,7 @@ export default function BadgeApproval() {
               },
             });
           } catch (emailError) {
-            console.error('Failed to send badge notification email:', emailError);
+            console.error("Failed to send badge notification email:", emailError);
           }
         }
       }
@@ -205,7 +202,7 @@ export default function BadgeApproval() {
       return badgeIds.length;
     },
     onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: ['pending-badge-approvals'] });
+      queryClient.invalidateQueries({ queryKey: ["pending-badge-approvals"] });
       toast.success(`${count} badge(s) issued successfully`);
       setSelectedBadges(new Set());
       setApprovalDialogOpen(false);
@@ -220,7 +217,7 @@ export default function BadgeApproval() {
     // Check if this badge can be selected (all scenarios must be evaluated)
     const certCheck = certificationChecks?.get(enrollmentId);
     if (checked && certCheck && !certCheck.all_requirements_met) {
-      toast.error('Cannot select: Required scenarios are not yet evaluated');
+      toast.error("Cannot select: Required scenarios are not yet evaluated");
       return;
     }
 
@@ -238,11 +235,12 @@ export default function BadgeApproval() {
       setSelectedBadges(new Set());
     } else {
       // Only select badges that have all requirements met
-      const eligibleBadges = pendingBadges?.filter(b => {
-        const certCheck = certificationChecks?.get(b.enrollment_id);
-        return !certCheck || certCheck.all_requirements_met;
-      }) || [];
-      setSelectedBadges(new Set(eligibleBadges.map(b => b.id)));
+      const eligibleBadges =
+        pendingBadges?.filter((b) => {
+          const certCheck = certificationChecks?.get(b.enrollment_id);
+          return !certCheck || certCheck.all_requirements_met;
+        }) || [];
+      setSelectedBadges(new Set(eligibleBadges.map((b) => b.id)));
     }
   };
 
@@ -267,7 +265,7 @@ export default function BadgeApproval() {
   };
 
   const getPublicUrl = (path: string) => {
-    const { data } = supabase.storage.from('program-logos').getPublicUrl(path);
+    const { data } = supabase.storage.from("program-logos").getPublicUrl(path);
     return data.publicUrl;
   };
 
@@ -339,9 +337,9 @@ export default function BadgeApproval() {
                   {pendingBadges.map((badge) => {
                     const certCheck = certificationChecks?.get(badge.enrollment_id);
                     const hasBlockingScenarios = certCheck && !certCheck.all_requirements_met;
-                    
+
                     return (
-                      <TableRow key={badge.id} className={hasBlockingScenarios ? 'opacity-70' : ''}>
+                      <TableRow key={badge.id} className={hasBlockingScenarios ? "opacity-70" : ""}>
                         <TableCell>
                           <Checkbox
                             checked={selectedBadges.has(badge.id)}
@@ -354,7 +352,7 @@ export default function BadgeApproval() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4 text-muted-foreground" />
-                            {badge.profiles?.name || 'Unknown'}
+                            {badge.profiles?.name || "Unknown"}
                           </div>
                         </TableCell>
                         <TableCell>{badge.client_enrollments?.programs?.name}</TableCell>
@@ -415,9 +413,7 @@ export default function BadgeApproval() {
                             ))}
                           </div>
                         </TableCell>
-                        <TableCell>
-                          {new Date(badge.created_at).toLocaleDateString()}
-                        </TableCell>
+                        <TableCell>{new Date(badge.created_at).toLocaleDateString()}</TableCell>
                       </TableRow>
                     );
                   })}
@@ -458,17 +454,18 @@ export default function BadgeApproval() {
                     <CardContent className="space-y-3">
                       {badge.program_badges.program_badge_credentials.map((cred) => (
                         <div key={cred.id} className="space-y-1">
-                          <Label htmlFor={`url-${badge.id}-${cred.id}`} className="flex items-center gap-2">
+                          <Label
+                            htmlFor={`url-${badge.id}-${cred.id}`}
+                            className="flex items-center gap-2"
+                          >
                             <ExternalLink className="h-3 w-3" />
                             {cred.service_display_name || cred.service_name} URL
                           </Label>
                           <Input
                             id={`url-${badge.id}-${cred.id}`}
                             placeholder="https://..."
-                            value={credentialUrls[badge.id]?.[cred.id] || ''}
-                            onChange={(e) =>
-                              updateCredentialUrl(badge.id, cred.id, e.target.value)
-                            }
+                            value={credentialUrls[badge.id]?.[cred.id] || ""}
+                            onChange={(e) => updateCredentialUrl(badge.id, cred.id, e.target.value)}
                           />
                         </div>
                       ))}
@@ -486,9 +483,7 @@ export default function BadgeApproval() {
               onClick={() => approveBadgesMutation.mutate(Array.from(selectedBadges))}
               disabled={approveBadgesMutation.isPending}
             >
-              {approveBadgesMutation.isPending && (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              )}
+              {approveBadgesMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Issue {selectedBadges.size} Badge(s)
             </Button>
           </DialogFooter>

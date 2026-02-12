@@ -1,14 +1,14 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import type {
   ParagraphResponse,
   ParagraphEvaluation,
   ParagraphQuestionScore,
   DomainScoreAggregate,
   ScenarioScoreSummary,
-} from '@/types/scenarios';
+} from "@/types/scenarios";
 
 // ============================================================================
 // Response Hooks
@@ -16,13 +16,13 @@ import type {
 
 export function useParagraphResponses(assignmentId: string | undefined) {
   return useQuery({
-    queryKey: ['paragraph-responses', assignmentId],
+    queryKey: ["paragraph-responses", assignmentId],
     queryFn: async () => {
       if (!assignmentId) return [];
       const { data, error } = await supabase
-        .from('paragraph_responses')
-        .select('*')
-        .eq('assignment_id', assignmentId);
+        .from("paragraph_responses")
+        .select("*")
+        .eq("assignment_id", assignmentId);
 
       if (error) throw error;
       return data as ParagraphResponse[];
@@ -35,21 +35,28 @@ export function useParagraphResponseMutations(assignmentId: string) {
   const queryClient = useQueryClient();
 
   const upsertMutation = useMutation({
-    mutationFn: async ({ paragraphId, responseText }: { paragraphId: string; responseText: string }) => {
-      const { error } = await supabase
-        .from('paragraph_responses')
-        .upsert({
+    mutationFn: async ({
+      paragraphId,
+      responseText,
+    }: {
+      paragraphId: string;
+      responseText: string;
+    }) => {
+      const { error } = await supabase.from("paragraph_responses").upsert(
+        {
           assignment_id: assignmentId,
           paragraph_id: paragraphId,
           response_text: responseText,
-        }, {
-          onConflict: 'assignment_id,paragraph_id',
-        });
+        },
+        {
+          onConflict: "assignment_id,paragraph_id",
+        },
+      );
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['paragraph-responses', assignmentId] });
+      queryClient.invalidateQueries({ queryKey: ["paragraph-responses", assignmentId] });
     },
   });
 
@@ -62,13 +69,13 @@ export function useParagraphResponseMutations(assignmentId: string) {
 
 export function useParagraphEvaluations(assignmentId: string | undefined) {
   return useQuery({
-    queryKey: ['paragraph-evaluations', assignmentId],
+    queryKey: ["paragraph-evaluations", assignmentId],
     queryFn: async () => {
       if (!assignmentId) return [];
       const { data, error } = await supabase
-        .from('paragraph_evaluations')
-        .select('*')
-        .eq('assignment_id', assignmentId);
+        .from("paragraph_evaluations")
+        .select("*")
+        .eq("assignment_id", assignmentId);
 
       if (error) throw error;
       return data as ParagraphEvaluation[];
@@ -84,24 +91,25 @@ export function useParagraphEvaluationMutations(assignmentId: string) {
 
   const upsertMutation = useMutation({
     mutationFn: async ({ paragraphId, feedback }: { paragraphId: string; feedback: string }) => {
-      const { error } = await supabase
-        .from('paragraph_evaluations')
-        .upsert({
+      const { error } = await supabase.from("paragraph_evaluations").upsert(
+        {
           assignment_id: assignmentId,
           paragraph_id: paragraphId,
           feedback,
           evaluator_id: user?.id,
-        }, {
-          onConflict: 'assignment_id,paragraph_id',
-        });
+        },
+        {
+          onConflict: "assignment_id,paragraph_id",
+        },
+      );
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['paragraph-evaluations', assignmentId] });
+      queryClient.invalidateQueries({ queryKey: ["paragraph-evaluations", assignmentId] });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -114,12 +122,13 @@ export function useParagraphEvaluationMutations(assignmentId: string) {
 
 export function useParagraphQuestionScores(assignmentId: string | undefined) {
   return useQuery({
-    queryKey: ['paragraph-question-scores', assignmentId],
+    queryKey: ["paragraph-question-scores", assignmentId],
     queryFn: async () => {
       if (!assignmentId) return [];
       const { data, error } = await supabase
-        .from('paragraph_question_scores')
-        .select(`
+        .from("paragraph_question_scores")
+        .select(
+          `
           *,
           capability_domain_questions(
             id,
@@ -127,8 +136,9 @@ export function useParagraphQuestionScores(assignmentId: string | undefined) {
             domain_id,
             capability_domains(id, name)
           )
-        `)
-        .eq('assignment_id', assignmentId);
+        `,
+        )
+        .eq("assignment_id", assignmentId);
 
       if (error) throw error;
       return data as ParagraphQuestionScore[];
@@ -143,26 +153,35 @@ export function useParagraphQuestionScoreMutations(assignmentId: string) {
   const { user } = useAuth();
 
   const upsertMutation = useMutation({
-    mutationFn: async ({ paragraphId, questionId, score }: { paragraphId: string; questionId: string; score: number }) => {
-      const { error } = await supabase
-        .from('paragraph_question_scores')
-        .upsert({
+    mutationFn: async ({
+      paragraphId,
+      questionId,
+      score,
+    }: {
+      paragraphId: string;
+      questionId: string;
+      score: number;
+    }) => {
+      const { error } = await supabase.from("paragraph_question_scores").upsert(
+        {
           assignment_id: assignmentId,
           paragraph_id: paragraphId,
           question_id: questionId,
           score,
           evaluator_id: user?.id,
-        }, {
-          onConflict: 'assignment_id,paragraph_id,question_id',
-        });
+        },
+        {
+          onConflict: "assignment_id,paragraph_id,question_id",
+        },
+      );
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['paragraph-question-scores', assignmentId] });
+      queryClient.invalidateQueries({ queryKey: ["paragraph-question-scores", assignmentId] });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -186,7 +205,7 @@ export function useScenarioScoreSummary(assignmentId: string | undefined, rating
   for (const score of scores) {
     const domainId = score.capability_domain_questions?.domain_id;
     const domainName = score.capability_domain_questions?.capability_domains?.name;
-    
+
     if (!domainId || !domainName) continue;
 
     if (!domainScores.has(domainId)) {

@@ -1,20 +1,42 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { useClientGroupPeerAssessments, PeerAssessmentSnapshot } from '@/hooks/useGroupPeerAssessments';
-import { 
-  ClipboardCheck, Loader2, ArrowRight, Clock, CheckCircle, 
-  Send, Inbox, ExternalLink 
-} from 'lucide-react';
-import { format } from 'date-fns';
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import {
+  useClientGroupPeerAssessments,
+  PeerAssessmentSnapshot,
+} from "@/hooks/useGroupPeerAssessments";
+import {
+  ClipboardCheck,
+  Loader2,
+  ArrowRight,
+  Clock,
+  CheckCircle,
+  Send,
+  Inbox,
+  ExternalLink,
+} from "lucide-react";
+import { format } from "date-fns";
 
 interface GroupPeerAssessmentsPanelProps {
   groupId: string;
@@ -26,16 +48,16 @@ interface GroupPeerAssessmentsPanelProps {
   currentUserId: string;
 }
 
-export function GroupPeerAssessmentsPanel({ 
-  groupId, 
-  members, 
-  currentUserId 
+export function GroupPeerAssessmentsPanel({
+  groupId,
+  members,
+  currentUserId,
 }: GroupPeerAssessmentsPanelProps) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('given');
+  const [activeTab, setActiveTab] = useState("given");
   const [isAssessDialogOpen, setIsAssessDialogOpen] = useState(false);
-  const [selectedMemberId, setSelectedMemberId] = useState('');
-  const [selectedAssessmentId, setSelectedAssessmentId] = useState('');
+  const [selectedMemberId, setSelectedMemberId] = useState("");
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState("");
 
   const {
     availableAssessments,
@@ -57,24 +79,34 @@ export function GroupPeerAssessmentsPanel({
         subjectUserId: selectedMemberId,
       });
 
-      toast({ title: 'Assessment started' });
+      toast({ title: "Assessment started" });
       setIsAssessDialogOpen(false);
-      setSelectedMemberId('');
-      setSelectedAssessmentId('');
+      setSelectedMemberId("");
+      setSelectedAssessmentId("");
 
       // Navigate to the assessment form - use correct route path
       window.location.href = `/capabilities/${selectedAssessmentId}?snapshotId=${result.id}`;
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'completed':
-        return <Badge variant="default" className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Completed</Badge>;
-      case 'draft':
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />In Progress</Badge>;
+      case "completed":
+        return (
+          <Badge variant="default" className="bg-green-500">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Completed
+          </Badge>
+        );
+      case "draft":
+        return (
+          <Badge variant="secondary">
+            <Clock className="h-3 w-3 mr-1" />
+            In Progress
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -128,17 +160,17 @@ export function GroupPeerAssessmentsPanel({
           </TabsList>
 
           <TabsContent value="given" className="mt-4">
-            <AssessmentList 
-              assessments={givenAssessments || []} 
-              type="given" 
+            <AssessmentList
+              assessments={givenAssessments || []}
+              type="given"
               getStatusBadge={getStatusBadge}
             />
           </TabsContent>
 
           <TabsContent value="received" className="mt-4">
-            <AssessmentList 
-              assessments={receivedAssessments || []} 
-              type="received" 
+            <AssessmentList
+              assessments={receivedAssessments || []}
+              type="received"
               getStatusBadge={getStatusBadge}
             />
           </TabsContent>
@@ -167,7 +199,9 @@ export function GroupPeerAssessmentsPanel({
                       <div className="flex items-center gap-2">
                         <Avatar className="h-5 w-5">
                           <AvatarImage src={member.avatar_url || undefined} />
-                          <AvatarFallback className="text-xs">{member.name?.charAt(0)}</AvatarFallback>
+                          <AvatarFallback className="text-xs">
+                            {member.name?.charAt(0)}
+                          </AvatarFallback>
                         </Avatar>
                         {member.name}
                       </div>
@@ -196,9 +230,11 @@ export function GroupPeerAssessmentsPanel({
             <Button variant="outline" onClick={() => setIsAssessDialogOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleStartAssessment} 
-              disabled={!selectedMemberId || !selectedAssessmentId || createPeerAssessment.isPending}
+            <Button
+              onClick={handleStartAssessment}
+              disabled={
+                !selectedMemberId || !selectedAssessmentId || createPeerAssessment.isPending
+              }
             >
               {createPeerAssessment.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Start Assessment
@@ -212,7 +248,7 @@ export function GroupPeerAssessmentsPanel({
 
 interface AssessmentListProps {
   assessments: PeerAssessmentSnapshot[];
-  type: 'given' | 'received';
+  type: "given" | "received";
   getStatusBadge: (status: string) => JSX.Element;
 }
 
@@ -222,7 +258,7 @@ function AssessmentList({ assessments, type, getStatusBadge }: AssessmentListPro
       <Card>
         <CardContent className="py-8 text-center text-muted-foreground">
           <p className="text-sm">
-            {type === 'given' 
+            {type === "given"
               ? "You haven't given any peer assessments yet"
               : "You haven't received any peer assessments yet"}
           </p>
@@ -234,7 +270,7 @@ function AssessmentList({ assessments, type, getStatusBadge }: AssessmentListPro
   return (
     <div className="space-y-2">
       {assessments.map((assessment) => {
-        const person = type === 'given' ? assessment.user : assessment.evaluator;
+        const person = type === "given" ? assessment.user : assessment.evaluator;
         const assessmentId = assessment.assessment_id;
 
         return (
@@ -247,16 +283,17 @@ function AssessmentList({ assessments, type, getStatusBadge }: AssessmentListPro
                 </Avatar>
                 <div className="min-w-0">
                   <p className="font-medium text-sm truncate">
-                    {type === 'given' ? `Assessment of ${person?.name}` : `From ${person?.name}`}
+                    {type === "given" ? `Assessment of ${person?.name}` : `From ${person?.name}`}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {assessment.assessment?.name} • {format(new Date(assessment.created_at), 'MMM d, yyyy')}
+                    {assessment.assessment?.name} •{" "}
+                    {format(new Date(assessment.created_at), "MMM d, yyyy")}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
                 {getStatusBadge(assessment.status)}
-                {assessment.status === 'draft' && type === 'given' && assessmentId && (
+                {assessment.status === "draft" && type === "given" && assessmentId && (
                   <Link to={`/capabilities/${assessmentId}?snapshotId=${assessment.id}`}>
                     <Button variant="outline" size="sm">
                       Continue
@@ -264,7 +301,7 @@ function AssessmentList({ assessments, type, getStatusBadge }: AssessmentListPro
                     </Button>
                   </Link>
                 )}
-                {assessment.status === 'completed' && assessmentId && (
+                {assessment.status === "completed" && assessmentId && (
                   <Link to={`/capabilities/${assessmentId}?snapshotId=${assessment.id}`}>
                     <Button variant="ghost" size="sm">
                       <ExternalLink className="h-4 w-4" />

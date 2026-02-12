@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UserAddOnAccess {
   featureKeys: Set<string>;
@@ -25,20 +25,21 @@ export function useUserAddOns(): UserAddOnAccess {
 
   const fetchUserAddOnFeatures = async () => {
     if (!user) return;
-    
+
     try {
       // Get user's active add-ons (not expired)
       const { data: userAddOns, error: userAddOnsError } = await supabase
-        .from('user_add_ons')
-        .select('add_on_id, expires_at')
-        .eq('user_id', user.id);
+        .from("user_add_ons")
+        .select("add_on_id, expires_at")
+        .eq("user_id", user.id);
 
       if (userAddOnsError) throw userAddOnsError;
 
       // Filter out expired add-ons
-      const activeAddOnIds = userAddOns
-        ?.filter((ua) => !ua.expires_at || new Date(ua.expires_at) > new Date())
-        .map((ua) => ua.add_on_id) || [];
+      const activeAddOnIds =
+        userAddOns
+          ?.filter((ua) => !ua.expires_at || new Date(ua.expires_at) > new Date())
+          .map((ua) => ua.add_on_id) || [];
 
       if (activeAddOnIds.length === 0) {
         setFeatureKeys(new Set());
@@ -48,14 +49,16 @@ export function useUserAddOns(): UserAddOnAccess {
 
       // Get features for those add-ons
       const { data: addOnFeatures, error: featuresError } = await supabase
-        .from('add_on_features')
-        .select(`
+        .from("add_on_features")
+        .select(
+          `
           feature_id,
           features!inner (
             key
           )
-        `)
-        .in('add_on_id', activeAddOnIds);
+        `,
+        )
+        .in("add_on_id", activeAddOnIds);
 
       if (featuresError) throw featuresError;
 
@@ -68,7 +71,7 @@ export function useUserAddOns(): UserAddOnAccess {
 
       setFeatureKeys(keys);
     } catch (error) {
-      console.error('Error fetching user add-on features:', error);
+      console.error("Error fetching user add-on features:", error);
       setFeatureKeys(new Set());
     } finally {
       setIsLoading(false);

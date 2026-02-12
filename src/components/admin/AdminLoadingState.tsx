@@ -1,5 +1,5 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
 interface AdminLoadingStateProps {
   message?: string;
@@ -13,9 +13,7 @@ export function AdminLoadingState({ message }: AdminLoadingStateProps) {
     <Card>
       <CardContent className="flex flex-col items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        {message && (
-          <p className="text-muted-foreground mt-4">{message}</p>
-        )}
+        {message && <p className="text-muted-foreground mt-4">{message}</p>}
       </CardContent>
     </Card>
   );

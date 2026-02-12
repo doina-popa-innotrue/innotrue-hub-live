@@ -15,7 +15,7 @@ export default function LearningAnalytics() {
   const { toast } = useToast();
   if (!user) return null;
   const { hasFeature } = useEntitlements();
-  const hasExternalCourses = hasFeature('external_courses');
+  const hasExternalCourses = hasFeature("external_courses");
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [analytics, setAnalytics] = useState<any>({
@@ -45,7 +45,8 @@ export default function LearningAnalytics() {
       // Fetch enrollments
       const { data: enrollments } = await supabase
         .from("client_enrollments")
-        .select(`
+        .select(
+          `
           id,
           status,
           start_date,
@@ -61,13 +62,15 @@ export default function LearningAnalytics() {
               )
             )
           )
-        `)
+        `,
+        )
         .eq("client_user_id", user.id);
 
       // Fetch module progress
       const { data: moduleProgress } = await supabase
         .from("module_progress")
-        .select(`
+        .select(
+          `
           id,
           status,
           completed_at,
@@ -82,13 +85,15 @@ export default function LearningAnalytics() {
               )
             )
           )
-        `)
-        .in("enrollment_id", enrollments?.map(e => e.id) || []);
+        `,
+        )
+        .in("enrollment_id", enrollments?.map((e) => e.id) || []);
 
       // Fetch external courses
       const { data: externalCourses } = await supabase
         .from("external_courses")
-        .select(`
+        .select(
+          `
           id,
           title,
           provider,
@@ -103,47 +108,52 @@ export default function LearningAnalytics() {
               category
             )
           )
-        `)
+        `,
+        )
         .eq("user_id", user.id);
 
       const totalPrograms = enrollments?.length || 0;
-      const completedPrograms = enrollments?.filter(e => e.status === "completed").length || 0;
+      const completedPrograms = enrollments?.filter((e) => e.status === "completed").length || 0;
       const totalModules = moduleProgress?.length || 0;
-      const completedModules = moduleProgress?.filter(m => m.status === "completed").length || 0;
+      const completedModules = moduleProgress?.filter((m) => m.status === "completed").length || 0;
       const totalExternalCourses = externalCourses?.length || 0;
-      const completedExternalCourses = externalCourses?.filter(c => c.status === "completed").length || 0;
+      const completedExternalCourses =
+        externalCourses?.filter((c) => c.status === "completed").length || 0;
 
       // Collect unique skills
       const skillsMap = new Map();
-      
+
       // From completed modules
-      moduleProgress?.filter(m => m.status === "completed").forEach(m => {
-        m.program_modules?.module_skills?.forEach(ms => {
-          const skill = ms.skills;
-          if (skill && !skillsMap.has(skill.id)) {
-            skillsMap.set(skill.id, skill);
-          }
+      moduleProgress
+        ?.filter((m) => m.status === "completed")
+        .forEach((m) => {
+          m.program_modules?.module_skills?.forEach((ms) => {
+            const skill = ms.skills;
+            if (skill && !skillsMap.has(skill.id)) {
+              skillsMap.set(skill.id, skill);
+            }
+          });
         });
-      });
 
       // From completed external courses
-      externalCourses?.filter(c => c.status === "completed").forEach(c => {
-        c.external_course_skills?.forEach(ecs => {
-          const skill = ecs.skills;
-          if (skill && !skillsMap.has(skill.id)) {
-            skillsMap.set(skill.id, skill);
-          }
+      externalCourses
+        ?.filter((c) => c.status === "completed")
+        .forEach((c) => {
+          c.external_course_skills?.forEach((ecs) => {
+            const skill = ecs.skills;
+            if (skill && !skillsMap.has(skill.id)) {
+              skillsMap.set(skill.id, skill);
+            }
+          });
         });
-      });
 
       const skillsAcquired = Array.from(skillsMap.values());
 
       // Calculate overall stats
       const enrollmentsWithProgress = await Promise.all(
         (enrollments || []).map(async (e) => {
-          const modulesForProgram = moduleProgress?.filter(
-            (m) => enrollments?.find((en) => en.id === m.id)
-          ) || [];
+          const modulesForProgram =
+            moduleProgress?.filter((m) => enrollments?.find((en) => en.id === m.id)) || [];
           const totalModules = modulesForProgram.length;
           const completedModules = modulesForProgram.filter((m) => m.status === "completed").length;
           const progress = totalModules > 0 ? (completedModules / totalModules) * 100 : 0;
@@ -157,12 +167,11 @@ export default function LearningAnalytics() {
             totalModules,
             start_date: e.start_date,
           };
-        })
+        }),
       );
 
-      const completionRate = totalPrograms > 0 
-        ? Math.round((completedPrograms / totalPrograms) * 100) 
-        : 0;
+      const completionRate =
+        totalPrograms > 0 ? Math.round((completedPrograms / totalPrograms) * 100) : 0;
 
       setAnalytics({
         totalPrograms,
@@ -173,9 +182,7 @@ export default function LearningAnalytics() {
         completedExternalCourses,
         skillsAcquired,
         completionRate,
-        averageProgress: totalModules > 0 
-          ? Math.round((completedModules / totalModules) * 100) 
-          : 0,
+        averageProgress: totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0,
         programs: enrollmentsWithProgress,
         externalCoursesData: externalCourses || [],
       });
@@ -206,7 +213,7 @@ export default function LearningAnalytics() {
         userEmail,
         analytics.programs,
         analytics.externalCoursesData,
-        analytics.skillsAcquired
+        analytics.skillsAcquired,
       );
 
       toast({
@@ -320,9 +327,7 @@ export default function LearningAnalytics() {
             <div className="text-2xl font-bold">
               {analytics.completedPrograms}/{analytics.totalPrograms}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              InnoTrue programs
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">InnoTrue programs</p>
           </CardContent>
         </Card>
 
@@ -336,9 +341,7 @@ export default function LearningAnalytics() {
               <div className="text-2xl font-bold">
                 {analytics.completedExternalCourses}/{analytics.externalCourses}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Completed external courses
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">Completed external courses</p>
             </CardContent>
           </Card>
         )}
@@ -359,9 +362,7 @@ export default function LearningAnalytics() {
                 <Badge key={skill.id} variant="secondary" className="text-sm">
                   {skill.name}
                   {skill.category && (
-                    <span className="ml-1 text-xs text-muted-foreground">
-                      • {skill.category}
-                    </span>
+                    <span className="ml-1 text-xs text-muted-foreground">• {skill.category}</span>
                   )}
                 </Badge>
               ))}
@@ -385,19 +386,20 @@ export default function LearningAnalytics() {
                   {analytics.totalPrograms - analytics.completedPrograms}
                 </span>
               </div>
-              <Progress 
-                value={analytics.totalPrograms > 0 
-                  ? ((analytics.totalPrograms - analytics.completedPrograms) / analytics.totalPrograms) * 100 
-                  : 0
-                } 
+              <Progress
+                value={
+                  analytics.totalPrograms > 0
+                    ? ((analytics.totalPrograms - analytics.completedPrograms) /
+                        analytics.totalPrograms) *
+                      100
+                    : 0
+                }
               />
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Completed Programs</span>
-                <span className="text-sm text-muted-foreground">
-                  {analytics.completedPrograms}
-                </span>
+                <span className="text-sm text-muted-foreground">{analytics.completedPrograms}</span>
               </div>
               <Progress value={analytics.completionRate} />
             </div>
@@ -418,11 +420,14 @@ export default function LearningAnalytics() {
                     {analytics.externalCourses - analytics.completedExternalCourses}
                   </span>
                 </div>
-                <Progress 
-                  value={analytics.externalCourses > 0 
-                    ? ((analytics.externalCourses - analytics.completedExternalCourses) / analytics.externalCourses) * 100 
-                    : 0
-                  } 
+                <Progress
+                  value={
+                    analytics.externalCourses > 0
+                      ? ((analytics.externalCourses - analytics.completedExternalCourses) /
+                          analytics.externalCourses) *
+                        100
+                      : 0
+                  }
                 />
               </div>
               <div>
@@ -432,11 +437,12 @@ export default function LearningAnalytics() {
                     {analytics.completedExternalCourses}
                   </span>
                 </div>
-                <Progress 
-                  value={analytics.externalCourses > 0 
-                    ? (analytics.completedExternalCourses / analytics.externalCourses) * 100 
-                    : 0
-                  } 
+                <Progress
+                  value={
+                    analytics.externalCourses > 0
+                      ? (analytics.completedExternalCourses / analytics.externalCourses) * 100
+                      : 0
+                  }
                 />
               </div>
             </CardContent>

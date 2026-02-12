@@ -9,7 +9,19 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Target, Plus, Clock, CheckCircle2, TrendingUp, FileEdit, Users, ChevronDown, ChevronRight, User, UserCheck } from "lucide-react";
+import {
+  Target,
+  Plus,
+  Clock,
+  CheckCircle2,
+  TrendingUp,
+  FileEdit,
+  Users,
+  ChevronDown,
+  ChevronRight,
+  User,
+  UserCheck,
+} from "lucide-react";
 import { format } from "date-fns";
 import { FeatureGate } from "@/components/FeatureGate";
 
@@ -73,7 +85,8 @@ export default function CapabilityAssessments() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("capability_assessments")
-        .select(`
+        .select(
+          `
           id,
           name,
           description,
@@ -86,7 +99,8 @@ export default function CapabilityAssessments() {
           assessment_mode,
           programs:program_id (id, name),
           assessment_families:family_id (id, name, description, slug)
-        `)
+        `,
+        )
         .eq("is_active", true)
         .in("assessment_mode", ["self", "both"])
         .order("name");
@@ -107,7 +121,7 @@ export default function CapabilityAssessments() {
         .eq("client_user_id", user.id)
         .eq("status", "active");
       if (error) throw error;
-      return data?.map(e => e.program_id) || [];
+      return data?.map((e) => e.program_id) || [];
     },
     enabled: !!user,
   });
@@ -117,10 +131,11 @@ export default function CapabilityAssessments() {
     queryKey: ["my-capability-snapshots-all"],
     queryFn: async () => {
       if (!user) return [];
-      
+
       const { data, error } = await supabase
         .from("capability_snapshots")
-        .select(`
+        .select(
+          `
           id,
           assessment_id,
           title,
@@ -130,12 +145,13 @@ export default function CapabilityAssessments() {
           is_self_assessment,
           evaluator_id,
           notes
-        `)
+        `,
+        )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      
+
       // Fetch evaluator names separately if needed
       const snapshotsWithEvaluators = await Promise.all(
         data.map(async (s) => {
@@ -148,22 +164,24 @@ export default function CapabilityAssessments() {
             return { ...s, evaluator };
           }
           return { ...s, evaluator: null };
-        })
+        }),
       );
-      
+
       return snapshotsWithEvaluators as Snapshot[];
     },
     enabled: !!user,
   });
 
   const getSnapshotsForAssessment = (assessmentId: string, selfOnly?: boolean) => {
-    return snapshots?.filter((s) => {
-      const matchAssessment = s.assessment_id === assessmentId && s.status === 'completed';
-      if (selfOnly !== undefined) {
-        return matchAssessment && s.is_self_assessment === selfOnly;
-      }
-      return matchAssessment;
-    }) || [];
+    return (
+      snapshots?.filter((s) => {
+        const matchAssessment = s.assessment_id === assessmentId && s.status === "completed";
+        if (selfOnly !== undefined) {
+          return matchAssessment && s.is_self_assessment === selfOnly;
+        }
+        return matchAssessment;
+      }) || []
+    );
   };
 
   const getLatestSnapshot = (assessmentId: string, selfOnly?: boolean) => {
@@ -172,22 +190,28 @@ export default function CapabilityAssessments() {
   };
 
   const getDraftForAssessment = (assessmentId: string) => {
-    return snapshots?.find((s) => s.assessment_id === assessmentId && s.status === 'draft' && s.is_self_assessment);
+    return snapshots?.find(
+      (s) => s.assessment_id === assessmentId && s.status === "draft" && s.is_self_assessment,
+    );
   };
 
   const toggleFamily = (familyId: string) => {
-    setExpandedFamilies(prev => ({ ...prev, [familyId]: !prev[familyId] }));
+    setExpandedFamilies((prev) => ({ ...prev, [familyId]: !prev[familyId] }));
   };
 
   // Group assessments by family
-  const groupedAssessments = assessments?.reduce((acc, assessment) => {
-    const familyId = assessment.family_id || 'ungrouped';
-    if (!acc[familyId]) {
-      acc[familyId] = [];
-    }
-    acc[familyId].push(assessment);
-    return acc;
-  }, {} as Record<string, Assessment[]>) || {};
+  const groupedAssessments =
+    assessments?.reduce(
+      (acc, assessment) => {
+        const familyId = assessment.family_id || "ungrouped";
+        if (!acc[familyId]) {
+          acc[familyId] = [];
+        }
+        acc[familyId].push(assessment);
+        return acc;
+      },
+      {} as Record<string, Assessment[]>,
+    ) || {};
 
   const renderAssessmentCard = (assessment: Assessment) => {
     const selfSnapshots = getSnapshotsForAssessment(assessment.id, true);
@@ -205,9 +229,7 @@ export default function CapabilityAssessments() {
               <CardTitle className="text-lg">{assessment.name}</CardTitle>
               <div className="flex flex-wrap gap-1 mt-1">
                 {assessment.programs && (
-                  <Badge variant="outline">
-                    {(assessment.programs as { name: string }).name}
-                  </Badge>
+                  <Badge variant="outline">{(assessment.programs as { name: string }).name}</Badge>
                 )}
                 {assessment.assessment_families && (
                   <Badge variant="secondary" className="text-xs">
@@ -242,7 +264,7 @@ export default function CapabilityAssessments() {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <User className="h-4 w-4 text-blue-500" />
               <span>
-                {selfSnapshots.length} self-assessment{selfSnapshots.length !== 1 ? 's' : ''} 
+                {selfSnapshots.length} self-assessment{selfSnapshots.length !== 1 ? "s" : ""}
                 {latestSelfSnapshot?.completed_at && (
                   <span className="ml-1">
                     (latest: {format(new Date(latestSelfSnapshot.completed_at), "MMM d, yyyy")})
@@ -250,11 +272,13 @@ export default function CapabilityAssessments() {
                 )}
               </span>
             </div>
-          ) : !draftSnapshot && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              <span>Self-assessment not started</span>
-            </div>
+          ) : (
+            !draftSnapshot && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4" />
+                <span>Self-assessment not started</span>
+              </div>
+            )
           )}
 
           {/* Evaluator assessment status */}
@@ -262,7 +286,8 @@ export default function CapabilityAssessments() {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <UserCheck className="h-4 w-4 text-green-500" />
               <span>
-                {evaluatorSnapshots.length} evaluator assessment{evaluatorSnapshots.length !== 1 ? 's' : ''}
+                {evaluatorSnapshots.length} evaluator assessment
+                {evaluatorSnapshots.length !== 1 ? "s" : ""}
                 {latestEvalSnapshot?.completed_at && (
                   <span className="ml-1">
                     (latest: {format(new Date(latestEvalSnapshot.completed_at), "MMM d, yyyy")})
@@ -303,35 +328,46 @@ export default function CapabilityAssessments() {
 
     // If user has existing results, bypass the feature gate
     const hasExistingResults = totalSnapshots > 0 || draftSnapshot;
-    
+
     // If assessment is linked to a program the user is enrolled in, grant access
-    const isEnrolledInProgram = assessment.program_id && userEnrollments?.includes(assessment.program_id);
-    
+    const isEnrolledInProgram =
+      assessment.program_id && userEnrollments?.includes(assessment.program_id);
+
     // Wrap in FeatureGate if feature_key is set AND user has no existing results AND not enrolled in program
     if (assessment.feature_key && !hasExistingResults && !isEnrolledInProgram) {
       return (
-        <FeatureGate key={assessment.id} featureKey={assessment.feature_key} fallback={
-          <Card className="opacity-60">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">{assessment.name}</CardTitle>
-                  <Badge variant="outline" className="mt-1">Premium</Badge>
+        <FeatureGate
+          key={assessment.id}
+          featureKey={assessment.feature_key}
+          fallback={
+            <Card className="opacity-60">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-lg">{assessment.name}</CardTitle>
+                    <Badge variant="outline" className="mt-1">
+                      Premium
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-              {assessment.description && (
-                <CardDescription className="line-clamp-2 mt-2">
-                  {assessment.description}
-                </CardDescription>
-              )}
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full" onClick={() => navigate('/subscription')}>
-                Upgrade to Access
-              </Button>
-            </CardContent>
-          </Card>
-        }>
+                {assessment.description && (
+                  <CardDescription className="line-clamp-2 mt-2">
+                    {assessment.description}
+                  </CardDescription>
+                )}
+              </CardHeader>
+              <CardContent>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => navigate("/subscription")}
+                >
+                  Upgrade to Access
+                </Button>
+              </CardContent>
+            </Card>
+          }
+        >
           {content}
         </FeatureGate>
       );
@@ -354,8 +390,8 @@ export default function CapabilityAssessments() {
   }
 
   const hasFamilies = families && families.length > 0;
-  const ungroupedAssessments = groupedAssessments['ungrouped'] || [];
-  const familyIds = Object.keys(groupedAssessments).filter(id => id !== 'ungrouped');
+  const ungroupedAssessments = groupedAssessments["ungrouped"] || [];
+  const familyIds = Object.keys(groupedAssessments).filter((id) => id !== "ungrouped");
 
   return (
     <div className="space-y-6">
@@ -384,28 +420,38 @@ export default function CapabilityAssessments() {
       ) : hasFamilies && familyIds.length > 0 ? (
         <div className="space-y-6">
           {/* Grouped by family */}
-          {familyIds.map(familyId => {
-            const family = families?.find(f => f.id === familyId);
+          {familyIds.map((familyId) => {
+            const family = families?.find((f) => f.id === familyId);
             const familyAssessments = groupedAssessments[familyId];
             const isExpanded = expandedFamilies[familyId] !== false; // default expanded
 
             if (!family || !familyAssessments?.length) return null;
 
             return (
-              <Collapsible key={familyId} open={isExpanded} onOpenChange={() => toggleFamily(familyId)}>
+              <Collapsible
+                key={familyId}
+                open={isExpanded}
+                onOpenChange={() => toggleFamily(familyId)}
+              >
                 <CollapsibleTrigger className="flex items-center gap-2 w-full text-left hover:bg-muted/50 p-2 rounded-lg transition-colors">
-                  {isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                  {isExpanded ? (
+                    <ChevronDown className="h-5 w-5" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5" />
+                  )}
                   <div className="flex-1">
                     <h2 className="text-xl font-semibold">{family.name}</h2>
                     {family.description && (
                       <p className="text-sm text-muted-foreground">{family.description}</p>
                     )}
                   </div>
-                  <Badge variant="outline">{familyAssessments.length} assessment{familyAssessments.length !== 1 ? 's' : ''}</Badge>
+                  <Badge variant="outline">
+                    {familyAssessments.length} assessment{familyAssessments.length !== 1 ? "s" : ""}
+                  </Badge>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-4">
-                    {familyAssessments.map(assessment => renderAssessmentCard(assessment))}
+                    {familyAssessments.map((assessment) => renderAssessmentCard(assessment))}
                   </div>
                 </CollapsibleContent>
               </Collapsible>
@@ -415,18 +461,16 @@ export default function CapabilityAssessments() {
           {/* Ungrouped assessments */}
           {ungroupedAssessments.length > 0 && (
             <div className="space-y-4">
-              {familyIds.length > 0 && (
-                <h2 className="text-xl font-semibold">Other Assessments</h2>
-              )}
+              {familyIds.length > 0 && <h2 className="text-xl font-semibold">Other Assessments</h2>}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {ungroupedAssessments.map(assessment => renderAssessmentCard(assessment))}
+                {ungroupedAssessments.map((assessment) => renderAssessmentCard(assessment))}
               </div>
             </div>
           )}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {assessments?.map(assessment => renderAssessmentCard(assessment))}
+          {assessments?.map((assessment) => renderAssessmentCard(assessment))}
         </div>
       )}
     </div>

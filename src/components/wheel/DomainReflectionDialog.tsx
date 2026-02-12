@@ -1,20 +1,24 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Plus, Pencil, Trash2, Lock, Crown } from 'lucide-react';
-import { format } from 'date-fns';
-import { WheelCategory, WHEEL_OF_LIFE_CATEGORIES, WHEEL_CATEGORY_DESCRIPTIONS } from '@/lib/wheelOfLifeCategories';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, Plus, Pencil, Trash2, Lock, Crown } from "lucide-react";
+import { format } from "date-fns";
+import {
+  WheelCategory,
+  WHEEL_OF_LIFE_CATEGORIES,
+  WHEEL_CATEGORY_DESCRIPTIONS,
+} from "@/lib/wheelOfLifeCategories";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +28,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 
 interface DomainReflection {
   id: string;
@@ -43,9 +47,9 @@ interface DomainReflectionDialogProps {
   maxReflections?: number;
 }
 
-export function DomainReflectionDialog({ 
-  open, 
-  onOpenChange, 
+export function DomainReflectionDialog({
+  open,
+  onOpenChange,
   category,
   canAddReflection = true,
   isFreePlan = false,
@@ -59,7 +63,7 @@ export function DomainReflectionDialog({
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -73,19 +77,19 @@ export function DomainReflectionDialog({
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('wheel_domain_reflections' as any)
-        .select('id, content, created_at, updated_at')
-        .eq('user_id', user.id)
-        .eq('category', category)
-        .order('created_at', { ascending: false });
+        .from("wheel_domain_reflections" as any)
+        .select("id, content, created_at, updated_at")
+        .eq("user_id", user.id)
+        .eq("category", category)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setReflections((data as unknown as DomainReflection[]) || []);
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to load reflections',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load reflections",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -99,34 +103,32 @@ export function DomainReflectionDialog({
     try {
       if (editingId) {
         const { error } = await supabase
-          .from('wheel_domain_reflections' as any)
+          .from("wheel_domain_reflections" as any)
           .update({ content: content.trim(), updated_at: new Date().toISOString() })
-          .eq('id', editingId);
+          .eq("id", editingId);
 
         if (error) throw error;
-        toast({ title: 'Reflection updated' });
+        toast({ title: "Reflection updated" });
       } else {
-        const { error } = await supabase
-          .from('wheel_domain_reflections' as any)
-          .insert({
-            user_id: user.id,
-            category,
-            content: content.trim(),
-          });
+        const { error } = await supabase.from("wheel_domain_reflections" as any).insert({
+          user_id: user.id,
+          category,
+          content: content.trim(),
+        });
 
         if (error) throw error;
-        toast({ title: 'Reflection added' });
+        toast({ title: "Reflection added" });
       }
 
-      setContent('');
+      setContent("");
       setEditingId(null);
       setShowForm(false);
       fetchReflections();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to save reflection',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to save reflection",
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -144,19 +146,19 @@ export function DomainReflectionDialog({
 
     try {
       const { error } = await supabase
-        .from('wheel_domain_reflections' as any)
+        .from("wheel_domain_reflections" as any)
         .delete()
-        .eq('id', deleteId);
+        .eq("id", deleteId);
 
       if (error) throw error;
-      toast({ title: 'Reflection deleted' });
+      toast({ title: "Reflection deleted" });
       setDeleteId(null);
       fetchReflections();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to delete reflection',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to delete reflection",
+        variant: "destructive",
       });
     }
   };
@@ -164,7 +166,7 @@ export function DomainReflectionDialog({
   const handleCancel = () => {
     setShowForm(false);
     setEditingId(null);
-    setContent('');
+    setContent("");
   };
 
   return (
@@ -173,21 +175,22 @@ export function DomainReflectionDialog({
         <DialogContent className="max-w-2xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>{WHEEL_OF_LIFE_CATEGORIES[category]} Reflections</DialogTitle>
-            <DialogDescription>
-              {WHEEL_CATEGORY_DESCRIPTIONS[category]}
-            </DialogDescription>
+            <DialogDescription>{WHEEL_CATEGORY_DESCRIPTIONS[category]}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             {isFreePlan && (
               <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-500/10 p-3 rounded-lg border border-amber-500/30">
                 <Crown className="h-4 w-4" />
-                <span>Free plan: {currentReflectionCount}/{maxReflections} reflections used across all categories</span>
+                <span>
+                  Free plan: {currentReflectionCount}/{maxReflections} reflections used across all
+                  categories
+                </span>
               </div>
             )}
 
-            {!showForm && (
-              canAddReflection ? (
+            {!showForm &&
+              (canAddReflection ? (
                 <Button onClick={() => setShowForm(true)} variant="outline" className="w-full">
                   <Plus className="mr-2 h-4 w-4" />
                   Add Reflection
@@ -197,8 +200,7 @@ export function DomainReflectionDialog({
                   <Lock className="mr-2 h-4 w-4" />
                   Reflection Limit Reached
                 </Button>
-              )
-            )}
+              ))}
 
             {showForm && (
               <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
@@ -214,7 +216,7 @@ export function DomainReflectionDialog({
                   </Button>
                   <Button onClick={handleSave} disabled={saving || !content.trim()}>
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {editingId ? 'Update' : 'Save'}
+                    {editingId ? "Update" : "Save"}
                   </Button>
                 </div>
               </div>
@@ -235,8 +237,8 @@ export function DomainReflectionDialog({
                     <div key={reflection.id} className="p-4 border rounded-lg">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <span className="text-xs text-muted-foreground">
-                          {format(new Date(reflection.created_at), 'MMM d, yyyy h:mm a')}
-                          {reflection.updated_at !== reflection.created_at && ' (edited)'}
+                          {format(new Date(reflection.created_at), "MMM d, yyyy h:mm a")}
+                          {reflection.updated_at !== reflection.created_at && " (edited)"}
                         </span>
                         <div className="flex gap-1">
                           <Button

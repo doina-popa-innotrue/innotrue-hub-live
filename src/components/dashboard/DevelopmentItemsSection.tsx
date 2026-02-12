@@ -58,7 +58,8 @@ export function DevelopmentItemsSection() {
 
       const { data, error } = await supabase
         .from("development_items")
-        .select(`
+        .select(
+          `
           id,
           item_type,
           title,
@@ -68,7 +69,8 @@ export function DevelopmentItemsSection() {
             goal_id,
             goal:goals(id, title)
           )
-        `)
+        `,
+        )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(4);
@@ -167,7 +169,8 @@ export function DevelopmentItemsSection() {
                       )}
                     </div>
                     <p className="text-sm font-medium line-clamp-1">
-                      {item.title || (item.content ? item.content.substring(0, 50) + "..." : "Untitled")}
+                      {item.title ||
+                        (item.content ? item.content.substring(0, 50) + "..." : "Untitled")}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {format(parseISO(item.created_at), "MMM d, yyyy")}

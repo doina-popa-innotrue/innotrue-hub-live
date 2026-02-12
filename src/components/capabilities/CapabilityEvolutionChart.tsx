@@ -1,6 +1,12 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { User, UserCheck, Users } from "lucide-react";
 import {
@@ -62,25 +68,25 @@ interface CapabilityEvolutionChartProps {
   assessment: Assessment;
 }
 
-export function CapabilityEvolutionChart({ 
-  snapshots, 
-  selfSnapshots, 
+export function CapabilityEvolutionChart({
+  snapshots,
+  selfSnapshots,
   peerSnapshots,
-  instructorSnapshots, 
-  assessment 
+  instructorSnapshots,
+  assessment,
 }: CapabilityEvolutionChartProps) {
   const [compareMode, setCompareMode] = useState<"latest-vs-first" | "custom">("latest-vs-first");
   const [viewMode, setViewMode] = useState<"radar" | "line">("radar");
   const [sourceFilter, setSourceFilter] = useState<SnapshotSourceFilter>("all");
-  
+
   // Separate source filters for each comparison snapshot
   const [sourceFilter1, setSourceFilter1] = useState<SnapshotSourceFilter>("all");
   const [sourceFilter2, setSourceFilter2] = useState<SnapshotSourceFilter>("all");
-  
+
   // Custom selection states
   const [selectedSnapshot1, setSelectedSnapshot1] = useState<string>(snapshots[0]?.id || "");
   const [selectedSnapshot2, setSelectedSnapshot2] = useState<string>(
-    snapshots[snapshots.length - 1]?.id || ""
+    snapshots[snapshots.length - 1]?.id || "",
   );
 
   // Helper to get snapshots by filter
@@ -107,7 +113,11 @@ export function CapabilityEvolutionChart({
 
   // Generate snapshot label with type indicator
   const getSnapshotLabel = (s: Snapshot, includeDate = true) => {
-    const typePrefix = s.is_self_assessment ? "Self" : (s.evaluator_name ? `By ${s.evaluator_name}` : "Evaluator");
+    const typePrefix = s.is_self_assessment
+      ? "Self"
+      : s.evaluator_name
+        ? `By ${s.evaluator_name}`
+        : "Evaluator";
     const dateStr = includeDate ? format(new Date(s.completed_at), "MMM d, yyyy") : "";
     if (s.title) {
       return `${s.title} (${typePrefix})`;
@@ -168,17 +178,19 @@ export function CapabilityEvolutionChart({
 
   const getOverallChange = () => {
     if (!snapshot1 || !snapshot2) return 0;
-    
-    const current = assessment.capability_domains.reduce(
-      (sum, domain) => sum + getDomainAverageForSnapshot(snapshot1, domain),
-      0
-    ) / assessment.capability_domains.length;
-    
-    const previous = assessment.capability_domains.reduce(
-      (sum, domain) => sum + getDomainAverageForSnapshot(snapshot2, domain),
-      0
-    ) / assessment.capability_domains.length;
-    
+
+    const current =
+      assessment.capability_domains.reduce(
+        (sum, domain) => sum + getDomainAverageForSnapshot(snapshot1, domain),
+        0,
+      ) / assessment.capability_domains.length;
+
+    const previous =
+      assessment.capability_domains.reduce(
+        (sum, domain) => sum + getDomainAverageForSnapshot(snapshot2, domain),
+        0,
+      ) / assessment.capability_domains.length;
+
     return current - previous;
   };
 
@@ -293,8 +305,15 @@ export function CapabilityEvolutionChart({
                     </Select>
                   )}
                   {compareMode === "latest-vs-first" && filteredSnapshots1[0] && (
-                    <Badge variant={filteredSnapshots1[0].is_self_assessment ? "outline" : "secondary"} className="flex items-center gap-1">
-                      {filteredSnapshots1[0].is_self_assessment ? <User className="h-3 w-3" /> : <UserCheck className="h-3 w-3" />}
+                    <Badge
+                      variant={filteredSnapshots1[0].is_self_assessment ? "outline" : "secondary"}
+                      className="flex items-center gap-1"
+                    >
+                      {filteredSnapshots1[0].is_self_assessment ? (
+                        <User className="h-3 w-3" />
+                      ) : (
+                        <UserCheck className="h-3 w-3" />
+                      )}
                       {format(new Date(filteredSnapshots1[0].completed_at), "MMM d, yyyy")}
                     </Badge>
                   )}
@@ -352,19 +371,41 @@ export function CapabilityEvolutionChart({
                       </SelectContent>
                     </Select>
                   )}
-                  {compareMode === "latest-vs-first" && filteredSnapshots2[filteredSnapshots2.length - 1] && (
-                    <Badge variant={filteredSnapshots2[filteredSnapshots2.length - 1].is_self_assessment ? "outline" : "secondary"} className="flex items-center gap-1">
-                      {filteredSnapshots2[filteredSnapshots2.length - 1].is_self_assessment ? <User className="h-3 w-3" /> : <UserCheck className="h-3 w-3" />}
-                      {format(new Date(filteredSnapshots2[filteredSnapshots2.length - 1].completed_at), "MMM d, yyyy")}
-                    </Badge>
-                  )}
+                  {compareMode === "latest-vs-first" &&
+                    filteredSnapshots2[filteredSnapshots2.length - 1] && (
+                      <Badge
+                        variant={
+                          filteredSnapshots2[filteredSnapshots2.length - 1].is_self_assessment
+                            ? "outline"
+                            : "secondary"
+                        }
+                        className="flex items-center gap-1"
+                      >
+                        {filteredSnapshots2[filteredSnapshots2.length - 1].is_self_assessment ? (
+                          <User className="h-3 w-3" />
+                        ) : (
+                          <UserCheck className="h-3 w-3" />
+                        )}
+                        {format(
+                          new Date(filteredSnapshots2[filteredSnapshots2.length - 1].completed_at),
+                          "MMM d, yyyy",
+                        )}
+                      </Badge>
+                    )}
                 </div>
               </div>
 
-
               {filteredSnapshots.length < 2 ? (
                 <div className="flex items-center justify-center py-12 text-muted-foreground">
-                  Need at least 2 {sourceFilter === "self" ? "self-evaluation" : sourceFilter === "peer" ? "peer review" : sourceFilter === "instructor" ? "instructor/coach" : ""} snapshots to compare.
+                  Need at least 2{" "}
+                  {sourceFilter === "self"
+                    ? "self-evaluation"
+                    : sourceFilter === "peer"
+                      ? "peer review"
+                      : sourceFilter === "instructor"
+                        ? "instructor/coach"
+                        : ""}{" "}
+                  snapshots to compare.
                 </div>
               ) : (
                 <div className="h-[400px]">
@@ -462,8 +503,11 @@ export function CapabilityEvolutionChart({
           <CardTitle className="text-base">Domain Changes</CardTitle>
           <CardDescription>
             Comparing{" "}
-            {snapshot1?.title || (snapshot1 && format(new Date(snapshot1.completed_at), "MMM d, yyyy"))} to{" "}
-            {snapshot2?.title || (snapshot2 && format(new Date(snapshot2.completed_at), "MMM d, yyyy"))}
+            {snapshot1?.title ||
+              (snapshot1 && format(new Date(snapshot1.completed_at), "MMM d, yyyy"))}{" "}
+            to{" "}
+            {snapshot2?.title ||
+              (snapshot2 && format(new Date(snapshot2.completed_at), "MMM d, yyyy"))}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -480,14 +524,9 @@ export function CapabilityEvolutionChart({
                 >
                   <span className="font-medium text-sm">{domain.name}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      {current.toFixed(1)}
-                    </span>
+                    <span className="text-sm text-muted-foreground">{current.toFixed(1)}</span>
                     {change !== 0 && (
-                      <Badge
-                        variant={change > 0 ? "default" : "destructive"}
-                        className="text-xs"
-                      >
+                      <Badge variant={change > 0 ? "default" : "destructive"} className="text-xs">
                         {change > 0 ? "+" : ""}
                         {change.toFixed(1)}
                       </Badge>

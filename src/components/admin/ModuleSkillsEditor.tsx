@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { Sparkles, Search, Save } from 'lucide-react';
-import { useSkillCategoryLookup } from '@/hooks/useSkillCategories';
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { Sparkles, Search, Save } from "lucide-react";
+import { useSkillCategoryLookup } from "@/hooks/useSkillCategories";
 
 interface Skill {
   id: string;
@@ -27,30 +27,34 @@ interface ModuleSkillsEditorProps {
 export function ModuleSkillsEditor({ moduleId }: ModuleSkillsEditorProps) {
   const { toast } = useToast();
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const { lookup: categoryLookup } = useSkillCategoryLookup();
 
   const { data: skills = [], isLoading: skillsLoading } = useQuery({
-    queryKey: ['skills'],
+    queryKey: ["skills"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('skills')
-        .select('*')
-        .order('category', { ascending: true })
-        .order('name', { ascending: true });
+        .from("skills")
+        .select("*")
+        .order("category", { ascending: true })
+        .order("name", { ascending: true });
       if (error) throw error;
       return data as Skill[];
     },
   });
 
-  const { data: moduleSkills = [], isLoading: moduleSkillsLoading, refetch } = useQuery({
-    queryKey: ['module-skills', moduleId],
+  const {
+    data: moduleSkills = [],
+    isLoading: moduleSkillsLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ["module-skills", moduleId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('module_skills')
-        .select('skill_id')
-        .eq('module_id', moduleId);
+        .from("module_skills")
+        .select("skill_id")
+        .eq("module_id", moduleId);
       if (error) throw error;
       return data.map((ms) => ms.skill_id);
     },
@@ -62,9 +66,7 @@ export function ModuleSkillsEditor({ moduleId }: ModuleSkillsEditorProps) {
 
   const handleToggleSkill = (skillId: string) => {
     setSelectedSkillIds((prev) =>
-      prev.includes(skillId)
-        ? prev.filter((id) => id !== skillId)
-        : [...prev, skillId]
+      prev.includes(skillId) ? prev.filter((id) => id !== skillId) : [...prev, skillId],
     );
   };
 
@@ -73,32 +75,30 @@ export function ModuleSkillsEditor({ moduleId }: ModuleSkillsEditorProps) {
     try {
       // Delete existing module skills
       const { error: deleteError } = await supabase
-        .from('module_skills')
+        .from("module_skills")
         .delete()
-        .eq('module_id', moduleId);
-      
+        .eq("module_id", moduleId);
+
       if (deleteError) throw deleteError;
 
       // Insert new module skills
       if (selectedSkillIds.length > 0) {
-        const { error: insertError } = await supabase
-          .from('module_skills')
-          .insert(
-            selectedSkillIds.map((skillId) => ({
-              module_id: moduleId,
-              skill_id: skillId,
-            }))
-          );
+        const { error: insertError } = await supabase.from("module_skills").insert(
+          selectedSkillIds.map((skillId) => ({
+            module_id: moduleId,
+            skill_id: skillId,
+          })),
+        );
         if (insertError) throw insertError;
       }
 
       refetch();
-      toast({ title: 'Skills updated successfully' });
+      toast({ title: "Skills updated successfully" });
     } catch (error) {
       toast({
-        title: 'Error saving skills',
+        title: "Error saving skills",
         description: (error as Error).message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -109,7 +109,7 @@ export function ModuleSkillsEditor({ moduleId }: ModuleSkillsEditorProps) {
     if (skill.category_id && categoryLookup[skill.category_id]) {
       return categoryLookup[skill.category_id].name;
     }
-    return skill.category || 'Uncategorized';
+    return skill.category || "Uncategorized";
   };
 
   const filteredSkills = skills.filter((skill) => {
@@ -121,16 +121,20 @@ export function ModuleSkillsEditor({ moduleId }: ModuleSkillsEditorProps) {
   });
 
   // Group skills by category
-  const skillsByCategory = filteredSkills.reduce((acc, skill) => {
-    const category = getCategoryName(skill);
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(skill);
-    return acc;
-  }, {} as Record<string, Skill[]>);
+  const skillsByCategory = filteredSkills.reduce(
+    (acc, skill) => {
+      const category = getCategoryName(skill);
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(skill);
+      return acc;
+    },
+    {} as Record<string, Skill[]>,
+  );
 
   const categories = Object.keys(skillsByCategory).sort();
 
-  const hasChanges = JSON.stringify(selectedSkillIds.sort()) !== JSON.stringify(moduleSkills.sort());
+  const hasChanges =
+    JSON.stringify(selectedSkillIds.sort()) !== JSON.stringify(moduleSkills.sort());
 
   if (skillsLoading || moduleSkillsLoading) {
     return <div className="text-muted-foreground">Loading skills...</div>;
@@ -171,7 +175,9 @@ export function ModuleSkillsEditor({ moduleId }: ModuleSkillsEditorProps) {
 
             <ScrollArea className="h-[300px] border rounded-md p-4">
               {categories.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">No skills match your search.</p>
+                <p className="text-muted-foreground text-center py-4">
+                  No skills match your search.
+                </p>
               ) : (
                 <div className="space-y-4">
                   {categories.map((category) => (
@@ -198,9 +204,7 @@ export function ModuleSkillsEditor({ moduleId }: ModuleSkillsEditorProps) {
                                 {skill.name}
                               </label>
                               {skill.description && (
-                                <p className="text-xs text-muted-foreground">
-                                  {skill.description}
-                                </p>
+                                <p className="text-xs text-muted-foreground">{skill.description}</p>
                               )}
                             </div>
                           </div>
@@ -224,13 +228,9 @@ export function ModuleSkillsEditor({ moduleId }: ModuleSkillsEditorProps) {
               </div>
             )}
 
-            <Button
-              onClick={handleSave}
-              disabled={saving || !hasChanges}
-              className="w-full"
-            >
+            <Button onClick={handleSave} disabled={saving || !hasChanges} className="w-full">
               <Save className="mr-2 h-4 w-4" />
-              {saving ? 'Saving...' : hasChanges ? 'Save Changes' : 'No Changes'}
+              {saving ? "Saving..." : hasChanges ? "Save Changes" : "No Changes"}
             </Button>
           </>
         )}

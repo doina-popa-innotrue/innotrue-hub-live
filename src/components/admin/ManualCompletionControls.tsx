@@ -49,14 +49,12 @@ export function ManualCompletionControls({
         if (error) throw error;
       } else if (enrollmentId && moduleId) {
         // Create new progress record and mark as complete
-        const { error } = await supabase
-          .from("module_progress")
-          .insert({
-            enrollment_id: enrollmentId,
-            module_id: moduleId,
-            status: "completed",
-            completed_at: new Date().toISOString(),
-          });
+        const { error } = await supabase.from("module_progress").insert({
+          enrollment_id: enrollmentId,
+          module_id: moduleId,
+          status: "completed",
+          completed_at: new Date().toISOString(),
+        });
 
         if (error) throw error;
       } else {
@@ -216,8 +214,8 @@ export function ManualCompletionControls({
         <AlertDialogHeader>
           <AlertDialogTitle>Mark Program as Complete</AlertDialogTitle>
           <AlertDialogDescription>
-            This will mark all modules and the entire program as completed for this client. Are
-            you sure?
+            This will mark all modules and the entire program as completed for this client. Are you
+            sure?
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

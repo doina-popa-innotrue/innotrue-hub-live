@@ -1,14 +1,21 @@
-import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare, Calendar, ArrowLeft } from 'lucide-react';
-import { format } from 'date-fns';
+import { useParams, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Skeleton } from "@/components/ui/skeleton";
+import { MessageSquare, Calendar, ArrowLeft } from "lucide-react";
+import { format } from "date-fns";
 
 interface CheckInWithProfile {
   id: string;
@@ -26,21 +33,21 @@ export default function GroupCheckInDetail() {
   if (!groupId || !checkInId) return null;
 
   const { data: checkIn, isLoading } = useQuery<CheckInWithProfile | null>({
-    queryKey: ['group-check-in', checkInId],
+    queryKey: ["group-check-in", checkInId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('group_check_ins')
-        .select('*')
-        .eq('id', checkInId)
+        .from("group_check_ins")
+        .select("*")
+        .eq("id", checkInId)
         .single();
       if (error) throw error;
 
       // Fetch author profile
       if (data.user_id) {
         const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, name, avatar_url')
-          .eq('id', data.user_id)
+          .from("profiles")
+          .select("id, name, avatar_url")
+          .eq("id", data.user_id)
           .single();
         return { ...data, profile } as CheckInWithProfile;
       }
@@ -50,12 +57,12 @@ export default function GroupCheckInDetail() {
   });
 
   const { data: group } = useQuery({
-    queryKey: ['group-basic', groupId],
+    queryKey: ["group-basic", groupId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('groups')
-        .select('id, name')
-        .eq('id', groupId)
+        .from("groups")
+        .select("id, name")
+        .eq("id", groupId)
         .single();
       if (error) throw error;
       return data;
@@ -89,11 +96,16 @@ export default function GroupCheckInDetail() {
 
   const getMoodEmoji = (mood: string | null) => {
     switch (mood) {
-      case 'great': return '😊';
-      case 'good': return '🙂';
-      case 'okay': return '😐';
-      case 'struggling': return '😔';
-      default: return null;
+      case "great":
+        return "😊";
+      case "good":
+        return "🙂";
+      case "okay":
+        return "😐";
+      case "struggling":
+        return "😔";
+      default:
+        return null;
     }
   };
 
@@ -102,11 +114,15 @@ export default function GroupCheckInDetail() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild><Link to="/groups">Groups</Link></BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to="/groups">Groups</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink asChild><Link to={`/groups/${groupId}`}>{group?.name || 'Group'}</Link></BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to={`/groups/${groupId}`}>{group?.name || "Group"}</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -129,17 +145,17 @@ export default function GroupCheckInDetail() {
               {checkIn.profile && (
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={checkIn.profile.avatar_url || undefined} />
-                  <AvatarFallback>{checkIn.profile.name?.charAt(0) || '?'}</AvatarFallback>
+                  <AvatarFallback>{checkIn.profile.name?.charAt(0) || "?"}</AvatarFallback>
                 </Avatar>
               )}
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                  Check-in from {checkIn.profile?.name || 'Unknown'}
+                  Check-in from {checkIn.profile?.name || "Unknown"}
                 </CardTitle>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                   <Calendar className="h-4 w-4" />
-                  <span>{format(new Date(checkIn.check_in_date), 'PPP')}</span>
+                  <span>{format(new Date(checkIn.check_in_date), "PPP")}</span>
                 </div>
               </div>
             </div>

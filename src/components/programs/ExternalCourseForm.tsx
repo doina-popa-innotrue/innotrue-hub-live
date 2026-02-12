@@ -5,8 +5,22 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
@@ -45,19 +59,26 @@ interface ExternalCourseFormProps {
     is_public?: boolean;
   };
   userId: string;
-  onSubmit: (data: FormValues & { 
-    id?: string;
-    certificate_path?: string;
-    certificate_name?: string;
-  }) => Promise<void>;
+  onSubmit: (
+    data: FormValues & {
+      id?: string;
+      certificate_path?: string;
+      certificate_name?: string;
+    },
+  ) => Promise<void>;
   onCancel: () => void;
 }
 
-export function ExternalCourseForm({ initialData, userId, onSubmit, onCancel }: ExternalCourseFormProps) {
+export function ExternalCourseForm({
+  initialData,
+  userId,
+  onSubmit,
+  onCancel,
+}: ExternalCourseFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const [certificatePreview, setCertificatePreview] = useState<string | null>(
-    initialData?.certificate_path || null
+    initialData?.certificate_path || null,
   );
   const [uploadingCertificate, setUploadingCertificate] = useState(false);
 
@@ -81,15 +102,15 @@ export function ExternalCourseForm({ initialData, userId, onSubmit, onCancel }: 
     if (!file) return;
 
     // Validate file type
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    const validTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
     if (!validTypes.includes(file.type)) {
-      alert('Please upload a PDF or image file');
+      alert("Please upload a PDF or image file");
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5MB');
+      alert("File size must be less than 5MB");
       return;
     }
 
@@ -111,12 +132,12 @@ export function ExternalCourseForm({ initialData, userId, onSubmit, onCancel }: 
       // Upload certificate if a new file is selected
       if (certificateFile) {
         setUploadingCertificate(true);
-        const fileExt = certificateFile.name.split('.').pop();
+        const fileExt = certificateFile.name.split(".").pop();
         const fileName = `${Date.now()}.${fileExt}`;
         const filePath = `${userId}/certificates/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('external-course-certificates')
+          .from("external-course-certificates")
           .upload(filePath, certificateFile);
 
         if (uploadError) throw uploadError;
@@ -126,8 +147,8 @@ export function ExternalCourseForm({ initialData, userId, onSubmit, onCancel }: 
         setUploadingCertificate(false);
       }
 
-      await onSubmit({ 
-        ...data, 
+      await onSubmit({
+        ...data,
         id: initialData?.id,
         certificate_path: certificatePath,
         certificate_name: certificateName,
@@ -219,7 +240,7 @@ export function ExternalCourseForm({ initialData, userId, onSubmit, onCancel }: 
                         variant="outline"
                         className={cn(
                           "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
+                          !field.value && "text-muted-foreground",
                         )}
                       >
                         {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
@@ -254,7 +275,7 @@ export function ExternalCourseForm({ initialData, userId, onSubmit, onCancel }: 
                         variant="outline"
                         className={cn(
                           "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
+                          !field.value && "text-muted-foreground",
                         )}
                       >
                         {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
@@ -300,21 +321,16 @@ export function ExternalCourseForm({ initialData, userId, onSubmit, onCancel }: 
                 <span className="text-sm text-muted-foreground">
                   {certificateFile?.name || initialData?.certificate_name || "Certificate uploaded"}
                 </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={removeCertificate}
-                >
+                <Button type="button" variant="ghost" size="sm" onClick={removeCertificate}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              {certificatePreview.endsWith('.pdf') ? (
+              {certificatePreview.endsWith(".pdf") ? (
                 <div className="text-sm text-muted-foreground">PDF Certificate</div>
               ) : (
-                <img 
-                  src={certificatePreview} 
-                  alt="Certificate preview" 
+                <img
+                  src={certificatePreview}
+                  alt="Certificate preview"
                   className="max-h-32 object-contain"
                 />
               )}
@@ -323,9 +339,7 @@ export function ExternalCourseForm({ initialData, userId, onSubmit, onCancel }: 
             <div className="border-2 border-dashed rounded-md p-6 text-center">
               <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">
-                  Upload certificate (PDF or image)
-                </p>
+                <p className="text-sm text-muted-foreground">Upload certificate (PDF or image)</p>
                 <Input
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
@@ -343,7 +357,7 @@ export function ExternalCourseForm({ initialData, userId, onSubmit, onCancel }: 
             <Eye className="h-4 w-4" />
             Visibility Settings
           </div>
-          
+
           <FormField
             control={form.control}
             name="is_private"
@@ -373,7 +387,7 @@ export function ExternalCourseForm({ initialData, userId, onSubmit, onCancel }: 
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="is_public"
@@ -411,7 +425,13 @@ export function ExternalCourseForm({ initialData, userId, onSubmit, onCancel }: 
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting || uploadingCertificate}>
-            {uploadingCertificate ? "Uploading..." : isSubmitting ? "Saving..." : initialData?.id ? "Update" : "Add Course"}
+            {uploadingCertificate
+              ? "Uploading..."
+              : isSubmitting
+                ? "Saving..."
+                : initialData?.id
+                  ? "Update"
+                  : "Add Course"}
           </Button>
         </div>
       </form>

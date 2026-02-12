@@ -1,8 +1,8 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import * as Sentry from '@sentry/react';
-import { AlertTriangle, RefreshCw, Bug, Copy, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { Component, ErrorInfo, ReactNode } from "react";
+import * as Sentry from "@sentry/react";
+import { AlertTriangle, RefreshCw, Bug, Copy, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Props {
   children: ReactNode;
@@ -25,13 +25,9 @@ function generateErrorId(): string {
 }
 
 // Log error to console with structured format for monitoring
-function logErrorToMonitoring(
-  error: Error, 
-  errorInfo: ErrorInfo, 
-  errorId: string
-) {
-  const isDev = process.env.NODE_ENV === 'development';
-  
+function logErrorToMonitoring(error: Error, errorInfo: ErrorInfo, errorId: string) {
+  const isDev = process.env.NODE_ENV === "development";
+
   if (isDev) {
     // Verbose logging in development
     const errorLog = {
@@ -48,10 +44,10 @@ function logErrorToMonitoring(
         height: window.innerHeight,
       },
     };
-    console.error('[ErrorBoundary] Application Error:', JSON.stringify(errorLog, null, 2));
+    console.error("[ErrorBoundary] Application Error:", JSON.stringify(errorLog, null, 2));
   } else {
     // Minimal logging in production - no stack traces or sensitive info
-    console.error('[ErrorBoundary] Application Error:', {
+    console.error("[ErrorBoundary] Application Error:", {
       errorId,
       timestamp: new Date().toISOString(),
       message: error.message,
@@ -63,12 +59,12 @@ function logErrorToMonitoring(
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { 
-      hasError: false, 
-      error: null, 
-      errorInfo: null, 
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
       errorId: null,
-      copied: false 
+      copied: false,
     };
   }
 
@@ -98,12 +94,12 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleRetry = () => {
-    this.setState({ 
-      hasError: false, 
-      error: null, 
-      errorInfo: null, 
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null,
       errorId: null,
-      copied: false 
+      copied: false,
     });
   };
 
@@ -119,7 +115,7 @@ export class ErrorBoundary extends Component<Props, State> {
         setTimeout(() => this.setState({ copied: false }), 2000);
       } catch {
         // Fallback for older browsers
-        console.log('Error ID:', this.state.errorId);
+        console.log("Error ID:", this.state.errorId);
       }
     }
   };
@@ -130,7 +126,7 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
-      const isDev = process.env.NODE_ENV === 'development';
+      const isDev = process.env.NODE_ENV === "development";
 
       return (
         <div className="min-h-[400px] flex items-center justify-center p-6">
@@ -150,9 +146,9 @@ export class ErrorBoundary extends Component<Props, State> {
                 <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                   <Bug className="h-3 w-3" />
                   <span>Error ID: {this.state.errorId}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-5 w-5"
                     onClick={this.handleCopyErrorId}
                   >

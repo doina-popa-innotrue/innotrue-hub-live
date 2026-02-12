@@ -12,7 +12,7 @@ import { format } from "date-fns";
 interface DataExportRequest {
   id: string;
   user_id: string;
-  status: 'pending' | 'processing' | 'ready' | 'downloaded' | 'expired';
+  status: "pending" | "processing" | "ready" | "downloaded" | "expired";
   requested_at: string;
   completed_at: string | null;
   download_url: string | null;
@@ -48,12 +48,10 @@ export function DataExportSection() {
     mutationFn: async () => {
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase
-        .from("data_export_requests" as any)
-        .insert({
-          user_id: user.id,
-          status: 'pending',
-        });
+      const { error } = await supabase.from("data_export_requests" as any).insert({
+        user_id: user.id,
+        status: "pending",
+      });
 
       if (error) throw error;
     },
@@ -73,7 +71,9 @@ export function DataExportSection() {
     },
   });
 
-  const hasPendingRequest = requests?.some(r => r.status === 'pending' || r.status === 'processing');
+  const hasPendingRequest = requests?.some(
+    (r) => r.status === "pending" || r.status === "processing",
+  );
 
   const statusConfig: Record<string, { icon: typeof Clock; color: string; label: string }> = {
     pending: { icon: Clock, color: "text-yellow-600", label: "Pending" },
@@ -91,13 +91,13 @@ export function DataExportSection() {
           <CardTitle>Export Your Data</CardTitle>
         </div>
         <CardDescription>
-          Download a copy of all your personal data stored on InnoTrue Hub. 
-          This includes your profile, goals, decisions, assessments, and more.
+          Download a copy of all your personal data stored on InnoTrue Hub. This includes your
+          profile, goals, decisions, assessments, and more.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Button 
-          onClick={() => requestExport.mutate()} 
+        <Button
+          onClick={() => requestExport.mutate()}
           disabled={hasPendingRequest || requestExport.isPending}
         >
           {requestExport.isPending ? (
@@ -123,12 +123,14 @@ export function DataExportSection() {
                 const Icon = config.icon;
 
                 return (
-                  <div 
-                    key={request.id} 
+                  <div
+                    key={request.id}
                     className="flex items-center justify-between p-3 rounded-lg border bg-card"
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`h-4 w-4 ${config.color} ${request.status === 'processing' ? 'animate-spin' : ''}`} />
+                      <Icon
+                        className={`h-4 w-4 ${config.color} ${request.status === "processing" ? "animate-spin" : ""}`}
+                      />
                       <div>
                         <p className="text-sm font-medium">
                           {format(new Date(request.requested_at), "MMM d, yyyy 'at' h:mm a")}
@@ -138,7 +140,7 @@ export function DataExportSection() {
                         </Badge>
                       </div>
                     </div>
-                    {request.status === 'ready' && request.download_url && (
+                    {request.status === "ready" && request.download_url && (
                       <Button variant="outline" size="sm" asChild>
                         <a href={request.download_url} download>
                           <FileDown className="h-4 w-4 mr-1" />
@@ -155,12 +157,15 @@ export function DataExportSection() {
 
         <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
           <p>
-            <strong>Your rights:</strong> Under GDPR, you have the right to access, rectify, 
-            and delete your personal data.
+            <strong>Your rights:</strong> Under GDPR, you have the right to access, rectify, and
+            delete your personal data.
           </p>
           <p>
             To request data deletion, please visit{" "}
-            <a href="/account" className="text-primary hover:underline">Account Settings</a>.
+            <a href="/account" className="text-primary hover:underline">
+              Account Settings
+            </a>
+            .
           </p>
         </div>
       </CardContent>

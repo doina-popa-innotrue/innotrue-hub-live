@@ -86,10 +86,7 @@ export function ValuesAlignment({ decisionId }: ValuesAlignmentProps) {
 
   async function updateValue(id: string, updates: Partial<Value>) {
     try {
-      const { error } = await supabase
-        .from("decision_values")
-        .update(updates)
-        .eq("id", id);
+      const { error } = await supabase.from("decision_values").update(updates).eq("id", id);
 
       if (error) throw error;
 
@@ -105,10 +102,7 @@ export function ValuesAlignment({ decisionId }: ValuesAlignmentProps) {
 
   async function deleteValue(id: string) {
     try {
-      const { error } = await supabase
-        .from("decision_values")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.from("decision_values").delete().eq("id", id);
 
       if (error) throw error;
 
@@ -128,9 +122,7 @@ export function ValuesAlignment({ decisionId }: ValuesAlignmentProps) {
 
   const averageAlignment =
     values.length > 0
-      ? Math.round(
-          values.reduce((sum, v) => sum + (v.alignment_score || 0), 0) / values.length
-        )
+      ? Math.round(values.reduce((sum, v) => sum + (v.alignment_score || 0), 0) / values.length)
       : 0;
 
   if (loading) {
@@ -186,9 +178,7 @@ export function ValuesAlignment({ decisionId }: ValuesAlignmentProps) {
                     </div>
                     <Slider
                       value={[value.alignment_score || 5]}
-                      onValueChange={([score]) =>
-                        updateValue(value.id, { alignment_score: score })
-                      }
+                      onValueChange={([score]) => updateValue(value.id, { alignment_score: score })}
                       min={1}
                       max={10}
                       step={1}

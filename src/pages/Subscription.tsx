@@ -1,18 +1,29 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Check, Zap, Crown, Rocket, TrendingUp, Plus, CreditCard, Loader2, AlertTriangle, Info } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { RichTextDisplay } from '@/components/ui/rich-text-display';
-import { useToast } from '@/hooks/use-toast';
-import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrackSelector } from '@/components/tracks/TrackSelector';
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Check,
+  Zap,
+  Crown,
+  Rocket,
+  TrendingUp,
+  Plus,
+  CreditCard,
+  Loader2,
+  AlertTriangle,
+  Info,
+} from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TrackSelector } from "@/components/tracks/TrackSelector";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +33,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 
 interface PlanPrice {
   id: string;
@@ -75,19 +86,19 @@ export default function Subscription() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState<string | null>(null);
-  const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
+  const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
   const [openingPortal, setOpeningPortal] = useState(false);
   const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
   const [selectedDowngradePlan, setSelectedDowngradePlan] = useState<Plan | null>(null);
 
   const { data: profile } = useQuery({
-    queryKey: ['profile', user?.id],
+    queryKey: ["profile", user?.id],
     queryFn: async () => {
       if (!user) return null;
       const { data, error } = await supabase
-        .from('profiles')
-        .select('plan_id, name')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("plan_id, name")
+        .eq("id", user.id)
         .single();
 
       if (error) throw error;
@@ -97,21 +108,22 @@ export default function Subscription() {
   });
 
   const { data: plans } = useQuery({
-    queryKey: ['plans-with-features'],
+    queryKey: ["plans-with-features"],
     queryFn: async () => {
       const { data: plansData, error: plansError } = await supabase
-        .from('plans')
-        .select('*, plan_prices(*)')
-        .eq('is_active', true)
-        .order('tier_level', { ascending: true });
+        .from("plans")
+        .select("*, plan_prices(*)")
+        .eq("is_active", true)
+        .order("tier_level", { ascending: true });
 
       if (plansError) throw plansError;
 
       const plansWithFeatures = await Promise.all(
         plansData.map(async (plan) => {
           const { data: featuresData } = await supabase
-            .from('plan_features')
-            .select(`
+            .from("plan_features")
+            .select(
+              `
               feature_id,
               enabled,
               limit_value,
@@ -119,15 +131,16 @@ export default function Subscription() {
                 name,
                 description
               )
-            `)
-            .eq('plan_id', plan.id)
-            .eq('enabled', true);
+            `,
+            )
+            .eq("plan_id", plan.id)
+            .eq("enabled", true);
 
           return {
             ...plan,
             features: featuresData || [],
           };
-        })
+        }),
       );
 
       return plansWithFeatures as (Plan & { features: PlanFeature[]; is_purchasable?: boolean })[];
@@ -135,32 +148,34 @@ export default function Subscription() {
   });
 
   // Separate purchasable and non-purchasable plans
-  const purchasablePlans = plans?.filter(p => p.is_purchasable !== false) || [];
-  const specialPlans = plans?.filter(p => p.is_purchasable === false) || [];
+  const purchasablePlans = plans?.filter((p) => p.is_purchasable !== false) || [];
+  const specialPlans = plans?.filter((p) => p.is_purchasable === false) || [];
 
   const { data: usageData } = useQuery({
-    queryKey: ['usage-tracking', user?.id],
+    queryKey: ["usage-tracking", user?.id],
     queryFn: async () => {
       if (!profile?.plan_id) return [];
 
       const { data: planFeatures } = await supabase
-        .from('plan_features')
-        .select(`
+        .from("plan_features")
+        .select(
+          `
           features!inner (
             key,
             name
           ),
           limit_value
-        `)
-        .eq('plan_id', profile.plan_id)
-        .eq('enabled', true)
-        .not('limit_value', 'is', null);
+        `,
+        )
+        .eq("plan_id", profile.plan_id)
+        .eq("enabled", true)
+        .not("limit_value", "is", null);
 
       if (!planFeatures) return [];
 
       const usagePromises = planFeatures.map(async (pf) => {
-        const { data } = await supabase.rpc('get_current_usage', {
-          _user_id: user?.id ?? '',
+        const { data } = await supabase.rpc("get_current_usage", {
+          _user_id: user?.id ?? "",
           _feature_key: (pf.features as any).key,
         });
 
@@ -172,19 +187,19 @@ export default function Subscription() {
         };
       });
 
-      return await Promise.all(usagePromises) as UsageData[];
+      return (await Promise.all(usagePromises)) as UsageData[];
     },
     enabled: !!user && !!profile?.plan_id,
   });
 
   const { data: addOns } = useQuery({
-    queryKey: ['available-add-ons'],
+    queryKey: ["available-add-ons"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('add_ons')
-        .select('id, name, description, price_cents')
-        .eq('is_active', true)
-        .order('name');
+        .from("add_ons")
+        .select("id, name, description, price_cents")
+        .eq("is_active", true)
+        .order("name");
 
       if (error) throw error;
       return data as AddOn[];
@@ -192,12 +207,12 @@ export default function Subscription() {
   });
 
   const { data: userAddOns } = useQuery({
-    queryKey: ['user-add-ons', user?.id],
+    queryKey: ["user-add-ons", user?.id],
     queryFn: async (): Promise<UserAddOn[]> => {
       if (!user) return [];
       const { data, error } = await supabase
-        .from('user_add_ons')
-        .select('add_on_id, expires_at')
+        .from("user_add_ons")
+        .select("add_on_id, expires_at")
         .match({ user_id: user.id, is_active: true });
 
       if (error) throw error;
@@ -209,20 +224,20 @@ export default function Subscription() {
   // Stripe price IDs mapping
   const stripePriceIds: Record<string, { month: string; year: string }> = {
     base: {
-      month: 'price_1SlKDWKTUzwyKyi3yFJlmUMR',
-      year: 'price_1SlKDnKTUzwyKyi37Y0BPNeE',
+      month: "price_1SlKDWKTUzwyKyi3yFJlmUMR",
+      year: "price_1SlKDnKTUzwyKyi37Y0BPNeE",
     },
     pro: {
-      month: 'price_1SlKE4KTUzwyKyi3UtmUNeJ8',
-      year: 'price_1SlKEKKTUzwyKyi3MSVe9J7f',
+      month: "price_1SlKE4KTUzwyKyi3UtmUNeJ8",
+      year: "price_1SlKEKKTUzwyKyi3MSVe9J7f",
     },
     advanced: {
-      month: 'price_1SlKFxKTUzwyKyi3szdFPBSC',
-      year: 'price_1SlKGEKTUzwyKyi3wm6q3ZU2',
+      month: "price_1SlKFxKTUzwyKyi3szdFPBSC",
+      year: "price_1SlKGEKTUzwyKyi3wm6q3ZU2",
     },
     elite: {
-      month: 'price_1SlKGPKTUzwyKyi3w8z5lnBm',
-      year: 'price_1SlKGaKTUzwyKyi3hl22G7RJ',
+      month: "price_1SlKGPKTUzwyKyi3w8z5lnBm",
+      year: "price_1SlKGaKTUzwyKyi3hl22G7RJ",
     },
   };
 
@@ -233,7 +248,7 @@ export default function Subscription() {
       setDowngradeDialogOpen(true);
       return;
     }
-    
+
     // Otherwise proceed with checkout
     handleCheckout(plan);
   };
@@ -242,35 +257,35 @@ export default function Subscription() {
     const priceMapping = stripePriceIds[plan.key];
     if (!priceMapping) {
       toast({
-        title: 'Plan not available',
-        description: 'This plan is not available for direct checkout. Please contact support.',
-        variant: 'destructive',
+        title: "Plan not available",
+        description: "This plan is not available for direct checkout. Please contact support.",
+        variant: "destructive",
       });
       return;
     }
 
     const stripePriceId = priceMapping[billingInterval];
-    
+
     setSubmitting(plan.id);
     try {
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
           priceId: stripePriceId,
-          mode: 'subscription',
+          mode: "subscription",
         },
       });
 
       if (error) throw error;
       if (data?.url) {
-        window.open(data.url, '_blank');
+        window.open(data.url, "_blank");
       } else {
-        throw new Error('No checkout URL returned');
+        throw new Error("No checkout URL returned");
       }
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to start checkout. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to start checkout. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setSubmitting(null);
@@ -280,13 +295,13 @@ export default function Subscription() {
   const handleAddOnRequest = async (addOn: AddOn) => {
     setSubmitting(addOn.id);
     try {
-      const { error } = await supabase.functions.invoke('send-notification-email', {
+      const { error } = await supabase.functions.invoke("send-notification-email", {
         body: {
-          email: 'admin@innotrue.com',
-          name: 'Admin',
-          type: 'subscription_addon_request',
+          email: "admin@innotrue.com",
+          name: "Admin",
+          type: "subscription_addon_request",
           timestamp: new Date().toISOString(),
-          userName: profile?.name || 'Unknown',
+          userName: profile?.name || "Unknown",
           userEmail: user?.email,
           userId: user?.id,
           addOnName: addOn.name,
@@ -297,14 +312,14 @@ export default function Subscription() {
       if (error) throw error;
 
       toast({
-        title: 'Request submitted',
+        title: "Request submitted",
         description: `Your request for the ${addOn.name} add-on has been sent. We'll contact you shortly.`,
       });
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to submit request. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to submit request. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setSubmitting(null);
@@ -312,17 +327,17 @@ export default function Subscription() {
   };
 
   const formatPrice = (cents: number | null) => {
-    if (cents === null || cents === 0) return 'Free';
+    if (cents === null || cents === 0) return "Free";
     return `€${(cents / 100).toFixed(2)}`;
   };
 
   const getPlanIcon = (planKey: string) => {
     switch (planKey) {
-      case 'free':
+      case "free":
         return <Zap className="h-6 w-6" />;
-      case 'pro':
+      case "pro":
         return <Rocket className="h-6 w-6" />;
-      case 'enterprise':
+      case "enterprise":
         return <Crown className="h-6 w-6" />;
       default:
         return <TrendingUp className="h-6 w-6" />;
@@ -330,11 +345,11 @@ export default function Subscription() {
   };
 
   const getPriceForInterval = (plan: Plan, interval: string) => {
-    return plan.plan_prices.find(p => p.billing_interval === interval);
+    return plan.plan_prices.find((p) => p.billing_interval === interval);
   };
 
   const getDefaultPrice = (plan: Plan) => {
-    return plan.plan_prices.find(p => p.is_default) || plan.plan_prices[0];
+    return plan.plan_prices.find((p) => p.is_default) || plan.plan_prices[0];
   };
 
   const getDisplayPrice = (plan: Plan) => {
@@ -344,64 +359,67 @@ export default function Subscription() {
   };
 
   const calculateYearlySavings = (plan: Plan) => {
-    const monthlyPrice = getPriceForInterval(plan, 'month');
-    const yearlyPrice = getPriceForInterval(plan, 'year');
-    
+    const monthlyPrice = getPriceForInterval(plan, "month");
+    const yearlyPrice = getPriceForInterval(plan, "year");
+
     if (!monthlyPrice || !yearlyPrice) return null;
-    
+
     const yearlyIfMonthly = monthlyPrice.price_cents * 12;
     const savings = yearlyIfMonthly - yearlyPrice.price_cents;
-    
+
     if (savings <= 0) return null;
-    
+
     return Math.round((savings / yearlyIfMonthly) * 100);
   };
 
   const currentPlan = plans?.find((p) => p.id === profile?.plan_id);
 
   // Check if any plan has both monthly and yearly pricing
-  const hasMultipleBillingOptions = plans?.some(p => 
-    p.plan_prices.some(pr => pr.billing_interval === 'month') &&
-    p.plan_prices.some(pr => pr.billing_interval === 'year')
+  const hasMultipleBillingOptions = plans?.some(
+    (p) =>
+      p.plan_prices.some((pr) => pr.billing_interval === "month") &&
+      p.plan_prices.some((pr) => pr.billing_interval === "year"),
   );
 
   const handleManageBilling = async () => {
     setOpeningPortal(true);
     try {
-      const { data, error } = await supabase.functions.invoke('customer-portal');
-      
+      const { data, error } = await supabase.functions.invoke("customer-portal");
+
       // Check for error in the response body (edge function returned error)
       if (data?.error) {
         const errorMessage = data.error;
-        const isNoCustomer = errorMessage?.includes('No Stripe customer found') || 
-                            errorMessage?.includes('complete a purchase first');
+        const isNoCustomer =
+          errorMessage?.includes("No Stripe customer found") ||
+          errorMessage?.includes("complete a purchase first");
         toast({
-          title: isNoCustomer ? 'No billing history yet' : 'Unable to open billing portal',
-          description: isNoCustomer 
-            ? 'The billing portal will be available after your first purchase.' 
-            : (errorMessage || 'Please try again later.'),
-          variant: isNoCustomer ? 'default' : 'destructive',
+          title: isNoCustomer ? "No billing history yet" : "Unable to open billing portal",
+          description: isNoCustomer
+            ? "The billing portal will be available after your first purchase."
+            : errorMessage || "Please try again later.",
+          variant: isNoCustomer ? "default" : "destructive",
         });
         return;
       }
-      
+
       if (error) throw error;
-      
+
       if (data?.url) {
-        window.open(data.url, '_blank');
+        window.open(data.url, "_blank");
       } else {
-        throw new Error('No portal URL returned');
+        throw new Error("No portal URL returned");
       }
     } catch (error: any) {
       const errorMessage = error.message || String(error);
-      const isNoCustomer = errorMessage?.includes('No Stripe customer found') || 
-                          errorMessage?.includes('complete a purchase first');
+      const isNoCustomer =
+        errorMessage?.includes("No Stripe customer found") ||
+        errorMessage?.includes("complete a purchase first");
       toast({
-        title: isNoCustomer ? 'No billing history yet' : 'Unable to open billing portal',
-        description: isNoCustomer 
-          ? 'The billing portal will be available after your first purchase.' 
-          : (errorMessage || 'Please try again later.'),
-        variant: isNoCustomer ? 'default' : 'destructive',
+        title: isNoCustomer ? "No billing history yet" : "Unable to open billing portal",
+        description: isNoCustomer
+          ? "The billing portal will be available after your first purchase."
+          : errorMessage || "Please try again later.",
+        variant: isNoCustomer ? "default" : "destructive",
       });
     } finally {
       setOpeningPortal(false);
@@ -412,18 +430,14 @@ export default function Subscription() {
     <div className="space-y-8 pb-8">
       <div className="sticky top-0 z-10 bg-background pb-4 -mx-6 px-6 pt-0 -mt-0">
         <h1 className="text-3xl font-bold">Subscription Plans</h1>
-        <p className="text-muted-foreground">
-          Choose the plan that best fits your needs
-        </p>
+        <p className="text-muted-foreground">Choose the plan that best fits your needs</p>
       </div>
 
       {currentPlan && (
         <Card>
           <CardHeader>
             <CardTitle>Current Plan</CardTitle>
-            <CardDescription>
-              You are currently on the {currentPlan.name} plan
-            </CardDescription>
+            <CardDescription>You are currently on the {currentPlan.name} plan</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -434,13 +448,21 @@ export default function Subscription() {
                 <div>
                   <h3 className="font-semibold">{currentPlan.name}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {currentPlan.is_free ? 'Free' : formatPrice(getDefaultPrice(currentPlan)?.price_cents || 0)}
-                    {!currentPlan.is_free && getDefaultPrice(currentPlan)?.billing_interval &&
+                    {currentPlan.is_free
+                      ? "Free"
+                      : formatPrice(getDefaultPrice(currentPlan)?.price_cents || 0)}
+                    {!currentPlan.is_free &&
+                      getDefaultPrice(currentPlan)?.billing_interval &&
                       ` / ${getDefaultPrice(currentPlan)?.billing_interval}`}
                   </p>
                 </div>
               </div>
-              <Button variant="outline" onClick={handleManageBilling} disabled={openingPortal} className="w-full sm:w-auto">
+              <Button
+                variant="outline"
+                onClick={handleManageBilling}
+                disabled={openingPortal}
+                className="w-full sm:w-auto"
+              >
                 {openingPortal ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
@@ -462,11 +484,7 @@ export default function Subscription() {
                       </span>
                     </div>
                     <Progress
-                      value={
-                        usage.limit
-                          ? (usage.used_count / usage.limit) * 100
-                          : 0
-                      }
+                      value={usage.limit ? (usage.used_count / usage.limit) * 100 : 0}
                       className="h-2"
                     />
                   </div>
@@ -481,9 +499,7 @@ export default function Subscription() {
         <Card>
           <CardHeader>
             <CardTitle>My Active Add-Ons</CardTitle>
-            <CardDescription>
-              Additional features you have access to
-            </CardDescription>
+            <CardDescription>Additional features you have access to</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -527,12 +543,17 @@ export default function Subscription() {
 
       {hasMultipleBillingOptions && (
         <div className="flex justify-center">
-          <Tabs value={billingInterval} onValueChange={(v) => setBillingInterval(v as 'month' | 'year')}>
+          <Tabs
+            value={billingInterval}
+            onValueChange={(v) => setBillingInterval(v as "month" | "year")}
+          >
             <TabsList>
               <TabsTrigger value="month">Monthly</TabsTrigger>
               <TabsTrigger value="year" className="relative">
                 Yearly
-                <Badge variant="secondary" className="ml-2 text-xs">Save up to 20%</Badge>
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  Save up to 20%
+                </Badge>
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -546,23 +567,18 @@ export default function Subscription() {
             profile?.plan_id &&
             purchasablePlans.findIndex((p) => p.id === profile.plan_id) <
               purchasablePlans.findIndex((p) => p.id === plan.id);
-          
+
           const displayPrice = getDisplayPrice(plan);
-          const yearlySavings = billingInterval === 'year' ? calculateYearlySavings(plan) : null;
+          const yearlySavings = billingInterval === "year" ? calculateYearlySavings(plan) : null;
 
           return (
-            <Card
-              key={plan.id}
-              className={isCurrent ? 'border-primary shadow-lg' : ''}
-            >
+            <Card key={plan.id} className={isCurrent ? "border-primary shadow-lg" : ""}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                     {getPlanIcon(plan.key)}
                   </div>
-                  {isCurrent && (
-                    <Badge variant="default">Current Plan</Badge>
-                  )}
+                  {isCurrent && <Badge variant="default">Current Plan</Badge>}
                 </div>
                 <CardTitle className="text-2xl">{plan.name}</CardTitle>
                 <CardDescription>{plan.description}</CardDescription>
@@ -572,7 +588,7 @@ export default function Subscription() {
                   </span>
                   {displayPrice?.billing_interval && (
                     <span className="text-muted-foreground">
-                      {' '}
+                      {" "}
                       / {displayPrice.billing_interval}
                     </span>
                   )}
@@ -613,19 +629,19 @@ export default function Subscription() {
                 </ul>
                 <Button
                   className="w-full"
-                  variant={isCurrent ? 'outline' : 'default'}
+                  variant={isCurrent ? "outline" : "default"}
                   disabled={isCurrent || submitting === plan.id || plan.is_free}
                   onClick={() => handlePlanClick(plan)}
                 >
                   {isCurrent
-                    ? 'Current Plan'
+                    ? "Current Plan"
                     : plan.is_free
-                    ? 'Free Plan'
-                    : submitting === plan.id
-                    ? 'Processing...'
-                    : isUpgrade
-                    ? 'Upgrade Now'
-                    : 'Subscribe'}
+                      ? "Free Plan"
+                      : submitting === plan.id
+                        ? "Processing..."
+                        : isUpgrade
+                          ? "Upgrade Now"
+                          : "Subscribe"}
                 </Button>
               </CardContent>
             </Card>
@@ -646,9 +662,9 @@ export default function Subscription() {
           <div className="grid gap-4 md:grid-cols-2">
             {specialPlans.map((plan) => {
               const isCurrent = plan.id === profile?.plan_id;
-              
+
               return (
-                <Card key={plan.id} className={`opacity-75 ${isCurrent ? 'border-primary' : ''}`}>
+                <Card key={plan.id} className={`opacity-75 ${isCurrent ? "border-primary" : ""}`}>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">{plan.name}</CardTitle>
@@ -681,7 +697,7 @@ export default function Subscription() {
               const isOwned = userAddOns?.some((ua) => ua.add_on_id === addOn.id);
 
               return (
-                <Card key={addOn.id} className={isOwned ? 'border-primary' : ''}>
+                <Card key={addOn.id} className={isOwned ? "border-primary" : ""}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle>{addOn.name}</CardTitle>
@@ -690,23 +706,21 @@ export default function Subscription() {
                     <CardDescription>{addOn.description}</CardDescription>
                     {addOn.price_cents && (
                       <div className="pt-2">
-                        <span className="text-2xl font-bold">
-                          {formatPrice(addOn.price_cents)}
-                        </span>
+                        <span className="text-2xl font-bold">{formatPrice(addOn.price_cents)}</span>
                       </div>
                     )}
                   </CardHeader>
                   <CardContent>
                     <Button
                       className="w-full"
-                      variant={isOwned ? 'outline' : 'default'}
+                      variant={isOwned ? "outline" : "default"}
                       disabled={isOwned || submitting === addOn.id}
                       onClick={() => handleAddOnRequest(addOn)}
                     >
                       {isOwned ? (
-                        'Already Active'
+                        "Already Active"
                       ) : submitting === addOn.id ? (
-                        'Submitting...'
+                        "Submitting..."
                       ) : (
                         <>
                           <Plus className="mr-2 h-4 w-4" />
@@ -739,17 +753,17 @@ export default function Subscription() {
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
               <p>
-                You're about to switch from <strong>{currentPlan?.name}</strong> to{' '}
+                You're about to switch from <strong>{currentPlan?.name}</strong> to{" "}
                 <strong>{selectedDowngradePlan?.name}</strong>.
               </p>
               <p>
-                If you have an active subscription, changes will take effect at the end of your 
-                current billing period. You'll continue to have access to your current plan's 
+                If you have an active subscription, changes will take effect at the end of your
+                current billing period. You'll continue to have access to your current plan's
                 features until then.
               </p>
               <p className="text-muted-foreground">
-                To manage your existing subscription (cancel, change plan, or update payment), 
-                use the <strong>Manage Billing & Invoices</strong> button instead.
+                To manage your existing subscription (cancel, change plan, or update payment), use
+                the <strong>Manage Billing & Invoices</strong> button instead.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>

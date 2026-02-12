@@ -1,33 +1,33 @@
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import type { Json } from '@/integrations/supabase/types';
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import type { Json } from "@/integrations/supabase/types";
 
-type AuditAction = 
-  | 'create' 
-  | 'update' 
-  | 'delete' 
-  | 'archive' 
-  | 'restore' 
-  | 'assign' 
-  | 'unassign'
-  | 'approve'
-  | 'reject'
-  | 'export';
+type AuditAction =
+  | "create"
+  | "update"
+  | "delete"
+  | "archive"
+  | "restore"
+  | "assign"
+  | "unassign"
+  | "approve"
+  | "reject"
+  | "export";
 
-type EntityType = 
-  | 'program' 
-  | 'module' 
-  | 'enrollment' 
-  | 'user' 
-  | 'cohort'
-  | 'assessment'
-  | 'badge'
-  | 'feature'
-  | 'plan'
-  | 'program_plan'
-  | 'track'
-  | 'group'
-  | 'resource';
+type EntityType =
+  | "program"
+  | "module"
+  | "enrollment"
+  | "user"
+  | "cohort"
+  | "assessment"
+  | "badge"
+  | "feature"
+  | "plan"
+  | "program_plan"
+  | "track"
+  | "group"
+  | "resource";
 
 interface AuditLogParams {
   action: AuditAction;
@@ -48,14 +48,13 @@ export function useAuditLog() {
     newValues,
   }: AuditLogParams) => {
     if (!user) {
-      console.warn('Cannot log audit action: no user logged in');
+      console.warn("Cannot log audit action: no user logged in");
       return;
     }
 
     try {
-      const { error } = await supabase
-        .from('admin_audit_logs')
-        .insert([{
+      const { error } = await supabase.from("admin_audit_logs").insert([
+        {
           admin_user_id: user.id,
           action,
           entity_type: entityType,
@@ -63,13 +62,14 @@ export function useAuditLog() {
           old_values: oldValues || null,
           new_values: newValues || null,
           user_agent: navigator.userAgent,
-        }]);
+        },
+      ]);
 
       if (error) {
-        console.error('Failed to log audit action:', error);
+        console.error("Failed to log audit action:", error);
       }
     } catch (err) {
-      console.error('Error logging audit action:', err);
+      console.error("Error logging audit action:", err);
     }
   };
 

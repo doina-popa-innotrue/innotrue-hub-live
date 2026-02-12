@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, Users } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus, Trash2, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface ScheduledDate {
   id: string;
@@ -25,8 +25,8 @@ export function ScheduledDatesManager({ scheduledDates, onChange }: ScheduledDat
       ...scheduledDates,
       {
         id: crypto.randomUUID(),
-        date: '',
-        title: '',
+        date: "",
+        title: "",
         capacity: 0,
         enrolled_count: 0,
       },
@@ -64,7 +64,7 @@ export function ScheduledDatesManager({ scheduledDates, onChange }: ScheduledDat
                     id={`date-${index}`}
                     type="date"
                     value={schedule.date}
-                    onChange={(e) => updateSchedule(index, 'date', e.target.value)}
+                    onChange={(e) => updateSchedule(index, "date", e.target.value)}
                   />
                 </div>
 
@@ -74,7 +74,7 @@ export function ScheduledDatesManager({ scheduledDates, onChange }: ScheduledDat
                     id={`title-${index}`}
                     placeholder="e.g., Session 1"
                     value={schedule.title}
-                    onChange={(e) => updateSchedule(index, 'title', e.target.value)}
+                    onChange={(e) => updateSchedule(index, "title", e.target.value)}
                   />
                 </div>
 
@@ -85,7 +85,9 @@ export function ScheduledDatesManager({ scheduledDates, onChange }: ScheduledDat
                     type="number"
                     min="0"
                     value={schedule.capacity}
-                    onChange={(e) => updateSchedule(index, 'capacity', parseInt(e.target.value) || 0)}
+                    onChange={(e) =>
+                      updateSchedule(index, "capacity", parseInt(e.target.value) || 0)
+                    }
                   />
                 </div>
 
@@ -98,7 +100,9 @@ export function ScheduledDatesManager({ scheduledDates, onChange }: ScheduledDat
                         {schedule.enrolled_count || 0} / {schedule.capacity || 0}
                       </span>
                       {schedule.capacity > 0 && schedule.enrolled_count >= schedule.capacity && (
-                        <Badge variant="destructive" className="text-xs">Full</Badge>
+                        <Badge variant="destructive" className="text-xs">
+                          Full
+                        </Badge>
                       )}
                     </div>
                   </div>

@@ -1,20 +1,33 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Pencil, Eye, Code, FileText, Image as ImageIcon, Link } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
-import DOMPurify from 'dompurify';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Pencil, Eye, Code, FileText, Image as ImageIcon, Link } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import DOMPurify from "dompurify";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface EmailTemplate {
   id: string;
@@ -40,19 +53,16 @@ export default function EmailTemplatesManagement() {
   const [editOpen, setEditOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
-  const [subject, setSubject] = useState('');
-  const [htmlContent, setHtmlContent] = useState('');
-  const [editMode, setEditMode] = useState<'visual' | 'html'>('visual');
+  const [subject, setSubject] = useState("");
+  const [htmlContent, setHtmlContent] = useState("");
+  const [editMode, setEditMode] = useState<"visual" | "html">("visual");
   const [saving, setSaving] = useState(false);
 
   async function fetchTemplates() {
-    const { data, error } = await supabase
-      .from('email_templates')
-      .select('*')
-      .order('name');
+    const { data, error } = await supabase.from("email_templates").select("*").order("name");
 
     if (error) {
-      toast.error('Failed to load email templates');
+      toast.error("Failed to load email templates");
       console.error(error);
     } else {
       setTemplates(data || []);
@@ -62,13 +72,13 @@ export default function EmailTemplatesManagement() {
 
   async function fetchAssets() {
     const { data, error } = await supabase
-      .from('email_template_assets')
-      .select('id, name, file_url, is_system_logo')
-      .order('is_system_logo', { ascending: false })
-      .order('name');
+      .from("email_template_assets")
+      .select("id, name, file_url, is_system_logo")
+      .order("is_system_logo", { ascending: false })
+      .order("name");
 
     if (error) {
-      console.error('Failed to load assets:', error);
+      console.error("Failed to load assets:", error);
     } else {
       setAssets((data || []) as EmailAsset[]);
     }
@@ -83,7 +93,7 @@ export default function EmailTemplatesManagement() {
     setSelectedTemplate(template);
     setSubject(template.subject);
     setHtmlContent(template.html_content);
-    setEditMode('visual');
+    setEditMode("visual");
     setEditOpen(true);
   }
 
@@ -94,20 +104,20 @@ export default function EmailTemplatesManagement() {
 
   async function handleSave() {
     if (!selectedTemplate) return;
-    
+
     setSaving(true);
     try {
       const { error } = await supabase
-        .from('email_templates')
+        .from("email_templates")
         .update({
           subject,
           html_content: htmlContent,
         })
-        .eq('id', selectedTemplate.id);
+        .eq("id", selectedTemplate.id);
 
       if (error) throw error;
 
-      toast.success('Template saved successfully');
+      toast.success("Template saved successfully");
       setEditOpen(false);
       fetchTemplates();
     } catch (error: any) {
@@ -119,32 +129,56 @@ export default function EmailTemplatesManagement() {
 
   function insertImageTag(asset: EmailAsset) {
     const imgTag = `<img src="${asset.file_url}" alt="${asset.name}" style="max-width: 100%; height: auto;" />`;
-    setHtmlContent(prev => prev + imgTag);
+    setHtmlContent((prev) => prev + imgTag);
     toast.success(`Inserted ${asset.name} image`);
   }
 
   function insertSystemLogoVariable() {
-    const logoTag = '{{systemLogo}}';
-    setHtmlContent(prev => prev + logoTag);
-    toast.success('Inserted system logo variable');
+    const logoTag = "{{systemLogo}}";
+    setHtmlContent((prev) => prev + logoTag);
+    toast.success("Inserted system logo variable");
   }
 
   // Replace template variables with example values for preview and sanitize HTML
   function getPreviewContent(content: string) {
-    const systemLogo = assets.find(a => a.is_system_logo);
-    const logoImg = systemLogo 
+    const systemLogo = assets.find((a) => a.is_system_logo);
+    const logoImg = systemLogo
       ? `<img src="${systemLogo.file_url}" alt="System Logo" style="max-width: 200px; height: auto;" />`
       : '<span style="color: #999;">[System Logo Not Set]</span>';
-    
+
     const replaced = content
-      .replace(/\{\{userName\}\}/g, 'John Doe')
-      .replace(/\{\{passwordSetupLink\}\}/g, 'https://example.com/auth?token=abc123')
+      .replace(/\{\{userName\}\}/g, "John Doe")
+      .replace(/\{\{passwordSetupLink\}\}/g, "https://example.com/auth?token=abc123")
       .replace(/\{\{systemLogo\}\}/g, logoImg);
-    
+
     // Sanitize HTML to prevent XSS attacks
     return DOMPurify.sanitize(replaced, {
-      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'h1', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'table', 'tr', 'td', 'th', 'thead', 'tbody', 'div', 'span', 'img', 'hr'],
-      ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style', 'src', 'alt', 'width', 'height']
+      ALLOWED_TAGS: [
+        "p",
+        "br",
+        "strong",
+        "em",
+        "u",
+        "a",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "ul",
+        "ol",
+        "li",
+        "table",
+        "tr",
+        "td",
+        "th",
+        "thead",
+        "tbody",
+        "div",
+        "span",
+        "img",
+        "hr",
+      ],
+      ALLOWED_ATTR: ["href", "target", "rel", "class", "style", "src", "alt", "width", "height"],
     });
   }
 
@@ -198,11 +232,7 @@ export default function EmailTemplatesManagement() {
                         <Eye className="mr-2 h-4 w-4" />
                         Preview
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(template)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => openEditDialog(template)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit
                       </Button>
@@ -227,11 +257,9 @@ export default function EmailTemplatesManagement() {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Template: {selectedTemplate?.name}</DialogTitle>
-            <DialogDescription>
-              {selectedTemplate?.description}
-            </DialogDescription>
+            <DialogDescription>{selectedTemplate?.description}</DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="subject">Subject Line</Label>
@@ -248,25 +276,25 @@ export default function EmailTemplatesManagement() {
                 <Label>Email Content</Label>
                 <div className="flex gap-1">
                   <Button
-                    variant={editMode === 'visual' ? 'default' : 'outline'}
+                    variant={editMode === "visual" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setEditMode('visual')}
+                    onClick={() => setEditMode("visual")}
                   >
                     <FileText className="mr-2 h-4 w-4" />
                     Visual
                   </Button>
                   <Button
-                    variant={editMode === 'html' ? 'default' : 'outline'}
+                    variant={editMode === "html" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setEditMode('html')}
+                    onClick={() => setEditMode("html")}
                   >
                     <Code className="mr-2 h-4 w-4" />
                     HTML
                   </Button>
                 </div>
               </div>
-              
-              {editMode === 'visual' ? (
+
+              {editMode === "visual" ? (
                 <RichTextEditor
                   value={htmlContent}
                   onChange={setHtmlContent}
@@ -287,17 +315,21 @@ export default function EmailTemplatesManagement() {
               <div>
                 <h4 className="font-medium mb-2">Available Variables</h4>
                 <div className="flex gap-2 flex-wrap">
-                  <Badge variant="outline">{'{{userName}}'}</Badge>
-                  <Badge variant="outline">{'{{passwordSetupLink}}'}</Badge>
-                  <Badge variant="outline" className="cursor-pointer hover:bg-primary/10" onClick={insertSystemLogoVariable}>
-                    {'{{systemLogo}}'}
+                  <Badge variant="outline">{"{{userName}}"}</Badge>
+                  <Badge variant="outline">{"{{passwordSetupLink}}"}</Badge>
+                  <Badge
+                    variant="outline"
+                    className="cursor-pointer hover:bg-primary/10"
+                    onClick={insertSystemLogoVariable}
+                  >
+                    {"{{systemLogo}}"}
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">
                   Click on a variable to insert it at the end of the content.
                 </p>
               </div>
-              
+
               <div className="border-t pt-3">
                 <h4 className="font-medium mb-2 flex items-center gap-2">
                   <ImageIcon className="h-4 w-4" />
@@ -321,8 +353,8 @@ export default function EmailTemplatesManagement() {
                               className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors text-left"
                             >
                               <div className="w-12 h-10 border rounded flex items-center justify-center bg-background overflow-hidden flex-shrink-0">
-                                <img 
-                                  src={asset.file_url} 
+                                <img
+                                  src={asset.file_url}
                                   alt={asset.name}
                                   className="max-w-full max-h-full object-contain"
                                 />
@@ -330,7 +362,9 @@ export default function EmailTemplatesManagement() {
                               <div className="min-w-0">
                                 <p className="font-medium text-sm truncate">{asset.name}</p>
                                 {asset.is_system_logo && (
-                                  <Badge variant="secondary" className="text-xs">System Logo</Badge>
+                                  <Badge variant="secondary" className="text-xs">
+                                    System Logo
+                                  </Badge>
                                 )}
                               </div>
                             </button>
@@ -341,7 +375,11 @@ export default function EmailTemplatesManagement() {
                   </Popover>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    No images uploaded. <a href="/admin/email-assets" className="text-primary hover:underline">Upload images</a> to use in templates.
+                    No images uploaded.{" "}
+                    <a href="/admin/email-assets" className="text-primary hover:underline">
+                      Upload images
+                    </a>{" "}
+                    to use in templates.
                   </p>
                 )}
               </div>
@@ -352,7 +390,7 @@ export default function EmailTemplatesManagement() {
                 Cancel
               </Button>
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving...' : 'Save Template'}
+                {saving ? "Saving..." : "Save Template"}
               </Button>
             </div>
           </div>
@@ -365,21 +403,21 @@ export default function EmailTemplatesManagement() {
           <DialogHeader>
             <DialogTitle>Preview: {selectedTemplate?.name}</DialogTitle>
             <DialogDescription>
-              Subject: {selectedTemplate?.subject.replace(/\{\{userName\}\}/g, 'John Doe')}
+              Subject: {selectedTemplate?.subject.replace(/\{\{userName\}\}/g, "John Doe")}
             </DialogDescription>
           </DialogHeader>
-          
+
           <Tabs defaultValue="preview">
             <TabsList>
               <TabsTrigger value="preview">Preview</TabsTrigger>
               <TabsTrigger value="source">Source</TabsTrigger>
             </TabsList>
             <TabsContent value="preview" className="mt-4">
-              <div 
+              <div
                 className="border rounded-lg p-4 bg-white"
-                dangerouslySetInnerHTML={{ 
-                  __html: getPreviewContent(selectedTemplate?.html_content || '') 
-                }} 
+                dangerouslySetInnerHTML={{
+                  __html: getPreviewContent(selectedTemplate?.html_content || ""),
+                }}
               />
             </TabsContent>
             <TabsContent value="source" className="mt-4">

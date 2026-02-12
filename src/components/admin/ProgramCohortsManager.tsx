@@ -1,19 +1,31 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Calendar, Users, ChevronDown, ChevronUp } from 'lucide-react';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { CohortSessionsManager } from './CohortSessionsManager';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Pencil, Trash2, Calendar, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { CohortSessionsManager } from "./CohortSessionsManager";
 
 interface ProgramCohortsManagerProps {
   programId: string;
@@ -27,7 +39,7 @@ interface Cohort {
   start_date: string | null;
   end_date: string | null;
   capacity: number | null;
-  status: 'upcoming' | 'active' | 'completed' | 'cancelled';
+  status: "upcoming" | "active" | "completed" | "cancelled";
   created_at: string;
   updated_at: string;
 }
@@ -38,16 +50,16 @@ interface CohortFormData {
   start_date: string;
   end_date: string;
   capacity: string;
-  status: 'upcoming' | 'active' | 'completed' | 'cancelled';
+  status: "upcoming" | "active" | "completed" | "cancelled";
 }
 
 const defaultFormData: CohortFormData = {
-  name: '',
-  description: '',
-  start_date: '',
-  end_date: '',
-  capacity: '',
-  status: 'upcoming',
+  name: "",
+  description: "",
+  start_date: "",
+  end_date: "",
+  capacity: "",
+  status: "upcoming",
 };
 
 export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps) {
@@ -58,13 +70,13 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
   const [expandedCohorts, setExpandedCohorts] = useState<Set<string>>(new Set());
 
   const { data: cohorts, isLoading } = useQuery({
-    queryKey: ['program-cohorts', programId],
+    queryKey: ["program-cohorts", programId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('program_cohorts')
-        .select('*')
-        .eq('program_id', programId)
-        .order('start_date', { ascending: false });
+        .from("program_cohorts")
+        .select("*")
+        .eq("program_id", programId)
+        .order("start_date", { ascending: false });
 
       if (error) throw error;
       return data as Cohort[];
@@ -72,13 +84,13 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
   });
 
   const { data: enrollmentCounts } = useQuery({
-    queryKey: ['cohort-enrollment-counts', programId],
+    queryKey: ["cohort-enrollment-counts", programId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('client_enrollments')
-        .select('cohort_id')
-        .eq('program_id', programId)
-        .not('cohort_id', 'is', null);
+        .from("client_enrollments")
+        .select("cohort_id")
+        .eq("program_id", programId)
+        .not("cohort_id", "is", null);
 
       if (error) throw error;
 
@@ -105,41 +117,36 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
 
       if (editingCohort) {
         const { error } = await supabase
-          .from('program_cohorts')
+          .from("program_cohorts")
           .update(payload)
-          .eq('id', editingCohort.id);
+          .eq("id", editingCohort.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('program_cohorts')
-          .insert(payload);
+        const { error } = await supabase.from("program_cohorts").insert(payload);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['program-cohorts', programId] });
-      toast.success(editingCohort ? 'Cohort updated' : 'Cohort created');
+      queryClient.invalidateQueries({ queryKey: ["program-cohorts", programId] });
+      toast.success(editingCohort ? "Cohort updated" : "Cohort created");
       handleCloseDialog();
     },
     onError: () => {
-      toast.error('Failed to save cohort');
+      toast.error("Failed to save cohort");
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (cohortId: string) => {
-      const { error } = await supabase
-        .from('program_cohorts')
-        .delete()
-        .eq('id', cohortId);
+      const { error } = await supabase.from("program_cohorts").delete().eq("id", cohortId);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['program-cohorts', programId] });
-      toast.success('Cohort deleted');
+      queryClient.invalidateQueries({ queryKey: ["program-cohorts", programId] });
+      toast.success("Cohort deleted");
     },
     onError: () => {
-      toast.error('Failed to delete cohort');
+      toast.error("Failed to delete cohort");
     },
   });
 
@@ -148,10 +155,10 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
       setEditingCohort(cohort);
       setFormData({
         name: cohort.name,
-        description: cohort.description || '',
-        start_date: cohort.start_date || '',
-        end_date: cohort.end_date || '',
-        capacity: cohort.capacity?.toString() || '',
+        description: cohort.description || "",
+        start_date: cohort.start_date || "",
+        end_date: cohort.end_date || "",
+        capacity: cohort.capacity?.toString() || "",
         status: cohort.status,
       });
     } else {
@@ -170,7 +177,7 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      toast.error('Cohort name is required');
+      toast.error("Cohort name is required");
       return;
     }
     saveMutation.mutate(formData);
@@ -188,16 +195,16 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'default';
-      case 'upcoming':
-        return 'secondary';
-      case 'completed':
-        return 'outline';
-      case 'cancelled':
-        return 'destructive';
+      case "active":
+        return "default";
+      case "upcoming":
+        return "secondary";
+      case "completed":
+        return "outline";
+      case "cancelled":
+        return "destructive";
       default:
-        return 'outline';
+        return "outline";
     }
   };
 
@@ -223,7 +230,7 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>{editingCohort ? 'Edit Cohort' : 'Create Cohort'}</DialogTitle>
+              <DialogTitle>{editingCohort ? "Edit Cohort" : "Create Cohort"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -283,7 +290,9 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
                   <Label htmlFor="status">Status</Label>
                   <Select
                     value={formData.status}
-                    onValueChange={(value) => setFormData({ ...formData, status: value as CohortFormData['status'] })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, status: value as CohortFormData["status"] })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -303,7 +312,7 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
                   Cancel
                 </Button>
                 <Button type="submit" disabled={saveMutation.isPending}>
-                  {saveMutation.isPending ? 'Saving...' : editingCohort ? 'Update' : 'Create'}
+                  {saveMutation.isPending ? "Saving..." : editingCohort ? "Update" : "Create"}
                 </Button>
               </div>
             </form>
@@ -328,16 +337,18 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
             const isExpanded = expandedCohorts.has(cohort.id);
 
             return (
-              <Collapsible key={cohort.id} open={isExpanded} onOpenChange={() => toggleExpanded(cohort.id)}>
+              <Collapsible
+                key={cohort.id}
+                open={isExpanded}
+                onOpenChange={() => toggleExpanded(cohort.id)}
+              >
                 <Card>
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <CardTitle className="text-lg">{cohort.name}</CardTitle>
-                          <Badge variant={getStatusVariant(cohort.status)}>
-                            {cohort.status}
-                          </Badge>
+                          <Badge variant={getStatusVariant(cohort.status)}>{cohort.status}</Badge>
                         </div>
                         {cohort.description && (
                           <CardDescription className="mt-1">{cohort.description}</CardDescription>
@@ -346,29 +357,27 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
                           {cohort.start_date && (
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              {format(new Date(cohort.start_date), 'MMM d, yyyy')}
-                              {cohort.end_date && ` - ${format(new Date(cohort.end_date), 'MMM d, yyyy')}`}
+                              {format(new Date(cohort.start_date), "MMM d, yyyy")}
+                              {cohort.end_date &&
+                                ` - ${format(new Date(cohort.end_date), "MMM d, yyyy")}`}
                             </span>
                           )}
                           <span className="flex items-center gap-1">
                             <Users className="h-3 w-3" />
-                            {enrolledCount}{cohort.capacity ? ` / ${cohort.capacity}` : ''} enrolled
+                            {enrolledCount}
+                            {cohort.capacity ? ` / ${cohort.capacity}` : ""} enrolled
                           </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenDialog(cohort)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(cohort)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            if (confirm('Are you sure you want to delete this cohort?')) {
+                            if (confirm("Are you sure you want to delete this cohort?")) {
                               deleteMutation.mutate(cohort.id);
                             }
                           }}
@@ -390,10 +399,7 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
                   </CardHeader>
                   <CollapsibleContent>
                     <CardContent className="border-t pt-4">
-                      <CohortSessionsManager 
-                        cohortId={cohort.id} 
-                        programId={programId}
-                      />
+                      <CohortSessionsManager cohortId={cohort.id} programId={programId} />
                     </CardContent>
                   </CollapsibleContent>
                 </Card>

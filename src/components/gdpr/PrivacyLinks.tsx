@@ -7,9 +7,9 @@ interface PrivacyPolicyLinkProps {
 
 export function PrivacyPolicyLink({ className, showIcon = false }: PrivacyPolicyLinkProps) {
   return (
-    <Link 
+    <Link
       to="/privacy-policy"
-      className={`text-primary hover:underline inline-flex items-center gap-1 ${className || ''}`}
+      className={`text-primary hover:underline inline-flex items-center gap-1 ${className || ""}`}
     >
       Privacy Policy
     </Link>
@@ -18,9 +18,9 @@ export function PrivacyPolicyLink({ className, showIcon = false }: PrivacyPolicy
 
 export function CookiePolicyLink({ className }: { className?: string }) {
   return (
-    <Link 
+    <Link
       to="/cookie-policy"
-      className={`text-primary hover:underline inline-flex items-center gap-1 ${className || ''}`}
+      className={`text-primary hover:underline inline-flex items-center gap-1 ${className || ""}`}
     >
       Cookie Policy
     </Link>
@@ -29,11 +29,11 @@ export function CookiePolicyLink({ className }: { className?: string }) {
 
 export function TermsOfServiceLink({ className, showIcon = false }: PrivacyPolicyLinkProps) {
   return (
-    <a 
-      href="https://innotrue.com/terms" 
-      target="_blank" 
+    <a
+      href="https://innotrue.com/terms"
+      target="_blank"
       rel="noopener noreferrer"
-      className={`text-primary hover:underline inline-flex items-center gap-1 ${className || ''}`}
+      className={`text-primary hover:underline inline-flex items-center gap-1 ${className || ""}`}
     >
       Terms of Service
     </a>

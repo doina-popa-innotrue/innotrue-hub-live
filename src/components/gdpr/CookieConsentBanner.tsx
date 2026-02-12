@@ -62,9 +62,9 @@ export function CookieConsentBanner() {
 
     // Save to database via edge function with rate limiting and validation
     try {
-      await supabase.functions.invoke('track-analytics', {
+      await supabase.functions.invoke("track-analytics", {
         body: {
-          type: 'cookie_consent',
+          type: "cookie_consent",
           payload: {
             user_id: user?.id || null,
             session_id: getSessionId(),
@@ -84,17 +84,15 @@ export function CookieConsentBanner() {
     if (user?.id && !prefs.analytics) {
       try {
         // Insert into exclusion list (ignore conflict if already exists)
-        await supabase
-          .from('analytics_excluded_users')
-          .upsert(
-            {
-              user_id: user.id,
-              reason: 'User declined analytics via cookie banner',
-            },
-            { onConflict: 'user_id', ignoreDuplicates: true }
-          );
+        await supabase.from("analytics_excluded_users").upsert(
+          {
+            user_id: user.id,
+            reason: "User declined analytics via cookie banner",
+          },
+          { onConflict: "user_id", ignoreDuplicates: true },
+        );
         // Clear cached exclusion status so it's re-fetched
-        sessionStorage.removeItem('innotrue_analytics_excluded');
+        sessionStorage.removeItem("innotrue_analytics_excluded");
       } catch (error) {
         console.error("Failed to add user to exclusion list:", error);
       }
@@ -103,12 +101,9 @@ export function CookieConsentBanner() {
     // If logged-in user accepts analytics, remove them from exclusion list if present
     if (user?.id && prefs.analytics) {
       try {
-        await supabase
-          .from('analytics_excluded_users')
-          .delete()
-          .eq('user_id', user.id);
+        await supabase.from("analytics_excluded_users").delete().eq("user_id", user.id);
         // Clear cached exclusion status
-        sessionStorage.removeItem('innotrue_analytics_excluded');
+        sessionStorage.removeItem("innotrue_analytics_excluded");
       } catch (error) {
         console.error("Failed to remove user from exclusion list:", error);
       }
@@ -128,7 +123,7 @@ export function CookieConsentBanner() {
   };
 
   // Don't show on auth pages — user hasn't logged in yet, consent can wait
-  if (location.pathname.startsWith('/auth')) return null;
+  if (location.pathname.startsWith("/auth")) return null;
 
   if (!showBanner) return null;
 
@@ -161,7 +156,7 @@ export function CookieConsentBanner() {
                 </div>
                 <Switch checked disabled />
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="font-medium">Analytics</Label>
@@ -169,12 +164,14 @@ export function CookieConsentBanner() {
                     Help us understand how you use the platform
                   </p>
                 </div>
-                <Switch 
-                  checked={preferences.analytics} 
-                  onCheckedChange={(checked) => setPreferences(p => ({ ...p, analytics: checked }))}
+                <Switch
+                  checked={preferences.analytics}
+                  onCheckedChange={(checked) =>
+                    setPreferences((p) => ({ ...p, analytics: checked }))
+                  }
                 />
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="font-medium">Marketing</Label>
@@ -182,9 +179,11 @@ export function CookieConsentBanner() {
                     Personalized content and relevant recommendations
                   </p>
                 </div>
-                <Switch 
-                  checked={preferences.marketing} 
-                  onCheckedChange={(checked) => setPreferences(p => ({ ...p, marketing: checked }))}
+                <Switch
+                  checked={preferences.marketing}
+                  onCheckedChange={(checked) =>
+                    setPreferences((p) => ({ ...p, marketing: checked }))
+                  }
                 />
               </div>
 
@@ -203,9 +202,14 @@ export function CookieConsentBanner() {
                 <p className="font-medium">We value your privacy</p>
                 <p className="text-sm text-muted-foreground">
                   We use cookies to enhance your experience. By continuing, you agree to our{" "}
-                  <a href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</a>
-                  {" "}and{" "}
-                  <a href="/cookie-policy" className="text-primary hover:underline">Cookie Policy</a>.
+                  <a href="/privacy-policy" className="text-primary hover:underline">
+                    Privacy Policy
+                  </a>{" "}
+                  and{" "}
+                  <a href="/cookie-policy" className="text-primary hover:underline">
+                    Cookie Policy
+                  </a>
+                  .
                 </p>
               </div>
             </div>

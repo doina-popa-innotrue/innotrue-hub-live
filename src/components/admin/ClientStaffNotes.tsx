@@ -1,25 +1,55 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { 
-  Plus, Edit2, Trash2, Flag, FlagOff, ChevronDown, ChevronRight, 
-  Link2, FileText, ExternalLink, Loader2, User, Calendar, Tag,
-  AlertCircle, ThumbsUp, ThumbsDown, Minus, Lock, Unlock
-} from 'lucide-react';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Flag,
+  FlagOff,
+  ChevronDown,
+  ChevronRight,
+  Link2,
+  FileText,
+  ExternalLink,
+  Loader2,
+  User,
+  Calendar,
+  Tag,
+  AlertCircle,
+  ThumbsUp,
+  ThumbsDown,
+  Minus,
+  Lock,
+  Unlock,
+} from "lucide-react";
 
 interface ClientStaffNotesProps {
   clientUserId: string;
@@ -60,52 +90,58 @@ interface NoteAttachment {
 }
 
 const NOTE_TYPES = [
-  { value: 'general', label: 'General Note' },
-  { value: 'session_note', label: 'Session Note' },
-  { value: 'observation', label: 'Observation' },
-  { value: 'progress', label: 'Progress Update' },
-  { value: 'concern', label: 'Concern' },
-  { value: 'action_item', label: 'Action Item' },
-  { value: 'milestone', label: 'Milestone' },
+  { value: "general", label: "General Note" },
+  { value: "session_note", label: "Session Note" },
+  { value: "observation", label: "Observation" },
+  { value: "progress", label: "Progress Update" },
+  { value: "concern", label: "Concern" },
+  { value: "action_item", label: "Action Item" },
+  { value: "milestone", label: "Milestone" },
 ];
 
 const SENTIMENTS = [
-  { value: 'positive', label: 'Positive', icon: ThumbsUp, color: 'text-success' },
-  { value: 'neutral', label: 'Neutral', icon: Minus, color: 'text-muted-foreground' },
-  { value: 'negative', label: 'Negative', icon: ThumbsDown, color: 'text-destructive' },
-  { value: 'concern', label: 'Concern', icon: AlertCircle, color: 'text-warning' },
+  { value: "positive", label: "Positive", icon: ThumbsUp, color: "text-success" },
+  { value: "neutral", label: "Neutral", icon: Minus, color: "text-muted-foreground" },
+  { value: "negative", label: "Negative", icon: ThumbsDown, color: "text-destructive" },
+  { value: "concern", label: "Concern", icon: AlertCircle, color: "text-warning" },
 ];
 
-export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin = false }: ClientStaffNotesProps) {
+export default function ClientStaffNotes({
+  clientUserId,
+  enrollmentId,
+  isAdmin = false,
+}: ClientStaffNotesProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<StaffNote | null>(null);
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
-  const [filterType, setFilterType] = useState<string>('all');
+  const [filterType, setFilterType] = useState<string>("all");
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
 
   const [form, setForm] = useState({
-    title: '',
-    content: '',
-    note_type: 'general',
-    sentiment: '',
-    tags: '',
+    title: "",
+    content: "",
+    note_type: "general",
+    sentiment: "",
+    tags: "",
     is_flagged: false,
     is_private: false,
   });
 
-  const [attachments, setAttachments] = useState<{ type: 'link'; title: string; url: string; description: string }[]>([]);
+  const [attachments, setAttachments] = useState<
+    { type: "link"; title: string; url: string; description: string }[]
+  >([]);
 
   // Fetch notes
   const { data: notes, isLoading } = useQuery({
-    queryKey: ['client-staff-notes', clientUserId, enrollmentId],
+    queryKey: ["client-staff-notes", clientUserId, enrollmentId],
     queryFn: async () => {
       let query = supabase
-        .from('client_staff_notes')
-        .select('*')
-        .eq('client_user_id', clientUserId)
-        .order('created_at', { ascending: false });
+        .from("client_staff_notes")
+        .select("*")
+        .eq("client_user_id", clientUserId)
+        .order("created_at", { ascending: false });
 
       if (enrollmentId) {
         query = query.or(`enrollment_id.eq.${enrollmentId},enrollment_id.is.null`);
@@ -118,18 +154,18 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
       const notesWithDetails = await Promise.all(
         (data || []).map(async (note) => {
           const { data: author } = await supabase
-            .from('profiles')
-            .select('id, name, avatar_url')
-            .eq('id', note.author_id)
+            .from("profiles")
+            .select("id, name, avatar_url")
+            .eq("id", note.author_id)
             .single();
 
           const { data: attachmentsData } = await supabase
-            .from('client_staff_note_attachments')
-            .select('*')
-            .eq('note_id', note.id);
+            .from("client_staff_note_attachments")
+            .select("*")
+            .eq("note_id", note.id);
 
           return { ...note, author, attachments: attachmentsData || [] };
-        })
+        }),
       );
 
       return notesWithDetails as StaffNote[];
@@ -139,11 +175,11 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
   // Create note mutation
   const createNote = useMutation({
     mutationFn: async () => {
-      if (!user) throw new Error('Not authenticated');
-      if (!form.title.trim()) throw new Error('Title is required');
+      if (!user) throw new Error("Not authenticated");
+      if (!form.title.trim()) throw new Error("Title is required");
 
       const { data: noteData, error: noteError } = await supabase
-        .from('client_staff_notes')
+        .from("client_staff_notes")
         .insert({
           client_user_id: clientUserId,
           author_id: user.id,
@@ -152,7 +188,12 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
           content: form.content.trim() || null,
           note_type: form.note_type,
           sentiment: form.sentiment || null,
-          tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : null,
+          tags: form.tags
+            ? form.tags
+                .split(",")
+                .map((t) => t.trim())
+                .filter(Boolean)
+            : null,
           is_flagged: form.is_flagged,
           is_private: form.is_private,
         })
@@ -163,7 +204,7 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
 
       // Add attachments
       if (attachments.length > 0 && noteData) {
-        const attachmentInserts = attachments.map(att => ({
+        const attachmentInserts = attachments.map((att) => ({
           note_id: noteData.id,
           attachment_type: att.type,
           title: att.title,
@@ -172,7 +213,7 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
         }));
 
         const { error: attError } = await supabase
-          .from('client_staff_note_attachments')
+          .from("client_staff_note_attachments")
           .insert(attachmentInserts);
 
         if (attError) throw attError;
@@ -181,42 +222,47 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
       return noteData;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['client-staff-notes', clientUserId] });
-      toast.success('Note added');
+      queryClient.invalidateQueries({ queryKey: ["client-staff-notes", clientUserId] });
+      toast.success("Note added");
       resetForm();
       setDialogOpen(false);
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to add note');
+      toast.error(error.message || "Failed to add note");
     },
   });
 
   // Update note mutation
   const updateNote = useMutation({
     mutationFn: async () => {
-      if (!editingNote) throw new Error('No note to update');
-      if (!form.title.trim()) throw new Error('Title is required');
+      if (!editingNote) throw new Error("No note to update");
+      if (!form.title.trim()) throw new Error("Title is required");
 
       const { error } = await supabase
-        .from('client_staff_notes')
+        .from("client_staff_notes")
         .update({
           title: form.title.trim(),
           content: form.content.trim() || null,
           note_type: form.note_type,
           sentiment: form.sentiment || null,
-          tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : null,
+          tags: form.tags
+            ? form.tags
+                .split(",")
+                .map((t) => t.trim())
+                .filter(Boolean)
+            : null,
           is_flagged: form.is_flagged,
           is_private: form.is_private,
         })
-        .eq('id', editingNote.id);
+        .eq("id", editingNote.id);
 
       if (error) throw error;
 
       // Handle attachments - for simplicity, delete old and add new
-      await supabase.from('client_staff_note_attachments').delete().eq('note_id', editingNote.id);
+      await supabase.from("client_staff_note_attachments").delete().eq("note_id", editingNote.id);
 
       if (attachments.length > 0) {
-        const attachmentInserts = attachments.map(att => ({
+        const attachmentInserts = attachments.map((att) => ({
           note_id: editingNote.id,
           attachment_type: att.type,
           title: att.title,
@@ -224,36 +270,33 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
           description: att.description || null,
         }));
 
-        await supabase.from('client_staff_note_attachments').insert(attachmentInserts);
+        await supabase.from("client_staff_note_attachments").insert(attachmentInserts);
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['client-staff-notes', clientUserId] });
-      toast.success('Note updated');
+      queryClient.invalidateQueries({ queryKey: ["client-staff-notes", clientUserId] });
+      toast.success("Note updated");
       resetForm();
       setDialogOpen(false);
       setEditingNote(null);
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to update note');
+      toast.error(error.message || "Failed to update note");
     },
   });
 
   // Delete note mutation
   const deleteNote = useMutation({
     mutationFn: async (noteId: string) => {
-      const { error } = await supabase
-        .from('client_staff_notes')
-        .delete()
-        .eq('id', noteId);
+      const { error } = await supabase.from("client_staff_notes").delete().eq("id", noteId);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['client-staff-notes', clientUserId] });
-      toast.success('Note deleted');
+      queryClient.invalidateQueries({ queryKey: ["client-staff-notes", clientUserId] });
+      toast.success("Note deleted");
     },
     onError: () => {
-      toast.error('Failed to delete note');
+      toast.error("Failed to delete note");
     },
   });
 
@@ -261,23 +304,23 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
   const toggleFlag = useMutation({
     mutationFn: async ({ noteId, isFlagged }: { noteId: string; isFlagged: boolean }) => {
       const { error } = await supabase
-        .from('client_staff_notes')
+        .from("client_staff_notes")
         .update({ is_flagged: isFlagged })
-        .eq('id', noteId);
+        .eq("id", noteId);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['client-staff-notes', clientUserId] });
+      queryClient.invalidateQueries({ queryKey: ["client-staff-notes", clientUserId] });
     },
   });
 
   const resetForm = () => {
     setForm({
-      title: '',
-      content: '',
-      note_type: 'general',
-      sentiment: '',
-      tags: '',
+      title: "",
+      content: "",
+      note_type: "general",
+      sentiment: "",
+      tags: "",
       is_flagged: false,
       is_private: false,
     });
@@ -288,26 +331,26 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
     setEditingNote(note);
     setForm({
       title: note.title,
-      content: note.content || '',
+      content: note.content || "",
       note_type: note.note_type,
-      sentiment: note.sentiment || '',
-      tags: note.tags?.join(', ') || '',
+      sentiment: note.sentiment || "",
+      tags: note.tags?.join(", ") || "",
       is_flagged: note.is_flagged,
       is_private: note.is_private,
     });
     setAttachments(
-      (note.attachments || []).map(att => ({
-        type: 'link' as const,
+      (note.attachments || []).map((att) => ({
+        type: "link" as const,
         title: att.title,
-        url: att.url || '',
-        description: att.description || '',
-      }))
+        url: att.url || "",
+        description: att.description || "",
+      })),
     );
     setDialogOpen(true);
   };
 
   const handleAddAttachment = () => {
-    setAttachments([...attachments, { type: 'link', title: '', url: '', description: '' }]);
+    setAttachments([...attachments, { type: "link", title: "", url: "", description: "" }]);
   };
 
   const handleRemoveAttachment = (index: number) => {
@@ -330,14 +373,14 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
     setExpandedNotes(newExpanded);
   };
 
-  const filteredNotes = notes?.filter(note => {
+  const filteredNotes = notes?.filter((note) => {
     if (showFlaggedOnly && !note.is_flagged) return false;
-    if (filterType !== 'all' && note.note_type !== filterType) return false;
+    if (filterType !== "all" && note.note_type !== filterType) return false;
     return true;
   });
 
   const getSentimentIcon = (sentiment: string | null) => {
-    const s = SENTIMENTS.find(s => s.value === sentiment);
+    const s = SENTIMENTS.find((s) => s.value === sentiment);
     if (!s) return null;
     const Icon = s.icon;
     return <Icon className={`h-4 w-4 ${s.color}`} />;
@@ -374,7 +417,14 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
               Private notes about this client (not visible to the client)
             </CardDescription>
           </div>
-          <Button size="sm" onClick={() => { resetForm(); setEditingNote(null); setDialogOpen(true); }}>
+          <Button
+            size="sm"
+            onClick={() => {
+              resetForm();
+              setEditingNote(null);
+              setDialogOpen(true);
+            }}
+          >
             <Plus className="h-4 w-4 mr-1" />
             Add Note
           </Button>
@@ -388,13 +438,15 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              {NOTE_TYPES.map(type => (
-                <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+              {NOTE_TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Button
-            variant={showFlaggedOnly ? 'default' : 'outline'}
+            variant={showFlaggedOnly ? "default" : "outline"}
             size="sm"
             className="h-8 text-xs"
             onClick={() => setShowFlaggedOnly(!showFlaggedOnly)}
@@ -403,7 +455,7 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
             Flagged
           </Button>
           <span className="text-xs text-muted-foreground ml-auto">
-            {filteredNotes?.length || 0} note{(filteredNotes?.length || 0) !== 1 ? 's' : ''}
+            {filteredNotes?.length || 0} note{(filteredNotes?.length || 0) !== 1 ? "s" : ""}
           </span>
         </div>
       </CardHeader>
@@ -429,19 +481,26 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium truncate">{note.title}</span>
-                            {note.is_private && <Lock className="h-3 w-3 text-muted-foreground shrink-0" />}
-                            {note.is_flagged && <Flag className="h-3 w-3 text-destructive shrink-0" />}
+                            {note.is_private && (
+                              <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+                            )}
+                            {note.is_flagged && (
+                              <Flag className="h-3 w-3 text-destructive shrink-0" />
+                            )}
                             {getSentimentIcon(note.sentiment)}
                           </div>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
-                            <Badge variant="outline" className="text-xs">{NOTE_TYPES.find(t => t.value === note.note_type)?.label || note.note_type}</Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {NOTE_TYPES.find((t) => t.value === note.note_type)?.label ||
+                                note.note_type}
+                            </Badge>
                             <span className="flex items-center gap-1">
                               <User className="h-3 w-3" />
-                              {note.author?.name || 'Unknown'}
+                              {note.author?.name || "Unknown"}
                             </span>
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              {format(new Date(note.created_at), 'MMM d, yyyy h:mm a')}
+                              {format(new Date(note.created_at), "MMM d, yyyy h:mm a")}
                             </span>
                           </div>
                         </div>
@@ -451,15 +510,25 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
                               variant="ghost"
                               size="sm"
                               className="h-7 w-7 p-0"
-                              onClick={(e) => { e.stopPropagation(); toggleFlag.mutate({ noteId: note.id, isFlagged: !note.is_flagged }); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleFlag.mutate({ noteId: note.id, isFlagged: !note.is_flagged });
+                              }}
                             >
-                              {note.is_flagged ? <FlagOff className="h-3 w-3" /> : <Flag className="h-3 w-3" />}
+                              {note.is_flagged ? (
+                                <FlagOff className="h-3 w-3" />
+                              ) : (
+                                <Flag className="h-3 w-3" />
+                              )}
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-7 w-7 p-0"
-                              onClick={(e) => { e.stopPropagation(); handleEdit(note); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(note);
+                              }}
                             >
                               <Edit2 className="h-3 w-3" />
                             </Button>
@@ -467,7 +536,10 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
                               variant="ghost"
                               size="sm"
                               className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                              onClick={(e) => { e.stopPropagation(); if (confirm('Delete this note?')) deleteNote.mutate(note.id); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm("Delete this note?")) deleteNote.mutate(note.id);
+                              }}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -484,17 +556,21 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
                           <div className="flex items-center gap-1 mt-3 flex-wrap">
                             <Tag className="h-3 w-3 text-muted-foreground" />
                             {note.tags.map((tag, i) => (
-                              <Badge key={i} variant="secondary" className="text-xs">{tag}</Badge>
+                              <Badge key={i} variant="secondary" className="text-xs">
+                                {tag}
+                              </Badge>
                             ))}
                           </div>
                         )}
                         {note.attachments && note.attachments.length > 0 && (
                           <div className="mt-3 space-y-2">
-                            <span className="text-xs font-medium text-muted-foreground">Attachments</span>
+                            <span className="text-xs font-medium text-muted-foreground">
+                              Attachments
+                            </span>
                             {note.attachments.map((att) => (
                               <a
                                 key={att.id}
-                                href={att.url || '#'}
+                                href={att.url || "#"}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-2 text-sm text-primary hover:underline"
@@ -508,7 +584,7 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
                         )}
                         {note.updated_at !== note.created_at && (
                           <p className="text-xs text-muted-foreground mt-3 pt-2 border-t">
-                            Updated: {format(new Date(note.updated_at), 'MMM d, yyyy h:mm a')}
+                            Updated: {format(new Date(note.updated_at), "MMM d, yyyy h:mm a")}
                           </p>
                         )}
                       </div>
@@ -528,10 +604,19 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
       </CardContent>
 
       {/* Add/Edit Note Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setEditingNote(null); resetForm(); } }}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setEditingNote(null);
+            resetForm();
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingNote ? 'Edit Note' : 'Add Staff Note'}</DialogTitle>
+            <DialogTitle>{editingNote ? "Edit Note" : "Add Staff Note"}</DialogTitle>
             <DialogDescription>
               Private note about this client (not shared with the client)
             </DialogDescription>
@@ -551,13 +636,18 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Note Type</Label>
-                <Select value={form.note_type} onValueChange={(v) => setForm({ ...form, note_type: v })}>
+                <Select
+                  value={form.note_type}
+                  onValueChange={(v) => setForm({ ...form, note_type: v })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {NOTE_TYPES.map(type => (
-                      <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                    {NOTE_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -565,13 +655,16 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
 
               <div className="space-y-2">
                 <Label>Sentiment</Label>
-                <Select value={form.sentiment} onValueChange={(v) => setForm({ ...form, sentiment: v })}>
+                <Select
+                  value={form.sentiment}
+                  onValueChange={(v) => setForm({ ...form, sentiment: v })}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Optional" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">None</SelectItem>
-                    {SENTIMENTS.map(s => (
+                    {SENTIMENTS.map((s) => (
                       <SelectItem key={s.value} value={s.value}>
                         <div className="flex items-center gap-2">
                           <s.icon className={`h-4 w-4 ${s.color}`} />
@@ -660,17 +753,17 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
                   <Input
                     placeholder="Title"
                     value={att.title}
-                    onChange={(e) => handleAttachmentChange(index, 'title', e.target.value)}
+                    onChange={(e) => handleAttachmentChange(index, "title", e.target.value)}
                   />
                   <Input
                     placeholder="URL"
                     value={att.url}
-                    onChange={(e) => handleAttachmentChange(index, 'url', e.target.value)}
+                    onChange={(e) => handleAttachmentChange(index, "url", e.target.value)}
                   />
                   <Input
                     placeholder="Description (optional)"
                     value={att.description}
-                    onChange={(e) => handleAttachmentChange(index, 'description', e.target.value)}
+                    onChange={(e) => handleAttachmentChange(index, "description", e.target.value)}
                   />
                 </div>
               ))}
@@ -678,15 +771,24 @@ export default function ClientStaffNotes({ clientUserId, enrollmentId, isAdmin =
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setDialogOpen(false); setEditingNote(null); resetForm(); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDialogOpen(false);
+                setEditingNote(null);
+                resetForm();
+              }}
+            >
               Cancel
             </Button>
             <Button
-              onClick={() => editingNote ? updateNote.mutate() : createNote.mutate()}
+              onClick={() => (editingNote ? updateNote.mutate() : createNote.mutate())}
               disabled={!form.title.trim() || createNote.isPending || updateNote.isPending}
             >
-              {(createNote.isPending || updateNote.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {editingNote ? 'Save Changes' : 'Add Note'}
+              {(createNote.isPending || updateNote.isPending) && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              {editingNote ? "Save Changes" : "Add Note"}
             </Button>
           </DialogFooter>
         </DialogContent>

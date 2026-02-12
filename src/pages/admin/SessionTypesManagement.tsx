@@ -1,21 +1,46 @@
-import { useState, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, Users, Clock, Zap } from 'lucide-react';
-import { useAdminCRUD } from '@/hooks/useAdminCRUD';
-import { AdminPageHeader, AdminLoadingState, AdminEmptyState, AdminFormActions } from '@/components/admin';
+import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, Users, Clock, Zap } from "lucide-react";
+import { useAdminCRUD } from "@/hooks/useAdminCRUD";
+import {
+  AdminPageHeader,
+  AdminLoadingState,
+  AdminEmptyState,
+  AdminFormActions,
+} from "@/components/admin";
 
 interface SessionType {
   id: string;
@@ -65,19 +90,19 @@ interface RoleFormData {
 }
 
 const initialTypeFormData: TypeFormData = {
-  name: '',
-  description: '',
+  name: "",
+  description: "",
   default_duration_minutes: 60,
-  max_participants: '',
+  max_participants: "",
   allow_self_registration: false,
-  feature_key: '',
+  feature_key: "",
   is_active: true,
 };
 
 const initialRoleFormData: RoleFormData = {
-  role_name: '',
-  description: '',
-  max_per_session: '',
+  role_name: "",
+  description: "",
+  max_per_session: "",
   is_required: false,
   order_index: 0,
 };
@@ -103,30 +128,30 @@ export default function SessionTypesManagement() {
     handleDelete,
     isMutating,
   } = useAdminCRUD<SessionType, TypeFormData>({
-    tableName: 'session_types',
-    queryKey: 'session-types',
-    entityName: 'Session type',
-    orderBy: 'name',
+    tableName: "session_types",
+    queryKey: "session-types",
+    entityName: "Session type",
+    orderBy: "name",
     initialFormData: initialTypeFormData,
     mapItemToForm: (item) => ({
       name: item.name,
-      description: item.description || '',
+      description: item.description || "",
       default_duration_minutes: item.default_duration_minutes,
-      max_participants: item.max_participants?.toString() || '',
+      max_participants: item.max_participants?.toString() || "",
       allow_self_registration: item.allow_self_registration,
-      feature_key: item.feature_key || '',
+      feature_key: item.feature_key || "",
       is_active: item.is_active,
     }),
   });
 
   // Fetch session type roles
   const { data: sessionRoles, isLoading: rolesLoading } = useQuery({
-    queryKey: ['session-type-roles'],
+    queryKey: ["session-type-roles"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('session_type_roles')
-        .select('*')
-        .order('order_index');
+        .from("session_type_roles")
+        .select("*")
+        .order("order_index");
       if (error) throw error;
       return data as SessionTypeRole[];
     },
@@ -134,12 +159,12 @@ export default function SessionTypesManagement() {
 
   // Fetch features for dropdown
   const { data: features } = useQuery({
-    queryKey: ['features-for-sessions'],
+    queryKey: ["features-for-sessions"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('features')
-        .select('id, key, name, is_consumable')
-        .order('name');
+        .from("features")
+        .select("id, key, name, is_consumable")
+        .order("name");
       if (error) throw error;
       return data as Feature[];
     },
@@ -159,25 +184,20 @@ export default function SessionTypesManagement() {
       };
 
       if (data.id) {
-        const { error } = await supabase
-          .from('session_types')
-          .update(payload)
-          .eq('id', data.id);
+        const { error } = await supabase.from("session_types").update(payload).eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('session_types')
-          .insert(payload);
+        const { error } = await supabase.from("session_types").insert(payload);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['session-types'] });
-      toast.success(editingItem ? 'Session type updated' : 'Session type created');
+      queryClient.invalidateQueries({ queryKey: ["session-types"] });
+      toast.success(editingItem ? "Session type updated" : "Session type created");
       setIsDialogOpen(false);
     },
     onError: (error) => {
-      toast.error('Failed to save session type', { description: error.message });
+      toast.error("Failed to save session type", { description: error.message });
     },
   });
 
@@ -195,38 +215,36 @@ export default function SessionTypesManagement() {
 
       if (data.id) {
         const { error } = await supabase
-          .from('session_type_roles')
+          .from("session_type_roles")
           .update(payload)
-          .eq('id', data.id);
+          .eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('session_type_roles')
-          .insert(payload);
+        const { error } = await supabase.from("session_type_roles").insert(payload);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['session-type-roles'] });
-      toast.success(editingRole ? 'Role updated' : 'Role created');
+      queryClient.invalidateQueries({ queryKey: ["session-type-roles"] });
+      toast.success(editingRole ? "Role updated" : "Role created");
       resetRoleForm();
     },
     onError: (error) => {
-      toast.error('Failed to save role', { description: error.message });
+      toast.error("Failed to save role", { description: error.message });
     },
   });
 
   const deleteRoleMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('session_type_roles').delete().eq('id', id);
+      const { error } = await supabase.from("session_type_roles").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['session-type-roles'] });
-      toast.success('Role deleted');
+      queryClient.invalidateQueries({ queryKey: ["session-type-roles"] });
+      toast.success("Role deleted");
     },
     onError: (error) => {
-      toast.error('Failed to delete role', { description: error.message });
+      toast.error("Failed to delete role", { description: error.message });
     },
   });
 
@@ -239,7 +257,7 @@ export default function SessionTypesManagement() {
 
   const openAddRole = (typeId: string) => {
     setSelectedTypeId(typeId);
-    const existingRoles = sessionRoles?.filter(r => r.session_type_id === typeId) || [];
+    const existingRoles = sessionRoles?.filter((r) => r.session_type_id === typeId) || [];
     setRoleForm({
       ...initialRoleFormData,
       order_index: existingRoles.length,
@@ -252,8 +270,8 @@ export default function SessionTypesManagement() {
     setSelectedTypeId(role.session_type_id);
     setRoleForm({
       role_name: role.role_name,
-      description: role.description || '',
-      max_per_session: role.max_per_session?.toString() || '',
+      description: role.description || "",
+      max_per_session: role.max_per_session?.toString() || "",
       is_required: role.is_required,
       order_index: role.order_index,
     });
@@ -261,7 +279,7 @@ export default function SessionTypesManagement() {
   };
 
   const toggleExpanded = useCallback((typeId: string) => {
-    setExpandedTypes(prev => {
+    setExpandedTypes((prev) => {
       const newExpanded = new Set(prev);
       if (newExpanded.has(typeId)) {
         newExpanded.delete(typeId);
@@ -272,14 +290,20 @@ export default function SessionTypesManagement() {
     });
   }, []);
 
-  const getRolesForType = useCallback((typeId: string) => {
-    return sessionRoles?.filter(r => r.session_type_id === typeId) || [];
-  }, [sessionRoles]);
+  const getRolesForType = useCallback(
+    (typeId: string) => {
+      return sessionRoles?.filter((r) => r.session_type_id === typeId) || [];
+    },
+    [sessionRoles],
+  );
 
-  const getFeatureName = useCallback((featureKey: string | null) => {
-    if (!featureKey) return null;
-    return features?.find(f => f.key === featureKey)?.name || featureKey;
-  }, [features]);
+  const getFeatureName = useCallback(
+    (featureKey: string | null) => {
+      if (!featureKey) return null;
+      return features?.find((f) => f.key === featureKey)?.name || featureKey;
+    },
+    [features],
+  );
 
   const handleTypeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -331,21 +355,25 @@ export default function SessionTypesManagement() {
                       <div className="flex items-start gap-3">
                         <CollapsibleTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-6 w-6 mt-1">
-                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
                           </Button>
                         </CollapsibleTrigger>
                         <div>
                           <div className="flex items-center gap-2">
                             <CardTitle className="text-lg">{type.name}</CardTitle>
-                            <Badge variant={type.is_active ? 'default' : 'secondary'}>
-                              {type.is_active ? 'Active' : 'Inactive'}
+                            <Badge variant={type.is_active ? "default" : "secondary"}>
+                              {type.is_active ? "Active" : "Inactive"}
                             </Badge>
                             {type.allow_self_registration && (
                               <Badge variant="outline">Self-Registration</Badge>
                             )}
                           </div>
                           <CardDescription className="mt-1">
-                            {type.description || 'No description'}
+                            {type.description || "No description"}
                           </CardDescription>
                           <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
@@ -364,7 +392,9 @@ export default function SessionTypesManagement() {
                                 {getFeatureName(type.feature_key)}
                               </span>
                             )}
-                            <span>{roles.length} role{roles.length !== 1 ? 's' : ''}</span>
+                            <span>
+                              {roles.length} role{roles.length !== 1 ? "s" : ""}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -372,11 +402,7 @@ export default function SessionTypesManagement() {
                         <Button variant="outline" size="sm" onClick={() => handleEdit(type)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleDelete(type.id)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => handleDelete(type.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -395,7 +421,9 @@ export default function SessionTypesManagement() {
                         </div>
 
                         {roles.length === 0 ? (
-                          <p className="text-sm text-muted-foreground italic">No roles defined for this session type.</p>
+                          <p className="text-sm text-muted-foreground italic">
+                            No roles defined for this session type.
+                          </p>
                         ) : (
                           <Table>
                             <TableHeader>
@@ -410,27 +438,34 @@ export default function SessionTypesManagement() {
                             <TableBody>
                               {roles.map((role) => (
                                 <TableRow key={role.id}>
-                                  <TableCell className="font-medium capitalize">{role.role_name}</TableCell>
-                                  <TableCell className="text-muted-foreground">
-                                    {role.description || '-'}
+                                  <TableCell className="font-medium capitalize">
+                                    {role.role_name}
                                   </TableCell>
-                                  <TableCell>{role.max_per_session || 'Unlimited'}</TableCell>
+                                  <TableCell className="text-muted-foreground">
+                                    {role.description || "-"}
+                                  </TableCell>
+                                  <TableCell>{role.max_per_session || "Unlimited"}</TableCell>
                                   <TableCell>
-                                    <Badge variant={role.is_required ? 'default' : 'outline'}>
-                                      {role.is_required ? 'Required' : 'Optional'}
+                                    <Badge variant={role.is_required ? "default" : "outline"}>
+                                      {role.is_required ? "Required" : "Optional"}
                                     </Badge>
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex items-center gap-1">
-                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditRole(role)}>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => openEditRole(role)}
+                                      >
                                         <Pencil className="h-4 w-4" />
                                       </Button>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon" 
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
                                         className="h-8 w-8"
                                         onClick={() => {
-                                          if (confirm('Delete this role?')) {
+                                          if (confirm("Delete this role?")) {
                                             deleteRoleMutation.mutate(role.id);
                                           }
                                         }}
@@ -459,7 +494,7 @@ export default function SessionTypesManagement() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingItem ? 'Edit Session Type' : 'Add Session Type'}</DialogTitle>
+            <DialogTitle>{editingItem ? "Edit Session Type" : "Add Session Type"}</DialogTitle>
             <DialogDescription>
               Configure the session type and its default settings.
             </DialogDescription>
@@ -490,7 +525,12 @@ export default function SessionTypesManagement() {
                   type="number"
                   min={5}
                   value={typeForm.default_duration_minutes}
-                  onChange={(e) => setTypeForm({ ...typeForm, default_duration_minutes: parseInt(e.target.value) || 60 })}
+                  onChange={(e) =>
+                    setTypeForm({
+                      ...typeForm,
+                      default_duration_minutes: parseInt(e.target.value) || 60,
+                    })
+                  }
                 />
               </div>
               <div>
@@ -508,8 +548,10 @@ export default function SessionTypesManagement() {
             <div>
               <Label htmlFor="feature_key">Feature Gate</Label>
               <Select
-                value={typeForm.feature_key || '_none'}
-                onValueChange={(value) => setTypeForm({ ...typeForm, feature_key: value === '_none' ? '' : value })}
+                value={typeForm.feature_key || "_none"}
+                onValueChange={(value) =>
+                  setTypeForm({ ...typeForm, feature_key: value === "_none" ? "" : value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="No feature gate" />
@@ -518,7 +560,7 @@ export default function SessionTypesManagement() {
                   <SelectItem value="_none">No feature gate</SelectItem>
                   {features?.map((feature) => (
                     <SelectItem key={feature.id} value={feature.key}>
-                      {feature.name} {feature.is_consumable && '(Consumable)'}
+                      {feature.name} {feature.is_consumable && "(Consumable)"}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -532,7 +574,9 @@ export default function SessionTypesManagement() {
               <Switch
                 id="self_registration"
                 checked={typeForm.allow_self_registration}
-                onCheckedChange={(checked) => setTypeForm({ ...typeForm, allow_self_registration: checked })}
+                onCheckedChange={(checked) =>
+                  setTypeForm({ ...typeForm, allow_self_registration: checked })
+                }
               />
             </div>
             <div className="flex items-center justify-between">
@@ -550,7 +594,7 @@ export default function SessionTypesManagement() {
               onCancel={() => setIsDialogOpen(false)}
               isEditing={!!editingItem}
               isSubmitting={saveTypeMutation.isPending}
-              submitLabel={{ create: 'Create Session Type', update: 'Save Changes' }}
+              submitLabel={{ create: "Create Session Type", update: "Save Changes" }}
             />
           </form>
         </DialogContent>
@@ -560,7 +604,7 @@ export default function SessionTypesManagement() {
       <Dialog open={roleDialogOpen} onOpenChange={(open) => !open && resetRoleForm()}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingRole ? 'Edit Role' : 'Add Role'}</DialogTitle>
+            <DialogTitle>{editingRole ? "Edit Role" : "Add Role"}</DialogTitle>
             <DialogDescription>
               Configure the participant role for this session type.
             </DialogDescription>
@@ -610,7 +654,7 @@ export default function SessionTypesManagement() {
               onCancel={resetRoleForm}
               isEditing={!!editingRole}
               isSubmitting={saveRoleMutation.isPending}
-              submitLabel={{ create: 'Add Role', update: 'Save Changes' }}
+              submitLabel={{ create: "Add Role", update: "Save Changes" }}
             />
           </form>
         </DialogContent>

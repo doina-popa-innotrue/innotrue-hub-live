@@ -59,11 +59,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DevelopmentItemDialog } from "@/components/capabilities/DevelopmentItemDialog";
 
 interface DevelopmentItem {
@@ -80,7 +76,10 @@ interface DevelopmentItem {
   updated_at: string;
   // Linked entities
   goal_links?: Array<{ goal_id: string; goal: { id: string; title: string } }>;
-  milestone_links?: Array<{ milestone_id: string; milestone: { id: string; title: string; goal_id: string } }>;
+  milestone_links?: Array<{
+    milestone_id: string;
+    milestone: { id: string; title: string; goal_id: string };
+  }>;
   question_links?: Array<{ question_id: string; snapshot_id: string | null }>;
   domain_links?: Array<{ domain_id: string; snapshot_id: string | null }>;
 }
@@ -142,10 +141,10 @@ export default function DevelopmentItems() {
   useEffect(() => {
     if (urlSnapshotId) setSelectedSnapshotId(urlSnapshotId);
     else setSelectedSnapshotId("all");
-    
+
     if (urlDomainId) setSelectedDomainId(urlDomainId);
     else setSelectedDomainId("all");
-    
+
     if (urlQuestionId) setSelectedQuestionId(urlQuestionId);
     else setSelectedQuestionId("all");
   }, [urlSnapshotId, urlDomainId, urlQuestionId]);
@@ -203,11 +202,13 @@ export default function DevelopmentItems() {
       if (!user) return [];
       const { data, error } = await supabase
         .from("capability_snapshots")
-        .select(`
+        .select(
+          `
           id,
           completed_at,
           assessment:capability_assessments(id, name)
-        `)
+        `,
+        )
         .eq("user_id", user.id)
         .eq("status", "completed")
         .order("completed_at", { ascending: false });
@@ -222,9 +223,9 @@ export default function DevelopmentItems() {
     queryKey: ["domains-for-filter", selectedSnapshotId, snapshots],
     queryFn: async () => {
       if (selectedSnapshotId === "all" || !snapshots) return [];
-      const selectedSnapshot = snapshots.find(s => s.id === selectedSnapshotId);
+      const selectedSnapshot = snapshots.find((s) => s.id === selectedSnapshotId);
       if (!selectedSnapshot?.assessment?.id) return [];
-      
+
       const { data, error } = await supabase
         .from("capability_domains")
         .select("id, name")
@@ -276,7 +277,8 @@ export default function DevelopmentItems() {
 
       const { data, error } = await supabase
         .from("development_items")
-        .select(`
+        .select(
+          `
           *,
           goal_links:development_item_goal_links(
             goal_id,
@@ -288,7 +290,8 @@ export default function DevelopmentItems() {
           ),
           question_links:development_item_question_links(question_id, snapshot_id),
           domain_links:development_item_domain_links(domain_id, snapshot_id)
-        `)
+        `,
+        )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -301,10 +304,7 @@ export default function DevelopmentItems() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (itemId: string) => {
-      const { error } = await supabase
-        .from("development_items")
-        .delete()
-        .eq("id", itemId);
+      const { error } = await supabase.from("development_items").delete().eq("id", itemId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -327,11 +327,8 @@ export default function DevelopmentItems() {
       } else {
         updates.completed_at = null;
       }
-      
-      const { error } = await supabase
-        .from("development_items")
-        .update(updates)
-        .eq("id", itemId);
+
+      const { error } = await supabase.from("development_items").update(updates).eq("id", itemId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -351,17 +348,21 @@ export default function DevelopmentItems() {
       // Context filters (URL-synced: snapshotId, domainId, questionId)
       if (selectedQuestionId !== "all") {
         const matchesQuestion = item.question_links?.some(
-          (link) => link.question_id === selectedQuestionId && (selectedSnapshotId === "all" || link.snapshot_id === selectedSnapshotId)
+          (link) =>
+            link.question_id === selectedQuestionId &&
+            (selectedSnapshotId === "all" || link.snapshot_id === selectedSnapshotId),
         );
         if (!matchesQuestion) return false;
       } else if (selectedDomainId !== "all") {
         const matchesDomain = item.domain_links?.some(
-          (link) => link.domain_id === selectedDomainId && (selectedSnapshotId === "all" || link.snapshot_id === selectedSnapshotId)
+          (link) =>
+            link.domain_id === selectedDomainId &&
+            (selectedSnapshotId === "all" || link.snapshot_id === selectedSnapshotId),
         );
         if (!matchesDomain) return false;
       } else if (selectedSnapshotId !== "all") {
         // Filter by snapshot (question or domain linked)
-        const matchesSnapshot = 
+        const matchesSnapshot =
           item.question_links?.some((link) => link.snapshot_id === selectedSnapshotId) ||
           item.domain_links?.some((link) => link.snapshot_id === selectedSnapshotId);
         if (!matchesSnapshot) return false;
@@ -369,7 +370,7 @@ export default function DevelopmentItems() {
 
       // Goal filter
       if (selectedGoalId !== "all") {
-        const matchesGoal = item.goal_links?.some(link => link.goal_id === selectedGoalId);
+        const matchesGoal = item.goal_links?.some((link) => link.goal_id === selectedGoalId);
         if (!matchesGoal) return false;
       }
 
@@ -395,7 +396,19 @@ export default function DevelopmentItems() {
 
       return true;
     });
-  }, [items, showReflections, showNotes, showResources, showActions, selectedStatus, searchQuery, selectedSnapshotId, selectedDomainId, selectedQuestionId, selectedGoalId]);
+  }, [
+    items,
+    showReflections,
+    showNotes,
+    showResources,
+    showActions,
+    selectedStatus,
+    searchQuery,
+    selectedSnapshotId,
+    selectedDomainId,
+    selectedQuestionId,
+    selectedGoalId,
+  ]);
 
   // Group items by context (goal)
   const groupedItems = useMemo(() => {
@@ -732,9 +745,11 @@ export default function DevelopmentItems() {
                       Reflections
                     </label>
                   </div>
-                  <p className="text-xs text-muted-foreground ml-6">What you learned or how you've grown</p>
+                  <p className="text-xs text-muted-foreground ml-6">
+                    What you learned or how you've grown
+                  </p>
                 </div>
-                
+
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -750,9 +765,11 @@ export default function DevelopmentItems() {
                       Notes
                     </label>
                   </div>
-                  <p className="text-xs text-muted-foreground ml-6">What happened or what you observed</p>
+                  <p className="text-xs text-muted-foreground ml-6">
+                    What happened or what you observed
+                  </p>
                 </div>
-                
+
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -768,9 +785,11 @@ export default function DevelopmentItems() {
                       Resources
                     </label>
                   </div>
-                  <p className="text-xs text-muted-foreground ml-6">External materials that support your learning</p>
+                  <p className="text-xs text-muted-foreground ml-6">
+                    External materials that support your learning
+                  </p>
                 </div>
-                
+
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -786,7 +805,9 @@ export default function DevelopmentItems() {
                       Actions
                     </label>
                   </div>
-                  <p className="text-xs text-muted-foreground ml-6">Concrete next steps or commitments</p>
+                  <p className="text-xs text-muted-foreground ml-6">
+                    Concrete next steps or commitments
+                  </p>
                 </div>
               </div>
             </div>
@@ -813,7 +834,7 @@ export default function DevelopmentItems() {
             {/* Context Filters */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">Context Filters</Label>
-              
+
               {/* Assessment filter */}
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Assessment</Label>
@@ -826,7 +847,8 @@ export default function DevelopmentItems() {
                     {snapshots?.map((s) => (
                       <SelectItem key={s.id} value={s.id}>
                         <span className="line-clamp-1">
-                          {s.assessment?.name} ({s.completed_at ? format(parseISO(s.completed_at), "MMM d") : "N/A"})
+                          {s.assessment?.name} (
+                          {s.completed_at ? format(parseISO(s.completed_at), "MMM d") : "N/A"})
                         </span>
                       </SelectItem>
                     ))}
@@ -837,18 +859,24 @@ export default function DevelopmentItems() {
               {/* Domain filter (enabled when assessment selected) */}
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Domain</Label>
-                <Select 
-                  value={selectedDomainId} 
+                <Select
+                  value={selectedDomainId}
                   onValueChange={handleDomainChange}
                   disabled={selectedSnapshotId === "all"}
                 >
                   <SelectTrigger className="text-sm">
-                    <SelectValue placeholder={selectedSnapshotId === "all" ? "Select assessment first" : "All domains"} />
+                    <SelectValue
+                      placeholder={
+                        selectedSnapshotId === "all" ? "Select assessment first" : "All domains"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All domains</SelectItem>
                     {domains?.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -857,13 +885,17 @@ export default function DevelopmentItems() {
               {/* Question filter (enabled when domain selected) */}
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Question</Label>
-                <Select 
-                  value={selectedQuestionId} 
+                <Select
+                  value={selectedQuestionId}
                   onValueChange={handleQuestionChange}
                   disabled={selectedDomainId === "all"}
                 >
                   <SelectTrigger className="text-sm">
-                    <SelectValue placeholder={selectedDomainId === "all" ? "Select domain first" : "All questions"} />
+                    <SelectValue
+                      placeholder={
+                        selectedDomainId === "all" ? "Select domain first" : "All questions"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All questions</SelectItem>
@@ -922,9 +954,7 @@ export default function DevelopmentItems() {
             </Card>
           ) : viewMode === "list" ? (
             <ScrollArea className="h-[calc(100vh-280px)]">
-              <div className="space-y-3 pr-4">
-                {filteredItems.map(renderItemCard)}
-              </div>
+              <div className="space-y-3 pr-4">{filteredItems.map(renderItemCard)}</div>
             </ScrollArea>
           ) : (
             <ScrollArea className="h-[calc(100vh-280px)]">

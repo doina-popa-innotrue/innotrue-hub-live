@@ -1,12 +1,12 @@
-import { Button } from '@/components/ui/button';
-import { Edit, Trash2, MoreHorizontal } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2, MoreHorizontal } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { ReactNode } from 'react';
+} from "@/components/ui/dropdown-menu";
+import { ReactNode } from "react";
 
 interface AdminTableActionsProps {
   onEdit?: () => void;
@@ -21,7 +21,7 @@ interface AdminTableActionsProps {
 
 /**
  * Standardized table action buttons for admin pages.
- * 
+ *
  * @example
  * ```tsx
  * <AdminTableActions
@@ -84,7 +84,7 @@ export function AdminTableActions({
           size="icon"
           onClick={onDelete}
           disabled={deleteDisabled}
-          title={deleteDisabled ? deleteDisabledReason : 'Delete'}
+          title={deleteDisabled ? deleteDisabledReason : "Delete"}
         >
           <Trash2 className="h-4 w-4" />
         </Button>

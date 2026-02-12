@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-import { cn } from '@/lib/utils';
+import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface LiveRegionProps {
   /** Message to announce */
   message: string;
   /** Politeness level - 'polite' waits for idle, 'assertive' interrupts immediately */
-  politeness?: 'polite' | 'assertive';
+  politeness?: "polite" | "assertive";
   /** Whether the region is currently active */
   active?: boolean;
   /** Additional class names */
@@ -15,29 +15,29 @@ interface LiveRegionProps {
 /**
  * Live region for announcing dynamic content changes to screen readers.
  * Use for status updates, form errors, or other dynamic content.
- * 
+ *
  * @example
  * ```tsx
  * const [message, setMessage] = useState('');
- * 
+ *
  * // After form submission:
  * setMessage('Form submitted successfully');
- * 
+ *
  * <LiveRegion message={message} />
  * ```
  */
-export function LiveRegion({ 
-  message, 
-  politeness = 'polite',
+export function LiveRegion({
+  message,
+  politeness = "polite",
   active = true,
-  className 
+  className,
 }: LiveRegionProps) {
-  const [announced, setAnnounced] = useState('');
+  const [announced, setAnnounced] = useState("");
 
   useEffect(() => {
     if (active && message) {
       // Clear first, then set - this ensures the message is announced even if unchanged
-      setAnnounced('');
+      setAnnounced("");
       const timer = setTimeout(() => setAnnounced(message), 100);
       return () => clearTimeout(timer);
     }
@@ -48,7 +48,7 @@ export function LiveRegion({
       role="status"
       aria-live={politeness}
       aria-atomic="true"
-      className={cn('sr-only', className)}
+      className={cn("sr-only", className)}
     >
       {announced}
     </div>
@@ -57,16 +57,16 @@ export function LiveRegion({
 
 /**
  * Hook for managing live region announcements.
- * 
+ *
  * @example
  * ```tsx
  * const { announce, LiveRegionComponent } = useLiveAnnouncer();
- * 
+ *
  * const handleSave = () => {
  *   // ... save logic
  *   announce('Changes saved successfully');
  * };
- * 
+ *
  * return (
  *   <>
  *     <button onClick={handleSave}>Save</button>
@@ -75,20 +75,18 @@ export function LiveRegion({
  * );
  * ```
  */
-export function useLiveAnnouncer(defaultPoliteness: 'polite' | 'assertive' = 'polite') {
-  const [message, setMessage] = useState('');
+export function useLiveAnnouncer(defaultPoliteness: "polite" | "assertive" = "polite") {
+  const [message, setMessage] = useState("");
 
   const announce = (newMessage: string) => {
     setMessage(newMessage);
   };
 
   const clear = () => {
-    setMessage('');
+    setMessage("");
   };
 
-  const LiveRegionComponent = () => (
-    <LiveRegion message={message} politeness={defaultPoliteness} />
-  );
+  const LiveRegionComponent = () => <LiveRegion message={message} politeness={defaultPoliteness} />;
 
   return {
     announce,

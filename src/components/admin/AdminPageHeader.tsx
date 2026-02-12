@@ -1,29 +1,35 @@
-import { ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus } from 'lucide-react';
+import { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Plus } from "lucide-react";
 
 interface AdminPageHeaderProps {
   title: string;
   description?: string;
-  
+
   // Dialog props (optional - if not provided, just renders the header)
   isDialogOpen?: boolean;
   onDialogOpenChange?: (open: boolean) => void;
   dialogTitle?: string;
   dialogContent?: ReactNode;
-  
+
   // Create button props
   createButtonLabel?: string;
   showCreateButton?: boolean;
-  
+
   // Custom actions
   actions?: ReactNode;
 }
 
 /**
  * Standardized admin page header with optional create dialog.
- * 
+ *
  * @example
  * ```tsx
  * <AdminPageHeader
@@ -44,7 +50,7 @@ export function AdminPageHeader({
   onDialogOpenChange,
   dialogTitle,
   dialogContent,
-  createButtonLabel = 'Create New',
+  createButtonLabel = "Create New",
   showCreateButton = true,
   actions,
 }: AdminPageHeaderProps) {
@@ -54,14 +60,12 @@ export function AdminPageHeader({
     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
       <div className="flex-1 min-w-0">
         <h1 className="text-2xl sm:text-3xl font-bold">{title}</h1>
-        {description && (
-          <p className="text-muted-foreground mt-2">{description}</p>
-        )}
+        {description && <p className="text-muted-foreground mt-2">{description}</p>}
       </div>
-      
+
       <div className="flex gap-2 shrink-0">
         {actions}
-        
+
         {hasDialog && showCreateButton && (
           <Dialog open={isDialogOpen} onOpenChange={onDialogOpenChange}>
             <DialogTrigger asChild>

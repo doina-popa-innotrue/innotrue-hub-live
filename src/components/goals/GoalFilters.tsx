@@ -1,7 +1,13 @@
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search } from 'lucide-react';
-import { useWheelCategories } from '@/hooks/useWheelCategories';
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Search } from "lucide-react";
+import { useWheelCategories } from "@/hooks/useWheelCategories";
 
 interface GoalFiltersProps {
   filters: {
@@ -20,8 +26,8 @@ export default function GoalFilters({ filters, onFiltersChange }: GoalFiltersPro
     onFiltersChange({ ...filters, [key]: value });
   };
 
-  const activeCategories = categories?.filter(c => !c.is_legacy && c.is_active) || [];
-  const legacyCategories = categories?.filter(c => c.is_legacy) || [];
+  const activeCategories = categories?.filter((c) => !c.is_legacy && c.is_active) || [];
+  const legacyCategories = categories?.filter((c) => c.is_legacy) || [];
 
   return (
     <div className="mb-6 space-y-4">
@@ -30,13 +36,13 @@ export default function GoalFilters({ filters, onFiltersChange }: GoalFiltersPro
         <Input
           placeholder="Search goals..."
           value={filters.search}
-          onChange={(e) => updateFilter('search', e.target.value)}
+          onChange={(e) => updateFilter("search", e.target.value)}
           className="pl-10"
         />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Select value={filters.category} onValueChange={(value) => updateFilter('category', value)}>
+        <Select value={filters.category} onValueChange={(value) => updateFilter("category", value)}>
           <SelectTrigger>
             <SelectValue placeholder="Category" />
           </SelectTrigger>
@@ -45,29 +51,33 @@ export default function GoalFilters({ filters, onFiltersChange }: GoalFiltersPro
             {activeCategories.map((cat) => (
               <SelectItem key={cat.key} value={cat.key}>
                 <div className="flex items-center gap-2">
-                  <div 
-                    className="w-2.5 h-2.5 rounded-full shrink-0" 
-                    style={{ backgroundColor: cat.color || '#6B7280' }}
+                  <div
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: cat.color || "#6B7280" }}
                   />
                   {cat.name}
                 </div>
               </SelectItem>
             ))}
-            {legacyCategories.length > 0 && legacyCategories.map((cat) => (
-              <SelectItem key={cat.key} value={cat.key}>
-                <div className="flex items-center gap-2">
-                  <div 
-                    className="w-2.5 h-2.5 rounded-full shrink-0" 
-                    style={{ backgroundColor: cat.color || '#6B7280' }}
-                  />
-                  {cat.name} (Legacy)
-                </div>
-              </SelectItem>
-            ))}
+            {legacyCategories.length > 0 &&
+              legacyCategories.map((cat) => (
+                <SelectItem key={cat.key} value={cat.key}>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: cat.color || "#6B7280" }}
+                    />
+                    {cat.name} (Legacy)
+                  </div>
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
 
-        <Select value={filters.timeframe} onValueChange={(value) => updateFilter('timeframe', value)}>
+        <Select
+          value={filters.timeframe}
+          onValueChange={(value) => updateFilter("timeframe", value)}
+        >
           <SelectTrigger>
             <SelectValue placeholder="Timeframe" />
           </SelectTrigger>
@@ -79,7 +89,7 @@ export default function GoalFilters({ filters, onFiltersChange }: GoalFiltersPro
           </SelectContent>
         </Select>
 
-        <Select value={filters.status} onValueChange={(value) => updateFilter('status', value)}>
+        <Select value={filters.status} onValueChange={(value) => updateFilter("status", value)}>
           <SelectTrigger>
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -92,7 +102,7 @@ export default function GoalFilters({ filters, onFiltersChange }: GoalFiltersPro
           </SelectContent>
         </Select>
 
-        <Select value={filters.priority} onValueChange={(value) => updateFilter('priority', value)}>
+        <Select value={filters.priority} onValueChange={(value) => updateFilter("priority", value)}>
           <SelectTrigger>
             <SelectValue placeholder="Priority" />
           </SelectTrigger>

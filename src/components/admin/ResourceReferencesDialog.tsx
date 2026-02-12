@@ -1,15 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
-import { BookOpen, Users, Target, FileText } from 'lucide-react';
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { BookOpen, Users, Target, FileText } from "lucide-react";
 
 interface ResourceReferencesDialogProps {
   open: boolean;
@@ -49,7 +49,7 @@ export function ResourceReferencesDialog({
 }: ResourceReferencesDialogProps) {
   // Fetch all references
   const { data, isLoading } = useQuery({
-    queryKey: ['resource-references', resourceId],
+    queryKey: ["resource-references", resourceId],
     queryFn: async () => {
       const moduleAssignments: ModuleAssignment[] = [];
       const reflectionAssignments: ReflectionAssignment[] = [];
@@ -57,30 +57,36 @@ export function ResourceReferencesDialog({
       const programLinks: ProgramLink[] = [];
 
       // 1. Fetch module assignments
-      const { data: moduleAssignData } = await supabase
-        .from('module_resource_assignments')
-        .select('id, module_id')
-        .eq('resource_id', resourceId) as { data: any[] | null };
+      const { data: moduleAssignData } = (await supabase
+        .from("module_resource_assignments")
+        .select("id, module_id")
+        .eq("resource_id", resourceId)) as { data: any[] | null };
 
       if (moduleAssignData && moduleAssignData.length > 0) {
         const moduleIds = moduleAssignData.map((m: any) => m.module_id);
-        const { data: modulesData } = await supabase
-          .from('modules' as any)
-          .select('id, title, program_id')
-          .in('id', moduleIds) as { data: any[] | null };
+        const { data: modulesData } = (await supabase
+          .from("modules" as any)
+          .select("id, title, program_id")
+          .in("id", moduleIds)) as { data: any[] | null };
 
         if (modulesData) {
-          const programIds = [...new Set(modulesData.map((m: any) => m.program_id).filter(Boolean))];
-          const { data: programsData } = programIds.length > 0 
-            ? await supabase.from('programs').select('id, name').in('id', programIds as string[]) as { data: any[] | null }
-            : { data: null };
+          const programIds = [
+            ...new Set(modulesData.map((m: any) => m.program_id).filter(Boolean)),
+          ];
+          const { data: programsData } =
+            programIds.length > 0
+              ? ((await supabase
+                  .from("programs")
+                  .select("id, name")
+                  .in("id", programIds as string[])) as { data: any[] | null })
+              : { data: null };
 
           moduleAssignData.forEach((assignment: any) => {
             const module = modulesData.find((m: any) => m.id === assignment.module_id);
             const program = programsData?.find((p: any) => p.id === module?.program_id);
             moduleAssignments.push({
               id: assignment.id,
-              moduleName: module?.title || 'Unknown module',
+              moduleName: module?.title || "Unknown module",
               programName: program?.name || null,
             });
           });
@@ -89,31 +95,45 @@ export function ResourceReferencesDialog({
 
       // 2. Fetch reflection resources
       const reflectionResult = await supabase
-        .from('module_reflection_resources' as any)
-        .select('id, module_reflection_id')
-        .eq('resource_id', resourceId);
+        .from("module_reflection_resources" as any)
+        .select("id, module_reflection_id")
+        .eq("resource_id", resourceId);
       const reflectionData = reflectionResult.data as any[] | null;
 
       if (reflectionData && reflectionData.length > 0) {
         const reflectionIds = reflectionData.map((r: any) => r.module_reflection_id);
-        const { data: reflectionsData } = await supabase
-          .from('module_reflections' as any)
-          .select('id, module_id')
-          .in('id', reflectionIds) as { data: any[] | null };
+        const { data: reflectionsData } = (await supabase
+          .from("module_reflections" as any)
+          .select("id, module_id")
+          .in("id", reflectionIds)) as { data: any[] | null };
 
         if (reflectionsData) {
-          const moduleIds = [...new Set(reflectionsData.map((r: any) => r.module_id).filter(Boolean))];
-          const { data: modulesData } = moduleIds.length > 0
-            ? await supabase.from('modules' as any).select('id, title, program_id').in('id', moduleIds as string[]) as { data: any[] | null }
-            : { data: null };
+          const moduleIds = [
+            ...new Set(reflectionsData.map((r: any) => r.module_id).filter(Boolean)),
+          ];
+          const { data: modulesData } =
+            moduleIds.length > 0
+              ? ((await supabase
+                  .from("modules" as any)
+                  .select("id, title, program_id")
+                  .in("id", moduleIds as string[])) as { data: any[] | null })
+              : { data: null };
 
-          const programIds = [...new Set(modulesData?.map((m: any) => m.program_id).filter(Boolean) || [])];
-          const { data: programsData } = programIds.length > 0 
-            ? await supabase.from('programs').select('id, name').in('id', programIds as string[]) as { data: any[] | null }
-            : { data: null };
+          const programIds = [
+            ...new Set(modulesData?.map((m: any) => m.program_id).filter(Boolean) || []),
+          ];
+          const { data: programsData } =
+            programIds.length > 0
+              ? ((await supabase
+                  .from("programs")
+                  .select("id, name")
+                  .in("id", programIds as string[])) as { data: any[] | null })
+              : { data: null };
 
           reflectionData.forEach((assignment: any) => {
-            const reflection = reflectionsData.find((r: any) => r.id === assignment.module_reflection_id);
+            const reflection = reflectionsData.find(
+              (r: any) => r.id === assignment.module_reflection_id,
+            );
             const module = modulesData?.find((m: any) => m.id === reflection?.module_id);
             const program = programsData?.find((p: any) => p.id === module?.program_id);
             reflectionAssignments.push({
@@ -127,30 +147,34 @@ export function ResourceReferencesDialog({
 
       // 3. Fetch goal resources
       const goalResult = await supabase
-        .from('goal_resources' as any)
-        .select('id, goal_id')
-        .eq('resource_id', resourceId);
+        .from("goal_resources" as any)
+        .select("id, goal_id")
+        .eq("resource_id", resourceId);
       const goalData = goalResult.data as any[] | null;
 
       if (goalData && goalData.length > 0) {
         const goalIds = goalData.map((g: any) => g.goal_id);
-        const { data: goalsData } = await supabase
-          .from('goals')
-          .select('id, title, user_id')
-          .in('id', goalIds) as { data: any[] | null };
+        const { data: goalsData } = (await supabase
+          .from("goals")
+          .select("id, title, user_id")
+          .in("id", goalIds)) as { data: any[] | null };
 
         if (goalsData) {
           const userIds = [...new Set(goalsData.map((g: any) => g.user_id).filter(Boolean))];
-          const { data: profilesData } = userIds.length > 0
-            ? await supabase.from('profiles').select('id, name').in('id', userIds as string[]) as { data: any[] | null }
-            : { data: null };
+          const { data: profilesData } =
+            userIds.length > 0
+              ? ((await supabase
+                  .from("profiles")
+                  .select("id, name")
+                  .in("id", userIds as string[])) as { data: any[] | null })
+              : { data: null };
 
           goalData.forEach((gr: any) => {
             const goal = goalsData.find((g: any) => g.id === gr.goal_id);
             const profile = profilesData?.find((p: any) => p.id === goal?.user_id);
             goalResources.push({
               id: gr.id,
-              goalTitle: goal?.title || 'Unknown goal',
+              goalTitle: goal?.title || "Unknown goal",
               userName: profile?.name || null,
             });
           });
@@ -158,17 +182,17 @@ export function ResourceReferencesDialog({
       }
 
       // 4. Fetch program links
-      const { data: programData } = await supabase
-        .from('resource_library_programs')
-        .select('id, program_id')
-        .eq('resource_id', resourceId) as { data: any[] | null };
+      const { data: programData } = (await supabase
+        .from("resource_library_programs")
+        .select("id, program_id")
+        .eq("resource_id", resourceId)) as { data: any[] | null };
 
       if (programData && programData.length > 0) {
         const programIds = programData.map((p: any) => p.program_id);
-        const { data: programsData } = await supabase
-          .from('programs')
-          .select('id, name')
-          .in('id', programIds) as { data: any[] | null };
+        const { data: programsData } = (await supabase
+          .from("programs")
+          .select("id, name")
+          .in("id", programIds)) as { data: any[] | null };
 
         programData.forEach((link: any) => {
           const program = programsData?.find((p: any) => p.id === link.program_id);
@@ -186,9 +210,9 @@ export function ResourceReferencesDialog({
     enabled: open,
   });
 
-  const totalReferences = 
-    (data?.moduleAssignments.length || 0) + 
-    (data?.reflectionAssignments.length || 0) + 
+  const totalReferences =
+    (data?.moduleAssignments.length || 0) +
+    (data?.reflectionAssignments.length || 0) +
     (data?.goalResources.length || 0);
 
   return (
@@ -196,9 +220,7 @@ export function ResourceReferencesDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Resource References</DialogTitle>
-          <DialogDescription>
-            Where "{resourceTitle}" is being used
-          </DialogDescription>
+          <DialogDescription>Where "{resourceTitle}" is being used</DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
@@ -258,7 +280,9 @@ export function ResourceReferencesDialog({
                   <div className="pl-6 space-y-2">
                     {data.reflectionAssignments.map((assignment) => (
                       <div key={assignment.id} className="text-sm">
-                        <div className="font-medium">{assignment.moduleName || 'Unknown module'}</div>
+                        <div className="font-medium">
+                          {assignment.moduleName || "Unknown module"}
+                        </div>
                         {assignment.programName && (
                           <div className="text-xs text-muted-foreground">
                             in {assignment.programName}
@@ -282,9 +306,7 @@ export function ResourceReferencesDialog({
                       <div key={gr.id} className="text-sm">
                         <div className="font-medium">{gr.goalTitle}</div>
                         {gr.userName && (
-                          <div className="text-xs text-muted-foreground">
-                            by {gr.userName}
-                          </div>
+                          <div className="text-xs text-muted-foreground">by {gr.userName}</div>
                         )}
                       </div>
                     ))}

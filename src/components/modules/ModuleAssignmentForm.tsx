@@ -9,15 +9,33 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ClipboardCheck, Save, Send, Paperclip, X, ExternalLink, Download, Trash2, CheckCircle, EyeOff, FolderOpen } from "lucide-react";
+import {
+  ClipboardCheck,
+  Save,
+  Send,
+  Paperclip,
+  X,
+  ExternalLink,
+  Download,
+  Trash2,
+  CheckCircle,
+  EyeOff,
+  FolderOpen,
+} from "lucide-react";
 import { useGoogleDriveSSO } from "@/hooks/useGoogleDriveSSO";
 import { Badge } from "@/components/ui/badge";
 import { InstructorAssignmentScoring } from "./InstructorAssignmentScoring";
- import { ClientAssignmentFeedback } from "./ClientAssignmentFeedback";
+import { ClientAssignmentFeedback } from "./ClientAssignmentFeedback";
 
 interface AssignmentField {
   id: string;
@@ -65,7 +83,13 @@ interface ModuleAssignmentFormProps {
   moduleId?: string; // needed to fetch linked capability assessment from config
 }
 
-export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEditable, isInstructor = false, moduleId }: ModuleAssignmentFormProps) {
+export function ModuleAssignmentForm({
+  moduleProgressId,
+  assignmentType,
+  isEditable,
+  isInstructor = false,
+  moduleId,
+}: ModuleAssignmentFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -74,7 +98,13 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
   const [overallScore, setOverallScore] = useState<number | null>(null);
   const [overallComments, setOverallComments] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
-  const [attachmentForm, setAttachmentForm] = useState({ type: "link" as "file" | "image" | "link", title: "", description: "", url: "", file: null as File | null });
+  const [attachmentForm, setAttachmentForm] = useState({
+    type: "link" as "file" | "image" | "link",
+    title: "",
+    description: "",
+    url: "",
+    file: null as File | null,
+  });
   const [showAttachmentForm, setShowAttachmentForm] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -134,11 +164,15 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
   }, [existingAssignment]);
 
   const saveMutation = useMutation({
-    mutationFn: async ({ status }: { status: "draft" | "submitted" | "reviewed" | "completed" }) => {
+    mutationFn: async ({
+      status,
+    }: {
+      status: "draft" | "submitted" | "reviewed" | "completed";
+    }) => {
       const payload = {
         module_progress_id: moduleProgressId,
         assignment_type_id: assignmentType.id,
-        assessor_id: user?.id ?? '',
+        assessor_id: user?.id ?? "",
         responses: JSON.parse(JSON.stringify(responses)) as Json,
         overall_score: overallScore,
         overall_comments: overallComments || null,
@@ -182,7 +216,9 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
       }
     },
     onSuccess: (_, { status }) => {
-      queryClient.invalidateQueries({ queryKey: ["module-assignment", moduleProgressId, assignmentType.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["module-assignment", moduleProgressId, assignmentType.id],
+      });
       const messages: Record<string, string> = {
         draft: "Assignment saved as draft",
         submitted: "Assignment submitted for review",
@@ -192,7 +228,11 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
       toast({ title: messages[status] || "Assignment saved" });
     },
     onError: (error) => {
-      toast({ title: "Error saving assignment", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error saving assignment",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -235,7 +275,11 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
       setShowAttachmentForm(false);
       toast({ title: "Attachment added" });
     } catch (error: unknown) {
-      toast({ title: "Error adding attachment", description: (error as Error).message, variant: "destructive" });
+      toast({
+        title: "Error adding attachment",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
     } finally {
       setUploading(false);
     }
@@ -247,12 +291,19 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
       if (attachment.file_path) {
         await supabase.storage.from("module-assignment-attachments").remove([attachment.file_path]);
       }
-      const { error } = await supabase.from("module_assignment_attachments").delete().eq("id", attachment.id);
+      const { error } = await supabase
+        .from("module_assignment_attachments")
+        .delete()
+        .eq("id", attachment.id);
       if (error) throw error;
       refetchAttachments();
       toast({ title: "Attachment deleted" });
     } catch (error: unknown) {
-      toast({ title: "Error deleting attachment", description: (error as Error).message, variant: "destructive" });
+      toast({
+        title: "Error deleting attachment",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -279,14 +330,17 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
 
   const renderField = (field: AssignmentField) => {
     const value = responses[field.id];
-    const isLocked = existingAssignment?.status === "submitted" || existingAssignment?.status === "reviewed" || existingAssignment?.status === "completed";
+    const isLocked =
+      existingAssignment?.status === "submitted" ||
+      existingAssignment?.status === "reviewed" ||
+      existingAssignment?.status === "completed";
     const isDisabled = !isEditable || isLocked;
 
     // Helper to check if a string is a URL
     const isUrl = (str: string) => {
       try {
         const url = new URL(str);
-        return url.protocol === 'http:' || url.protocol === 'https:';
+        return url.protocol === "http:" || url.protocol === "https:";
       } catch {
         return false;
       }
@@ -295,11 +349,11 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
     switch (field.type) {
       case "text":
         // If disabled and the value is a URL, render as clickable link
-        if (isDisabled && typeof value === 'string' && isUrl(value)) {
+        if (isDisabled && typeof value === "string" && isUrl(value)) {
           return (
-            <a 
-              href={value} 
-              target="_blank" 
+            <a
+              href={value}
+              target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-primary hover:underline break-all"
             >
@@ -330,7 +384,9 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
             min={field.min}
             max={field.max}
             value={(value as number) ?? ""}
-            onChange={(e) => updateResponse(field.id, e.target.value ? Number(e.target.value) : null)}
+            onChange={(e) =>
+              updateResponse(field.id, e.target.value ? Number(e.target.value) : null)
+            }
             disabled={isDisabled}
           />
         );
@@ -391,7 +447,10 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
     return <div className="text-sm text-muted-foreground">Loading assignment...</div>;
   }
 
-  const isLocked = existingAssignment?.status === "submitted" || existingAssignment?.status === "reviewed" || existingAssignment?.status === "completed";
+  const isLocked =
+    existingAssignment?.status === "submitted" ||
+    existingAssignment?.status === "reviewed" ||
+    existingAssignment?.status === "completed";
   const status = existingAssignment?.status;
 
   const getStatusBadge = () => {
@@ -429,9 +488,12 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
         {assignmentType.structure.map((field) => {
           // Determine helper text based on field label/id
           const fieldLabelLower = field.label.toLowerCase();
-          const isArtefactsField = fieldLabelLower.includes('artefact') || field.id.toLowerCase().includes('artefact');
-          const isGoogleFolderField = fieldLabelLower.includes('google folder') || field.id.toLowerCase().includes('google_folder');
-          
+          const isArtefactsField =
+            fieldLabelLower.includes("artefact") || field.id.toLowerCase().includes("artefact");
+          const isGoogleFolderField =
+            fieldLabelLower.includes("google folder") ||
+            field.id.toLowerCase().includes("google_folder");
+
           return (
             <div key={field.id} className="space-y-2">
               {field.type !== "checkbox" && (
@@ -441,24 +503,27 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
                 </Label>
               )}
               {renderField(field)}
-              
+
               {/* Helper notes for specific fields */}
               {isArtefactsField && (
                 <p className="text-xs text-muted-foreground">
-                  Add a link to a folder or file in your Lucid account containing your diagrams for this module.
+                  Add a link to a folder or file in your Lucid account containing your diagrams for
+                  this module.
                 </p>
               )}
               {isGoogleFolderField && (
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground">
-                    Create a new folder in your shared program folder for this module. Add your notes document and any other materials you've prepared (Google Sheets, presentations, etc.).
+                    Create a new folder in your shared program folder for this module. Add your
+                    notes document and any other materials you've prepared (Google Sheets,
+                    presentations, etc.).
                   </p>
                   {driveUser?.folder_url && (
                     <Button
                       variant="outline"
                       size="sm"
                       className="gap-2"
-                      onClick={() => window.open(driveUser.folder_url, '_blank')}
+                      onClick={() => window.open(driveUser.folder_url, "_blank")}
                     >
                       <FolderOpen className="h-4 w-4" />
                       Open My Shared Folder
@@ -480,7 +545,7 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
               placeholder="Additional comments or feedback..."
             />
           </div>
-          
+
           {/* Privacy Toggle - HIDDEN FOR NOW (feature needs clearer use case)
           {!isInstructor && isEditable && !isLocked && (
             <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
@@ -507,15 +572,16 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
           <div className="flex items-center justify-between">
             <Label className="font-medium">Attachments</Label>
             {isEditable && !isLocked && (
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   if (!existingAssignment) {
-                    toast({ 
-                      title: "Save draft first", 
-                      description: "Please save your assignment as a draft before adding attachments.",
-                      variant: "default"
+                    toast({
+                      title: "Save draft first",
+                      description:
+                        "Please save your assignment as a draft before adding attachments.",
+                      variant: "default",
                     });
                     return;
                   }
@@ -526,7 +592,7 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
               </Button>
             )}
           </div>
-          
+
           {!existingAssignment && isEditable && !isLocked && (
             <p className="text-sm text-muted-foreground">
               Save your assignment as a draft to enable attachments.
@@ -540,7 +606,9 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
                   <Label>Type</Label>
                   <Select
                     value={attachmentForm.type}
-                    onValueChange={(v: "file" | "image" | "link") => setAttachmentForm({ ...attachmentForm, type: v, file: null })}
+                    onValueChange={(v: "file" | "image" | "link") =>
+                      setAttachmentForm({ ...attachmentForm, type: v, file: null })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -556,7 +624,9 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
                   <Label>Title *</Label>
                   <Input
                     value={attachmentForm.title}
-                    onChange={(e) => setAttachmentForm({ ...attachmentForm, title: e.target.value })}
+                    onChange={(e) =>
+                      setAttachmentForm({ ...attachmentForm, title: e.target.value })
+                    }
                   />
                 </div>
               </div>
@@ -564,7 +634,9 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
                 <Label>Description</Label>
                 <Input
                   value={attachmentForm.description}
-                  onChange={(e) => setAttachmentForm({ ...attachmentForm, description: e.target.value })}
+                  onChange={(e) =>
+                    setAttachmentForm({ ...attachmentForm, description: e.target.value })
+                  }
                 />
               </div>
               {attachmentForm.type === "link" ? (
@@ -582,7 +654,9 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
                   <Input
                     type="file"
                     accept={attachmentForm.type === "image" ? "image/*" : "*/*"}
-                    onChange={(e) => setAttachmentForm({ ...attachmentForm, file: e.target.files?.[0] || null })}
+                    onChange={(e) =>
+                      setAttachmentForm({ ...attachmentForm, file: e.target.files?.[0] || null })
+                    }
                   />
                 </div>
               )}
@@ -593,7 +667,11 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
                 <Button
                   size="sm"
                   onClick={handleAddAttachment}
-                  disabled={uploading || !attachmentForm.title || (attachmentForm.type === "link" ? !attachmentForm.url : !attachmentForm.file)}
+                  disabled={
+                    uploading ||
+                    !attachmentForm.title ||
+                    (attachmentForm.type === "link" ? !attachmentForm.url : !attachmentForm.file)
+                  }
                 >
                   {uploading ? "Uploading..." : "Add"}
                 </Button>
@@ -604,23 +682,28 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
           {attachments && attachments.length > 0 && (
             <div className="space-y-2">
               {attachments.map((att) => (
-                <div key={att.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
+                <div
+                  key={att.id}
+                  className="flex items-center justify-between p-2 bg-muted rounded-md"
+                >
                   <div className="flex items-center gap-2">
                     <Paperclip className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <div className="text-sm font-medium">{att.title}</div>
-                      {att.description && <div className="text-xs text-muted-foreground">{att.description}</div>}
+                      {att.description && (
+                        <div className="text-xs text-muted-foreground">{att.description}</div>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-1">
                     {att.attachment_type === "link" && att.url ? (
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="icon"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          window.open(att.url!, '_blank', 'noopener,noreferrer');
+                          window.open(att.url!, "_blank", "noopener,noreferrer");
                         }}
                       >
                         <ExternalLink className="h-4 w-4" />
@@ -631,7 +714,11 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
                       </Button>
                     )}
                     {isEditable && !isLocked && (
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteAttachment(att)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteAttachment(att)}
+                      >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     )}
@@ -665,46 +752,60 @@ export function ModuleAssignmentForm({ moduleProgressId, assignmentType, isEdita
         {status === "submitted" && !isInstructor && (
           <div className="pt-4 border-t">
             <p className="text-sm text-muted-foreground text-center">
-              Your assignment has been submitted and is awaiting review from your coach or instructor.
+              Your assignment has been submitted and is awaiting review from your coach or
+              instructor.
             </p>
           </div>
         )}
 
-         {/* Client Feedback Section - shown when assignment is reviewed */}
-         {!isInstructor && status === "reviewed" && existingAssignment && (
-           <div className="pt-4 border-t">
-             <ClientAssignmentFeedback assignmentId={existingAssignment.id} />
-           </div>
-         )}
- 
-        {/* Instructor Scoring Section - uses linked assessment or falls back to scoring_assessment_id */}
-        {/* Show for submitted and reviewed assignments so instructors can view/edit scoring */}
-        {isInstructor && (status === "submitted" || status === "reviewed") && existingAssignment && (linkedAssessmentConfig?.linked_capability_assessment_id || assignmentType.scoring_assessment_id) && (
+        {/* Client Feedback Section - shown when assignment is reviewed */}
+        {!isInstructor && status === "reviewed" && existingAssignment && (
           <div className="pt-4 border-t">
-            <InstructorAssignmentScoring
-              assignmentId={existingAssignment.id}
-              assignmentTypeId={assignmentType.id}
-              moduleProgressId={moduleProgressId}
-              linkedCapabilityAssessmentId={linkedAssessmentConfig?.linked_capability_assessment_id}
-              onComplete={() => queryClient.invalidateQueries({ queryKey: ["module-assignment", moduleProgressId, assignmentType.id] })}
-            />
+            <ClientAssignmentFeedback assignmentId={existingAssignment.id} />
           </div>
         )}
 
-        {/* Instructor actions when no scoring assessment is configured */}
-        {isInstructor && status === "submitted" && !linkedAssessmentConfig?.linked_capability_assessment_id && !assignmentType.scoring_assessment_id && (
-          <div className="pt-4 border-t space-y-3">
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => saveMutation.mutate({ status: "reviewed" })}
-                disabled={saveMutation.isPending}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" /> Mark as Reviewed
-              </Button>
+        {/* Instructor Scoring Section - uses linked assessment or falls back to scoring_assessment_id */}
+        {/* Show for submitted and reviewed assignments so instructors can view/edit scoring */}
+        {isInstructor &&
+          (status === "submitted" || status === "reviewed") &&
+          existingAssignment &&
+          (linkedAssessmentConfig?.linked_capability_assessment_id ||
+            assignmentType.scoring_assessment_id) && (
+            <div className="pt-4 border-t">
+              <InstructorAssignmentScoring
+                assignmentId={existingAssignment.id}
+                assignmentTypeId={assignmentType.id}
+                moduleProgressId={moduleProgressId}
+                linkedCapabilityAssessmentId={
+                  linkedAssessmentConfig?.linked_capability_assessment_id
+                }
+                onComplete={() =>
+                  queryClient.invalidateQueries({
+                    queryKey: ["module-assignment", moduleProgressId, assignmentType.id],
+                  })
+                }
+              />
             </div>
-          </div>
-        )}
+          )}
+
+        {/* Instructor actions when no scoring assessment is configured */}
+        {isInstructor &&
+          status === "submitted" &&
+          !linkedAssessmentConfig?.linked_capability_assessment_id &&
+          !assignmentType.scoring_assessment_id && (
+            <div className="pt-4 border-t space-y-3">
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => saveMutation.mutate({ status: "reviewed" })}
+                  disabled={saveMutation.isPending}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" /> Mark as Reviewed
+                </Button>
+              </div>
+            </div>
+          )}
       </CardContent>
     </Card>
   );

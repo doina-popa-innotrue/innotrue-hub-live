@@ -42,8 +42,8 @@ interface ActivityItem {
 
 export default function ClientProgramsList() {
   // Track page view for analytics
-  usePageView('Programs');
-  
+  usePageView("Programs");
+
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -60,7 +60,7 @@ export default function ClientProgramsList() {
         const { data: enrollmentsData, error: enrollmentsError } = await supabase
           .from("client_enrollments")
           .select(
-            `id, status, start_date, program_id, tier, programs ( id, name, category, tiers )`
+            `id, status, start_date, program_id, tier, programs ( id, name, category, tiers )`,
           )
           .eq("client_user_id", user.id)
           .order("created_at", { ascending: true });
@@ -90,7 +90,7 @@ export default function ClientProgramsList() {
           const { data: moduleProgressData, error: moduleError } = await supabase
             .from("module_progress")
             .select(
-              `id, enrollment_id, status, completed_at, module_id, program_modules ( title, module_type )`
+              `id, enrollment_id, status, completed_at, module_id, program_modules ( title, module_type )`,
             )
             .in("enrollment_id", enrollmentIds);
 
@@ -105,7 +105,7 @@ export default function ClientProgramsList() {
         const { data: externalCoursesData, error: externalError } = await supabase
           .from("external_courses")
           .select(
-            "id, title, provider, status, planned_date, due_date, certificate_path, updated_at"
+            "id, title, provider, status, planned_date, due_date, certificate_path, updated_at",
           )
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
@@ -115,45 +115,42 @@ export default function ClientProgramsList() {
         }
 
         // Build enrollment summaries with tier-based accessible modules
-        const enrollmentSummaries: EnrollmentSummary[] = (enrollmentsData || []).map(
-          (e: any) => {
-            const programTiers = (e.programs?.tiers as string[]) || [];
-            const userTier = e.tier || programTiers[0] || 'essentials';
+        const enrollmentSummaries: EnrollmentSummary[] = (enrollmentsData || []).map((e: any) => {
+          const programTiers = (e.programs?.tiers as string[]) || [];
+          const userTier = e.tier || programTiers[0] || "essentials";
 
-            // Get all modules for this program
-            const programModules = allModules.filter((m) => m.program_id === e.program_id);
+          // Get all modules for this program
+          const programModules = allModules.filter((m) => m.program_id === e.program_id);
 
-            // Filter to accessible modules based on user's tier
-            const accessibleModules = programModules.filter((m) =>
-              hasTierAccess(programTiers, userTier, m.tier_required)
-            );
+          // Filter to accessible modules based on user's tier
+          const accessibleModules = programModules.filter((m) =>
+            hasTierAccess(programTiers, userTier, m.tier_required),
+          );
 
-            const accessibleModuleIds = new Set(accessibleModules.map((m) => m.id));
+          const accessibleModuleIds = new Set(accessibleModules.map((m) => m.id));
 
-            // Filter progress to only accessible modules
-            const accessibleProgress = moduleProgress.filter(
-              (m) => m.enrollment_id === e.id && accessibleModuleIds.has(m.module_id)
-            );
+          // Filter progress to only accessible modules
+          const accessibleProgress = moduleProgress.filter(
+            (m) => m.enrollment_id === e.id && accessibleModuleIds.has(m.module_id),
+          );
 
-            const totalModules = accessibleModules.length;
-            const completedModules = accessibleProgress.filter(
-              (m) => m.status === "completed"
-            ).length;
-            const progress =
-              totalModules > 0 ? (completedModules / totalModules) * 100 : 0;
+          const totalModules = accessibleModules.length;
+          const completedModules = accessibleProgress.filter(
+            (m) => m.status === "completed",
+          ).length;
+          const progress = totalModules > 0 ? (completedModules / totalModules) * 100 : 0;
 
-            return {
-              id: e.id,
-              programId: e.program_id,
-              status: e.status,
-              programName: e.programs?.name || "Program",
-              programCategory: e.programs?.category || "other",
-              progress,
-              completedModules,
-              totalModules,
-            };
-          }
-        );
+          return {
+            id: e.id,
+            programId: e.program_id,
+            status: e.status,
+            programName: e.programs?.name || "Program",
+            programCategory: e.programs?.category || "other",
+            progress,
+            completedModules,
+            totalModules,
+          };
+        });
 
         setEnrollments(enrollmentSummaries);
         setExternalCourses((externalCoursesData as ExternalCourse[]) || []);
@@ -162,9 +159,7 @@ export default function ClientProgramsList() {
         const moduleActivities: ActivityItem[] = moduleProgress
           .filter((m) => m.status === "completed" && m.completed_at)
           .map((m) => {
-            const enrollment = (enrollmentsData || []).find(
-              (e: any) => e.id === m.enrollment_id
-            );
+            const enrollment = (enrollmentsData || []).find((e: any) => e.id === m.enrollment_id);
             return {
               id: `module-${m.id}`,
               type: "module",
@@ -181,12 +176,11 @@ export default function ClientProgramsList() {
             type: "external",
             title: c.title,
             subtitle: c.provider,
-            completedAt:
-              c.updated_at || c.due_date || c.planned_date || new Date().toISOString(),
+            completedAt: c.updated_at || c.due_date || c.planned_date || new Date().toISOString(),
           }));
 
         const combined = [...moduleActivities, ...externalActivities].sort(
-          (a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
+          (a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime(),
         );
 
         setRecentActivity(combined.slice(0, 5));
@@ -206,9 +200,7 @@ export default function ClientProgramsList() {
 
   const overallProgress =
     totalPrograms > 0
-      ? Math.round(
-          enrollments.reduce((sum, e) => sum + e.progress, 0) / totalPrograms
-        )
+      ? Math.round(enrollments.reduce((sum, e) => sum + e.progress, 0) / totalPrograms)
       : 0;
 
   if (loading) {
@@ -306,14 +298,15 @@ export default function ClientProgramsList() {
                     >
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <div>
-                          <div className="font-medium">
-                            {enrollment.programName}
-                          </div>
+                          <div className="font-medium">{enrollment.programName}</div>
                           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                             <Badge variant="outline" className="text-xs">
                               {enrollment.programCategory}
                             </Badge>
-                            <span>{enrollment.completedModules} of {enrollment.totalModules} modules completed</span>
+                            <span>
+                              {enrollment.completedModules} of {enrollment.totalModules} modules
+                              completed
+                            </span>
                           </div>
                         </div>
                         <div className="text-sm font-medium">
@@ -338,8 +331,7 @@ export default function ClientProgramsList() {
             <CardContent>
               {recentActivity.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No recent activity yet. As you complete modules and courses,
-                  they'll appear here.
+                  No recent activity yet. As you complete modules and courses, they'll appear here.
                 </p>
               ) : (
                 <ul className="space-y-3 text-sm">
@@ -356,8 +348,8 @@ export default function ClientProgramsList() {
                             // Extract module ID from item.id format "module-{id}"
                             const moduleId = item.id.replace("module-", "");
                             // Find enrollment to get program ID
-                            const enrollment = enrollments.find(e => 
-                              e.programName === item.subtitle
+                            const enrollment = enrollments.find(
+                              (e) => e.programName === item.subtitle,
                             );
                             if (enrollment) {
                               navigate(`/programs/${enrollment.programId}`);
@@ -367,9 +359,7 @@ export default function ClientProgramsList() {
                       >
                         <div>
                           <div className="font-medium">{item.title}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {item.subtitle}
-                          </div>
+                          <div className="text-xs text-muted-foreground">{item.subtitle}</div>
                         </div>
                         <div className="text-xs text-muted-foreground whitespace-nowrap">
                           {new Date(item.completedAt).toLocaleDateString()}
@@ -388,9 +378,7 @@ export default function ClientProgramsList() {
           <CardHeader className="flex flex-row items-start justify-between gap-4">
             <div className="space-y-2">
               <CardTitle>External Learning</CardTitle>
-              <CardDescription>
-                Courses you're tracking from other platforms.
-              </CardDescription>
+              <CardDescription>Courses you're tracking from other platforms.</CardDescription>
             </div>
             <Button
               size="sm"
@@ -406,10 +394,7 @@ export default function ClientProgramsList() {
                 <p className="text-sm text-muted-foreground mb-3">
                   You haven't added any external courses yet.
                 </p>
-                <Button
-                  size="sm"
-                  onClick={() => navigate("/learning/external-courses")}
-                >
+                <Button size="sm" onClick={() => navigate("/learning/external-courses")}>
                   Add External Course
                 </Button>
               </div>
@@ -423,9 +408,7 @@ export default function ClientProgramsList() {
                   >
                     <div>
                       <div className="font-medium">{course.title}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {course.provider}
-                      </div>
+                      <div className="text-xs text-muted-foreground">{course.provider}</div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <Badge variant="outline" className="text-xs capitalize">

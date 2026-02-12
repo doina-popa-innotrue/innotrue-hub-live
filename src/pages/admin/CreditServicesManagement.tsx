@@ -9,9 +9,29 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Coins, Plus, Pencil, Trash2, Tag, Link2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -94,11 +114,13 @@ export default function CreditServicesManagement() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("credit_services")
-        .select(`
+        .select(
+          `
           *,
           features:feature_id(name),
           tracks:track_id(name)
-        `)
+        `,
+        )
         .order("category", { ascending: true })
         .order("name", { ascending: true });
       if (error) throw error;
@@ -110,10 +132,7 @@ export default function CreditServicesManagement() {
   const { data: features } = useQuery({
     queryKey: ["features-list"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("features")
-        .select("id, name, key")
-        .order("name");
+      const { data, error } = await supabase.from("features").select("id, name, key").order("name");
       if (error) throw error;
       return data as Feature[];
     },
@@ -145,7 +164,9 @@ export default function CreditServicesManagement() {
         track_id: data.track_id || null,
         linked_entity_type: data.linked_entity_type || null,
         linked_entity_id: data.linked_entity_id || null,
-        track_discounted_cost: data.track_discounted_cost ? parseInt(data.track_discounted_cost) : null,
+        track_discounted_cost: data.track_discounted_cost
+          ? parseInt(data.track_discounted_cost)
+          : null,
         is_active: data.is_active,
       });
       if (error) throw error;
@@ -174,7 +195,9 @@ export default function CreditServicesManagement() {
           track_id: data.track_id || null,
           linked_entity_type: data.linked_entity_type || null,
           linked_entity_id: data.linked_entity_id || null,
-          track_discounted_cost: data.track_discounted_cost ? parseInt(data.track_discounted_cost) : null,
+          track_discounted_cost: data.track_discounted_cost
+            ? parseInt(data.track_discounted_cost)
+            : null,
           is_active: data.is_active,
         })
         .eq("id", id);
@@ -256,12 +279,15 @@ export default function CreditServicesManagement() {
   };
 
   // Group services by category
-  const groupedServices = services?.reduce((acc, service) => {
-    const cat = service.category || "general";
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(service);
-    return acc;
-  }, {} as Record<string, CreditService[]>);
+  const groupedServices = services?.reduce(
+    (acc, service) => {
+      const cat = service.category || "general";
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(service);
+      return acc;
+    },
+    {} as Record<string, CreditService[]>,
+  );
 
   if (isLoading) return <AdminLoadingState />;
 
@@ -348,7 +374,9 @@ export default function CreditServicesManagement() {
                                     {service.track_discounted_cost} credits
                                   </Badge>
                                   {service.tracks?.name && (
-                                    <span className="text-muted-foreground ml-2">({service.tracks.name})</span>
+                                    <span className="text-muted-foreground ml-2">
+                                      ({service.tracks.name})
+                                    </span>
                                   )}
                                 </div>
                               ) : (
@@ -407,9 +435,7 @@ export default function CreditServicesManagement() {
             <DialogTitle>
               {editingService ? "Edit Credit Service" : "Add Credit Service"}
             </DialogTitle>
-            <DialogDescription>
-              Define a service that costs credits to use.
-            </DialogDescription>
+            <DialogDescription>Define a service that costs credits to use.</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
@@ -472,7 +498,9 @@ export default function CreditServicesManagement() {
               <Label htmlFor="feature_id">Feature Gate (optional)</Label>
               <Select
                 value={formData.feature_id || "none"}
-                onValueChange={(value) => setFormData({ ...formData, feature_id: value === "none" ? "" : value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, feature_id: value === "none" ? "" : value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="No feature gate" />
@@ -496,7 +524,9 @@ export default function CreditServicesManagement() {
                 <Label htmlFor="track_id">Track Discount (optional)</Label>
                 <Select
                   value={formData.track_id || "none"}
-                  onValueChange={(value) => setFormData({ ...formData, track_id: value === "none" ? "" : value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, track_id: value === "none" ? "" : value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="No track discount" />
@@ -555,9 +585,7 @@ export default function CreditServicesManagement() {
                 <Input
                   id="linked_entity_id"
                   value={formData.linked_entity_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, linked_entity_id: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, linked_entity_id: e.target.value })}
                   placeholder="UUID"
                   disabled={!formData.linked_entity_type}
                 />

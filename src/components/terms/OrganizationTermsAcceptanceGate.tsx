@@ -1,22 +1,22 @@
-import { useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { toast } from 'sonner';
-import { Shield, AlertCircle } from 'lucide-react';
-import DOMPurify from 'dompurify';
-import CryptoJS from 'crypto-js';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useState, useEffect, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
+import { Shield, AlertCircle } from "lucide-react";
+import DOMPurify from "dompurify";
+import CryptoJS from "crypto-js";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 
 interface OrganizationTerms {
   id: string;
@@ -36,10 +36,10 @@ interface OrganizationTermsAcceptanceGateProps {
   onTermsLoaded?: (hasTerms: boolean, needsAcceptance: boolean) => void;
 }
 
-export function OrganizationTermsAcceptanceGate({ 
-  organizationId, 
-  children, 
-  onTermsLoaded 
+export function OrganizationTermsAcceptanceGate({
+  organizationId,
+  children,
+  onTermsLoaded,
 }: OrganizationTermsAcceptanceGateProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -63,10 +63,10 @@ export function OrganizationTermsAcceptanceGate({
     try {
       // Fetch current terms for this organization
       const { data: terms, error: termsError } = await supabase
-        .from('organization_terms' as any)
-        .select('*')
-        .eq('organization_id', organizationId)
-        .eq('is_current', true)
+        .from("organization_terms" as any)
+        .select("*")
+        .eq("organization_id", organizationId)
+        .eq("is_current", true)
         .maybeSingle();
 
       if (termsError) throw termsError;
@@ -83,10 +83,10 @@ export function OrganizationTermsAcceptanceGate({
 
       // Check if user has accepted current terms
       const { data: acceptance, error: acceptanceError } = await supabase
-        .from('user_organization_terms_acceptance' as any)
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('organization_terms_id', termsData.id)
+        .from("user_organization_terms_acceptance" as any)
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("organization_terms_id", termsData.id)
         .maybeSingle();
 
       if (acceptanceError) throw acceptanceError;
@@ -98,10 +98,10 @@ export function OrganizationTermsAcceptanceGate({
         if (termsData.is_blocking_on_first_access) {
           // Check if user has accepted ANY previous version
           const { data: anyAcceptance } = await supabase
-            .from('user_organization_terms_acceptance' as any)
-            .select('*, organization_terms!inner(organization_id)')
-            .eq('user_id', user.id)
-            .eq('organization_terms.organization_id', organizationId)
+            .from("user_organization_terms_acceptance" as any)
+            .select("*, organization_terms!inner(organization_id)")
+            .eq("user_id", user.id)
+            .eq("organization_terms.organization_id", organizationId)
             .limit(1);
 
           if (anyAcceptance && anyAcceptance.length > 0) {
@@ -121,8 +121,8 @@ export function OrganizationTermsAcceptanceGate({
         onTermsLoaded?.(true, false);
       }
     } catch (error: any) {
-      console.error('Error checking terms acceptance:', error);
-      toast.error('Failed to check terms acceptance');
+      console.error("Error checking terms acceptance:", error);
+      toast.error("Failed to check terms acceptance");
     } finally {
       setLoading(false);
     }
@@ -135,25 +135,23 @@ export function OrganizationTermsAcceptanceGate({
     try {
       const contentHash = CryptoJS.SHA256(currentTerms.content_html).toString();
 
-      const { error } = await supabase
-        .from('user_organization_terms_acceptance' as any)
-        .insert({
-          user_id: user.id,
-          organization_terms_id: currentTerms.id,
-          ip_address: null,
-          user_agent: navigator.userAgent,
-          content_hash: contentHash
-        });
+      const { error } = await supabase.from("user_organization_terms_acceptance" as any).insert({
+        user_id: user.id,
+        organization_terms_id: currentTerms.id,
+        ip_address: null,
+        user_agent: navigator.userAgent,
+        content_hash: contentHash,
+      });
 
       if (error) throw error;
 
-      toast.success('Terms accepted successfully');
+      toast.success("Terms accepted successfully");
       setShowBlockingModal(false);
       setShowUpdateBanner(false);
       setUserAcceptance({ accepted: true });
     } catch (error: any) {
-      console.error('Error accepting terms:', error);
-      toast.error('Failed to accept terms');
+      console.error("Error accepting terms:", error);
+      toast.error("Failed to accept terms");
     } finally {
       setAccepting(false);
     }
@@ -193,20 +191,13 @@ export function OrganizationTermsAcceptanceGate({
                 checked={agreed}
                 onCheckedChange={(checked) => setAgreed(checked === true)}
               />
-              <label
-                htmlFor="agree-org"
-                className="text-sm cursor-pointer leading-tight"
-              >
+              <label htmlFor="agree-org" className="text-sm cursor-pointer leading-tight">
                 I have read and agree to the organization terms and conditions
               </label>
             </div>
 
-            <Button
-              onClick={acceptTerms}
-              disabled={!agreed || accepting}
-              className="w-full"
-            >
-              {accepting ? 'Processing...' : 'Agree & Continue'}
+            <Button onClick={acceptTerms} disabled={!agreed || accepting} className="w-full">
+              {accepting ? "Processing..." : "Agree & Continue"}
             </Button>
           </CardContent>
         </Card>
@@ -237,10 +228,10 @@ interface OrganizationTermsUpdateBannerProps {
   accepting: boolean;
 }
 
-function OrganizationTermsUpdateBanner({ 
-  terms, 
-  onAccept, 
-  accepting 
+function OrganizationTermsUpdateBanner({
+  terms,
+  onAccept,
+  accepting,
 }: OrganizationTermsUpdateBannerProps) {
   const [showModal, setShowModal] = useState(false);
   const [agreed, setAgreed] = useState(false);
@@ -252,7 +243,7 @@ function OrganizationTermsUpdateBanner({
           <DialogHeader className="shrink-0">
             <DialogTitle>{terms.title}</DialogTitle>
             <DialogDescription>
-              Version {terms.version} • Effective from{' '}
+              Version {terms.version} • Effective from{" "}
               {new Date(terms.effective_from).toLocaleDateString()}
             </DialogDescription>
           </DialogHeader>
@@ -273,10 +264,7 @@ function OrganizationTermsUpdateBanner({
                 checked={agreed}
                 onCheckedChange={(checked) => setAgreed(checked === true)}
               />
-              <label
-                htmlFor="agree-update-org"
-                className="text-sm cursor-pointer leading-tight"
-              >
+              <label htmlFor="agree-update-org" className="text-sm cursor-pointer leading-tight">
                 I have read and agree to the updated organization terms
               </label>
             </div>
@@ -286,7 +274,7 @@ function OrganizationTermsUpdateBanner({
                 Review Later
               </Button>
               <Button onClick={onAccept} disabled={!agreed || accepting}>
-                {accepting ? 'Processing...' : 'Accept Updated Terms'}
+                {accepting ? "Processing..." : "Accept Updated Terms"}
               </Button>
             </div>
           </div>

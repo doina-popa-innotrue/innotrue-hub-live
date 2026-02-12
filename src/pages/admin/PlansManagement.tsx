@@ -1,21 +1,27 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Euro, Copy, DollarSign, Settings } from 'lucide-react';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Edit, Trash2, Euro, Copy, DollarSign, Settings } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -23,12 +29,17 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { useAdminCRUD } from '@/hooks/useAdminCRUD';
-import { AdminPageHeader, AdminLoadingState, AdminEmptyState, AdminFormActions } from '@/components/admin';
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { useAdminCRUD } from "@/hooks/useAdminCRUD";
+import {
+  AdminPageHeader,
+  AdminLoadingState,
+  AdminEmptyState,
+  AdminFormActions,
+} from "@/components/admin";
 
 interface PlanPrice {
   id: string;
@@ -73,11 +84,11 @@ interface PriceFormData {
 }
 
 const initialPlanFormData: PlanFormData = {
-  key: '',
-  name: '',
-  display_name: '',
-  description: '',
-  stripe_product_id: '',
+  key: "",
+  name: "",
+  display_name: "",
+  description: "",
+  stripe_product_id: "",
   is_active: true,
   is_free: false,
   tier_level: 1,
@@ -86,9 +97,9 @@ const initialPlanFormData: PlanFormData = {
 };
 
 const initialPriceFormData: PriceFormData = {
-  billing_interval: 'month',
+  billing_interval: "month",
   price_cents: 0,
-  stripe_price_id: '',
+  stripe_price_id: "",
   is_default: false,
 };
 
@@ -113,19 +124,19 @@ export default function PlansManagement() {
     handleDelete,
     isMutating,
   } = useAdminCRUD<Plan, PlanFormData>({
-    tableName: 'plans',
-    queryKey: 'plans',
-    entityName: 'Plan',
-    orderBy: 'tier_level',
-    orderDirection: 'asc',
-    select: '*, plan_prices(*)',
+    tableName: "plans",
+    queryKey: "plans",
+    entityName: "Plan",
+    orderBy: "tier_level",
+    orderDirection: "asc",
+    select: "*, plan_prices(*)",
     initialFormData: initialPlanFormData,
     mapItemToForm: (item) => ({
       key: item.key,
       name: item.name,
-      display_name: (item as any).display_name || '',
-      description: item.description || '',
-      stripe_product_id: item.stripe_product_id || '',
+      display_name: (item as any).display_name || "",
+      description: item.description || "",
+      stripe_product_id: item.stripe_product_id || "",
       is_active: item.is_active,
       is_free: item.is_free,
       tier_level: item.tier_level,
@@ -137,7 +148,7 @@ export default function PlansManagement() {
   // Custom plan mutations for null handling
   const createPlanMutation = useMutation({
     mutationFn: async (data: PlanFormData) => {
-      const { error } = await supabase.from('plans').insert({
+      const { error } = await supabase.from("plans").insert({
         key: data.key,
         name: data.name,
         display_name: data.display_name || null,
@@ -153,15 +164,15 @@ export default function PlansManagement() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
       setIsDialogOpen(false);
-      toast({ title: 'Plan created successfully' });
+      toast({ title: "Plan created successfully" });
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error creating plan',
+        title: "Error creating plan",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
@@ -169,7 +180,7 @@ export default function PlansManagement() {
   const updatePlanMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: PlanFormData }) => {
       const { error } = await supabase
-        .from('plans')
+        .from("plans")
         .update({
           key: data.key,
           name: data.name,
@@ -182,20 +193,20 @@ export default function PlansManagement() {
           fallback_plan_id: data.fallback_plan_id,
           credit_allowance: data.credit_allowance,
         })
-        .eq('id', id);
+        .eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
       setIsDialogOpen(false);
-      toast({ title: 'Plan updated successfully' });
+      toast({ title: "Plan updated successfully" });
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error updating plan',
+        title: "Error updating plan",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
@@ -203,7 +214,7 @@ export default function PlansManagement() {
   const clonePlanMutation = useMutation({
     mutationFn: async (plan: Plan) => {
       const { data: newPlan, error: planError } = await supabase
-        .from('plans')
+        .from("plans")
         .insert({
           key: `${plan.key}_copy`,
           name: `${plan.name} (Copy)`,
@@ -221,9 +232,9 @@ export default function PlansManagement() {
 
       // Copy plan features
       const { data: features, error: featuresError } = await supabase
-        .from('plan_features')
-        .select('*')
-        .eq('plan_id', plan.id);
+        .from("plan_features")
+        .select("*")
+        .eq("plan_id", plan.id);
 
       if (featuresError) throw featuresError;
 
@@ -236,7 +247,7 @@ export default function PlansManagement() {
         }));
 
         const { error: insertFeaturesError } = await supabase
-          .from('plan_features')
+          .from("plan_features")
           .insert(newFeatures);
 
         if (insertFeaturesError) throw insertFeaturesError;
@@ -252,9 +263,7 @@ export default function PlansManagement() {
           is_default: p.is_default,
         }));
 
-        const { error: insertPricesError } = await supabase
-          .from('plan_prices')
-          .insert(newPrices);
+        const { error: insertPricesError } = await supabase.from("plan_prices").insert(newPrices);
 
         if (insertPricesError) throw insertPricesError;
       }
@@ -262,14 +271,14 @@ export default function PlansManagement() {
       return newPlan;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plans'] });
-      toast({ title: 'Plan cloned successfully' });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      toast({ title: "Plan cloned successfully" });
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error cloning plan',
+        title: "Error cloning plan",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
@@ -277,7 +286,7 @@ export default function PlansManagement() {
   // Price mutations
   const createPriceMutation = useMutation({
     mutationFn: async ({ planId, data }: { planId: string; data: PriceFormData }) => {
-      const { error } = await supabase.from('plan_prices').insert({
+      const { error } = await supabase.from("plan_prices").insert({
         plan_id: planId,
         billing_interval: data.billing_interval,
         price_cents: data.price_cents,
@@ -288,16 +297,16 @@ export default function PlansManagement() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
       setIsPriceDialogOpen(false);
       resetPriceForm();
-      toast({ title: 'Price added successfully' });
+      toast({ title: "Price added successfully" });
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error adding price',
+        title: "Error adding price",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
@@ -305,47 +314,47 @@ export default function PlansManagement() {
   const updatePriceMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: PriceFormData }) => {
       const { error } = await supabase
-        .from('plan_prices')
+        .from("plan_prices")
         .update({
           billing_interval: data.billing_interval,
           price_cents: data.price_cents,
           stripe_price_id: data.stripe_price_id || null,
           is_default: data.is_default,
         })
-        .eq('id', id);
+        .eq("id", id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
       setIsPriceDialogOpen(false);
       setEditingPrice(null);
       resetPriceForm();
-      toast({ title: 'Price updated successfully' });
+      toast({ title: "Price updated successfully" });
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error updating price',
+        title: "Error updating price",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
 
   const deletePriceMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('plan_prices').delete().eq('id', id);
+      const { error } = await supabase.from("plan_prices").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plans'] });
-      toast({ title: 'Price deleted successfully' });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      toast({ title: "Price deleted successfully" });
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error deleting price',
+        title: "Error deleting price",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });
@@ -361,7 +370,7 @@ export default function PlansManagement() {
       setPriceFormData({
         billing_interval: price.billing_interval,
         price_cents: price.price_cents,
-        stripe_price_id: price.stripe_price_id || '',
+        stripe_price_id: price.stripe_price_id || "",
         is_default: price.is_default,
       });
     } else {
@@ -390,17 +399,17 @@ export default function PlansManagement() {
   };
 
   const formatPrice = (cents: number) => {
-    if (cents === 0) return 'Free';
+    if (cents === 0) return "Free";
     return `€${(cents / 100).toFixed(2)}`;
   };
 
   const formatInterval = (interval: string) => {
     const labels: Record<string, string> = {
-      month: 'Monthly',
-      year: 'Yearly',
-      week: 'Weekly',
-      day: 'Daily',
-      one_time: 'One-time',
+      month: "Monthly",
+      year: "Yearly",
+      week: "Weekly",
+      day: "Daily",
+      one_time: "One-time",
     };
     return labels[interval] || interval;
   };
@@ -439,19 +448,20 @@ export default function PlansManagement() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <CardTitle>{plan.name}</CardTitle>
-                      <Badge variant={plan.is_active ? 'default' : 'secondary'}>
-                        {plan.is_active ? 'Active' : 'Inactive'}
+                      <Badge variant={plan.is_active ? "default" : "secondary"}>
+                        {plan.is_active ? "Active" : "Inactive"}
                       </Badge>
-                      {plan.is_free && (
-                        <Badge variant="outline">Free</Badge>
-                      )}
+                      {plan.is_free && <Badge variant="outline">Free</Badge>}
                       <Badge variant="outline">Tier {plan.tier_level}</Badge>
                     </div>
                     <CardDescription>
                       Key: <code className="rounded bg-muted px-1 py-0.5 text-xs">{plan.key}</code>
                       {plan.stripe_product_id && (
                         <span className="ml-2">
-                          Stripe: <code className="rounded bg-muted px-1 py-0.5 text-xs">{plan.stripe_product_id}</code>
+                          Stripe:{" "}
+                          <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                            {plan.stripe_product_id}
+                          </code>
                         </span>
                       )}
                     </CardDescription>
@@ -492,11 +502,7 @@ export default function PlansManagement() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-medium">Pricing</h4>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenPriceDialog(plan)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => handleOpenPriceDialog(plan)}>
                       <Plus className="h-4 w-4 mr-1" />
                       Add Price
                     </Button>
@@ -528,9 +534,7 @@ export default function PlansManagement() {
                                 <span className="text-muted-foreground">-</span>
                               )}
                             </TableCell>
-                            <TableCell>
-                              {price.is_default && <Badge>Default</Badge>}
-                            </TableCell>
+                            <TableCell>{price.is_default && <Badge>Default</Badge>}</TableCell>
                             <TableCell>
                               <div className="flex gap-1">
                                 <Button
@@ -544,7 +548,7 @@ export default function PlansManagement() {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => {
-                                    if (confirm('Delete this price?')) {
+                                    if (confirm("Delete this price?")) {
                                       deletePriceMutation.mutate(price.id);
                                     }
                                   }}
@@ -571,10 +575,8 @@ export default function PlansManagement() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingPlan ? 'Edit Plan' : 'Add Plan'}</DialogTitle>
-            <DialogDescription>
-              Configure the subscription plan details.
-            </DialogDescription>
+            <DialogTitle>{editingPlan ? "Edit Plan" : "Add Plan"}</DialogTitle>
+            <DialogDescription>Configure the subscription plan details.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handlePlanSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -607,7 +609,8 @@ export default function PlansManagement() {
                 placeholder="e.g. subscription plan"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                How this plan type is described in upgrade prompts (e.g., "Available with Pro subscription plan")
+                How this plan type is described in upgrade prompts (e.g., "Available with Pro
+                subscription plan")
               </p>
             </div>
             <div>
@@ -626,7 +629,9 @@ export default function PlansManagement() {
                   type="number"
                   min={0}
                   value={formData.tier_level}
-                  onChange={(e) => setFormData({ ...formData, tier_level: parseInt(e.target.value) || 1 })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tier_level: parseInt(e.target.value) || 1 })
+                  }
                 />
               </div>
               <div>
@@ -642,17 +647,23 @@ export default function PlansManagement() {
             <div>
               <Label htmlFor="fallback_plan_id">Fallback Plan</Label>
               <Select
-                value={formData.fallback_plan_id || '_none'}
-                onValueChange={(value) => setFormData({ ...formData, fallback_plan_id: value === '_none' ? null : value })}
+                value={formData.fallback_plan_id || "_none"}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, fallback_plan_id: value === "_none" ? null : value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="No fallback" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_none">No fallback</SelectItem>
-                  {plans?.filter(p => p.id !== editingPlan?.id).map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
+                  {plans
+                    ?.filter((p) => p.id !== editingPlan?.id)
+                    .map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -662,11 +673,13 @@ export default function PlansManagement() {
                 id="credit_allowance"
                 type="number"
                 min={0}
-                value={formData.credit_allowance ?? ''}
-                onChange={(e) => setFormData({ 
-                  ...formData, 
-                  credit_allowance: e.target.value ? parseInt(e.target.value) : null 
-                })}
+                value={formData.credit_allowance ?? ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    credit_allowance: e.target.value ? parseInt(e.target.value) : null,
+                  })
+                }
                 placeholder="e.g., 100"
               />
               <p className="text-xs text-muted-foreground mt-1">
@@ -699,23 +712,26 @@ export default function PlansManagement() {
               onCancel={() => setIsDialogOpen(false)}
               isEditing={!!editingPlan}
               isSubmitting={isSubmitting}
-              submitLabel={{ create: 'Create Plan', update: 'Save Changes' }}
+              submitLabel={{ create: "Create Plan", update: "Save Changes" }}
             />
           </form>
         </DialogContent>
       </Dialog>
 
       {/* Price Dialog */}
-      <Dialog open={isPriceDialogOpen} onOpenChange={(open) => {
-        setIsPriceDialogOpen(open);
-        if (!open) {
-          setEditingPrice(null);
-          resetPriceForm();
-        }
-      }}>
+      <Dialog
+        open={isPriceDialogOpen}
+        onOpenChange={(open) => {
+          setIsPriceDialogOpen(open);
+          if (!open) {
+            setEditingPrice(null);
+            resetPriceForm();
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingPrice ? 'Edit Price' : 'Add Price'}</DialogTitle>
+            <DialogTitle>{editingPrice ? "Edit Price" : "Add Price"}</DialogTitle>
             <DialogDescription>
               Configure pricing for {selectedPlanForPrice?.name}
             </DialogDescription>
@@ -725,7 +741,9 @@ export default function PlansManagement() {
               <Label htmlFor="billing_interval">Billing Interval</Label>
               <Select
                 value={priceFormData.billing_interval}
-                onValueChange={(value) => setPriceFormData({ ...priceFormData, billing_interval: value })}
+                onValueChange={(value) =>
+                  setPriceFormData({ ...priceFormData, billing_interval: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -745,7 +763,9 @@ export default function PlansManagement() {
                 type="number"
                 min={0}
                 value={priceFormData.price_cents}
-                onChange={(e) => setPriceFormData({ ...priceFormData, price_cents: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setPriceFormData({ ...priceFormData, price_cents: parseInt(e.target.value) || 0 })
+                }
               />
               <p className="text-xs text-muted-foreground mt-1">
                 {formatPrice(priceFormData.price_cents)}
@@ -756,7 +776,9 @@ export default function PlansManagement() {
               <Input
                 id="stripe_price_id"
                 value={priceFormData.stripe_price_id}
-                onChange={(e) => setPriceFormData({ ...priceFormData, stripe_price_id: e.target.value })}
+                onChange={(e) =>
+                  setPriceFormData({ ...priceFormData, stripe_price_id: e.target.value })
+                }
                 placeholder="price_..."
               />
             </div>
@@ -768,7 +790,9 @@ export default function PlansManagement() {
               <Switch
                 id="is_default"
                 checked={priceFormData.is_default}
-                onCheckedChange={(checked) => setPriceFormData({ ...priceFormData, is_default: checked })}
+                onCheckedChange={(checked) =>
+                  setPriceFormData({ ...priceFormData, is_default: checked })
+                }
               />
             </div>
             <AdminFormActions
@@ -779,7 +803,7 @@ export default function PlansManagement() {
               }}
               isEditing={!!editingPrice}
               isSubmitting={createPriceMutation.isPending || updatePriceMutation.isPending}
-              submitLabel={{ create: 'Add Price', update: 'Save Changes' }}
+              submitLabel={{ create: "Add Price", update: "Save Changes" }}
             />
           </form>
         </DialogContent>

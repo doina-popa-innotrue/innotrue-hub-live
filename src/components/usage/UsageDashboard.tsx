@@ -40,7 +40,8 @@ export function UsageDashboard() {
       // Get consumable features for user's plan
       const { data: planFeatures } = await supabase
         .from("plan_features")
-        .select(`
+        .select(
+          `
           limit_value,
           enabled,
           features!inner (
@@ -48,12 +49,13 @@ export function UsageDashboard() {
             name,
             is_consumable
           )
-        `)
+        `,
+        )
         .eq("plan_id", profile.plan_id)
         .eq("enabled", true);
 
       const consumableFeatures = (planFeatures || []).filter(
-        (pf: any) => pf.features?.is_consumable
+        (pf: any) => pf.features?.is_consumable,
       );
 
       // Get current usage for each consumable feature
@@ -102,9 +104,7 @@ export function UsageDashboard() {
             <TrendingUp className="h-5 w-5" />
             Feature Usage
           </CardTitle>
-          <CardDescription>
-            No consumable features available on your current plan.
-          </CardDescription>
+          <CardDescription>No consumable features available on your current plan.</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -117,9 +117,7 @@ export function UsageDashboard() {
           <TrendingUp className="h-5 w-5" />
           Monthly Feature Usage
         </CardTitle>
-        <CardDescription>
-          Track your usage of consumable features this month
-        </CardDescription>
+        <CardDescription>Track your usage of consumable features this month</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {usageData.map((item) => {
@@ -142,21 +140,14 @@ export function UsageDashboard() {
                   {item.limit_value !== null ? (
                     <>
                       {item.used_count} / {item.limit_value} used
-                      <span className="ml-2 text-primary">
-                        ({remaining} remaining)
-                      </span>
+                      <span className="ml-2 text-primary">({remaining} remaining)</span>
                     </>
                   ) : (
                     <span className="text-primary">Unlimited</span>
                   )}
                 </span>
               </div>
-              {item.limit_value !== null && (
-                <Progress
-                  value={percentage}
-                  className="h-2"
-                />
-              )}
+              {item.limit_value !== null && <Progress value={percentage} className="h-2" />}
             </div>
           );
         })}

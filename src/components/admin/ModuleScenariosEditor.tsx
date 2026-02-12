@@ -1,16 +1,26 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Trash2, FileText, Shield, Award, Search, GripVertical } from 'lucide-react';
-import { useModuleScenarios, useModuleScenarioMutations, useScenarioTemplates } from '@/hooks/useScenarios';
-import type { ModuleScenario } from '@/types/scenarios';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, Trash2, FileText, Shield, Award, Search, GripVertical } from "lucide-react";
+import {
+  useModuleScenarios,
+  useModuleScenarioMutations,
+  useScenarioTemplates,
+} from "@/hooks/useScenarios";
+import type { ModuleScenario } from "@/types/scenarios";
 import {
   DndContext,
   closestCenter,
@@ -19,15 +29,15 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from '@dnd-kit/core';
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface ModuleScenariosEditorProps {
   moduleId: string;
@@ -35,31 +45,34 @@ interface ModuleScenariosEditorProps {
 
 export function ModuleScenariosEditor({ moduleId }: ModuleScenariosEditorProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: linkedScenarios, isLoading } = useModuleScenarios(moduleId);
   const { data: allTemplates } = useScenarioTemplates();
-  const { addMutation, removeMutation, updateMutation, reorderMutation } = useModuleScenarioMutations();
+  const { addMutation, removeMutation, updateMutation, reorderMutation } =
+    useModuleScenarioMutations();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   // Filter out already-linked scenarios
-  const linkedTemplateIds = new Set(linkedScenarios?.map(s => s.template_id) || []);
-  const availableTemplates = allTemplates?.filter(t => 
-    t.is_active && 
-    !linkedTemplateIds.has(t.id) &&
-    (searchQuery === '' || t.title.toLowerCase().includes(searchQuery.toLowerCase()))
-  ) || [];
+  const linkedTemplateIds = new Set(linkedScenarios?.map((s) => s.template_id) || []);
+  const availableTemplates =
+    allTemplates?.filter(
+      (t) =>
+        t.is_active &&
+        !linkedTemplateIds.has(t.id) &&
+        (searchQuery === "" || t.title.toLowerCase().includes(searchQuery.toLowerCase())),
+    ) || [];
 
   const handleAdd = (templateId: string) => {
     addMutation.mutate(
       { module_id: moduleId, template_id: templateId },
-      { onSuccess: () => setIsAddDialogOpen(false) }
+      { onSuccess: () => setIsAddDialogOpen(false) },
     );
   };
 
@@ -77,16 +90,16 @@ export function ModuleScenariosEditor({ moduleId }: ModuleScenariosEditorProps) 
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     if (over && active.id !== over.id && linkedScenarios) {
-      const oldIndex = linkedScenarios.findIndex(s => s.id === active.id);
-      const newIndex = linkedScenarios.findIndex(s => s.id === over.id);
-      
+      const oldIndex = linkedScenarios.findIndex((s) => s.id === active.id);
+      const newIndex = linkedScenarios.findIndex((s) => s.id === over.id);
+
       if (oldIndex !== -1 && newIndex !== -1) {
         const newOrder = arrayMove(linkedScenarios, oldIndex, newIndex);
         reorderMutation.mutate({
           moduleId,
-          orderedIds: newOrder.map(s => s.id),
+          orderedIds: newOrder.map((s) => s.id),
         });
       }
     }
@@ -105,8 +118,9 @@ export function ModuleScenariosEditor({ moduleId }: ModuleScenariosEditorProps) 
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Link scenario-based assessments to this module. Scenarios marked "required for certification" 
-          must be completed and evaluated before the client can receive their program badge.
+          Link scenario-based assessments to this module. Scenarios marked "required for
+          certification" must be completed and evaluated before the client can receive their program
+          badge.
         </p>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
@@ -132,15 +146,15 @@ export function ModuleScenariosEditor({ moduleId }: ModuleScenariosEditorProps) 
               <ScrollArea className="h-[300px]">
                 {availableTemplates.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
-                    {allTemplates?.length === linkedTemplateIds.size 
-                      ? 'All scenarios are already linked to this module' 
-                      : 'No scenarios match your search'}
+                    {allTemplates?.length === linkedTemplateIds.size
+                      ? "All scenarios are already linked to this module"
+                      : "No scenarios match your search"}
                   </p>
                 ) : (
                   <div className="space-y-2 pr-4">
                     {availableTemplates.map((template) => (
-                      <Card 
-                        key={template.id} 
+                      <Card
+                        key={template.id}
                         className="cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => handleAdd(template.id)}
                       >
@@ -170,8 +184,8 @@ export function ModuleScenariosEditor({ moduleId }: ModuleScenariosEditorProps) 
                                 )}
                               </div>
                             </div>
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               variant="ghost"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -196,19 +210,13 @@ export function ModuleScenariosEditor({ moduleId }: ModuleScenariosEditorProps) 
         <Card>
           <CardContent className="py-8 text-center">
             <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">
-              No scenarios linked to this module yet.
-            </p>
+            <p className="text-sm text-muted-foreground">No scenarios linked to this module yet.</p>
           </CardContent>
         </Card>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
-            items={linkedScenarios?.map(s => s.id) || []}
+            items={linkedScenarios?.map((s) => s.id) || []}
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-2">
@@ -246,14 +254,9 @@ function SortableScenarioCard({
   isUpdating,
   isRemoving,
 }: SortableScenarioCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: scenario.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: scenario.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -278,7 +281,7 @@ function SortableScenarioCard({
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-primary shrink-0" />
                 <span className="font-medium truncate">
-                  {scenario.scenario_templates?.title || 'Untitled Scenario'}
+                  {scenario.scenario_templates?.title || "Untitled Scenario"}
                 </span>
                 {scenario.scenario_templates?.is_protected && (
                   <Shield className="h-3.5 w-3.5 text-muted-foreground" />
@@ -291,7 +294,7 @@ function SortableScenarioCard({
               )}
             </div>
           </div>
-          
+
           <div className="flex items-center gap-4 shrink-0">
             <div className="flex items-center gap-2">
               <Switch
@@ -300,15 +303,15 @@ function SortableScenarioCard({
                 onCheckedChange={() => onToggleCertification(scenario)}
                 disabled={isUpdating}
               />
-              <Label 
-                htmlFor={`cert-${scenario.id}`} 
+              <Label
+                htmlFor={`cert-${scenario.id}`}
                 className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1"
               >
                 <Award className="h-3 w-3" />
                 Required for cert
               </Label>
             </div>
-            
+
             <Button
               variant="ghost"
               size="icon"

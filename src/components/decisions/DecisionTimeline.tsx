@@ -2,15 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Calendar, 
-  CheckCircle2, 
-  Circle, 
-  Clock, 
-  BookOpen, 
-  Bell,
-  Lightbulb
-} from "lucide-react";
+import { Calendar, CheckCircle2, Circle, Clock, BookOpen, Bell, Lightbulb } from "lucide-react";
 import { format } from "date-fns";
 
 interface DecisionTimelineProps {
@@ -99,7 +91,7 @@ export function DecisionTimeline({ decisionId }: DecisionTimelineProps) {
   }
 
   // Add journal entries
-  journalEntries?.forEach(entry => {
+  journalEntries?.forEach((entry) => {
     events.push({
       date: new Date(entry.entry_date),
       type: "journal",
@@ -111,7 +103,7 @@ export function DecisionTimeline({ decisionId }: DecisionTimelineProps) {
   });
 
   // Add reminders
-  reminders?.forEach(reminder => {
+  reminders?.forEach((reminder) => {
     events.push({
       date: new Date(reminder.reminder_date),
       type: "reminder",
@@ -164,9 +156,7 @@ export function DecisionTimeline({ decisionId }: DecisionTimelineProps) {
           {events.map((event, index) => (
             <div key={index} className="relative">
               {/* Timeline dot */}
-              <div className={`absolute -left-6 mt-1.5 ${event.color}`}>
-                {event.icon}
-              </div>
+              <div className={`absolute -left-6 mt-1.5 ${event.color}`}>{event.icon}</div>
 
               <Card>
                 <CardContent className="pt-4">

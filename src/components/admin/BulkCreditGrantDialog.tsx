@@ -1,6 +1,15 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Coins, Users, Upload, CheckCircle2, AlertCircle, Loader2, Search, Calendar as CalendarIcon } from "lucide-react";
+import {
+  Coins,
+  Users,
+  Upload,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Search,
+  Calendar as CalendarIcon,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -54,7 +63,10 @@ export function BulkCreditGrantDialog({ trigger, onSuccess }: BulkCreditGrantDia
   const [reason, setReason] = useState("");
   const [expiryDate, setExpiryDate] = useState<Date | undefined>();
   const [filterPlan, setFilterPlan] = useState<string>("all");
-  const [results, setResults] = useState<{ success: number; failed: number }>({ success: 0, failed: 0 });
+  const [results, setResults] = useState<{ success: number; failed: number }>({
+    success: 0,
+    failed: 0,
+  });
 
   // Fetch default expiry months for admin_grant
   const { data: sourceTypeConfig } = useQuery({
@@ -82,10 +94,7 @@ export function BulkCreditGrantDialog({ trigger, onSuccess }: BulkCreditGrantDia
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ["admin-users-for-credits", searchQuery],
     queryFn: async () => {
-      let query = supabase
-        .from("profiles")
-        .select("id, name, plan_id")
-        .order("name");
+      let query = supabase.from("profiles").select("id, name, plan_id").order("name");
 
       if (searchQuery) {
         query = query.ilike("name", `%${searchQuery}%`);
@@ -123,13 +132,13 @@ export function BulkCreditGrantDialog({ trigger, onSuccess }: BulkCreditGrantDia
           .select("id", { count: "exact", head: true });
         return count ?? 0;
       }
-      
+
       // Filter by plan_id on profiles table
       const { count } = await supabase
         .from("profiles")
         .select("id", { count: "exact", head: true })
         .eq("plan_id", filterPlan);
-      
+
       return count ?? 0;
     },
     enabled: open && selectionMode === "filter",
@@ -152,11 +161,11 @@ export function BulkCreditGrantDialog({ trigger, onSuccess }: BulkCreditGrantDia
       } else {
         // Get users by filter
         let query = supabase.from("profiles").select("id");
-        
+
         if (filterPlan !== "all") {
           query = query.eq("plan_id", filterPlan);
         }
-        
+
         const { data } = await query;
         targetUserIds = data?.map((p) => p.id) ?? [];
       }
@@ -177,11 +186,11 @@ export function BulkCreditGrantDialog({ trigger, onSuccess }: BulkCreditGrantDia
       for (const userId of targetUserIds) {
         try {
           const { error } = await supabase.rpc("grant_credit_batch", {
-            p_owner_type: 'user',
+            p_owner_type: "user",
             p_owner_id: userId,
             p_amount: creditAmount,
             p_expires_at: expiryDate.toISOString(),
-            p_source_type: 'admin_grant',
+            p_source_type: "admin_grant",
             p_feature_key: undefined,
             p_source_reference_id: undefined,
             p_description: reason || "Bulk credit grant by admin",
@@ -214,7 +223,7 @@ export function BulkCreditGrantDialog({ trigger, onSuccess }: BulkCreditGrantDia
 
   const handleToggleUser = (userId: string) => {
     setSelectedUserIds((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
     );
   };
 
@@ -251,7 +260,13 @@ export function BulkCreditGrantDialog({ trigger, onSuccess }: BulkCreditGrantDia
   const canProceed = targetCount > 0 && parseInt(amount, 10) > 0 && !!expiryDate;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetDialog(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) resetDialog();
+      }}
+    >
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline">
@@ -266,9 +281,7 @@ export function BulkCreditGrantDialog({ trigger, onSuccess }: BulkCreditGrantDia
             <Coins className="h-5 w-5 text-primary" />
             Bulk Credit Grant
           </DialogTitle>
-          <DialogDescription>
-            Grant credits to multiple users at once.
-          </DialogDescription>
+          <DialogDescription>Grant credits to multiple users at once.</DialogDescription>
         </DialogHeader>
 
         {step === "select" && (
@@ -354,7 +367,9 @@ export function BulkCreditGrantDialog({ trigger, onSuccess }: BulkCreditGrantDia
                     <SelectContent>
                       <SelectItem value="all">All Users</SelectItem>
                       {plans?.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -387,7 +402,7 @@ export function BulkCreditGrantDialog({ trigger, onSuccess }: BulkCreditGrantDia
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !expiryDate && "text-muted-foreground"
+                        !expiryDate && "text-muted-foreground",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -435,16 +450,17 @@ export function BulkCreditGrantDialog({ trigger, onSuccess }: BulkCreditGrantDia
               </div>
               <div className="flex justify-between">
                 <span>Expires:</span>
-                <Badge variant="outline">{expiryDate ? format(expiryDate, "PPP") : "Not set"}</Badge>
+                <Badge variant="outline">
+                  {expiryDate ? format(expiryDate, "PPP") : "Not set"}
+                </Badge>
               </div>
               {reason && (
-                <div className="pt-2 border-t text-sm text-muted-foreground">
-                  Reason: {reason}
-                </div>
+                <div className="pt-2 border-t text-sm text-muted-foreground">Reason: {reason}</div>
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              This action cannot be undone. Credits will be immediately added to each user's balance.
+              This action cannot be undone. Credits will be immediately added to each user's
+              balance.
             </p>
           </div>
         )}
@@ -472,7 +488,9 @@ export function BulkCreditGrantDialog({ trigger, onSuccess }: BulkCreditGrantDia
         <DialogFooter>
           {step === "select" && (
             <>
-              <Button variant="outline" onClick={handleClose}>Cancel</Button>
+              <Button variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
               <Button onClick={() => setStep("confirm")} disabled={!canProceed}>
                 Review Grant
               </Button>
@@ -480,16 +498,16 @@ export function BulkCreditGrantDialog({ trigger, onSuccess }: BulkCreditGrantDia
           )}
           {step === "confirm" && (
             <>
-              <Button variant="outline" onClick={() => setStep("select")}>Back</Button>
+              <Button variant="outline" onClick={() => setStep("select")}>
+                Back
+              </Button>
               <Button onClick={() => grantMutation.mutate()} disabled={grantMutation.isPending}>
                 {grantMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Confirm Grant
               </Button>
             </>
           )}
-          {step === "result" && (
-            <Button onClick={handleClose}>Done</Button>
-          )}
+          {step === "result" && <Button onClick={handleClose}>Done</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

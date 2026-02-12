@@ -1,19 +1,50 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useToast } from '@/hooks/use-toast';
-import { Building2, Plus, Pencil, Trash2, Users, Search, ExternalLink, Eye } from 'lucide-react';
-import { format } from 'date-fns';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+import { Building2, Plus, Pencil, Trash2, Users, Search, ExternalLink, Eye } from "lucide-react";
+import { format } from "date-fns";
+import { Link } from "react-router-dom";
 
 interface Organization {
   id: string;
@@ -30,25 +61,25 @@ interface Organization {
 }
 
 const SIZE_RANGES = [
-  { value: '1-10', label: '1-10 employees' },
-  { value: '11-50', label: '11-50 employees' },
-  { value: '51-200', label: '51-200 employees' },
-  { value: '201-500', label: '201-500 employees' },
-  { value: '501-1000', label: '501-1000 employees' },
-  { value: '1000+', label: '1000+ employees' },
+  { value: "1-10", label: "1-10 employees" },
+  { value: "11-50", label: "11-50 employees" },
+  { value: "51-200", label: "51-200 employees" },
+  { value: "201-500", label: "201-500 employees" },
+  { value: "501-1000", label: "501-1000 employees" },
+  { value: "1000+", label: "1000+ employees" },
 ];
 
 const INDUSTRIES = [
-  'Technology',
-  'Healthcare',
-  'Finance',
-  'Education',
-  'Manufacturing',
-  'Retail',
-  'Professional Services',
-  'Non-profit',
-  'Government',
-  'Other',
+  "Technology",
+  "Healthcare",
+  "Finance",
+  "Education",
+  "Manufacturing",
+  "Retail",
+  "Professional Services",
+  "Non-profit",
+  "Government",
+  "Other",
 ];
 
 export default function OrganizationsManagement() {
@@ -58,16 +89,16 @@ export default function OrganizationsManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
   const [saving, setSaving] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Form state
   const [formData, setFormData] = useState({
-    name: '',
-    slug: '',
-    description: '',
-    website: '',
-    industry: '',
-    size_range: '',
+    name: "",
+    slug: "",
+    description: "",
+    website: "",
+    industry: "",
+    size_range: "",
   });
 
   useEffect(() => {
@@ -79,9 +110,9 @@ export default function OrganizationsManagement() {
       setLoading(true);
 
       const { data: orgsData, error } = await supabase
-        .from('organizations')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from("organizations")
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
@@ -89,32 +120,32 @@ export default function OrganizationsManagement() {
       const orgsWithCounts = await Promise.all(
         (orgsData || []).map(async (org) => {
           const { count: memberCount } = await supabase
-            .from('organization_members')
-            .select('*', { count: 'exact', head: true })
-            .eq('organization_id', org.id)
-            .eq('is_active', true);
+            .from("organization_members")
+            .select("*", { count: "exact", head: true })
+            .eq("organization_id", org.id)
+            .eq("is_active", true);
 
           const { count: programCount } = await supabase
-            .from('organization_programs')
-            .select('*', { count: 'exact', head: true })
-            .eq('organization_id', org.id)
-            .eq('is_active', true);
+            .from("organization_programs")
+            .select("*", { count: "exact", head: true })
+            .eq("organization_id", org.id)
+            .eq("is_active", true);
 
           return {
             ...org,
             memberCount: memberCount || 0,
             programCount: programCount || 0,
           };
-        })
+        }),
       );
 
       setOrganizations(orgsWithCounts);
     } catch (error) {
-      console.error('Error loading organizations:', error);
+      console.error("Error loading organizations:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to load organizations',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load organizations",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -124,12 +155,12 @@ export default function OrganizationsManagement() {
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
   };
 
   const handleNameChange = (name: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       name,
       slug: editingOrg ? prev.slug : generateSlug(name),
@@ -138,12 +169,12 @@ export default function OrganizationsManagement() {
 
   const resetForm = () => {
     setFormData({
-      name: '',
-      slug: '',
-      description: '',
-      website: '',
-      industry: '',
-      size_range: '',
+      name: "",
+      slug: "",
+      description: "",
+      website: "",
+      industry: "",
+      size_range: "",
     });
     setEditingOrg(null);
   };
@@ -153,10 +184,10 @@ export default function OrganizationsManagement() {
     setFormData({
       name: org.name,
       slug: org.slug,
-      description: org.description || '',
-      website: org.website || '',
-      industry: org.industry || '',
-      size_range: org.size_range || '',
+      description: org.description || "",
+      website: org.website || "",
+      industry: org.industry || "",
+      size_range: org.size_range || "",
     });
     setDialogOpen(true);
   };
@@ -164,9 +195,9 @@ export default function OrganizationsManagement() {
   const handleSave = async () => {
     if (!formData.name || !formData.slug) {
       toast({
-        title: 'Validation Error',
-        description: 'Name and slug are required',
-        variant: 'destructive',
+        title: "Validation Error",
+        description: "Name and slug are required",
+        variant: "destructive",
       });
       return;
     }
@@ -176,7 +207,7 @@ export default function OrganizationsManagement() {
       if (editingOrg) {
         // Update existing
         const { error } = await supabase
-          .from('organizations')
+          .from("organizations")
           .update({
             name: formData.name,
             description: formData.description || null,
@@ -185,37 +216,35 @@ export default function OrganizationsManagement() {
             size_range: formData.size_range || null,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', editingOrg.id);
+          .eq("id", editingOrg.id);
 
         if (error) throw error;
 
         toast({
-          title: 'Organization Updated',
-          description: 'Organization has been updated successfully',
+          title: "Organization Updated",
+          description: "Organization has been updated successfully",
         });
       } else {
         // Create new
-        const { error } = await supabase
-          .from('organizations')
-          .insert({
-            name: formData.name,
-            slug: formData.slug,
-            description: formData.description || null,
-            website: formData.website || null,
-            industry: formData.industry || null,
-            size_range: formData.size_range || null,
-          });
+        const { error } = await supabase.from("organizations").insert({
+          name: formData.name,
+          slug: formData.slug,
+          description: formData.description || null,
+          website: formData.website || null,
+          industry: formData.industry || null,
+          size_range: formData.size_range || null,
+        });
 
         if (error) {
-          if (error.code === '23505') {
-            throw new Error('An organization with this slug already exists');
+          if (error.code === "23505") {
+            throw new Error("An organization with this slug already exists");
           }
           throw error;
         }
 
         toast({
-          title: 'Organization Created',
-          description: 'New organization has been created successfully',
+          title: "Organization Created",
+          description: "New organization has been created successfully",
         });
       }
 
@@ -223,11 +252,11 @@ export default function OrganizationsManagement() {
       resetForm();
       loadOrganizations();
     } catch (error: any) {
-      console.error('Error saving organization:', error);
+      console.error("Error saving organization:", error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to save organization',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to save organization",
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -237,58 +266,57 @@ export default function OrganizationsManagement() {
   const handleToggleActive = async (org: Organization) => {
     try {
       const { error } = await supabase
-        .from('organizations')
-        .update({ 
+        .from("organizations")
+        .update({
           is_active: !org.is_active,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', org.id);
+        .eq("id", org.id);
 
       if (error) throw error;
 
       toast({
-        title: org.is_active ? 'Organization Deactivated' : 'Organization Activated',
-        description: `${org.name} has been ${org.is_active ? 'deactivated' : 'activated'}`,
+        title: org.is_active ? "Organization Deactivated" : "Organization Activated",
+        description: `${org.name} has been ${org.is_active ? "deactivated" : "activated"}`,
       });
       loadOrganizations();
     } catch (error) {
-      console.error('Error toggling organization:', error);
+      console.error("Error toggling organization:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to update organization',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update organization",
+        variant: "destructive",
       });
     }
   };
 
   const handleDelete = async (org: Organization) => {
     try {
-      const { error } = await supabase
-        .from('organizations')
-        .delete()
-        .eq('id', org.id);
+      const { error } = await supabase.from("organizations").delete().eq("id", org.id);
 
       if (error) throw error;
 
       toast({
-        title: 'Organization Deleted',
+        title: "Organization Deleted",
         description: `${org.name} has been deleted`,
       });
       loadOrganizations();
     } catch (error) {
-      console.error('Error deleting organization:', error);
+      console.error("Error deleting organization:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to delete organization. Make sure all members and programs are removed first.',
-        variant: 'destructive',
+        title: "Error",
+        description:
+          "Failed to delete organization. Make sure all members and programs are removed first.",
+        variant: "destructive",
       });
     }
   };
 
-  const filteredOrganizations = organizations.filter(org =>
-    !searchQuery ||
-    org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    org.slug.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredOrganizations = organizations.filter(
+    (org) =>
+      !searchQuery ||
+      org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      org.slug.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -296,14 +324,15 @@ export default function OrganizationsManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Organizations</h1>
-          <p className="text-muted-foreground">
-            Manage B2B organizations and their access
-          </p>
+          <p className="text-muted-foreground">Manage B2B organizations and their access</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -312,13 +341,11 @@ export default function OrganizationsManagement() {
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>
-                {editingOrg ? 'Edit Organization' : 'Create Organization'}
-              </DialogTitle>
+              <DialogTitle>{editingOrg ? "Edit Organization" : "Create Organization"}</DialogTitle>
               <DialogDescription>
-                {editingOrg 
-                  ? 'Update organization details'
-                  : 'Add a new B2B organization to the platform'}
+                {editingOrg
+                  ? "Update organization details"
+                  : "Add a new B2B organization to the platform"}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -339,7 +366,7 @@ export default function OrganizationsManagement() {
                   onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                   placeholder="acme-corp"
                   disabled={!!editingOrg}
-                  className={editingOrg ? 'bg-muted' : ''}
+                  className={editingOrg ? "bg-muted" : ""}
                 />
                 {!editingOrg && (
                   <p className="text-xs text-muted-foreground">
@@ -370,8 +397,8 @@ export default function OrganizationsManagement() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Industry</Label>
-                  <Select 
-                    value={formData.industry} 
+                  <Select
+                    value={formData.industry}
                     onValueChange={(v) => setFormData({ ...formData, industry: v })}
                   >
                     <SelectTrigger>
@@ -388,8 +415,8 @@ export default function OrganizationsManagement() {
                 </div>
                 <div className="space-y-2">
                   <Label>Company Size</Label>
-                  <Select 
-                    value={formData.size_range} 
+                  <Select
+                    value={formData.size_range}
                     onValueChange={(v) => setFormData({ ...formData, size_range: v })}
                   >
                     <SelectTrigger>
@@ -411,7 +438,7 @@ export default function OrganizationsManagement() {
                 Cancel
               </Button>
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving...' : editingOrg ? 'Update' : 'Create'}
+                {saving ? "Saving..." : editingOrg ? "Update" : "Create"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -430,7 +457,7 @@ export default function OrganizationsManagement() {
           <CardHeader className="pb-2">
             <CardDescription>Active</CardDescription>
             <CardTitle className="text-2xl text-green-600">
-              {organizations.filter(o => o.is_active).length}
+              {organizations.filter((o) => o.is_active).length}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -465,14 +492,12 @@ export default function OrganizationsManagement() {
           </div>
 
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading organizations...
-            </div>
+            <div className="text-center py-8 text-muted-foreground">Loading organizations...</div>
           ) : filteredOrganizations.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {organizations.length === 0 
-                ? 'No organizations yet. Create your first one!'
-                : 'No organizations match your search.'}
+              {organizations.length === 0
+                ? "No organizations yet. Create your first one!"
+                : "No organizations match your search."}
             </div>
           ) : (
             <Table>
@@ -513,15 +538,15 @@ export default function OrganizationsManagement() {
                     <TableCell>{org.programCount}</TableCell>
                     <TableCell>
                       <Badge
-                        variant={org.is_active ? 'default' : 'secondary'}
+                        variant={org.is_active ? "default" : "secondary"}
                         className="cursor-pointer"
                         onClick={() => handleToggleActive(org)}
                       >
-                        {org.is_active ? 'Active' : 'Inactive'}
+                        {org.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {format(new Date(org.created_at), 'MMM d, yyyy')}
+                      {format(new Date(org.created_at), "MMM d, yyyy")}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -535,11 +560,7 @@ export default function OrganizationsManagement() {
                             <ExternalLink className="h-4 w-4" />
                           </Button>
                         </Link>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(org)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(org)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <AlertDialog>
@@ -552,9 +573,8 @@ export default function OrganizationsManagement() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete Organization</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to delete "{org.name}"? 
-                                This will also remove all members and program licenses.
-                                This action cannot be undone.
+                                Are you sure you want to delete "{org.name}"? This will also remove
+                                all members and program licenses. This action cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>

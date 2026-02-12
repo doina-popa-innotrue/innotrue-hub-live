@@ -1,7 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, MousePointerClick, Activity, TrendingUp } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface AnalyticsData {
   total_events: number;
@@ -55,9 +63,10 @@ export function AnalyticsOverviewCards({ analytics, isLoading }: AnalyticsOvervi
     );
   }
 
-  const eventsPerSession = analytics.unique_sessions > 0 
-    ? (analytics.total_events / analytics.unique_sessions).toFixed(1)
-    : "0";
+  const eventsPerSession =
+    analytics.unique_sessions > 0
+      ? (analytics.total_events / analytics.unique_sessions).toFixed(1)
+      : "0";
 
   return (
     <div className="space-y-6">
@@ -118,40 +127,42 @@ export function AnalyticsOverviewCards({ analytics, isLoading }: AnalyticsOvervi
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={analytics.events_by_day}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis 
-                  dataKey="date" 
-                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(value) =>
+                    new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                  }
                   className="text-xs"
                 />
                 <YAxis className="text-xs" />
-                <Tooltip 
+                <Tooltip
                   labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))', 
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: 'var(--radius)'
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "var(--radius)",
                   }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="events" 
-                  stroke="hsl(var(--primary))" 
+                <Line
+                  type="monotone"
+                  dataKey="events"
+                  stroke="hsl(var(--primary))"
                   strokeWidth={2}
                   name="Events"
                   dot={false}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="sessions" 
-                  stroke="hsl(var(--chart-2))" 
+                <Line
+                  type="monotone"
+                  dataKey="sessions"
+                  stroke="hsl(var(--chart-2))"
                   strokeWidth={2}
                   name="Sessions"
                   dot={false}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="users" 
-                  stroke="hsl(var(--chart-3))" 
+                <Line
+                  type="monotone"
+                  dataKey="users"
+                  stroke="hsl(var(--chart-3))"
                   strokeWidth={2}
                   name="Users"
                   dot={false}
@@ -181,10 +192,10 @@ export function AnalyticsOverviewCards({ analytics, isLoading }: AnalyticsOvervi
                   </span>
                   <div className="flex items-center gap-3">
                     <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="h-full bg-primary rounded-full"
-                        style={{ 
-                          width: `${Math.min((category.count / analytics.total_events) * 100, 100)}%` 
+                        style={{
+                          width: `${Math.min((category.count / analytics.total_events) * 100, 100)}%`,
                         }}
                       />
                     </div>

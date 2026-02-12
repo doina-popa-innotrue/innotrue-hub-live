@@ -1,24 +1,65 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { Search, Users, GraduationCap, BookOpen, Layers, UserPlus, X, ArrowRight, Info, ExternalLink } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { AdminPageHeader } from '@/components/admin';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import {
+  Search,
+  Users,
+  GraduationCap,
+  BookOpen,
+  Layers,
+  UserPlus,
+  X,
+  ArrowRight,
+  Info,
+  ExternalLink,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { AdminPageHeader } from "@/components/admin";
 
-type AssignmentSource = 'direct' | 'program' | 'module';
-type StaffRole = 'instructor' | 'coach';
+type AssignmentSource = "direct" | "program" | "module";
+type StaffRole = "instructor" | "coach";
 
 interface Assignment {
   id: string;
@@ -54,18 +95,18 @@ interface Client {
 export default function StaffAssignments() {
   const [loading, setLoading] = useState(true);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [sourceFilter, setSourceFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'by-client' | 'by-staff'>('by-client');
-  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<"by-client" | "by-staff">("by-client");
+
   // For new assignment dialog
   const [dialogOpen, setDialogOpen] = useState(false);
   const [availableStaff, setAvailableStaff] = useState<StaffMember[]>([]);
   const [availableClients, setAvailableClients] = useState<Client[]>([]);
-  const [selectedStaff, setSelectedStaff] = useState('');
-  const [selectedClient, setSelectedClient] = useState('');
-  const [selectedRole, setSelectedRole] = useState<StaffRole>('instructor');
+  const [selectedStaff, setSelectedStaff] = useState("");
+  const [selectedClient, setSelectedClient] = useState("");
+  const [selectedRole, setSelectedRole] = useState<StaffRole>("instructor");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -79,9 +120,7 @@ export default function StaffAssignments() {
       const allAssignments: Assignment[] = [];
 
       // 1. Direct client-instructor assignments
-      const { data: directInstructors } = await supabase
-        .from('client_instructors')
-        .select(`
+      const { data: directInstructors } = await supabase.from("client_instructors").select(`
           id,
           instructor_id,
           client_id,
@@ -95,26 +134,24 @@ export default function StaffAssignments() {
             allAssignments.push({
               id: `direct-inst-${di.id}`,
               staffId: di.instructor_id,
-              staffName: (di.instructor as any).name || 'Unknown',
-              staffEmail: (di.instructor as any).email || '',
+              staffName: (di.instructor as any).name || "Unknown",
+              staffEmail: (di.instructor as any).email || "",
               staffAvatar: (di.instructor as any).avatar_url,
               clientId: di.client_id,
-              clientName: (di.client as any).name || 'Unknown',
-              clientEmail: (di.client as any).email || '',
+              clientName: (di.client as any).name || "Unknown",
+              clientEmail: (di.client as any).email || "",
               clientAvatar: (di.client as any).avatar_url,
-              role: 'instructor',
-              source: 'direct',
+              role: "instructor",
+              source: "direct",
               sourceId: di.id,
-              sourceName: 'Direct Assignment'
+              sourceName: "Direct Assignment",
             });
           }
         }
       }
 
       // 2. Direct client-coach assignments
-      const { data: directCoaches } = await supabase
-        .from('client_coaches')
-        .select(`
+      const { data: directCoaches } = await supabase.from("client_coaches").select(`
           id,
           coach_id,
           client_id,
@@ -128,26 +165,24 @@ export default function StaffAssignments() {
             allAssignments.push({
               id: `direct-coach-${dc.id}`,
               staffId: dc.coach_id,
-              staffName: (dc.coach as any).name || 'Unknown',
-              staffEmail: (dc.coach as any).email || '',
+              staffName: (dc.coach as any).name || "Unknown",
+              staffEmail: (dc.coach as any).email || "",
               staffAvatar: (dc.coach as any).avatar_url,
               clientId: dc.client_id,
-              clientName: (dc.client as any).name || 'Unknown',
-              clientEmail: (dc.client as any).email || '',
+              clientName: (dc.client as any).name || "Unknown",
+              clientEmail: (dc.client as any).email || "",
               clientAvatar: (dc.client as any).avatar_url,
-              role: 'coach',
-              source: 'direct',
+              role: "coach",
+              source: "direct",
               sourceId: dc.id,
-              sourceName: 'Direct Assignment'
+              sourceName: "Direct Assignment",
             });
           }
         }
       }
 
       // 3. Program-level instructor assignments (derived from enrollments)
-      const { data: programInstructors } = await supabase
-        .from('program_instructors')
-        .select(`
+      const { data: programInstructors } = await supabase.from("program_instructors").select(`
           id,
           instructor_id,
           program_id,
@@ -159,13 +194,15 @@ export default function StaffAssignments() {
         for (const pi of programInstructors) {
           // Get all clients enrolled in this program
           const { data: enrollments } = await supabase
-            .from('client_enrollments')
-            .select(`
+            .from("client_enrollments")
+            .select(
+              `
               client_user_id,
               client:profiles!client_enrollments_client_user_id_fkey(id, name, email, avatar_url)
-            `)
-            .eq('program_id', pi.program_id)
-            .not('client_user_id', 'is', null);
+            `,
+            )
+            .eq("program_id", pi.program_id)
+            .not("client_user_id", "is", null);
 
           if (enrollments && pi.instructor) {
             for (const enroll of enrollments) {
@@ -173,17 +210,17 @@ export default function StaffAssignments() {
                 allAssignments.push({
                   id: `prog-inst-${pi.id}-${enroll.client_user_id}`,
                   staffId: pi.instructor_id,
-                  staffName: (pi.instructor as any).name || 'Unknown',
-                  staffEmail: (pi.instructor as any).email || '',
+                  staffName: (pi.instructor as any).name || "Unknown",
+                  staffEmail: (pi.instructor as any).email || "",
                   staffAvatar: (pi.instructor as any).avatar_url,
                   clientId: enroll.client_user_id!,
-                  clientName: (enroll.client as any).name || 'Unknown',
-                  clientEmail: (enroll.client as any).email || '',
+                  clientName: (enroll.client as any).name || "Unknown",
+                  clientEmail: (enroll.client as any).email || "",
                   clientAvatar: (enroll.client as any).avatar_url,
-                  role: 'instructor',
-                  source: 'program',
+                  role: "instructor",
+                  source: "program",
                   sourceId: pi.program_id,
-                  sourceName: (pi.program as any)?.name || 'Unknown Program'
+                  sourceName: (pi.program as any)?.name || "Unknown Program",
                 });
               }
             }
@@ -192,9 +229,7 @@ export default function StaffAssignments() {
       }
 
       // 4. Program-level coach assignments
-      const { data: programCoaches } = await supabase
-        .from('program_coaches')
-        .select(`
+      const { data: programCoaches } = await supabase.from("program_coaches").select(`
           id,
           coach_id,
           program_id,
@@ -205,13 +240,15 @@ export default function StaffAssignments() {
       if (programCoaches) {
         for (const pc of programCoaches) {
           const { data: enrollments } = await supabase
-            .from('client_enrollments')
-            .select(`
+            .from("client_enrollments")
+            .select(
+              `
               client_user_id,
               client:profiles!client_enrollments_client_user_id_fkey(id, name, email, avatar_url)
-            `)
-            .eq('program_id', pc.program_id)
-            .not('client_user_id', 'is', null);
+            `,
+            )
+            .eq("program_id", pc.program_id)
+            .not("client_user_id", "is", null);
 
           if (enrollments && pc.coach) {
             for (const enroll of enrollments) {
@@ -219,17 +256,17 @@ export default function StaffAssignments() {
                 allAssignments.push({
                   id: `prog-coach-${pc.id}-${enroll.client_user_id}`,
                   staffId: pc.coach_id,
-                  staffName: (pc.coach as any).name || 'Unknown',
-                  staffEmail: (pc.coach as any).email || '',
+                  staffName: (pc.coach as any).name || "Unknown",
+                  staffEmail: (pc.coach as any).email || "",
                   staffAvatar: (pc.coach as any).avatar_url,
                   clientId: enroll.client_user_id!,
-                  clientName: (enroll.client as any).name || 'Unknown',
-                  clientEmail: (enroll.client as any).email || '',
+                  clientName: (enroll.client as any).name || "Unknown",
+                  clientEmail: (enroll.client as any).email || "",
                   clientAvatar: (enroll.client as any).avatar_url,
-                  role: 'coach',
-                  source: 'program',
+                  role: "coach",
+                  source: "program",
                   sourceId: pc.program_id,
-                  sourceName: (pc.program as any)?.name || 'Unknown Program'
+                  sourceName: (pc.program as any)?.name || "Unknown Program",
                 });
               }
             }
@@ -238,9 +275,7 @@ export default function StaffAssignments() {
       }
 
       // 5. Module-level instructor assignments
-      const { data: moduleInstructors } = await supabase
-        .from('module_instructors')
-        .select(`
+      const { data: moduleInstructors } = await supabase.from("module_instructors").select(`
           id,
           instructor_id,
           module_id,
@@ -252,13 +287,15 @@ export default function StaffAssignments() {
         for (const mi of moduleInstructors) {
           if (mi.module && mi.instructor) {
             const { data: enrollments } = await supabase
-              .from('client_enrollments')
-              .select(`
+              .from("client_enrollments")
+              .select(
+                `
                 client_user_id,
                 client:profiles!client_enrollments_client_user_id_fkey(id, name, email, avatar_url)
-              `)
-              .eq('program_id', (mi.module as any).program_id)
-              .not('client_user_id', 'is', null);
+              `,
+              )
+              .eq("program_id", (mi.module as any).program_id)
+              .not("client_user_id", "is", null);
 
             if (enrollments) {
               for (const enroll of enrollments) {
@@ -266,17 +303,17 @@ export default function StaffAssignments() {
                   allAssignments.push({
                     id: `mod-inst-${mi.id}-${enroll.client_user_id}`,
                     staffId: mi.instructor_id,
-                    staffName: (mi.instructor as any).name || 'Unknown',
-                    staffEmail: (mi.instructor as any).email || '',
+                    staffName: (mi.instructor as any).name || "Unknown",
+                    staffEmail: (mi.instructor as any).email || "",
                     staffAvatar: (mi.instructor as any).avatar_url,
                     clientId: enroll.client_user_id!,
-                    clientName: (enroll.client as any).name || 'Unknown',
-                    clientEmail: (enroll.client as any).email || '',
+                    clientName: (enroll.client as any).name || "Unknown",
+                    clientEmail: (enroll.client as any).email || "",
                     clientAvatar: (enroll.client as any).avatar_url,
-                    role: 'instructor',
-                    source: 'module',
+                    role: "instructor",
+                    source: "module",
                     sourceId: mi.module_id,
-                    sourceName: (mi.module as any)?.title || 'Unknown Module'
+                    sourceName: (mi.module as any)?.title || "Unknown Module",
                   });
                 }
               }
@@ -286,9 +323,7 @@ export default function StaffAssignments() {
       }
 
       // 6. Module-level coach assignments
-      const { data: moduleCoaches } = await supabase
-        .from('module_coaches')
-        .select(`
+      const { data: moduleCoaches } = await supabase.from("module_coaches").select(`
           id,
           coach_id,
           module_id,
@@ -300,13 +335,15 @@ export default function StaffAssignments() {
         for (const mc of moduleCoaches) {
           if (mc.module && mc.coach) {
             const { data: enrollments } = await supabase
-              .from('client_enrollments')
-              .select(`
+              .from("client_enrollments")
+              .select(
+                `
                 client_user_id,
                 client:profiles!client_enrollments_client_user_id_fkey(id, name, email, avatar_url)
-              `)
-              .eq('program_id', (mc.module as any).program_id)
-              .not('client_user_id', 'is', null);
+              `,
+              )
+              .eq("program_id", (mc.module as any).program_id)
+              .not("client_user_id", "is", null);
 
             if (enrollments) {
               for (const enroll of enrollments) {
@@ -314,17 +351,17 @@ export default function StaffAssignments() {
                   allAssignments.push({
                     id: `mod-coach-${mc.id}-${enroll.client_user_id}`,
                     staffId: mc.coach_id,
-                    staffName: (mc.coach as any).name || 'Unknown',
-                    staffEmail: (mc.coach as any).email || '',
+                    staffName: (mc.coach as any).name || "Unknown",
+                    staffEmail: (mc.coach as any).email || "",
                     staffAvatar: (mc.coach as any).avatar_url,
                     clientId: enroll.client_user_id!,
-                    clientName: (enroll.client as any).name || 'Unknown',
-                    clientEmail: (enroll.client as any).email || '',
+                    clientName: (enroll.client as any).name || "Unknown",
+                    clientEmail: (enroll.client as any).email || "",
                     clientAvatar: (enroll.client as any).avatar_url,
-                    role: 'coach',
-                    source: 'module',
+                    role: "coach",
+                    source: "module",
                     sourceId: mc.module_id,
-                    sourceName: (mc.module as any)?.title || 'Unknown Module'
+                    sourceName: (mc.module as any)?.title || "Unknown Module",
                   });
                 }
               }
@@ -335,8 +372,8 @@ export default function StaffAssignments() {
 
       setAssignments(allAssignments);
     } catch (error) {
-      console.error('Error loading assignments:', error);
-      toast.error('Failed to load assignments');
+      console.error("Error loading assignments:", error);
+      toast.error("Failed to load assignments");
     } finally {
       setLoading(false);
     }
@@ -345,39 +382,45 @@ export default function StaffAssignments() {
   async function loadAvailableStaffAndClients() {
     // Load staff (instructors and coaches)
     const { data: instructorRoles } = await supabase
-      .from('user_roles')
-      .select('user_id')
-      .eq('role', 'instructor');
-    
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "instructor");
+
     const { data: coachRoles } = await supabase
-      .from('user_roles')
-      .select('user_id')
-      .eq('role', 'coach');
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "coach");
 
     const staffIds = new Set<string>();
     const staffRoleMap: Record<string, StaffRole[]> = {};
-    
-    instructorRoles?.forEach(r => {
+
+    instructorRoles?.forEach((r) => {
       staffIds.add(r.user_id);
-      staffRoleMap[r.user_id] = [...(staffRoleMap[r.user_id] || []), 'instructor'];
+      staffRoleMap[r.user_id] = [...(staffRoleMap[r.user_id] || []), "instructor"];
     });
-    coachRoles?.forEach(r => {
+    coachRoles?.forEach((r) => {
       staffIds.add(r.user_id);
-      staffRoleMap[r.user_id] = [...(staffRoleMap[r.user_id] || []), 'coach'];
+      staffRoleMap[r.user_id] = [...(staffRoleMap[r.user_id] || []), "coach"];
     });
 
     if (staffIds.size > 0) {
       const { data: staffProfiles } = await supabase
-        .from('profiles')
-        .select('id, name, avatar_url')
-        .in('id', Array.from(staffIds));
-      
+        .from("profiles")
+        .select("id, name, avatar_url")
+        .in("id", Array.from(staffIds));
+
       if (staffProfiles) {
         const staff: StaffMember[] = [];
-        staffProfiles.forEach(p => {
+        staffProfiles.forEach((p) => {
           const roles = staffRoleMap[p.id] || [];
-          roles.forEach(role => {
-            staff.push({ id: p.id, name: p.name || 'Unknown', email: '', avatar_url: p.avatar_url, role });
+          roles.forEach((role) => {
+            staff.push({
+              id: p.id,
+              name: p.name || "Unknown",
+              email: "",
+              avatar_url: p.avatar_url,
+              role,
+            });
           });
         });
         setAvailableStaff(staff);
@@ -386,59 +429,64 @@ export default function StaffAssignments() {
 
     // Load clients
     const { data: clientRoles } = await supabase
-      .from('user_roles')
-      .select('user_id')
-      .eq('role', 'client');
-    
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "client");
+
     if (clientRoles && clientRoles.length > 0) {
       const { data: clientProfiles } = await supabase
-        .from('profiles')
-        .select('id, name, avatar_url')
-        .in('id', clientRoles.map(r => r.user_id));
-      
+        .from("profiles")
+        .select("id, name, avatar_url")
+        .in(
+          "id",
+          clientRoles.map((r) => r.user_id),
+        );
+
       if (clientProfiles) {
-        setAvailableClients(clientProfiles.map(p => ({ 
-          id: p.id, 
-          name: p.name || 'Unknown', 
-          email: '', 
-          avatar_url: p.avatar_url 
-        })));
+        setAvailableClients(
+          clientProfiles.map((p) => ({
+            id: p.id,
+            name: p.name || "Unknown",
+            email: "",
+            avatar_url: p.avatar_url,
+          })),
+        );
       }
     }
   }
 
   async function createDirectAssignment() {
     if (!selectedStaff || !selectedClient) return;
-    
+
     setSubmitting(true);
     try {
       let error;
-      if (selectedRole === 'instructor') {
-        const result = await supabase.from('client_instructors').insert({
+      if (selectedRole === "instructor") {
+        const result = await supabase.from("client_instructors").insert({
           client_id: selectedClient,
-          instructor_id: selectedStaff
+          instructor_id: selectedStaff,
         });
         error = result.error;
       } else {
-        const result = await supabase.from('client_coaches').insert({
+        const result = await supabase.from("client_coaches").insert({
           client_id: selectedClient,
-          coach_id: selectedStaff
+          coach_id: selectedStaff,
         });
         error = result.error;
       }
 
       if (error) throw error;
-      
-      toast.success('Assignment created successfully');
+
+      toast.success("Assignment created successfully");
       setDialogOpen(false);
-      setSelectedStaff('');
-      setSelectedClient('');
+      setSelectedStaff("");
+      setSelectedClient("");
       loadAssignments();
     } catch (error: any) {
-      if (error.code === '23505') {
-        toast.error('This assignment already exists');
+      if (error.code === "23505") {
+        toast.error("This assignment already exists");
       } else {
-        toast.error('Failed to create assignment');
+        toast.error("Failed to create assignment");
       }
     } finally {
       setSubmitting(false);
@@ -446,101 +494,110 @@ export default function StaffAssignments() {
   }
 
   async function removeDirectAssignment(assignment: Assignment) {
-    if (assignment.source !== 'direct') {
-      toast.error('Only direct assignments can be removed from here');
+    if (assignment.source !== "direct") {
+      toast.error("Only direct assignments can be removed from here");
       return;
     }
 
     try {
-      const table = assignment.role === 'instructor' ? 'client_instructors' : 'client_coaches';
-      const { error } = await supabase
-        .from(table)
-        .delete()
-        .eq('id', assignment.sourceId);
+      const table = assignment.role === "instructor" ? "client_instructors" : "client_coaches";
+      const { error } = await supabase.from(table).delete().eq("id", assignment.sourceId);
 
       if (error) throw error;
-      
-      toast.success('Assignment removed');
+
+      toast.success("Assignment removed");
       loadAssignments();
     } catch (error) {
-      toast.error('Failed to remove assignment');
+      toast.error("Failed to remove assignment");
     }
   }
 
   async function promoteToDirectAssignment(assignment: Assignment) {
     // Check if direct assignment already exists
     let existing;
-    if (assignment.role === 'instructor') {
+    if (assignment.role === "instructor") {
       const { data } = await supabase
-        .from('client_instructors')
-        .select('id')
-        .eq('client_id', assignment.clientId)
-        .eq('instructor_id', assignment.staffId)
+        .from("client_instructors")
+        .select("id")
+        .eq("client_id", assignment.clientId)
+        .eq("instructor_id", assignment.staffId)
         .maybeSingle();
       existing = data;
     } else {
       const { data } = await supabase
-        .from('client_coaches')
-        .select('id')
-        .eq('client_id', assignment.clientId)
-        .eq('coach_id', assignment.staffId)
+        .from("client_coaches")
+        .select("id")
+        .eq("client_id", assignment.clientId)
+        .eq("coach_id", assignment.staffId)
         .maybeSingle();
       existing = data;
     }
 
     if (existing) {
-      toast.info('Direct assignment already exists');
+      toast.info("Direct assignment already exists");
       return;
     }
 
     try {
       let error;
-      if (assignment.role === 'instructor') {
-        const result = await supabase.from('client_instructors').insert({
+      if (assignment.role === "instructor") {
+        const result = await supabase.from("client_instructors").insert({
           client_id: assignment.clientId,
-          instructor_id: assignment.staffId
+          instructor_id: assignment.staffId,
         });
         error = result.error;
       } else {
-        const result = await supabase.from('client_coaches').insert({
+        const result = await supabase.from("client_coaches").insert({
           client_id: assignment.clientId,
-          coach_id: assignment.staffId
+          coach_id: assignment.staffId,
         });
         error = result.error;
       }
 
       if (error) throw error;
-      
-      toast.success('Promoted to direct assignment');
+
+      toast.success("Promoted to direct assignment");
       loadAssignments();
     } catch (error) {
-      toast.error('Failed to promote assignment');
+      toast.error("Failed to promote assignment");
     }
   }
 
   // Filter assignments
-  const filteredAssignments = assignments.filter(a => {
-    const matchesSearch = 
+  const filteredAssignments = assignments.filter((a) => {
+    const matchesSearch =
       a.staffName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.sourceName.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === 'all' || a.role === roleFilter;
-    const matchesSource = sourceFilter === 'all' || a.source === sourceFilter;
+    const matchesRole = roleFilter === "all" || a.role === roleFilter;
+    const matchesSource = sourceFilter === "all" || a.source === sourceFilter;
     return matchesSearch && matchesRole && matchesSource;
   });
 
   // Group by client or staff based on active tab
-  const groupedData = activeTab === 'by-client' 
-    ? groupByClient(filteredAssignments)
-    : groupByStaff(filteredAssignments);
+  const groupedData =
+    activeTab === "by-client"
+      ? groupByClient(filteredAssignments)
+      : groupByStaff(filteredAssignments);
 
   function groupByClient(items: Assignment[]) {
-    const groups: Record<string, { client: { id: string; name: string; email: string; avatar: string | null }; assignments: Assignment[] }> = {};
-    items.forEach(a => {
+    const groups: Record<
+      string,
+      {
+        client: { id: string; name: string; email: string; avatar: string | null };
+        assignments: Assignment[];
+      }
+    > = {};
+    items.forEach((a) => {
       if (!groups[a.clientId]) {
         groups[a.clientId] = {
-          client: { id: a.clientId, name: a.clientName, email: a.clientEmail, avatar: a.clientAvatar },
-          assignments: []
+          client: {
+            id: a.clientId,
+            name: a.clientName,
+            email: a.clientEmail,
+            avatar: a.clientAvatar,
+          },
+          assignments: [],
         };
       }
       groups[a.clientId].assignments.push(a);
@@ -549,13 +606,25 @@ export default function StaffAssignments() {
   }
 
   function groupByStaff(items: Assignment[]) {
-    const groups: Record<string, { staff: { id: string; name: string; email: string; avatar: string | null; role: StaffRole }; assignments: Assignment[] }> = {};
-    items.forEach(a => {
+    const groups: Record<
+      string,
+      {
+        staff: { id: string; name: string; email: string; avatar: string | null; role: StaffRole };
+        assignments: Assignment[];
+      }
+    > = {};
+    items.forEach((a) => {
       const key = `${a.staffId}-${a.role}`;
       if (!groups[key]) {
         groups[key] = {
-          staff: { id: a.staffId, name: a.staffName, email: a.staffEmail, avatar: a.staffAvatar, role: a.role },
-          assignments: []
+          staff: {
+            id: a.staffId,
+            name: a.staffName,
+            email: a.staffEmail,
+            avatar: a.staffAvatar,
+            role: a.role,
+          },
+          assignments: [],
         };
       }
       groups[key].assignments.push(a);
@@ -565,30 +634,54 @@ export default function StaffAssignments() {
 
   const getSourceBadge = (source: AssignmentSource) => {
     switch (source) {
-      case 'direct':
-        return <Badge variant="default" className="text-xs"><Users className="h-3 w-3 mr-1" />Direct</Badge>;
-      case 'program':
-        return <Badge variant="secondary" className="text-xs"><BookOpen className="h-3 w-3 mr-1" />Program</Badge>;
-      case 'module':
-        return <Badge variant="outline" className="text-xs"><Layers className="h-3 w-3 mr-1" />Module</Badge>;
+      case "direct":
+        return (
+          <Badge variant="default" className="text-xs">
+            <Users className="h-3 w-3 mr-1" />
+            Direct
+          </Badge>
+        );
+      case "program":
+        return (
+          <Badge variant="secondary" className="text-xs">
+            <BookOpen className="h-3 w-3 mr-1" />
+            Program
+          </Badge>
+        );
+      case "module":
+        return (
+          <Badge variant="outline" className="text-xs">
+            <Layers className="h-3 w-3 mr-1" />
+            Module
+          </Badge>
+        );
     }
   };
 
   const getRoleBadge = (role: StaffRole) => {
-    return role === 'instructor' 
-      ? <Badge variant="default" className="text-xs"><GraduationCap className="h-3 w-3 mr-1" />Instructor</Badge>
-      : <Badge variant="secondary" className="text-xs"><Users className="h-3 w-3 mr-1" />Coach</Badge>;
+    return role === "instructor" ? (
+      <Badge variant="default" className="text-xs">
+        <GraduationCap className="h-3 w-3 mr-1" />
+        Instructor
+      </Badge>
+    ) : (
+      <Badge variant="secondary" className="text-xs">
+        <Users className="h-3 w-3 mr-1" />
+        Coach
+      </Badge>
+    );
   };
 
   // Stats
   const stats = {
     total: assignments.length,
-    direct: assignments.filter(a => a.source === 'direct').length,
-    program: assignments.filter(a => a.source === 'program').length,
-    module: assignments.filter(a => a.source === 'module').length,
-    instructors: new Set(assignments.filter(a => a.role === 'instructor').map(a => a.staffId)).size,
-    coaches: new Set(assignments.filter(a => a.role === 'coach').map(a => a.staffId)).size,
-    clients: new Set(assignments.map(a => a.clientId)).size
+    direct: assignments.filter((a) => a.source === "direct").length,
+    program: assignments.filter((a) => a.source === "program").length,
+    module: assignments.filter((a) => a.source === "module").length,
+    instructors: new Set(assignments.filter((a) => a.role === "instructor").map((a) => a.staffId))
+      .size,
+    coaches: new Set(assignments.filter((a) => a.role === "coach").map((a) => a.staffId)).size,
+    clients: new Set(assignments.map((a) => a.clientId)).size,
   };
 
   return (
@@ -671,7 +764,10 @@ export default function StaffAssignments() {
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium">Role</label>
-                    <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as StaffRole)}>
+                    <Select
+                      value={selectedRole}
+                      onValueChange={(v) => setSelectedRole(v as StaffRole)}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -689,7 +785,7 @@ export default function StaffAssignments() {
                       </SelectTrigger>
                       <SelectContent>
                         {availableStaff
-                          .filter(s => s.role === selectedRole)
+                          .filter((s) => s.role === selectedRole)
                           .map((staff) => (
                             <SelectItem key={`${staff.id}-${staff.role}`} value={staff.id}>
                               {staff.name} ({staff.email})
@@ -713,12 +809,12 @@ export default function StaffAssignments() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button 
-                    onClick={createDirectAssignment} 
+                  <Button
+                    onClick={createDirectAssignment}
                     disabled={!selectedStaff || !selectedClient || submitting}
                     className="w-full"
                   >
-                    {submitting ? 'Creating...' : 'Create Assignment'}
+                    {submitting ? "Creating..." : "Create Assignment"}
                   </Button>
                 </div>
               </DialogContent>
@@ -759,7 +855,10 @@ export default function StaffAssignments() {
             </Select>
           </div>
 
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'by-client' | 'by-staff')}>
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as "by-client" | "by-staff")}
+          >
             <TabsList className="mb-4">
               <TabsTrigger value="by-client">By Client</TabsTrigger>
               <TabsTrigger value="by-staff">By Staff</TabsTrigger>
@@ -768,12 +867,12 @@ export default function StaffAssignments() {
             <TabsContent value="by-client">
               {loading ? (
                 <div className="space-y-4">
-                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full" />)}
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-24 w-full" />
+                  ))}
                 </div>
               ) : groupedData.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No assignments found
-                </div>
+                <div className="text-center py-8 text-muted-foreground">No assignments found</div>
               ) : (
                 <div className="space-y-4">
                   {(groupedData as ReturnType<typeof groupByClient>).map((group) => (
@@ -782,10 +881,12 @@ export default function StaffAssignments() {
                         <div className="flex items-center gap-3">
                           <Avatar>
                             <AvatarImage src={group.client.avatar || undefined} />
-                            <AvatarFallback>{group.client.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                            <AvatarFallback>
+                              {group.client.name.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
-                            <Link 
+                            <Link
                               to={`/admin/clients/${group.client.id}`}
                               className="font-medium hover:underline"
                             >
@@ -813,7 +914,9 @@ export default function StaffAssignments() {
                                   <div className="flex items-center gap-2">
                                     <Avatar className="h-8 w-8">
                                       <AvatarImage src={a.staffAvatar || undefined} />
-                                      <AvatarFallback>{a.staffName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                      <AvatarFallback>
+                                        {a.staffName.slice(0, 2).toUpperCase()}
+                                      </AvatarFallback>
                                     </Avatar>
                                     <span>{a.staffName}</span>
                                   </div>
@@ -822,12 +925,14 @@ export default function StaffAssignments() {
                                 <TableCell>
                                   <div className="flex items-center gap-2">
                                     {getSourceBadge(a.source)}
-                                    <span className="text-sm text-muted-foreground">{a.sourceName}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                      {a.sourceName}
+                                    </span>
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-right">
                                   <div className="flex justify-end gap-2">
-                                    {a.source !== 'direct' && (
+                                    {a.source !== "direct" && (
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <Button
@@ -838,10 +943,12 @@ export default function StaffAssignments() {
                                             <ArrowRight className="h-4 w-4" />
                                           </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent>Promote to direct assignment</TooltipContent>
+                                        <TooltipContent>
+                                          Promote to direct assignment
+                                        </TooltipContent>
                                       </Tooltip>
                                     )}
-                                    {a.source === 'direct' && (
+                                    {a.source === "direct" && (
                                       <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                           <Button variant="ghost" size="sm">
@@ -852,12 +959,15 @@ export default function StaffAssignments() {
                                           <AlertDialogHeader>
                                             <AlertDialogTitle>Remove Assignment?</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                              This will remove the direct assignment between {a.staffName} and {a.clientName}.
+                                              This will remove the direct assignment between{" "}
+                                              {a.staffName} and {a.clientName}.
                                             </AlertDialogDescription>
                                           </AlertDialogHeader>
                                           <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => removeDirectAssignment(a)}>
+                                            <AlertDialogAction
+                                              onClick={() => removeDirectAssignment(a)}
+                                            >
                                               Remove
                                             </AlertDialogAction>
                                           </AlertDialogFooter>
@@ -880,12 +990,12 @@ export default function StaffAssignments() {
             <TabsContent value="by-staff">
               {loading ? (
                 <div className="space-y-4">
-                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full" />)}
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-24 w-full" />
+                  ))}
                 </div>
               ) : groupedData.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No assignments found
-                </div>
+                <div className="text-center py-8 text-muted-foreground">No assignments found</div>
               ) : (
                 <div className="space-y-4">
                   {(groupedData as ReturnType<typeof groupByStaff>).map((group) => (
@@ -894,7 +1004,9 @@ export default function StaffAssignments() {
                         <div className="flex items-center gap-3">
                           <Avatar>
                             <AvatarImage src={group.staff.avatar || undefined} />
-                            <AvatarFallback>{group.staff.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                            <AvatarFallback>
+                              {group.staff.name.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
@@ -922,9 +1034,11 @@ export default function StaffAssignments() {
                                   <div className="flex items-center gap-2">
                                     <Avatar className="h-8 w-8">
                                       <AvatarImage src={a.clientAvatar || undefined} />
-                                      <AvatarFallback>{a.clientName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                      <AvatarFallback>
+                                        {a.clientName.slice(0, 2).toUpperCase()}
+                                      </AvatarFallback>
                                     </Avatar>
-                                    <Link 
+                                    <Link
                                       to={`/admin/clients/${a.clientId}`}
                                       className="hover:underline"
                                     >
@@ -935,12 +1049,14 @@ export default function StaffAssignments() {
                                 <TableCell>
                                   <div className="flex items-center gap-2">
                                     {getSourceBadge(a.source)}
-                                    <span className="text-sm text-muted-foreground">{a.sourceName}</span>
+                                    <span className="text-sm text-muted-foreground">
+                                      {a.sourceName}
+                                    </span>
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-right">
                                   <div className="flex justify-end gap-2">
-                                    {a.source !== 'direct' && (
+                                    {a.source !== "direct" && (
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <Button
@@ -951,10 +1067,12 @@ export default function StaffAssignments() {
                                             <ArrowRight className="h-4 w-4" />
                                           </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent>Promote to direct assignment</TooltipContent>
+                                        <TooltipContent>
+                                          Promote to direct assignment
+                                        </TooltipContent>
                                       </Tooltip>
                                     )}
-                                    {a.source === 'direct' && (
+                                    {a.source === "direct" && (
                                       <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                           <Button variant="ghost" size="sm">
@@ -965,12 +1083,15 @@ export default function StaffAssignments() {
                                           <AlertDialogHeader>
                                             <AlertDialogTitle>Remove Assignment?</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                              This will remove the direct assignment between {a.staffName} and {a.clientName}.
+                                              This will remove the direct assignment between{" "}
+                                              {a.staffName} and {a.clientName}.
                                             </AlertDialogDescription>
                                           </AlertDialogHeader>
                                           <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => removeDirectAssignment(a)}>
+                                            <AlertDialogAction
+                                              onClick={() => removeDirectAssignment(a)}
+                                            >
                                               Remove
                                             </AlertDialogAction>
                                           </AlertDialogFooter>
@@ -1009,7 +1130,8 @@ export default function StaffAssignments() {
                 <h4 className="font-medium">Direct Assignments</h4>
               </div>
               <p className="text-sm text-muted-foreground">
-                Explicitly assigned to a specific client. These are persistent and don't change when program/module assignments change.
+                Explicitly assigned to a specific client. These are persistent and don't change when
+                program/module assignments change.
               </p>
             </div>
             <div>
@@ -1018,7 +1140,8 @@ export default function StaffAssignments() {
                 <h4 className="font-medium">Program Assignments</h4>
               </div>
               <p className="text-sm text-muted-foreground">
-                Assigned to a program. Automatically grants access to all clients enrolled in that program, including future enrollees.
+                Assigned to a program. Automatically grants access to all clients enrolled in that
+                program, including future enrollees.
               </p>
             </div>
             <div>
@@ -1027,7 +1150,8 @@ export default function StaffAssignments() {
                 <h4 className="font-medium">Module Assignments</h4>
               </div>
               <p className="text-sm text-muted-foreground">
-                Assigned to a specific module. Grants access to all clients enrolled in the program containing that module.
+                Assigned to a specific module. Grants access to all clients enrolled in the program
+                containing that module.
               </p>
             </div>
           </div>

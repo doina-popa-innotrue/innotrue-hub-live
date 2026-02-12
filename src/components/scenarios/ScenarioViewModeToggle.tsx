@@ -1,6 +1,6 @@
-import { Eye, Pencil } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Eye, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface ScenarioViewModeToggleProps {
   isPreviewMode: boolean;
@@ -8,10 +8,10 @@ interface ScenarioViewModeToggleProps {
   disabled?: boolean;
 }
 
-export function ScenarioViewModeToggle({ 
-  isPreviewMode, 
+export function ScenarioViewModeToggle({
+  isPreviewMode,
   onToggle,
-  disabled 
+  disabled,
 }: ScenarioViewModeToggleProps) {
   return (
     <Button
@@ -19,10 +19,7 @@ export function ScenarioViewModeToggle({
       size="sm"
       onClick={onToggle}
       disabled={disabled}
-      className={cn(
-        "transition-colors",
-        isPreviewMode && "bg-primary/90"
-      )}
+      className={cn("transition-colors", isPreviewMode && "bg-primary/90")}
     >
       {isPreviewMode ? (
         <>

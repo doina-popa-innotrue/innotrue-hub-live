@@ -7,11 +7,39 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Upload, FileText, Download, Trash2, Loader2, Lock, Unlock, UserPlus, X, Target, TrendingUp, CheckCircle2, ClipboardList } from "lucide-react";
+import {
+  Plus,
+  Upload,
+  FileText,
+  Download,
+  Trash2,
+  Loader2,
+  Lock,
+  Unlock,
+  UserPlus,
+  X,
+  Target,
+  TrendingUp,
+  CheckCircle2,
+  ClipboardList,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAssessmentFeatureAccess } from "@/hooks/useAssessmentFeatureAccess";
 import { useAuth } from "@/contexts/AuthContext";
@@ -89,7 +117,8 @@ export default function MyAssessments() {
   const { hasAccessToFeature, isLoading: accessLoading } = useAssessmentFeatureAccess();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [selectedAssessmentForShare, setSelectedAssessmentForShare] = useState<UserAssessment | null>(null);
+  const [selectedAssessmentForShare, setSelectedAssessmentForShare] =
+    useState<UserAssessment | null>(null);
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -102,7 +131,9 @@ export default function MyAssessments() {
   const { data: psychometricAssessments, isLoading: psychometricLoading } = useQuery({
     queryKey: ["my-assessments"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
@@ -121,10 +152,11 @@ export default function MyAssessments() {
     queryKey: ["my-capability-snapshots-results"],
     queryFn: async () => {
       if (!user) return [];
-      
+
       const { data, error } = await supabase
         .from("capability_snapshots")
-        .select(`
+        .select(
+          `
           id,
           assessment_id,
           title,
@@ -135,15 +167,16 @@ export default function MyAssessments() {
             name,
             description
           )
-        `)
+        `,
+        )
         .eq("user_id", user.id)
         .eq("status", "completed")
         .order("completed_at", { ascending: false });
 
       if (error) throw error;
-      return (data || []).map(s => ({
+      return (data || []).map((s) => ({
         ...s,
-        assessment: s.capability_assessments
+        assessment: s.capability_assessments,
       })) as CapabilitySnapshot[];
     },
     enabled: !!user,
@@ -154,10 +187,11 @@ export default function MyAssessments() {
     queryKey: ["my-self-assessment-responses"],
     queryFn: async () => {
       if (!user) return [];
-      
+
       const { data, error } = await supabase
         .from("assessment_responses")
-        .select(`
+        .select(
+          `
           id,
           assessment_id,
           completed_at,
@@ -167,14 +201,15 @@ export default function MyAssessments() {
             name,
             description
           )
-        `)
+        `,
+        )
         .eq("user_id", user.id)
         .order("completed_at", { ascending: false });
 
       if (error) throw error;
-      return (data || []).map(r => ({
+      return (data || []).map((r) => ({
         ...r,
-        assessment: r.assessment_definitions
+        assessment: r.assessment_definitions,
       })) as SelfAssessmentResponse[];
     },
     enabled: !!user,
@@ -184,7 +219,9 @@ export default function MyAssessments() {
   const { data: assessmentShares } = useQuery({
     queryKey: ["assessment-shares"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data: shares, error } = await supabase
@@ -193,20 +230,20 @@ export default function MyAssessments() {
         .eq("shared_by_user_id", user.id);
 
       if (error) throw error;
-      
+
       if (shares && shares.length > 0) {
-        const userIds = [...new Set(shares.map(s => s.shared_with_user_id))];
+        const userIds = [...new Set(shares.map((s) => s.shared_with_user_id))];
         const { data: profiles } = await supabase
           .from("profiles")
           .select("id, name")
           .in("id", userIds);
-        
-        return shares.map(share => ({
+
+        return shares.map((share) => ({
           ...share,
-          shared_with_profile: profiles?.find(p => p.id === share.shared_with_user_id)
+          shared_with_profile: profiles?.find((p) => p.id === share.shared_with_user_id),
         })) as AssessmentShare[];
       }
-      
+
       return [] as AssessmentShare[];
     },
   });
@@ -215,7 +252,9 @@ export default function MyAssessments() {
   const { data: coaches } = useQuery({
     queryKey: ["my-coaches"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data: coachRelations, error } = await supabase
@@ -224,20 +263,20 @@ export default function MyAssessments() {
         .eq("client_id", user.id);
 
       if (error) throw error;
-      
+
       if (coachRelations && coachRelations.length > 0) {
-        const coachIds = coachRelations.map(c => c.coach_id);
+        const coachIds = coachRelations.map((c) => c.coach_id);
         const { data: profiles } = await supabase
           .from("profiles")
           .select("id, name")
           .in("id", coachIds);
-        
-        return coachRelations.map(c => ({
+
+        return coachRelations.map((c) => ({
           coach_id: c.coach_id,
-          coach_profile: profiles?.find(p => p.id === c.coach_id)
+          coach_profile: profiles?.find((p) => p.id === c.coach_id),
         }));
       }
-      
+
       return [];
     },
   });
@@ -256,19 +295,21 @@ export default function MyAssessments() {
     },
   });
 
-  const accessibleAssessments = availableAssessments?.filter(
-    (a) => hasAccessToFeature(a.feature_key)
+  const accessibleAssessments = availableAssessments?.filter((a) =>
+    hasAccessToFeature(a.feature_key),
   );
 
   const getSharesForAssessment = (assessmentId: string) => {
-    return assessmentShares?.filter(s => s.user_assessment_id === assessmentId) || [];
+    return assessmentShares?.filter((s) => s.user_assessment_id === assessmentId) || [];
   };
 
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!selectedFile) throw new Error("No file selected");
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       setUploading(true);
@@ -282,16 +323,14 @@ export default function MyAssessments() {
 
       if (uploadError) throw uploadError;
 
-      const { error: insertError } = await supabase
-        .from("user_assessments")
-        .insert({
-          user_id: user.id,
-          title: formData.title,
-          file_name: selectedFile.name,
-          file_path: fileName,
-          assessment_id: formData.assessment_id || null,
-          notes: formData.notes || null,
-        });
+      const { error: insertError } = await supabase.from("user_assessments").insert({
+        user_id: user.id,
+        title: formData.title,
+        file_name: selectedFile.name,
+        file_path: fileName,
+        assessment_id: formData.assessment_id || null,
+        notes: formData.notes || null,
+      });
 
       if (insertError) throw insertError;
     },
@@ -313,13 +352,11 @@ export default function MyAssessments() {
     mutationFn: async ({ assessmentId, coachId }: { assessmentId: string; coachId: string }) => {
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase
-        .from("user_assessment_shares")
-        .insert({
-          user_assessment_id: assessmentId,
-          shared_with_user_id: coachId,
-          shared_by_user_id: user.id,
-        });
+      const { error } = await supabase.from("user_assessment_shares").insert({
+        user_assessment_id: assessmentId,
+        shared_with_user_id: coachId,
+        shared_by_user_id: user.id,
+      });
 
       if (error) throw error;
     },
@@ -338,10 +375,7 @@ export default function MyAssessments() {
 
   const unshareMutation = useMutation({
     mutationFn: async (shareId: string) => {
-      const { error } = await supabase
-        .from("user_assessment_shares")
-        .delete()
-        .eq("id", shareId);
+      const { error } = await supabase.from("user_assessment_shares").delete().eq("id", shareId);
 
       if (error) throw error;
     },
@@ -416,51 +450,60 @@ export default function MyAssessments() {
   // Group capability snapshots by assessment
   const groupedCapabilityAssessments: GroupedCapabilityAssessment[] = (() => {
     if (!capabilitySnapshots || capabilitySnapshots.length === 0) return [];
-    
-    const grouped = capabilitySnapshots.reduce((acc, snapshot) => {
-      const key = snapshot.assessment_id;
-      if (!acc[key]) {
-        acc[key] = {
-          assessment_id: snapshot.assessment_id,
-          assessment_name: snapshot.assessment?.name || "Unknown Assessment",
-          assessment_description: snapshot.assessment?.description || null,
-          snapshots: [],
-          latestSnapshot: snapshot,
-          sharedCount: 0,
-        };
-      }
-      acc[key].snapshots.push(snapshot);
-      if (snapshot.shared_with_coach) acc[key].sharedCount++;
-      return acc;
-    }, {} as Record<string, GroupedCapabilityAssessment>);
-    
+
+    const grouped = capabilitySnapshots.reduce(
+      (acc, snapshot) => {
+        const key = snapshot.assessment_id;
+        if (!acc[key]) {
+          acc[key] = {
+            assessment_id: snapshot.assessment_id,
+            assessment_name: snapshot.assessment?.name || "Unknown Assessment",
+            assessment_description: snapshot.assessment?.description || null,
+            snapshots: [],
+            latestSnapshot: snapshot,
+            sharedCount: 0,
+          };
+        }
+        acc[key].snapshots.push(snapshot);
+        if (snapshot.shared_with_coach) acc[key].sharedCount++;
+        return acc;
+      },
+      {} as Record<string, GroupedCapabilityAssessment>,
+    );
+
     return Object.values(grouped);
   })();
 
   // Group self-assessment responses by assessment
   const groupedSelfAssessments: GroupedSelfAssessment[] = (() => {
     if (!selfAssessmentResponses || selfAssessmentResponses.length === 0) return [];
-    
-    const grouped = selfAssessmentResponses.reduce((acc, response) => {
-      const key = response.assessment_id;
-      if (!acc[key]) {
-        acc[key] = {
-          assessment_id: response.assessment_id,
-          assessment_name: response.assessment?.name || "Unknown Assessment",
-          assessment_description: response.assessment?.description || null,
-          responses: [],
-          latestResponse: response,
-        };
-      }
-      acc[key].responses.push(response);
-      return acc;
-    }, {} as Record<string, GroupedSelfAssessment>);
-    
+
+    const grouped = selfAssessmentResponses.reduce(
+      (acc, response) => {
+        const key = response.assessment_id;
+        if (!acc[key]) {
+          acc[key] = {
+            assessment_id: response.assessment_id,
+            assessment_name: response.assessment?.name || "Unknown Assessment",
+            assessment_description: response.assessment?.description || null,
+            responses: [],
+            latestResponse: response,
+          };
+        }
+        acc[key].responses.push(response);
+        return acc;
+      },
+      {} as Record<string, GroupedSelfAssessment>,
+    );
+
     return Object.values(grouped);
   })();
 
   const isLoading = psychometricLoading || capabilityLoading || selfAssessmentLoading;
-  const totalResults = (psychometricAssessments?.length || 0) + groupedCapabilityAssessments.length + groupedSelfAssessments.length;
+  const totalResults =
+    (psychometricAssessments?.length || 0) +
+    groupedCapabilityAssessments.length +
+    groupedSelfAssessments.length;
 
   return (
     <div className="space-y-6">
@@ -471,10 +514,13 @@ export default function MyAssessments() {
             View all your assessment results in one place
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) resetForm();
-        }}>
+        <Dialog
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -517,12 +563,13 @@ export default function MyAssessments() {
                     ))}
                   </SelectContent>
                 </Select>
-                {availableAssessments && accessibleAssessments && 
-                 availableAssessments.length > accessibleAssessments.length && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Some assessment types require a plan upgrade to access.
-                  </p>
-                )}
+                {availableAssessments &&
+                  accessibleAssessments &&
+                  availableAssessments.length > accessibleAssessments.length && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Some assessment types require a plan upgrade to access.
+                    </p>
+                  )}
               </div>
               <div>
                 <Label htmlFor="file">File (PDF) *</Label>
@@ -570,36 +617,42 @@ export default function MyAssessments() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {selectedAssessmentForShare && getSharesForAssessment(selectedAssessmentForShare.id).length > 0 && (
-              <div className="space-y-2">
-                <Label>Currently shared with:</Label>
+            {selectedAssessmentForShare &&
+              getSharesForAssessment(selectedAssessmentForShare.id).length > 0 && (
                 <div className="space-y-2">
-                  {getSharesForAssessment(selectedAssessmentForShare.id).map((share) => (
-                    <div key={share.id} className="flex items-center justify-between p-2 rounded-md border">
-                      <span className="text-sm">{share.shared_with_profile?.name || "Unknown"}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => unshareMutation.mutate(share.id)}
+                  <Label>Currently shared with:</Label>
+                  <div className="space-y-2">
+                    {getSharesForAssessment(selectedAssessmentForShare.id).map((share) => (
+                      <div
+                        key={share.id}
+                        className="flex items-center justify-between p-2 rounded-md border"
                       >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                        <span className="text-sm">
+                          {share.shared_with_profile?.name || "Unknown"}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => unshareMutation.mutate(share.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {coaches && coaches.length > 0 ? (
               <div className="space-y-2">
                 <Label>Share with coach:</Label>
                 <div className="space-y-2">
                   {coaches
-                    .filter(c => {
-                      const existingShares = selectedAssessmentForShare 
-                        ? getSharesForAssessment(selectedAssessmentForShare.id) 
+                    .filter((c) => {
+                      const existingShares = selectedAssessmentForShare
+                        ? getSharesForAssessment(selectedAssessmentForShare.id)
                         : [];
-                      return !existingShares.some(s => s.shared_with_user_id === c.coach_id);
+                      return !existingShares.some((s) => s.shared_with_user_id === c.coach_id);
                     })
                     .map((coach) => (
                       <Button
@@ -645,11 +698,11 @@ export default function MyAssessments() {
               Complete a capability assessment or upload your psychometric results to see them here.
             </p>
             <div className="flex gap-2 mt-4">
-              <Button variant="outline" onClick={() => navigate('/capabilities')}>
+              <Button variant="outline" onClick={() => navigate("/capabilities")}>
                 <Target className="h-4 w-4 mr-2" />
                 Capability Assessments
               </Button>
-              <Button variant="outline" onClick={() => navigate('/assessments/explore')}>
+              <Button variant="outline" onClick={() => navigate("/assessments/explore")}>
                 <FileText className="h-4 w-4 mr-2" />
                 Psychometric Assessments
               </Button>
@@ -678,8 +731,8 @@ export default function MyAssessments() {
             {groupedCapabilityAssessments.length > 0 && (
               <div className="space-y-3">
                 {groupedCapabilityAssessments.map((group) => (
-                  <Card 
-                    key={group.assessment_id} 
+                  <Card
+                    key={group.assessment_id}
                     className="hover:border-primary/50 transition-colors cursor-pointer"
                     onClick={() => navigate(`/capabilities/${group.assessment_id}`)}
                   >
@@ -691,7 +744,8 @@ export default function MyAssessments() {
                             <CardTitle className="text-base">{group.assessment_name}</CardTitle>
                             <Badge variant="outline">Capability</Badge>
                             <Badge variant="secondary">
-                              {group.snapshots.length} {group.snapshots.length === 1 ? "snapshot" : "snapshots"}
+                              {group.snapshots.length}{" "}
+                              {group.snapshots.length === 1 ? "snapshot" : "snapshots"}
                             </Badge>
                             {group.sharedCount > 0 && (
                               <Badge variant="secondary">
@@ -701,11 +755,16 @@ export default function MyAssessments() {
                             )}
                           </div>
                           {group.assessment_description && (
-                            <p className="text-sm text-muted-foreground line-clamp-1">{group.assessment_description}</p>
+                            <p className="text-sm text-muted-foreground line-clamp-1">
+                              {group.assessment_description}
+                            </p>
                           )}
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            Last completed: {group.latestSnapshot.completed_at ? format(new Date(group.latestSnapshot.completed_at), "MMM d, yyyy") : ""}
+                            Last completed:{" "}
+                            {group.latestSnapshot.completed_at
+                              ? format(new Date(group.latestSnapshot.completed_at), "MMM d, yyyy")
+                              : ""}
                           </div>
                         </div>
                         <Button variant="ghost" size="sm">
@@ -722,8 +781,8 @@ export default function MyAssessments() {
             {groupedSelfAssessments.length > 0 && (
               <div className="space-y-3">
                 {groupedSelfAssessments.map((group) => (
-                  <Card 
-                    key={group.assessment_id} 
+                  <Card
+                    key={group.assessment_id}
                     className="hover:border-primary/50 transition-colors"
                   >
                     <CardHeader className="pb-3">
@@ -734,15 +793,21 @@ export default function MyAssessments() {
                             <CardTitle className="text-base">{group.assessment_name}</CardTitle>
                             <Badge variant="outline">Self-Assessment</Badge>
                             <Badge variant="secondary">
-                              {group.responses.length} {group.responses.length === 1 ? "response" : "responses"}
+                              {group.responses.length}{" "}
+                              {group.responses.length === 1 ? "response" : "responses"}
                             </Badge>
                           </div>
                           {group.assessment_description && (
-                            <p className="text-sm text-muted-foreground line-clamp-1">{group.assessment_description}</p>
+                            <p className="text-sm text-muted-foreground line-clamp-1">
+                              {group.assessment_description}
+                            </p>
                           )}
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            Last completed: {group.latestResponse.completed_at ? format(new Date(group.latestResponse.completed_at), "MMM d, yyyy") : ""}
+                            Last completed:{" "}
+                            {group.latestResponse.completed_at
+                              ? format(new Date(group.latestResponse.completed_at), "MMM d, yyyy")
+                              : ""}
                           </div>
                         </div>
                       </div>
@@ -757,7 +822,7 @@ export default function MyAssessments() {
                 {psychometricAssessments.map((assessment) => {
                   const shares = getSharesForAssessment(assessment.id);
                   const isShared = shares.length > 0;
-                  
+
                   return (
                     <Card key={assessment.id}>
                       <CardHeader className="pb-3">
@@ -790,7 +855,10 @@ export default function MyAssessments() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={(e) => { e.stopPropagation(); handleDownload(assessment); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownload(assessment);
+                              }}
                               title="Download"
                             >
                               <Download className="h-4 w-4" />
@@ -798,7 +866,10 @@ export default function MyAssessments() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={(e) => { e.stopPropagation(); openShareDialog(assessment); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openShareDialog(assessment);
+                              }}
                               title="Manage Sharing"
                             >
                               <UserPlus className="h-4 w-4" />
@@ -806,7 +877,10 @@ export default function MyAssessments() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(assessment); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteMutation.mutate(assessment);
+                              }}
                               title="Delete"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -825,8 +899,8 @@ export default function MyAssessments() {
             {groupedCapabilityAssessments.length > 0 ? (
               <div className="space-y-3">
                 {groupedCapabilityAssessments.map((group) => (
-                  <Card 
-                    key={group.assessment_id} 
+                  <Card
+                    key={group.assessment_id}
                     className="hover:border-primary/50 transition-colors cursor-pointer"
                     onClick={() => navigate(`/capabilities/${group.assessment_id}`)}
                   >
@@ -837,7 +911,8 @@ export default function MyAssessments() {
                             <Target className="h-4 w-4 text-primary" />
                             <CardTitle className="text-base">{group.assessment_name}</CardTitle>
                             <Badge variant="secondary">
-                              {group.snapshots.length} {group.snapshots.length === 1 ? "snapshot" : "snapshots"}
+                              {group.snapshots.length}{" "}
+                              {group.snapshots.length === 1 ? "snapshot" : "snapshots"}
                             </Badge>
                             {group.sharedCount > 0 && (
                               <Badge variant="secondary">
@@ -847,11 +922,16 @@ export default function MyAssessments() {
                             )}
                           </div>
                           {group.assessment_description && (
-                            <p className="text-sm text-muted-foreground line-clamp-1">{group.assessment_description}</p>
+                            <p className="text-sm text-muted-foreground line-clamp-1">
+                              {group.assessment_description}
+                            </p>
                           )}
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            Last completed: {group.latestSnapshot.completed_at ? format(new Date(group.latestSnapshot.completed_at), "MMM d, yyyy") : ""}
+                            Last completed:{" "}
+                            {group.latestSnapshot.completed_at
+                              ? format(new Date(group.latestSnapshot.completed_at), "MMM d, yyyy")
+                              : ""}
                           </div>
                         </div>
                         <Button variant="ghost" size="sm">
@@ -870,7 +950,11 @@ export default function MyAssessments() {
                   <p className="text-muted-foreground text-center">
                     No capability assessments completed yet.
                   </p>
-                  <Button variant="outline" className="mt-4" onClick={() => navigate('/capabilities')}>
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => navigate("/capabilities")}
+                  >
                     Start an Assessment
                   </Button>
                 </CardContent>
@@ -882,8 +966,8 @@ export default function MyAssessments() {
             {groupedSelfAssessments.length > 0 ? (
               <div className="space-y-3">
                 {groupedSelfAssessments.map((group) => (
-                  <Card 
-                    key={group.assessment_id} 
+                  <Card
+                    key={group.assessment_id}
                     className="hover:border-primary/50 transition-colors"
                   >
                     <CardHeader className="pb-3">
@@ -893,15 +977,21 @@ export default function MyAssessments() {
                             <ClipboardList className="h-4 w-4 text-primary" />
                             <CardTitle className="text-base">{group.assessment_name}</CardTitle>
                             <Badge variant="secondary">
-                              {group.responses.length} {group.responses.length === 1 ? "response" : "responses"}
+                              {group.responses.length}{" "}
+                              {group.responses.length === 1 ? "response" : "responses"}
                             </Badge>
                           </div>
                           {group.assessment_description && (
-                            <p className="text-sm text-muted-foreground line-clamp-1">{group.assessment_description}</p>
+                            <p className="text-sm text-muted-foreground line-clamp-1">
+                              {group.assessment_description}
+                            </p>
                           )}
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            Last completed: {group.latestResponse.completed_at ? format(new Date(group.latestResponse.completed_at), "MMM d, yyyy") : ""}
+                            Last completed:{" "}
+                            {group.latestResponse.completed_at
+                              ? format(new Date(group.latestResponse.completed_at), "MMM d, yyyy")
+                              : ""}
                           </div>
                         </div>
                       </div>
@@ -927,7 +1017,7 @@ export default function MyAssessments() {
                 {psychometricAssessments.map((assessment) => {
                   const shares = getSharesForAssessment(assessment.id);
                   const isShared = shares.length > 0;
-                  
+
                   return (
                     <Card key={assessment.id}>
                       <CardHeader className="pb-3">
@@ -994,7 +1084,11 @@ export default function MyAssessments() {
                   <p className="text-muted-foreground text-center">
                     No psychometric assessments uploaded yet.
                   </p>
-                  <Button variant="outline" className="mt-4" onClick={() => navigate('/assessments/explore')}>
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => navigate("/assessments/explore")}
+                  >
                     Explore Assessments
                   </Button>
                 </CardContent>

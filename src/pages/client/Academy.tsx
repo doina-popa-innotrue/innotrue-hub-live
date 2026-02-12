@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { GraduationCap, ExternalLink, AlertCircle } from 'lucide-react';
-import { toast } from 'sonner';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useTalentLmsSSO } from '@/hooks/useTalentLmsSSO';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { GraduationCap, ExternalLink, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useTalentLmsSSO } from "@/hooks/useTalentLmsSSO";
 
 export default function Academy() {
   const [talentLmsConnection, setTalentLmsConnection] = useState<any>(null);
@@ -19,13 +19,13 @@ export default function Academy() {
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('talentlms_users')
-        .select('*')
-        .eq('user_id', user.id)
+        .from("talentlms_users")
+        .select("*")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching TalentLMS connection:', error);
+        console.error("Error fetching TalentLMS connection:", error);
       } else {
         setTalentLmsConnection(data);
       }
@@ -37,7 +37,7 @@ export default function Academy() {
   }, [user]);
 
   const handleAccessTalentLms = () => {
-    loginToTalentLms('');
+    loginToTalentLms("");
   };
 
   if (loading) {
@@ -58,9 +58,7 @@ export default function Academy() {
               <GraduationCap className="h-5 w-5" />
               Your InnoTrue Academy Connection
             </CardTitle>
-            <CardDescription>
-              You're connected to InnoTrue Academy
-            </CardDescription>
+            <CardDescription>You're connected to InnoTrue Academy</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -80,13 +78,14 @@ export default function Academy() {
               className="w-full"
             >
               <ExternalLink className="mr-2 h-4 w-4" />
-              {accessingTalentLms ? 'Opening InnoTrue Academy...' : 'Access InnoTrue Academy'}
+              {accessingTalentLms ? "Opening InnoTrue Academy..." : "Access InnoTrue Academy"}
             </Button>
 
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Clicking the button above will generate a secure login link and open InnoTrue Academy in a new tab.
+                Clicking the button above will generate a secure login link and open InnoTrue
+                Academy in a new tab.
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -106,13 +105,14 @@ export default function Academy() {
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Your InnoTrue Academy account hasn't been set up yet. Request a connection to get access to InnoTrue Academy courses.
+                Your InnoTrue Academy account hasn't been set up yet. Request a connection to get
+                access to InnoTrue Academy courses.
               </AlertDescription>
             </Alert>
-            
-            <Button 
+
+            <Button
               onClick={() => {
-                toast.success('Connection request sent to administrators');
+                toast.success("Connection request sent to administrators");
               }}
               className="w-full"
             >

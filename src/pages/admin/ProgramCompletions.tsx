@@ -1,14 +1,21 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { Loader2, UserCheck, Users, ArrowRight } from 'lucide-react';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { Loader2, UserCheck, Users, ArrowRight } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +25,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 
 interface CompletedUser {
   user_id: string;
@@ -40,22 +47,22 @@ export default function ProgramCompletions() {
 
   // Fetch users on Programs plan who have completed all their enrollments
   const { data: completedUsers, isLoading } = useQuery({
-    queryKey: ['program-completions'],
+    queryKey: ["program-completions"],
     queryFn: async () => {
       // Get the Programs plan ID
       const { data: programsPlan } = await supabase
-        .from('plans')
-        .select('id')
-        .eq('key', 'programs')
+        .from("plans")
+        .select("id")
+        .eq("key", "programs")
         .single();
 
       if (!programsPlan) return [];
 
       // Get users on Programs plan
       const { data: usersOnProgramsPlan } = await supabase
-        .from('profiles')
-        .select('id, name, email:id')
-        .eq('plan_id', programsPlan.id);
+        .from("profiles")
+        .select("id, name, email:id")
+        .eq("plan_id", programsPlan.id);
 
       if (!usersOnProgramsPlan || usersOnProgramsPlan.length === 0) return [];
 
@@ -65,44 +72,47 @@ export default function ProgramCompletions() {
       for (const profile of usersOnProgramsPlan) {
         // Get user's email from auth (via edge function or profiles)
         const { data: userEmail } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', profile.id)
+          .from("profiles")
+          .select("id")
+          .eq("id", profile.id)
           .single();
 
         // Get all enrollments for this user
         const { data: enrollments } = await supabase
-          .from('client_enrollments')
-          .select(`
+          .from("client_enrollments")
+          .select(
+            `
             id,
             status,
             updated_at,
             programs!inner (
               name
             )
-          `)
-          .eq('client_user_id', profile.id);
+          `,
+          )
+          .eq("client_user_id", profile.id);
 
         if (!enrollments || enrollments.length === 0) continue;
 
         // Check if all enrollments are completed
-        const allCompleted = enrollments.every(e => e.status === 'completed');
-        
+        const allCompleted = enrollments.every((e) => e.status === "completed");
+
         if (allCompleted) {
-          const completedPrograms = enrollments.map(e => ({
-            program_name: ((e.programs as any)?.name as string) ?? '',
-            completed_at: (e.updated_at as string) ?? '',
+          const completedPrograms = enrollments.map((e) => ({
+            program_name: ((e.programs as any)?.name as string) ?? "",
+            completed_at: (e.updated_at as string) ?? "",
           }));
 
           // Find the most recent completion date
-          const lastCompletionDate = completedPrograms.reduce((latest: string, p) =>
-            new Date(p.completed_at) > new Date(latest) ? p.completed_at : latest,
-            completedPrograms[0].completed_at
+          const lastCompletionDate = completedPrograms.reduce(
+            (latest: string, p) =>
+              new Date(p.completed_at) > new Date(latest) ? p.completed_at : latest,
+            completedPrograms[0].completed_at,
           );
 
           completedUsers.push({
             user_id: profile.id,
-            user_name: profile.name || 'Unknown',
+            user_name: profile.name || "Unknown",
             user_email: profile.id, // We'll display the ID; in production you'd fetch email
             completed_programs: completedPrograms,
             last_completion_date: lastCompletionDate,
@@ -111,20 +121,21 @@ export default function ProgramCompletions() {
       }
 
       // Sort by most recent completion first
-      return completedUsers.sort((a, b) => 
-        new Date(b.last_completion_date).getTime() - new Date(a.last_completion_date).getTime()
+      return completedUsers.sort(
+        (a, b) =>
+          new Date(b.last_completion_date).getTime() - new Date(a.last_completion_date).getTime(),
       );
     },
   });
 
   // Get Continuation plan ID
   const { data: continuationPlan } = useQuery({
-    queryKey: ['continuation-plan'],
+    queryKey: ["continuation-plan"],
     queryFn: async () => {
       const { data } = await supabase
-        .from('plans')
-        .select('id, name')
-        .eq('key', 'continuation')
+        .from("plans")
+        .select("id, name")
+        .eq("key", "continuation")
         .single();
       return data;
     },
@@ -132,39 +143,36 @@ export default function ProgramCompletions() {
 
   const moveToContinuationMutation = useMutation({
     mutationFn: async (userIds: string[]) => {
-      if (!continuationPlan) throw new Error('Continuation plan not found');
+      if (!continuationPlan) throw new Error("Continuation plan not found");
 
       const updateData = { plan_id: continuationPlan.id };
-      const { error } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .in('id', userIds);
+      const { error } = await supabase.from("profiles").update(updateData).in("id", userIds);
 
       if (error) throw error;
       return userIds.length;
     },
     onSuccess: (count) => {
-      toast.success(`${count} user${count > 1 ? 's' : ''} moved to Continuation plan`);
-      queryClient.invalidateQueries({ queryKey: ['program-completions'] });
+      toast.success(`${count} user${count > 1 ? "s" : ""} moved to Continuation plan`);
+      queryClient.invalidateQueries({ queryKey: ["program-completions"] });
       setSelectedUsers(new Set());
       setConfirmDialogOpen(false);
       setTargetUserId(null);
       setBulkAction(false);
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to move users');
+      toast.error(error.message || "Failed to move users");
     },
   });
 
-  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+  const handleSelectAll = (checked: boolean | "indeterminate") => {
     if (checked === true && completedUsers) {
-      setSelectedUsers(new Set(completedUsers.map(u => u.user_id)));
+      setSelectedUsers(new Set(completedUsers.map((u) => u.user_id)));
     } else {
       setSelectedUsers(new Set());
     }
   };
 
-  const handleSelectUser = (userId: string, checked: boolean | 'indeterminate') => {
+  const handleSelectUser = (userId: string, checked: boolean | "indeterminate") => {
     const newSelected = new Set(selectedUsers);
     if (checked) {
       newSelected.add(userId);
@@ -194,8 +202,11 @@ export default function ProgramCompletions() {
     }
   };
 
-  const allSelected = !!(completedUsers && completedUsers.length > 0 &&
-    completedUsers.every(u => selectedUsers.has(u.user_id)));
+  const allSelected = !!(
+    completedUsers &&
+    completedUsers.length > 0 &&
+    completedUsers.every((u) => selectedUsers.has(u.user_id))
+  );
 
   return (
     <div className="space-y-6">
@@ -248,10 +259,7 @@ export default function ProgramCompletions() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={handleSelectAll}
-                    />
+                    <Checkbox checked={allSelected} onCheckedChange={handleSelectAll} />
                   </TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>Completed Programs</TableHead>
@@ -265,7 +273,7 @@ export default function ProgramCompletions() {
                     <TableCell>
                       <Checkbox
                         checked={selectedUsers.has(user.user_id)}
-                        onCheckedChange={(checked) => 
+                        onCheckedChange={(checked) =>
                           handleSelectUser(user.user_id, checked as boolean)
                         }
                       />
@@ -289,7 +297,7 @@ export default function ProgramCompletions() {
                     </TableCell>
                     <TableCell>
                       <span className="text-sm">
-                        {format(new Date(user.last_completion_date), 'MMM d, yyyy')}
+                        {format(new Date(user.last_completion_date), "MMM d, yyyy")}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
@@ -318,21 +326,28 @@ export default function ProgramCompletions() {
             <AlertDialogDescription>
               {bulkAction ? (
                 <>
-                  You are about to move <strong>{selectedUsers.size} user{selectedUsers.size > 1 ? 's' : ''}</strong> from 
-                  the Programs plan to the Continuation plan. They will see a notification on their dashboard 
-                  encouraging them to upgrade to a paid subscription.
+                  You are about to move{" "}
+                  <strong>
+                    {selectedUsers.size} user{selectedUsers.size > 1 ? "s" : ""}
+                  </strong>{" "}
+                  from the Programs plan to the Continuation plan. They will see a notification on
+                  their dashboard encouraging them to upgrade to a paid subscription.
                 </>
               ) : (
                 <>
-                  This user will be moved from the Programs plan to the Continuation plan. They will see a 
-                  notification on their dashboard encouraging them to upgrade to a paid subscription.
+                  This user will be moved from the Programs plan to the Continuation plan. They will
+                  see a notification on their dashboard encouraging them to upgrade to a paid
+                  subscription.
                 </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmMove} disabled={moveToContinuationMutation.isPending}>
+            <AlertDialogAction
+              onClick={confirmMove}
+              disabled={moveToContinuationMutation.isPending}
+            >
               {moveToContinuationMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}

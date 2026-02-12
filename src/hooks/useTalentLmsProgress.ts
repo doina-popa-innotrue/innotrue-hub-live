@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface TalentLmsProgress {
   talentlms_course_id: string;
@@ -22,20 +22,20 @@ export function useTalentLmsProgress(userId?: string) {
     try {
       setLoading(true);
       const userIdToFetch = targetUserId || userId;
-      
+
       if (!userIdToFetch) return;
 
       const { data, error } = await supabase
-        .from('talentlms_progress')
-        .select('*')
-        .eq('user_id', userIdToFetch)
-        .order('last_synced_at', { ascending: false });
+        .from("talentlms_progress")
+        .select("*")
+        .eq("user_id", userIdToFetch)
+        .order("last_synced_at", { ascending: false });
 
       if (error) throw error;
 
       setProgress(data as TalentLmsProgress[]);
     } catch (error: any) {
-      console.error('Error fetching TalentLMS progress:', error);
+      console.error("Error fetching TalentLMS progress:", error);
     } finally {
       setLoading(false);
     }
@@ -44,8 +44,8 @@ export function useTalentLmsProgress(userId?: string) {
   const syncProgress = async () => {
     try {
       setSyncing(true);
-      
-      const response = await supabase.functions.invoke('sync-talentlms-progress', {
+
+      const response = await supabase.functions.invoke("sync-talentlms-progress", {
         body: {},
       });
 
@@ -58,14 +58,13 @@ export function useTalentLmsProgress(userId?: string) {
         return;
       }
 
-      toast.success('Academy progress synced successfully');
-      
+      toast.success("Academy progress synced successfully");
+
       // Refresh progress data
       await fetchProgress();
-      
     } catch (error: any) {
-      console.error('Error syncing Academy progress:', error);
-      toast.error('Failed to sync Academy progress');
+      console.error("Error syncing Academy progress:", error);
+      toast.error("Failed to sync Academy progress");
     } finally {
       setSyncing(false);
     }
@@ -77,11 +76,11 @@ export function useTalentLmsProgress(userId?: string) {
     }
   }, [userId]);
 
-  return { 
-    progress, 
-    loading, 
-    syncing, 
+  return {
+    progress,
+    loading,
+    syncing,
     syncProgress,
-    refetch: fetchProgress 
+    refetch: fetchProgress,
   };
 }

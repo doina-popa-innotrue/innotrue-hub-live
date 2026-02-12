@@ -1,14 +1,14 @@
-import { Settings, LogOut, UserX, Trash2, User, Globe, CreditCard } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Settings, LogOut, UserX, Trash2, User, Globe, CreditCard } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,10 +18,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserDropdownProps {
   profileName: string;
@@ -38,7 +38,7 @@ export function UserDropdown({ profileName, avatarUrl, email }: UserDropdownProp
   const [submitting, setSubmitting] = useState(false);
 
   const getInitials = () => {
-    if (!profileName) return email?.charAt(0).toUpperCase() || 'U';
+    if (!profileName) return email?.charAt(0).toUpperCase() || "U";
     return profileName.charAt(0).toUpperCase();
   };
 
@@ -46,11 +46,11 @@ export function UserDropdown({ profileName, avatarUrl, email }: UserDropdownProp
     setSubmitting(true);
     try {
       // Send email to admins requesting deactivation
-      const { error } = await supabase.functions.invoke('send-notification-email', {
+      const { error } = await supabase.functions.invoke("send-notification-email", {
         body: {
-          email: 'admin@evolve360hub.com', // This will be handled by the edge function to send to all admins
-          name: 'Admin',
-          type: 'account_deactivation_request',
+          email: "admin@evolve360hub.com", // This will be handled by the edge function to send to all admins
+          name: "Admin",
+          type: "account_deactivation_request",
           timestamp: new Date().toISOString(),
           userName: profileName,
           userEmail: email,
@@ -61,15 +61,15 @@ export function UserDropdown({ profileName, avatarUrl, email }: UserDropdownProp
       if (error) throw error;
 
       toast({
-        title: 'Request submitted',
-        description: 'Your account deactivation request has been sent to the administrators.',
+        title: "Request submitted",
+        description: "Your account deactivation request has been sent to the administrators.",
       });
       setDeactivateDialogOpen(false);
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to submit request. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to submit request. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setSubmitting(false);
@@ -80,7 +80,7 @@ export function UserDropdown({ profileName, avatarUrl, email }: UserDropdownProp
     setSubmitting(true);
     try {
       // Submit deletion request via edge function
-      const { data, error } = await supabase.functions.invoke('request-account-deletion', {
+      const { data, error } = await supabase.functions.invoke("request-account-deletion", {
         body: {},
       });
 
@@ -88,15 +88,16 @@ export function UserDropdown({ profileName, avatarUrl, email }: UserDropdownProp
       if (data?.error) throw new Error(data.error);
 
       toast({
-        title: 'Request submitted',
-        description: 'Your account deletion request has been submitted. You will receive a confirmation email shortly.',
+        title: "Request submitted",
+        description:
+          "Your account deletion request has been submitted. You will receive a confirmation email shortly.",
       });
       setDeleteDialogOpen(false);
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to submit request. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to submit request. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setSubmitting(false);
@@ -116,32 +117,32 @@ export function UserDropdown({ profileName, avatarUrl, email }: UserDropdownProp
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56 bg-background border border-border z-50">
-          <DropdownMenuItem onClick={() => navigate('/account')} className="cursor-pointer">
+          <DropdownMenuItem onClick={() => navigate("/account")} className="cursor-pointer">
             <Settings className="mr-2 h-4 w-4" />
             Account Settings
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+          <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
             <User className="mr-2 h-4 w-4" />
             InnoTrue Hub Profile
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate('/public-profile')} className="cursor-pointer">
+          <DropdownMenuItem onClick={() => navigate("/public-profile")} className="cursor-pointer">
             <Globe className="mr-2 h-4 w-4" />
             Public Profile
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate('/subscription')} className="cursor-pointer">
+          <DropdownMenuItem onClick={() => navigate("/subscription")} className="cursor-pointer">
             <CreditCard className="mr-2 h-4 w-4" />
             Subscription
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem 
-            onClick={() => setDeactivateDialogOpen(true)} 
+          <DropdownMenuItem
+            onClick={() => setDeactivateDialogOpen(true)}
             className="cursor-pointer text-muted-foreground"
           >
             <UserX className="mr-2 h-4 w-4" />
             Request Deactivation
           </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => setDeleteDialogOpen(true)} 
+          <DropdownMenuItem
+            onClick={() => setDeleteDialogOpen(true)}
             className="cursor-pointer text-destructive focus:text-destructive"
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -161,17 +162,18 @@ export function UserDropdown({ profileName, avatarUrl, email }: UserDropdownProp
             <AlertDialogTitle>Request Account Deactivation</AlertDialogTitle>
             <AlertDialogDescription>
               This will send a request to administrators to temporarily deactivate your account.
-              Your data will be preserved and you can still log in to reactivate your account at any time.
+              Your data will be preserved and you can still log in to reactivate your account at any
+              time.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleRequestDeactivation} 
+            <AlertDialogAction
+              onClick={handleRequestDeactivation}
               disabled={submitting}
               className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
             >
-              {submitting ? 'Submitting...' : 'Submit Request'}
+              {submitting ? "Submitting..." : "Submit Request"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -182,19 +184,19 @@ export function UserDropdown({ profileName, avatarUrl, email }: UserDropdownProp
           <AlertDialogHeader>
             <AlertDialogTitle>Request Account Deletion</AlertDialogTitle>
             <AlertDialogDescription>
-              This will send a request to administrators to permanently delete your account.
-              Once deleted, all your data including programs, progress, decisions, and goals will be permanently removed.
-              This action cannot be undone.
+              This will send a request to administrators to permanently delete your account. Once
+              deleted, all your data including programs, progress, decisions, and goals will be
+              permanently removed. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleRequestDeletion} 
+            <AlertDialogAction
+              onClick={handleRequestDeletion}
               disabled={submitting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {submitting ? 'Submitting...' : 'Submit Deletion Request'}
+              {submitting ? "Submitting..." : "Submit Deletion Request"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

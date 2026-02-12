@@ -21,12 +21,12 @@ interface LowBalanceAlertProps {
 /** Hook to fetch the system-configured low balance threshold */
 function useLowBalanceThreshold() {
   return useQuery({
-    queryKey: ['system-setting', 'low_balance_threshold'],
+    queryKey: ["system-setting", "low_balance_threshold"],
     queryFn: async () => {
       const { data } = await supabase
-        .from('system_settings')
-        .select('value')
-        .eq('key', 'low_balance_threshold')
+        .from("system_settings")
+        .select("value")
+        .eq("key", "low_balance_threshold")
         .single();
       return data?.value ? parseInt(data.value, 10) : 10;
     },
@@ -34,11 +34,11 @@ function useLowBalanceThreshold() {
   });
 }
 
-export function LowBalanceAlert({ 
-  threshold: thresholdProp, 
+export function LowBalanceAlert({
+  threshold: thresholdProp,
   showTopUp = true,
   className,
-  variant = "banner"
+  variant = "banner",
 }: LowBalanceAlertProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -58,18 +58,15 @@ export function LowBalanceAlert({
 
   if (variant === "inline") {
     return (
-      <div className={`flex items-center gap-2 text-sm ${isEmpty ? 'text-destructive' : 'text-amber-600 dark:text-amber-500'} ${className}`}>
+      <div
+        className={`flex items-center gap-2 text-sm ${isEmpty ? "text-destructive" : "text-amber-600 dark:text-amber-500"} ${className}`}
+      >
         <AlertTriangle className="h-4 w-4 shrink-0" />
-        <span>
-          {isEmpty 
-            ? "No credits remaining" 
-            : `Low balance: ${balance} credits`
-          }
-        </span>
+        <span>{isEmpty ? "No credits remaining" : `Low balance: ${balance} credits`}</span>
         {showTopUp && (
-          <Button 
-            variant="link" 
-            size="sm" 
+          <Button
+            variant="link"
+            size="sm"
             className="h-auto p-0 text-primary"
             onClick={() => navigate("/credits")}
           >
@@ -81,27 +78,32 @@ export function LowBalanceAlert({
   }
 
   return (
-    <Alert 
-      variant={isEmpty ? "destructive" : "default"} 
-      className={`${isEmpty ? '' : 'border-amber-500/50 bg-amber-50 dark:bg-amber-950/20'} ${className}`}
+    <Alert
+      variant={isEmpty ? "destructive" : "default"}
+      className={`${isEmpty ? "" : "border-amber-500/50 bg-amber-50 dark:bg-amber-950/20"} ${className}`}
     >
-      <AlertTriangle className={`h-4 w-4 ${isEmpty ? '' : 'text-amber-600'}`} />
-      <AlertTitle className={isEmpty ? '' : 'text-amber-800 dark:text-amber-400'}>
+      <AlertTriangle className={`h-4 w-4 ${isEmpty ? "" : "text-amber-600"}`} />
+      <AlertTitle className={isEmpty ? "" : "text-amber-800 dark:text-amber-400"}>
         {isEmpty ? "No Credits Remaining" : "Low Credit Balance"}
       </AlertTitle>
-      <AlertDescription className={`flex items-center justify-between gap-4 ${isEmpty ? '' : 'text-amber-700 dark:text-amber-300'}`}>
+      <AlertDescription
+        className={`flex items-center justify-between gap-4 ${isEmpty ? "" : "text-amber-700 dark:text-amber-300"}`}
+      >
         <span>
-          {isEmpty 
+          {isEmpty
             ? "You've used all your credits. Top up to continue using premium features."
-            : `You have ${balance} credits remaining. Consider topping up to avoid interruptions.`
-          }
+            : `You have ${balance} credits remaining. Consider topping up to avoid interruptions.`}
         </span>
         {showTopUp && (
-          <Button 
+          <Button
             variant={isEmpty ? "default" : "outline"}
             size="sm"
             onClick={() => navigate("/credits")}
-            className={isEmpty ? '' : 'border-amber-600 text-amber-700 hover:bg-amber-100 dark:border-amber-500 dark:text-amber-400 dark:hover:bg-amber-950'}
+            className={
+              isEmpty
+                ? ""
+                : "border-amber-600 text-amber-700 hover:bg-amber-100 dark:border-amber-500 dark:text-amber-400 dark:hover:bg-amber-950"
+            }
           >
             <Coins className="h-4 w-4 mr-1" />
             Top Up

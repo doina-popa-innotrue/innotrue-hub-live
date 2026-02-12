@@ -1,8 +1,15 @@
-import { useEffect, useState } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { TourStep } from '@/hooks/useOnboardingTour';
+import { useEffect, useState } from "react";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { TourStep } from "@/hooks/useOnboardingTour";
 
 interface TourOverlayProps {
   step: TourStep;
@@ -28,8 +35,8 @@ export function TourOverlay({
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   useEffect(() => {
@@ -42,10 +49,10 @@ export function TourOverlay({
       const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
 
       // Highlight the target element
-      element.style.position = 'relative';
-      element.style.zIndex = '10001';
-      element.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5)';
-      element.style.borderRadius = '8px';
+      element.style.position = "relative";
+      element.style.zIndex = "10001";
+      element.style.boxShadow = "0 0 0 4px rgba(59, 130, 246, 0.5)";
+      element.style.borderRadius = "8px";
 
       // Calculate tooltip position - for mobile, center at bottom
       let top = rect.top + scrollTop;
@@ -57,19 +64,19 @@ export function TourOverlay({
         left = 16;
       } else {
         switch (step.placement) {
-          case 'bottom':
+          case "bottom":
             top = rect.bottom + scrollTop + 16;
             left = rect.left + scrollLeft;
             break;
-          case 'top':
+          case "top":
             top = rect.top + scrollTop - 200;
             left = rect.left + scrollLeft;
             break;
-          case 'left':
+          case "left":
             top = rect.top + scrollTop;
             left = rect.left + scrollLeft - 320;
             break;
-          case 'right':
+          case "right":
             top = rect.top + scrollTop;
             left = rect.right + scrollLeft + 16;
             break;
@@ -86,15 +93,15 @@ export function TourOverlay({
       setPosition({ top, left });
 
       // Scroll element into view
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
     return () => {
       if (element) {
-        element.style.position = '';
-        element.style.zIndex = '';
-        element.style.boxShadow = '';
-        element.style.borderRadius = '';
+        element.style.position = "";
+        element.style.zIndex = "";
+        element.style.boxShadow = "";
+        element.style.borderRadius = "";
       }
     };
   }, [step, isMobile]);
@@ -102,22 +109,22 @@ export function TourOverlay({
   return (
     <>
       {/* Overlay backdrop - always clickable to skip on mobile */}
-      <div 
-        className="fixed inset-0 bg-background/80 backdrop-blur-sm" 
-        style={{ zIndex: 10000 }} 
+      <div
+        className="fixed inset-0 bg-background/80 backdrop-blur-sm"
+        style={{ zIndex: 10000 }}
         onClick={isMobile ? onSkip : undefined}
       />
 
       {/* Tour card */}
       <Card
         className={`fixed shadow-lg border-2 border-primary bg-background ${
-          isMobile ? 'left-4 right-4 w-auto' : 'w-80'
+          isMobile ? "left-4 right-4 w-auto" : "w-80"
         }`}
         style={{
-          top: isMobile ? 'auto' : `${position.top}px`,
-          bottom: isMobile ? '16px' : 'auto',
-          left: isMobile ? '16px' : `${position.left}px`,
-          right: isMobile ? '16px' : 'auto',
+          top: isMobile ? "auto" : `${position.top}px`,
+          bottom: isMobile ? "16px" : "auto",
+          left: isMobile ? "16px" : `${position.left}px`,
+          right: isMobile ? "16px" : "auto",
           zIndex: 10002,
         }}
         onClick={(e) => e.stopPropagation()}
@@ -155,17 +162,12 @@ export function TourOverlay({
             <ChevronLeft className="h-4 w-4 mr-1" />
             Previous
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onSkip}
-            className="flex-1"
-          >
+          <Button variant="outline" size="sm" onClick={onSkip} className="flex-1">
             Skip
           </Button>
           <Button size="sm" onClick={onNext} className="flex-1">
             {currentStep === totalSteps - 1 ? (
-              'Finish'
+              "Finish"
             ) : (
               <>
                 Next

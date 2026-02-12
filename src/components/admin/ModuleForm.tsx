@@ -1,13 +1,19 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { X, Plus } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { X, Plus } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ModuleType {
   id: string;
@@ -27,7 +33,7 @@ interface CapabilityAssessment {
 interface ModuleLink {
   name: string;
   url: string;
-  type: 'zoom' | 'calendly' | 'talentlms' | 'circle' | 'lucidchart' | 'miro' | 'gdrive' | 'other';
+  type: "zoom" | "calendly" | "talentlms" | "circle" | "lucidchart" | "miro" | "gdrive" | "other";
 }
 
 interface ModuleFormProps {
@@ -62,18 +68,28 @@ interface ModuleFormProps {
   availableTiers?: string[];
 }
 
-export default function ModuleForm({ initialData, onSubmit, onCancel, submitLabel, availableTiers = ['Essentials', 'Premium'] }: ModuleFormProps) {
-  const [title, setTitle] = useState(initialData?.title || '');
-  const [description, setDescription] = useState(initialData?.description || '');
-  const [content, setContent] = useState(initialData?.content || '');
-  const [moduleType, setModuleType] = useState(initialData?.moduleType || 'session');
-  const [estimatedMinutes, setEstimatedMinutes] = useState(initialData?.estimatedMinutes || '60');
+export default function ModuleForm({
+  initialData,
+  onSubmit,
+  onCancel,
+  submitLabel,
+  availableTiers = ["Essentials", "Premium"],
+}: ModuleFormProps) {
+  const [title, setTitle] = useState(initialData?.title || "");
+  const [description, setDescription] = useState(initialData?.description || "");
+  const [content, setContent] = useState(initialData?.content || "");
+  const [moduleType, setModuleType] = useState(initialData?.moduleType || "session");
+  const [estimatedMinutes, setEstimatedMinutes] = useState(initialData?.estimatedMinutes || "60");
   const [links, setLinks] = useState<ModuleLink[]>(initialData?.links || []);
-  const [tierRequired, setTierRequired] = useState(initialData?.tierRequired || availableTiers[0]?.toLowerCase() || 'essentials');
+  const [tierRequired, setTierRequired] = useState(
+    initialData?.tierRequired || availableTiers[0]?.toLowerCase() || "essentials",
+  );
   const [isIndividualized, setIsIndividualized] = useState(initialData?.isIndividualized || false);
-  const [code, setCode] = useState(initialData?.code || '');
+  const [code, setCode] = useState(initialData?.code || "");
   const [featureKey, setFeatureKey] = useState<string | null>(initialData?.featureKey || null);
-  const [capabilityAssessmentId, setCapabilityAssessmentId] = useState<string | null>(initialData?.capabilityAssessmentId || null);
+  const [capabilityAssessmentId, setCapabilityAssessmentId] = useState<string | null>(
+    initialData?.capabilityAssessmentId || null,
+  );
   const [moduleTypes, setModuleTypes] = useState<ModuleType[]>([]);
   const [consumableFeatures, setConsumableFeatures] = useState<Feature[]>([]);
   const [capabilityAssessments, setCapabilityAssessments] = useState<CapabilityAssessment[]>([]);
@@ -82,26 +98,31 @@ export default function ModuleForm({ initialData, onSubmit, onCancel, submitLabe
     const fetchData = async () => {
       try {
         const [typesRes, featuresRes, assessmentsRes] = await Promise.all([
-          supabase.from('module_types').select('id, name, description').order('name'),
-          supabase.from('features').select('key, name').eq('is_consumable', true).order('name'),
-          supabase.from('capability_assessments').select('id, name').eq('is_active', true).order('name')
+          supabase.from("module_types").select("id, name, description").order("name"),
+          supabase.from("features").select("key, name").eq("is_consumable", true).order("name"),
+          supabase
+            .from("capability_assessments")
+            .select("id, name")
+            .eq("is_active", true)
+            .order("name"),
         ]);
-        if (typesRes.error) console.error('Error fetching module types:', typesRes.error);
-        if (featuresRes.error) console.error('Error fetching features:', featuresRes.error);
-        if (assessmentsRes.error) console.error('Error fetching assessments:', assessmentsRes.error);
-        
+        if (typesRes.error) console.error("Error fetching module types:", typesRes.error);
+        if (featuresRes.error) console.error("Error fetching features:", featuresRes.error);
+        if (assessmentsRes.error)
+          console.error("Error fetching assessments:", assessmentsRes.error);
+
         if (typesRes.data) setModuleTypes(typesRes.data);
         if (featuresRes.data) setConsumableFeatures(featuresRes.data);
         if (assessmentsRes.data) setCapabilityAssessments(assessmentsRes.data);
       } catch (error) {
-        console.error('Error fetching form data:', error);
+        console.error("Error fetching form data:", error);
       }
     };
     fetchData();
   }, []);
 
   const addLink = () => {
-    setLinks([...links, { name: '', url: '', type: 'other' }]);
+    setLinks([...links, { name: "", url: "", type: "other" }]);
   };
 
   const updateLink = (index: number, field: keyof ModuleLink, value: string) => {
@@ -122,7 +143,7 @@ export default function ModuleForm({ initialData, onSubmit, onCancel, submitLabe
       content,
       moduleType,
       estimatedMinutes,
-      links: links.filter(link => link.name && link.url), // Only include complete links
+      links: links.filter((link) => link.name && link.url), // Only include complete links
       tierRequired,
       isIndividualized,
       code: code.trim(),
@@ -140,19 +161,21 @@ export default function ModuleForm({ initialData, onSubmit, onCancel, submitLabe
         </div>
         <div className="space-y-2">
           <Label>Code (External ID)</Label>
-          <Input 
-            value={code} 
-            onChange={(e) => setCode(e.target.value)} 
+          <Input
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
             placeholder="e.g., TLMS-101 or articulate-intro"
           />
-          <p className="text-xs text-muted-foreground">Optional. Use to link with TalentLMS/Articulate Rise courses.</p>
+          <p className="text-xs text-muted-foreground">
+            Optional. Use to link with TalentLMS/Articulate Rise courses.
+          </p>
         </div>
       </div>
 
       <div className="space-y-2">
         <Label>Description</Label>
-        <RichTextEditor 
-          value={description} 
+        <RichTextEditor
+          value={description}
           onChange={setDescription}
           placeholder="Brief module description..."
         />
@@ -160,8 +183,8 @@ export default function ModuleForm({ initialData, onSubmit, onCancel, submitLabe
 
       <div className="space-y-2">
         <Label>Content</Label>
-        <RichTextEditor 
-          value={content} 
+        <RichTextEditor
+          value={content}
           onChange={setContent}
           placeholder="Full module content, instructions, or materials..."
         />
@@ -170,33 +193,43 @@ export default function ModuleForm({ initialData, onSubmit, onCancel, submitLabe
       <div className="space-y-2">
         <Label>Type</Label>
         <Select value={moduleType} onValueChange={setModuleType}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
-            {moduleTypes.length > 0 ? (
-              moduleTypes.map((type) => (
-                <SelectItem key={type.id} value={type.name}>
-                  {type.name.charAt(0).toUpperCase() + type.name.slice(1)}
-                </SelectItem>
-              ))
-            ) : (
-              ['session', 'assignment', 'reflection', 'resource'].map((type) => (
-                <SelectItem key={type} value={type}>{type}</SelectItem>
-              ))
-            )}
+            {moduleTypes.length > 0
+              ? moduleTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.name}>
+                    {type.name.charAt(0).toUpperCase() + type.name.slice(1)}
+                  </SelectItem>
+                ))
+              : ["session", "assignment", "reflection", "resource"].map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
           </SelectContent>
         </Select>
       </div>
 
       <div className="space-y-2">
         <Label>Estimated Minutes</Label>
-        <Input type="number" value={estimatedMinutes} onChange={(e) => setEstimatedMinutes(e.target.value)} />
+        <Input
+          type="number"
+          value={estimatedMinutes}
+          onChange={(e) => setEstimatedMinutes(e.target.value)}
+        />
       </div>
 
       <div className="space-y-2">
         <Label>Access Tier Required</Label>
-        <p className="text-xs text-muted-foreground">Higher tiers include access to all lower tier content.</p>
+        <p className="text-xs text-muted-foreground">
+          Higher tiers include access to all lower tier content.
+        </p>
         <Select value={tierRequired} onValueChange={setTierRequired}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             {availableTiers.map((tier, index) => (
               <SelectItem key={tier} value={tier.toLowerCase()}>
@@ -211,7 +244,8 @@ export default function ModuleForm({ initialData, onSubmit, onCancel, submitLabe
         <div className="space-y-0.5">
           <Label htmlFor="individualized">Individualized Content</Label>
           <p className="text-xs text-muted-foreground">
-            Enable per-client content. When enabled, admins/coaches can assign unique scenarios or materials to each participant.
+            Enable per-client content. When enabled, admins/coaches can assign unique scenarios or
+            materials to each participant.
           </p>
         </div>
         <Switch
@@ -223,8 +257,13 @@ export default function ModuleForm({ initialData, onSubmit, onCancel, submitLabe
 
       <div className="space-y-2">
         <Label>Consumable Feature</Label>
-        <Select value={featureKey || 'none'} onValueChange={(v) => setFeatureKey(v === 'none' ? null : v)}>
-          <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+        <Select
+          value={featureKey || "none"}
+          onValueChange={(v) => setFeatureKey(v === "none" ? null : v)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="None" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">None</SelectItem>
             {consumableFeatures.map((feature) => (
@@ -235,14 +274,20 @@ export default function ModuleForm({ initialData, onSubmit, onCancel, submitLabe
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          Optional. When this module is completed, the selected feature's usage count will be incremented.
+          Optional. When this module is completed, the selected feature's usage count will be
+          incremented.
         </p>
       </div>
 
       <div className="space-y-2">
         <Label>Self-Assessment (Capability Assessment)</Label>
-        <Select value={capabilityAssessmentId || 'none'} onValueChange={(v) => setCapabilityAssessmentId(v === 'none' ? null : v)}>
-          <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+        <Select
+          value={capabilityAssessmentId || "none"}
+          onValueChange={(v) => setCapabilityAssessmentId(v === "none" ? null : v)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="None" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">None</SelectItem>
             {capabilityAssessments.map((assessment) => (
@@ -261,12 +306,15 @@ export default function ModuleForm({ initialData, onSubmit, onCancel, submitLabe
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Resource Links</CardTitle>
           <Button type="button" size="sm" onClick={addLink} variant="outline">
-            <Plus className="mr-2 h-4 w-4" />Add Link
+            <Plus className="mr-2 h-4 w-4" />
+            Add Link
           </Button>
         </CardHeader>
         <CardContent className="space-y-4">
           {links.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No links added yet. Click "Add Link" to add resource links.</p>
+            <p className="text-sm text-muted-foreground">
+              No links added yet. Click "Add Link" to add resource links.
+            </p>
           ) : (
             links.map((link, index) => (
               <Card key={index}>
@@ -278,7 +326,7 @@ export default function ModuleForm({ initialData, onSubmit, onCancel, submitLabe
                         <Input
                           placeholder="e.g., Book Your Session"
                           value={link.name}
-                          onChange={(e) => updateLink(index, 'name', e.target.value)}
+                          onChange={(e) => updateLink(index, "name", e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
@@ -287,13 +335,20 @@ export default function ModuleForm({ initialData, onSubmit, onCancel, submitLabe
                           type="url"
                           placeholder="https://..."
                           value={link.url}
-                          onChange={(e) => updateLink(index, 'url', e.target.value)}
+                          onChange={(e) => updateLink(index, "url", e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>Link Type</Label>
-                        <Select value={link.type} onValueChange={(value) => updateLink(index, 'type', value as ModuleLink['type'])}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
+                        <Select
+                          value={link.type}
+                          onValueChange={(value) =>
+                            updateLink(index, "type", value as ModuleLink["type"])
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="calendly">Scheduling Tool</SelectItem>
                             <SelectItem value="zoom">Zoom</SelectItem>
@@ -325,8 +380,12 @@ export default function ModuleForm({ initialData, onSubmit, onCancel, submitLabe
       </Card>
 
       <div className="flex gap-2">
-        <Button type="submit" className="flex-1">{submitLabel}</Button>
-        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit" className="flex-1">
+          {submitLabel}
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
       </div>
     </form>
   );

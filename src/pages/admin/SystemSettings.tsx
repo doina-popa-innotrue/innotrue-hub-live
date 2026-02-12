@@ -1,14 +1,20 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { toast } from '@/hooks/use-toast';
-import { Settings, Save, Loader2 } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AdminRefreshControl } from '@/components/admin/AdminRefreshControl';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
+import { Settings, Save, Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AdminRefreshControl } from "@/components/admin/AdminRefreshControl";
 interface SystemSetting {
   id: string;
   key: string;
@@ -21,13 +27,10 @@ export default function SystemSettings() {
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
 
   const { data: settings, isLoading } = useQuery({
-    queryKey: ['system-settings'],
+    queryKey: ["system-settings"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('*')
-        .order('key');
-      
+      const { data, error } = await supabase.from("system_settings").select("*").order("key");
+
       if (error) throw error;
       return data as SystemSetting[];
     },
@@ -35,56 +38,55 @@ export default function SystemSettings() {
 
   // Fetch admin users for the ActiveCampaign sync admin dropdown
   const { data: adminUsers } = useQuery({
-    queryKey: ['admin-users'],
+    queryKey: ["admin-users"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('user_roles')
-        .select('user_id, profiles:user_id(id, name, email)')
-        .eq('role', 'admin');
-      
+        .from("user_roles")
+        .select("user_id, profiles:user_id(id, name, email)")
+        .eq("role", "admin");
+
       if (error) throw error;
-      return data?.map(r => ({
-        id: r.user_id,
-        name: (r.profiles as any)?.name || 'Unknown',
-        email: (r.profiles as any)?.email || '',
-      })) || [];
+      return (
+        data?.map((r) => ({
+          id: r.user_id,
+          name: (r.profiles as any)?.name || "Unknown",
+          email: (r.profiles as any)?.email || "",
+        })) || []
+      );
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
-      const { error } = await supabase
-        .from('system_settings')
-        .update({ value })
-        .eq('key', key);
-      
+      const { error } = await supabase.from("system_settings").update({ value }).eq("key", key);
+
       if (error) throw error;
     },
     onSuccess: (_, { key }) => {
-      queryClient.invalidateQueries({ queryKey: ['system-settings'] });
-      queryClient.invalidateQueries({ queryKey: ['system-settings', key] });
-      setEditedValues(prev => {
+      queryClient.invalidateQueries({ queryKey: ["system-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["system-settings", key] });
+      setEditedValues((prev) => {
         const updated = { ...prev };
         delete updated[key];
         return updated;
       });
       toast({
-        title: 'Setting Updated',
-        description: 'The setting has been saved successfully.',
+        title: "Setting Updated",
+        description: "The setting has been saved successfully.",
       });
     },
     onError: (error) => {
       toast({
-        title: 'Error',
-        description: 'Failed to update setting. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update setting. Please try again.",
+        variant: "destructive",
       });
-      console.error('Error updating setting:', error);
+      console.error("Error updating setting:", error);
     },
   });
 
   const handleValueChange = (key: string, value: string) => {
-    setEditedValues(prev => ({ ...prev, [key]: value }));
+    setEditedValues((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSave = (key: string) => {
@@ -96,31 +98,37 @@ export default function SystemSettings() {
 
   const getDisplayLabel = (key: string): string => {
     const labels: Record<string, string> = {
-      support_email: 'Support Email',
-      ai_monthly_credit_limit: 'AI Monthly Credit Limit',
-      ai_alert_threshold_percent: 'AI Alert Threshold (%)',
-      ai_alert_email: 'AI Alert Email',
-      ai_alert_sent_this_month: 'AI Alert Sent This Month',
-      activecampaign_sync_admin_user_id: 'ActiveCampaign Sync Admin User',
-      max_recurrence_occurrences: 'Max Recurring Session Instances',
-      program_terms_retention_years: 'Program Terms Retention (Years)',
-      org_terms_retention_years: 'Organization Terms Retention (Years)',
+      support_email: "Support Email",
+      ai_monthly_credit_limit: "AI Monthly Credit Limit",
+      ai_alert_threshold_percent: "AI Alert Threshold (%)",
+      ai_alert_email: "AI Alert Email",
+      ai_alert_sent_this_month: "AI Alert Sent This Month",
+      activecampaign_sync_admin_user_id: "ActiveCampaign Sync Admin User",
+      max_recurrence_occurrences: "Max Recurring Session Instances",
+      program_terms_retention_years: "Program Terms Retention (Years)",
+      org_terms_retention_years: "Organization Terms Retention (Years)",
     };
-    return labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    return labels[key] || key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
   const getInputType = (key: string): string => {
-    if (key.includes('email')) return 'email';
-    if (key.includes('limit') || key.includes('percent') || key.includes('years') || key.includes('occurrences')) return 'number';
-    return 'text';
+    if (key.includes("email")) return "email";
+    if (
+      key.includes("limit") ||
+      key.includes("percent") ||
+      key.includes("years") ||
+      key.includes("occurrences")
+    )
+      return "number";
+    return "text";
   };
 
   const isReadOnly = (key: string): boolean => {
-    return key === 'ai_alert_sent_this_month';
+    return key === "ai_alert_sent_this_month";
   };
 
   const isUserIdSelect = (key: string): boolean => {
-    return key === 'activecampaign_sync_admin_user_id';
+    return key === "activecampaign_sync_admin_user_id";
   };
 
   if (isLoading) {
@@ -138,24 +146,21 @@ export default function SystemSettings() {
           <Settings className="h-8 w-8" />
           System Settings
         </h1>
-        <p className="text-muted-foreground mt-2">
-          Configure platform-wide settings.
-        </p>
+        <p className="text-muted-foreground mt-2">Configure platform-wide settings.</p>
       </div>
 
       <div className="space-y-4">
         <AdminRefreshControl />
         {settings?.map((setting) => {
           const currentValue = editedValues[setting.key] ?? setting.value;
-          const hasChanges = editedValues[setting.key] !== undefined && editedValues[setting.key] !== setting.value;
+          const hasChanges =
+            editedValues[setting.key] !== undefined && editedValues[setting.key] !== setting.value;
 
           return (
             <Card key={setting.id}>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">{getDisplayLabel(setting.key)}</CardTitle>
-                {setting.description && (
-                  <CardDescription>{setting.description}</CardDescription>
-                )}
+                {setting.description && <CardDescription>{setting.description}</CardDescription>}
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2">
@@ -165,8 +170,10 @@ export default function SystemSettings() {
                     </Label>
                     {isUserIdSelect(setting.key) ? (
                       <Select
-                        value={currentValue || 'none'}
-                        onValueChange={(value) => handleValueChange(setting.key, value === 'none' ? '' : value)}
+                        value={currentValue || "none"}
+                        onValueChange={(value) =>
+                          handleValueChange(setting.key, value === "none" ? "" : value)
+                        }
                         disabled={isReadOnly(setting.key)}
                       >
                         <SelectTrigger>

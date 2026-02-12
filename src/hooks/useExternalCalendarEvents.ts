@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface ExternalCalendarEvent {
   id: string;
@@ -23,7 +23,7 @@ export function useExternalCalendarEvents(startDate?: Date, endDate?: Date) {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const refresh = useCallback(() => {
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey((prev) => prev + 1);
   }, []);
 
   useEffect(() => {
@@ -36,10 +36,10 @@ export function useExternalCalendarEvents(startDate?: Date, endDate?: Date) {
       try {
         // First, get all active calendars
         const { data: calendars, error: calError } = await supabase
-          .from('user_external_calendars')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('is_active', true);
+          .from("user_external_calendars")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("is_active", true);
 
         if (calError) throw calError;
 
@@ -52,7 +52,7 @@ export function useExternalCalendarEvents(startDate?: Date, endDate?: Date) {
         // Fetch events from each calendar in parallel
         const eventPromises = calendars.map(async (calendar) => {
           try {
-            const { data, error } = await supabase.functions.invoke('fetch-ical-feed', {
+            const { data, error } = await supabase.functions.invoke("fetch-ical-feed", {
               body: {
                 calendarId: calendar.id,
                 startDate: startDate?.toISOString(),
@@ -89,14 +89,14 @@ export function useExternalCalendarEvents(startDate?: Date, endDate?: Date) {
 
         const results = await Promise.all(eventPromises);
         const allEvents = results.flat();
-        
+
         // Sort by start date
         allEvents.sort((a, b) => a.start.getTime() - b.start.getTime());
-        
+
         setEvents(allEvents);
       } catch (err: any) {
-        console.error('Error fetching external calendar events:', err);
-        setError(err.message || 'Failed to fetch external calendar events');
+        console.error("Error fetching external calendar events:", err);
+        setError(err.message || "Failed to fetch external calendar events");
       } finally {
         setLoading(false);
       }

@@ -1,13 +1,19 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, GripVertical, Trash2, Minus } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, GripVertical, Trash2, Minus } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -16,28 +22,28 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from '@dnd-kit/core';
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface ModuleSection {
   id: string;
   module_id: string;
   order_index: number;
-  section_type: 'content' | 'separator';
+  section_type: "content" | "separator";
   title: string | null;
   content: string | null;
   created_at?: string;
   updated_at?: string;
 }
 
-type SectionType = 'content' | 'separator';
+type SectionType = "content" | "separator";
 
 interface SortableSectionItemProps {
   section: ModuleSection;
@@ -46,14 +52,9 @@ interface SortableSectionItemProps {
 }
 
 function SortableSectionItem({ section, onUpdate, onDelete }: SortableSectionItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: section.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: section.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -61,14 +62,10 @@ function SortableSectionItem({ section, onUpdate, onDelete }: SortableSectionIte
     opacity: isDragging ? 0.5 : 1,
   };
 
-  if (section.section_type === 'separator') {
+  if (section.section_type === "separator") {
     return (
       <div ref={setNodeRef} style={style} className="flex items-center gap-2 py-3">
-        <button
-          {...attributes}
-          {...listeners}
-          className="cursor-grab p-1 hover:bg-muted rounded"
-        >
+        <button {...attributes} {...listeners} className="cursor-grab p-1 hover:bg-muted rounded">
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </button>
         <div className="flex-1 flex items-center gap-4">
@@ -93,17 +90,13 @@ function SortableSectionItem({ section, onUpdate, onDelete }: SortableSectionIte
     <Card ref={setNodeRef} style={style} className="relative">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <button
-            {...attributes}
-            {...listeners}
-            className="cursor-grab p-1 hover:bg-muted rounded"
-          >
+          <button {...attributes} {...listeners} className="cursor-grab p-1 hover:bg-muted rounded">
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </button>
           <div className="flex-1">
             <Input
-              value={section.title || ''}
-              onChange={(e) => onUpdate(section.id, 'title', e.target.value || null)}
+              value={section.title || ""}
+              onChange={(e) => onUpdate(section.id, "title", e.target.value || null)}
               placeholder="Section title (optional)"
               className="font-medium"
             />
@@ -120,8 +113,8 @@ function SortableSectionItem({ section, onUpdate, onDelete }: SortableSectionIte
       </CardHeader>
       <CardContent>
         <RichTextEditor
-          value={section.content || ''}
-          onChange={(value) => onUpdate(section.id, 'content', value)}
+          value={section.content || ""}
+          onChange={(value) => onUpdate(section.id, "content", value)}
           placeholder="Section content..."
         />
       </CardContent>
@@ -142,7 +135,7 @@ export function ModuleSectionsEditor({ moduleId }: ModuleSectionsEditorProps) {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   useEffect(() => {
@@ -151,19 +144,21 @@ export function ModuleSectionsEditor({ moduleId }: ModuleSectionsEditorProps) {
 
   async function fetchSections() {
     const { data, error } = await supabase
-      .from('module_sections')
-      .select('*')
-      .eq('module_id', moduleId)
-      .order('order_index');
+      .from("module_sections")
+      .select("*")
+      .eq("module_id", moduleId)
+      .order("order_index");
 
     if (error) {
-      toast.error('Failed to load sections');
+      toast.error("Failed to load sections");
       console.error(error);
     } else {
-      setSections((data || []).map(s => ({
-        ...s,
-        section_type: s.section_type as SectionType,
-      })));
+      setSections(
+        (data || []).map((s) => ({
+          ...s,
+          section_type: s.section_type as SectionType,
+        })),
+      );
     }
     setLoading(false);
   }
@@ -171,21 +166,21 @@ export function ModuleSectionsEditor({ moduleId }: ModuleSectionsEditorProps) {
   async function addSection(type: SectionType) {
     setSaving(true);
     const newOrderIndex = sections.length;
-    
+
     const { data, error } = await supabase
-      .from('module_sections')
+      .from("module_sections")
       .insert({
         module_id: moduleId,
         order_index: newOrderIndex,
         section_type: type,
         title: null,
-        content: type === 'content' ? '' : null,
+        content: type === "content" ? "" : null,
       })
       .select()
       .single();
 
     if (error) {
-      toast.error('Failed to add section');
+      toast.error("Failed to add section");
       console.error(error);
     } else if (data) {
       const newSection: ModuleSection = {
@@ -193,45 +188,40 @@ export function ModuleSectionsEditor({ moduleId }: ModuleSectionsEditorProps) {
         section_type: data.section_type as SectionType,
       };
       setSections([...sections, newSection]);
-      toast.success(`${type === 'separator' ? 'Separator' : 'Section'} added`);
+      toast.success(`${type === "separator" ? "Separator" : "Section"} added`);
     }
     setSaving(false);
   }
 
   async function updateSection(id: string, field: keyof ModuleSection, value: string | null) {
     // Update local state immediately for responsiveness
-    setSections(prev =>
-      prev.map(s => (s.id === id ? { ...s, [field]: value } : s))
-    );
+    setSections((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
 
     // Debounce the database update
     const { error } = await supabase
-      .from('module_sections')
+      .from("module_sections")
       .update({ [field]: value, updated_at: new Date().toISOString() })
-      .eq('id', id);
+      .eq("id", id);
 
     if (error) {
-      toast.error('Failed to update section');
+      toast.error("Failed to update section");
       console.error(error);
     }
   }
 
   async function deleteSection(id: string) {
     setSaving(true);
-    const { error } = await supabase
-      .from('module_sections')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from("module_sections").delete().eq("id", id);
 
     if (error) {
-      toast.error('Failed to delete section');
+      toast.error("Failed to delete section");
       console.error(error);
     } else {
-      setSections(prev => prev.filter(s => s.id !== id));
+      setSections((prev) => prev.filter((s) => s.id !== id));
       // Re-order remaining sections
-      const remaining = sections.filter(s => s.id !== id);
+      const remaining = sections.filter((s) => s.id !== id);
       await updateOrder(remaining);
-      toast.success('Section deleted');
+      toast.success("Section deleted");
     }
     setSaving(false);
   }
@@ -244,9 +234,9 @@ export function ModuleSectionsEditor({ moduleId }: ModuleSectionsEditorProps) {
 
     for (const update of updates) {
       await supabase
-        .from('module_sections')
+        .from("module_sections")
         .update({ order_index: update.order_index })
-        .eq('id', update.id);
+        .eq("id", update.id);
     }
   }
 
@@ -258,10 +248,10 @@ export function ModuleSectionsEditor({ moduleId }: ModuleSectionsEditorProps) {
         const oldIndex = items.findIndex((i) => i.id === active.id);
         const newIndex = items.findIndex((i) => i.id === over.id);
         const newItems = arrayMove(items, oldIndex, newIndex);
-        
+
         // Update order in database
         updateOrder(newItems);
-        
+
         return newItems;
       });
     }
@@ -280,7 +270,7 @@ export function ModuleSectionsEditor({ moduleId }: ModuleSectionsEditorProps) {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => addSection('separator')}
+            onClick={() => addSection("separator")}
             disabled={saving}
           >
             <Minus className="mr-2 h-4 w-4" />
@@ -290,7 +280,7 @@ export function ModuleSectionsEditor({ moduleId }: ModuleSectionsEditorProps) {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => addSection('content')}
+            onClick={() => addSection("content")}
             disabled={saving}
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -307,15 +297,8 @@ export function ModuleSectionsEditor({ moduleId }: ModuleSectionsEditorProps) {
           </CardContent>
         </Card>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={sections.map(s => s.id)}
-            strategy={verticalListSortingStrategy}
-          >
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-3">
               {sections.map((section) => (
                 <SortableSectionItem

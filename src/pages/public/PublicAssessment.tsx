@@ -57,7 +57,7 @@ export default function PublicAssessment() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [step, setStep] = useState<Step>("intro");
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -76,7 +76,7 @@ export default function PublicAssessment() {
       const { data, error } = await supabase
         .from("assessment_definitions")
         .select("*")
-        .eq("slug", slug ?? '')
+        .eq("slug", slug ?? "")
         .eq("is_active", true)
         .eq("is_public", true)
         .single();
@@ -93,7 +93,7 @@ export default function PublicAssessment() {
       const { data, error } = await supabase
         .from("assessment_questions")
         .select("*")
-        .eq("assessment_id", assessment?.id ?? '')
+        .eq("assessment_id", assessment?.id ?? "")
         .order("order_index");
       if (error) throw error;
       return data as Question[];
@@ -105,7 +105,7 @@ export default function PublicAssessment() {
   const { data: options = [] } = useQuery({
     queryKey: ["public-assessment-options", assessment?.id],
     queryFn: async () => {
-      const questionIds = questions.map(q => q.id);
+      const questionIds = questions.map((q) => q.id);
       if (questionIds.length === 0) return [];
       const { data, error } = await supabase
         .from("assessment_options")
@@ -122,7 +122,7 @@ export default function PublicAssessment() {
   const { data: optionScores = [] } = useQuery({
     queryKey: ["public-assessment-scores", assessment?.id],
     queryFn: async () => {
-      const optionIds = options.map(o => o.id);
+      const optionIds = options.map((o) => o.id);
       if (optionIds.length === 0) return [];
       const { data, error } = await supabase
         .from("assessment_option_scores")
@@ -141,7 +141,7 @@ export default function PublicAssessment() {
       const { data, error } = await supabase
         .from("assessment_dimensions")
         .select("*")
-        .eq("assessment_id", assessment?.id ?? '')
+        .eq("assessment_id", assessment?.id ?? "")
         .order("order_index");
       if (error) throw error;
       return data as Dimension[];
@@ -156,7 +156,7 @@ export default function PublicAssessment() {
       const { data, error } = await supabase
         .from("assessment_interpretations")
         .select("*")
-        .eq("assessment_id", assessment?.id ?? '')
+        .eq("assessment_id", assessment?.id ?? "")
         .order("priority", { ascending: false });
       if (error) throw error;
       return data as Interpretation[];
@@ -165,20 +165,20 @@ export default function PublicAssessment() {
   });
 
   const currentQuestion = questions[currentQuestionIndex];
-  const currentOptions = options.filter(o => o.question_id === currentQuestion?.id);
+  const currentOptions = options.filter((o) => o.question_id === currentQuestion?.id);
   const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
-  const allAnswered = questions.every(q => answers[q.id]);
+  const allAnswered = questions.every((q) => answers[q.id]);
 
   const calculateScores = () => {
     const scores: Record<string, number> = {};
-    dimensions.forEach(dim => {
+    dimensions.forEach((dim) => {
       scores[dim.name] = 0;
     });
 
-    Object.values(answers).forEach(optionId => {
-      const relevantScores = optionScores.filter(s => s.option_id === optionId);
-      relevantScores.forEach(s => {
-        const dim = dimensions.find(d => d.id === s.dimension_id);
+    Object.values(answers).forEach((optionId) => {
+      const relevantScores = optionScores.filter((s) => s.option_id === optionId);
+      relevantScores.forEach((s) => {
+        const dim = dimensions.find((d) => d.id === s.dimension_id);
         if (dim) {
           scores[dim.name] = (scores[dim.name] || 0) + s.score;
         }
@@ -190,17 +190,17 @@ export default function PublicAssessment() {
 
   const evaluateInterpretations = (scores: Record<string, number>) => {
     const matched: Interpretation[] = [];
-    
-    interpretations.forEach(int => {
+
+    interpretations.forEach((int) => {
       let matches = true;
       const conditions = int.conditions as Record<string, { min?: number; max?: number }>;
-      
+
       Object.entries(conditions).forEach(([dimName, cond]) => {
         const score = scores[dimName] || 0;
         if (cond.min !== undefined && score < cond.min) matches = false;
         if (cond.max !== undefined && score > cond.max) matches = false;
       });
-      
+
       if (matches && Object.keys(conditions).length > 0) {
         matched.push(int);
       }
@@ -211,7 +211,7 @@ export default function PublicAssessment() {
 
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
+      setCurrentQuestionIndex((prev) => prev + 1);
     } else {
       setStep("email");
     }
@@ -219,7 +219,7 @@ export default function PublicAssessment() {
 
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
+      setCurrentQuestionIndex((prev) => prev - 1);
     }
   };
 
@@ -237,18 +237,18 @@ export default function PublicAssessment() {
     try {
       const scores = calculateScores();
       const matched = evaluateInterpretations(scores);
-      
+
       setDimensionScores(scores);
       setMatchedInterpretations(matched);
 
       // Save response
       const { error } = await supabase.from("assessment_responses").insert({
-        assessment_id: assessment?.id ?? '',
+        assessment_id: assessment?.id ?? "",
         email,
         name: name || null,
         responses: answers,
         dimension_scores: scores,
-        interpretations: matched.map(i => ({ name: i.name, text: i.interpretation_text })),
+        interpretations: matched.map((i) => ({ name: i.name, text: i.interpretation_text })),
         newsletter_consent: newsletterConsent,
       });
 
@@ -306,7 +306,7 @@ export default function PublicAssessment() {
       doc.text("Your Profile", 20, y);
       y += 10;
 
-      matchedInterpretations.forEach(int => {
+      matchedInterpretations.forEach((int) => {
         doc.setFontSize(12);
         doc.setTextColor(40, 40, 40);
         doc.text(int.name, 25, y);
@@ -376,7 +376,8 @@ export default function PublicAssessment() {
             <CardHeader>
               <CardTitle>Welcome</CardTitle>
               <CardDescription>
-                {questions.length} questions · Takes about {Math.ceil(questions.length * 0.5)} minutes
+                {questions.length} questions · Takes about {Math.ceil(questions.length * 0.5)}{" "}
+                minutes
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -397,7 +398,9 @@ export default function PublicAssessment() {
             <CardHeader>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>Question {currentQuestionIndex + 1} of {questions.length}</span>
+                  <span>
+                    Question {currentQuestionIndex + 1} of {questions.length}
+                  </span>
                   <span>{Math.round(progress)}%</span>
                 </div>
                 <Progress value={progress} className="h-2" />
@@ -405,13 +408,13 @@ export default function PublicAssessment() {
             </CardHeader>
             <CardContent className="space-y-6">
               <h2 className="text-lg font-medium">{currentQuestion.question_text}</h2>
-              
+
               <RadioGroup
                 value={answers[currentQuestion.id] || ""}
                 onValueChange={(value) => setAnswers({ ...answers, [currentQuestion.id]: value })}
               >
                 <div className="space-y-3">
-                  {currentOptions.map(opt => (
+                  {currentOptions.map((opt) => (
                     <div key={opt.id} className="flex items-start space-x-3">
                       <RadioGroupItem value={opt.id} id={opt.id} className="mt-1" />
                       <Label htmlFor={opt.id} className="font-normal cursor-pointer">
@@ -431,10 +434,7 @@ export default function PublicAssessment() {
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Previous
                 </Button>
-                <Button
-                  onClick={handleNext}
-                  disabled={!answers[currentQuestion.id]}
-                >
+                <Button onClick={handleNext} disabled={!answers[currentQuestion.id]}>
                   {currentQuestionIndex === questions.length - 1 ? "Continue" : "Next"}
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
@@ -518,7 +518,7 @@ export default function PublicAssessment() {
                   <h3 className="font-medium mb-3">Your Scores</h3>
                   <div className="grid gap-3">
                     {Object.entries(dimensionScores).map(([dimName, score]) => {
-                      const dim = dimensions.find(d => d.name === dimName);
+                      const dim = dimensions.find((d) => d.name === dimName);
                       const maxPossible = questions.length * 5; // Assuming max score per question is 5
                       const percentage = Math.min((score / maxPossible) * 100, 100);
                       return (
@@ -542,7 +542,7 @@ export default function PublicAssessment() {
                   <div>
                     <h3 className="font-medium mb-3">Your Profile Insights</h3>
                     <div className="space-y-4">
-                      {matchedInterpretations.map(int => (
+                      {matchedInterpretations.map((int) => (
                         <div key={int.id} className="p-4 bg-muted/50 rounded-lg">
                           <Badge className="mb-2">{int.name}</Badge>
                           <p className="text-sm">{int.interpretation_text}</p>
@@ -554,7 +554,8 @@ export default function PublicAssessment() {
 
                 {matchedInterpretations.length === 0 && (
                   <p className="text-muted-foreground text-center py-4">
-                    Your unique combination of responses shows a balanced profile across all dimensions.
+                    Your unique combination of responses shows a balanced profile across all
+                    dimensions.
                   </p>
                 )}
               </CardContent>

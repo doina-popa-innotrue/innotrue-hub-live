@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -13,32 +13,26 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Plus, 
-  Trash2, 
-  Calendar, 
-  ExternalLink, 
-  AlertTriangle, 
-  CheckCircle2, 
+  Plus,
+  Trash2,
+  Calendar,
+  ExternalLink,
+  AlertTriangle,
+  CheckCircle2,
   Loader2,
-  HelpCircle 
-} from 'lucide-react';
+  HelpCircle,
+} from "lucide-react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion';
+} from "@/components/ui/accordion";
 
 interface ExternalCalendar {
   id: string;
@@ -54,44 +48,50 @@ interface ExternalCalendarManagerProps {
 }
 
 const COLOR_OPTIONS = [
-  { value: '#6366f1', label: 'Indigo' },
-  { value: '#8b5cf6', label: 'Violet' },
-  { value: '#ec4899', label: 'Pink' },
-  { value: '#f97316', label: 'Orange' },
-  { value: '#22c55e', label: 'Green' },
-  { value: '#06b6d4', label: 'Cyan' },
-  { value: '#64748b', label: 'Slate' },
+  { value: "#6366f1", label: "Indigo" },
+  { value: "#8b5cf6", label: "Violet" },
+  { value: "#ec4899", label: "Pink" },
+  { value: "#f97316", label: "Orange" },
+  { value: "#22c55e", label: "Green" },
+  { value: "#06b6d4", label: "Cyan" },
+  { value: "#64748b", label: "Slate" },
 ];
 
 // Detect common incorrect URL patterns
 function detectUrlIssue(url: string): { hasIssue: boolean; message: string } {
   const trimmedUrl = url.trim().toLowerCase();
-  
+
   // Google Calendar web page link (not iCal)
-  if (trimmedUrl.includes('calendar.google.com/calendar/u/') && !trimmedUrl.includes('/ical/')) {
+  if (trimmedUrl.includes("calendar.google.com/calendar/u/") && !trimmedUrl.includes("/ical/")) {
     return {
       hasIssue: true,
-      message: 'This looks like a Google Calendar web link, not an iCal feed. Use the "Secret address in iCal format" instead.'
+      message:
+        'This looks like a Google Calendar web link, not an iCal feed. Use the "Secret address in iCal format" instead.',
     };
   }
-  
+
   // Google Calendar sharing link
-  if (trimmedUrl.includes('calendar.google.com') && trimmedUrl.includes('?cid=')) {
+  if (trimmedUrl.includes("calendar.google.com") && trimmedUrl.includes("?cid=")) {
     return {
       hasIssue: true,
-      message: 'This is a calendar sharing link. You need the iCal feed URL (ends with .ics).'
+      message: "This is a calendar sharing link. You need the iCal feed URL (ends with .ics).",
     };
   }
-  
+
   // Outlook web link
-  if (trimmedUrl.includes('outlook.live.com/calendar') && !trimmedUrl.includes('/ical/') && !trimmedUrl.includes('.ics')) {
+  if (
+    trimmedUrl.includes("outlook.live.com/calendar") &&
+    !trimmedUrl.includes("/ical/") &&
+    !trimmedUrl.includes(".ics")
+  ) {
     return {
       hasIssue: true,
-      message: 'This looks like an Outlook web link. Use the iCal subscription URL from sharing settings.'
+      message:
+        "This looks like an Outlook web link. Use the iCal subscription URL from sharing settings.",
     };
   }
-  
-  return { hasIssue: false, message: '' };
+
+  return { hasIssue: false, message: "" };
 }
 
 export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarManagerProps) {
@@ -107,11 +107,11 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
     message: string;
     eventCount?: number;
   } | null>(null);
-  
+
   const [newCalendar, setNewCalendar] = useState({
-    name: '',
-    ical_url: '',
-    color: '#6366f1',
+    name: "",
+    ical_url: "",
+    color: "#6366f1",
   });
 
   const urlWarning = newCalendar.ical_url ? detectUrlIssue(newCalendar.ical_url) : null;
@@ -130,19 +130,19 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
   const loadCalendars = async () => {
     try {
       const { data, error } = await supabase
-        .from('user_external_calendars')
-        .select('*')
-        .eq('user_id', user?.id ?? '')
-        .order('created_at', { ascending: true });
+        .from("user_external_calendars")
+        .select("*")
+        .eq("user_id", user?.id ?? "")
+        .order("created_at", { ascending: true });
 
       if (error) throw error;
       setCalendars(data || []);
     } catch (error: any) {
-      console.error('Error loading calendars:', error);
+      console.error("Error loading calendars:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to load external calendars',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load external calendars",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -152,9 +152,9 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
   const handleTestFeed = async () => {
     if (!newCalendar.ical_url.trim()) {
       toast({
-        title: 'Missing URL',
-        description: 'Please enter an iCal feed URL to test',
-        variant: 'destructive',
+        title: "Missing URL",
+        description: "Please enter an iCal feed URL to test",
+        variant: "destructive",
       });
       return;
     }
@@ -164,9 +164,9 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
       new URL(newCalendar.ical_url);
     } catch {
       toast({
-        title: 'Invalid URL',
-        description: 'Please enter a valid URL',
-        variant: 'destructive',
+        title: "Invalid URL",
+        description: "Please enter a valid URL",
+        variant: "destructive",
       });
       return;
     }
@@ -175,7 +175,7 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
     setTestResult(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('fetch-ical-feed', {
+      const { data, error } = await supabase.functions.invoke("fetch-ical-feed", {
         body: {
           testOnly: true,
           testUrl: newCalendar.ical_url.trim(),
@@ -193,14 +193,14 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
       } else {
         setTestResult({
           success: false,
-          message: data?.error || 'Failed to validate the feed',
+          message: data?.error || "Failed to validate the feed",
         });
       }
     } catch (error: any) {
-      console.error('Error testing feed:', error);
+      console.error("Error testing feed:", error);
       setTestResult({
         success: false,
-        message: error.message || 'Failed to test the calendar feed',
+        message: error.message || "Failed to test the calendar feed",
       });
     } finally {
       setTesting(false);
@@ -210,9 +210,9 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
   const handleAddCalendar = async () => {
     if (!newCalendar.name.trim() || !newCalendar.ical_url.trim()) {
       toast({
-        title: 'Missing information',
-        description: 'Please provide both a name and iCal URL',
-        variant: 'destructive',
+        title: "Missing information",
+        description: "Please provide both a name and iCal URL",
+        variant: "destructive",
       });
       return;
     }
@@ -220,42 +220,40 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
     // Require successful test before adding
     if (!testResult?.success) {
       toast({
-        title: 'Test required',
-        description: 'Please test the feed URL before adding the calendar',
-        variant: 'destructive',
+        title: "Test required",
+        description: "Please test the feed URL before adding the calendar",
+        variant: "destructive",
       });
       return;
     }
 
     setSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('user_external_calendars')
-        .insert({
-          user_id: user?.id ?? '',
-          name: newCalendar.name.trim(),
-          ical_url: newCalendar.ical_url.trim(),
-          color: newCalendar.color,
-        });
+      const { error } = await supabase.from("user_external_calendars").insert({
+        user_id: user?.id ?? "",
+        name: newCalendar.name.trim(),
+        ical_url: newCalendar.ical_url.trim(),
+        color: newCalendar.color,
+      });
 
       if (error) throw error;
 
       toast({
-        title: 'Calendar added',
+        title: "Calendar added",
         description: `Connected "${newCalendar.name}" with ${testResult.eventCount || 0} events`,
       });
-      
-      setNewCalendar({ name: '', ical_url: '', color: '#6366f1' });
+
+      setNewCalendar({ name: "", ical_url: "", color: "#6366f1" });
       setTestResult(null);
       setDialogOpen(false);
       loadCalendars();
       onCalendarsChange?.();
     } catch (error: any) {
-      console.error('Error adding calendar:', error);
+      console.error("Error adding calendar:", error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to add calendar',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to add calendar",
+        variant: "destructive",
       });
     } finally {
       setSubmitting(false);
@@ -265,21 +263,21 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
   const handleToggleActive = async (calendar: ExternalCalendar) => {
     try {
       const { error } = await supabase
-        .from('user_external_calendars')
+        .from("user_external_calendars")
         .update({ is_active: !calendar.is_active })
-        .eq('id', calendar.id);
+        .eq("id", calendar.id);
 
       if (error) throw error;
 
-      setCalendars(prev => 
-        prev.map(c => c.id === calendar.id ? { ...c, is_active: !c.is_active } : c)
+      setCalendars((prev) =>
+        prev.map((c) => (c.id === calendar.id ? { ...c, is_active: !c.is_active } : c)),
       );
       onCalendarsChange?.();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to update calendar',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update calendar",
+        variant: "destructive",
       });
     }
   };
@@ -287,24 +285,24 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
   const handleDeleteCalendar = async (calendarId: string) => {
     try {
       const { error } = await supabase
-        .from('user_external_calendars')
+        .from("user_external_calendars")
         .delete()
-        .eq('id', calendarId);
+        .eq("id", calendarId);
 
       if (error) throw error;
 
       toast({
-        title: 'Calendar removed',
-        description: 'The external calendar has been disconnected',
+        title: "Calendar removed",
+        description: "The external calendar has been disconnected",
       });
-      
-      setCalendars(prev => prev.filter(c => c.id !== calendarId));
+
+      setCalendars((prev) => prev.filter((c) => c.id !== calendarId));
       onCalendarsChange?.();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to remove calendar',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to remove calendar",
+        variant: "destructive",
       });
     }
   };
@@ -313,7 +311,7 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
     setDialogOpen(open);
     if (!open) {
       // Reset state when closing
-      setNewCalendar({ name: '', ical_url: '', color: '#6366f1' });
+      setNewCalendar({ name: "", ical_url: "", color: "#6366f1" });
       setTestResult(null);
     }
   };
@@ -346,10 +344,11 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
               <DialogHeader>
                 <DialogTitle>Add External Calendar</DialogTitle>
                 <DialogDescription>
-                  Connect an external calendar using its iCal feed URL. This is read-only and helps you see scheduling conflicts.
+                  Connect an external calendar using its iCal feed URL. This is read-only and helps
+                  you see scheduling conflicts.
                 </DialogDescription>
               </DialogHeader>
-              
+
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="cal-name">Calendar Name</Label>
@@ -357,33 +356,33 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
                     id="cal-name"
                     placeholder="e.g., Work Calendar"
                     value={newCalendar.name}
-                    onChange={(e) => setNewCalendar(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => setNewCalendar((prev) => ({ ...prev, name: e.target.value }))}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="cal-url">iCal Feed URL</Label>
                   <Input
                     id="cal-url"
                     placeholder="https://calendar.google.com/calendar/ical/...basic.ics"
                     value={newCalendar.ical_url}
-                    onChange={(e) => setNewCalendar(prev => ({ ...prev, ical_url: e.target.value }))}
+                    onChange={(e) =>
+                      setNewCalendar((prev) => ({ ...prev, ical_url: e.target.value }))
+                    }
                   />
-                  
+
                   {/* URL Warning */}
                   {urlWarning?.hasIssue && (
                     <Alert variant="destructive" className="py-2">
                       <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription className="text-xs">
-                        {urlWarning.message}
-                      </AlertDescription>
+                      <AlertDescription className="text-xs">{urlWarning.message}</AlertDescription>
                     </Alert>
                   )}
-                  
+
                   {/* Test Result */}
                   {testResult && (
-                    <Alert 
-                      variant={testResult.success ? "default" : "destructive"} 
+                    <Alert
+                      variant={testResult.success ? "default" : "destructive"}
                       className="py-2"
                     >
                       {testResult.success ? (
@@ -391,16 +390,14 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
                       ) : (
                         <AlertTriangle className="h-4 w-4" />
                       )}
-                      <AlertDescription className="text-xs">
-                        {testResult.message}
-                      </AlertDescription>
+                      <AlertDescription className="text-xs">{testResult.message}</AlertDescription>
                     </Alert>
                   )}
-                  
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={handleTestFeed}
                     disabled={testing || !newCalendar.ical_url.trim()}
                     className="w-full"
@@ -411,25 +408,25 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
                         Testing Feed...
                       </>
                     ) : (
-                      'Test Feed URL'
+                      "Test Feed URL"
                     )}
                   </Button>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label>Color</Label>
                   <div className="flex gap-2">
-                    {COLOR_OPTIONS.map(color => (
+                    {COLOR_OPTIONS.map((color) => (
                       <button
                         key={color.value}
                         type="button"
                         className={`w-8 h-8 rounded-full border-2 transition-all ${
-                          newCalendar.color === color.value 
-                            ? 'border-foreground scale-110' 
-                            : 'border-transparent hover:scale-105'
+                          newCalendar.color === color.value
+                            ? "border-foreground scale-110"
+                            : "border-transparent hover:scale-105"
                         }`}
                         style={{ backgroundColor: color.value }}
-                        onClick={() => setNewCalendar(prev => ({ ...prev, color: color.value }))}
+                        onClick={() => setNewCalendar((prev) => ({ ...prev, color: color.value }))}
                         title={color.label}
                       />
                     ))}
@@ -477,23 +474,20 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
                   </AccordionItem>
                 </Accordion>
               </div>
-              
+
               <DialogFooter>
                 <Button variant="outline" onClick={() => handleDialogClose(false)}>
                   Cancel
                 </Button>
-                <Button 
-                  onClick={handleAddCalendar} 
-                  disabled={submitting || !testResult?.success}
-                >
-                  {submitting ? 'Adding...' : 'Add Calendar'}
+                <Button onClick={handleAddCalendar} disabled={submitting || !testResult?.success}>
+                  {submitting ? "Adding..." : "Add Calendar"}
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
       </CardHeader>
-      
+
       <CardContent>
         {calendars.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
@@ -501,7 +495,7 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
           </p>
         ) : (
           <div className="space-y-3">
-            {calendars.map(calendar => (
+            {calendars.map((calendar) => (
               <div
                 key={calendar.id}
                 className="flex items-center justify-between p-3 border rounded-lg"
@@ -509,7 +503,7 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
                 <div className="flex items-center gap-3">
                   <div
                     className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: calendar.color ?? '#6366f1' }}
+                    style={{ backgroundColor: calendar.color ?? "#6366f1" }}
                   />
                   <div>
                     <p className="font-medium text-sm">{calendar.name}</p>
@@ -520,7 +514,7 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
                     )}
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={calendar.is_active ?? false}
@@ -539,13 +533,13 @@ export function ExternalCalendarManager({ onCalendarsChange }: ExternalCalendarM
             ))}
           </div>
         )}
-        
+
         <div className="mt-4 pt-4 border-t">
           <p className="text-xs text-muted-foreground flex items-center gap-1">
             <ExternalLink className="h-3 w-3" />
-            <a 
-              href="https://support.google.com/calendar/answer/37648" 
-              target="_blank" 
+            <a
+              href="https://support.google.com/calendar/answer/37648"
+              target="_blank"
               rel="noopener noreferrer"
               className="underline hover:text-foreground"
             >

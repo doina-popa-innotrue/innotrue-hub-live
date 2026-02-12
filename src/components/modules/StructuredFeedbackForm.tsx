@@ -1,14 +1,20 @@
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 interface StructureField {
   id: string;
-  type: 'text' | 'textarea' | 'number' | 'rating' | 'select' | 'checkbox' | 'richtext';
+  type: "text" | "textarea" | "number" | "rating" | "select" | "checkbox" | "richtext";
   label: string;
   description?: string;
   required?: boolean;
@@ -24,13 +30,12 @@ interface StructuredFeedbackFormProps {
   disabled?: boolean;
 }
 
-export default function StructuredFeedbackForm({ 
-  structure, 
-  responses, 
-  onChange, 
-  disabled = false 
+export default function StructuredFeedbackForm({
+  structure,
+  responses,
+  onChange,
+  disabled = false,
 }: StructuredFeedbackFormProps) {
-  
   function handleChange(fieldId: string, value: unknown) {
     onChange({ ...responses, [fieldId]: value });
   }
@@ -39,20 +44,20 @@ export default function StructuredFeedbackForm({
     const value = responses[field.id];
 
     switch (field.type) {
-      case 'text':
+      case "text":
         return (
           <Input
-            value={(value as string) || ''}
+            value={(value as string) || ""}
             onChange={(e) => handleChange(field.id, e.target.value)}
             placeholder={field.description}
             disabled={disabled}
           />
         );
 
-      case 'textarea':
+      case "textarea":
         return (
           <Textarea
-            value={(value as string) || ''}
+            value={(value as string) || ""}
             onChange={(e) => handleChange(field.id, e.target.value)}
             placeholder={field.description}
             rows={3}
@@ -60,11 +65,11 @@ export default function StructuredFeedbackForm({
           />
         );
 
-      case 'number':
+      case "number":
         return (
           <Input
             type="number"
-            value={(value as number) ?? ''}
+            value={(value as number) ?? ""}
             onChange={(e) => handleChange(field.id, e.target.value ? Number(e.target.value) : null)}
             min={field.min}
             max={field.max}
@@ -72,7 +77,7 @@ export default function StructuredFeedbackForm({
           />
         );
 
-      case 'rating':
+      case "rating":
         const min = field.min ?? 1;
         const max = field.max ?? 5;
         const currentRating = (value as number) ?? min;
@@ -94,10 +99,10 @@ export default function StructuredFeedbackForm({
           </div>
         );
 
-      case 'select':
+      case "select":
         return (
           <Select
-            value={(value as string) || ''}
+            value={(value as string) || ""}
             onValueChange={(v) => handleChange(field.id, v)}
             disabled={disabled}
           >
@@ -114,7 +119,7 @@ export default function StructuredFeedbackForm({
           </Select>
         );
 
-      case 'checkbox':
+      case "checkbox":
         return (
           <div className="flex items-center space-x-2">
             <Checkbox
@@ -124,15 +129,15 @@ export default function StructuredFeedbackForm({
               disabled={disabled}
             />
             <label htmlFor={field.id} className="text-sm text-muted-foreground">
-              {field.description || 'Yes'}
+              {field.description || "Yes"}
             </label>
           </div>
         );
 
-      case 'richtext':
+      case "richtext":
         return (
           <RichTextEditor
-            value={(value as string) || ''}
+            value={(value as string) || ""}
             onChange={(content) => handleChange(field.id, content)}
             placeholder={field.description}
             disabled={disabled}
@@ -154,7 +159,7 @@ export default function StructuredFeedbackForm({
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
           </Label>
-          {field.description && field.type !== 'checkbox' && (
+          {field.description && field.type !== "checkbox" && (
             <p className="text-xs text-muted-foreground">{field.description}</p>
           )}
           {renderField(field)}

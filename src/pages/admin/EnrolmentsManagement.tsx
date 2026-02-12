@@ -1,17 +1,30 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Loader2, Users, ExternalLink, Search, X, Download } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, Users, ExternalLink, Search, X, Download } from "lucide-react";
 
 interface Enrolment {
   id: string;
@@ -49,13 +62,13 @@ export default function EnrolmentsManagement() {
   const [enrolments, setEnrolments] = useState<Enrolment[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Filters
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [programFilter, setProgramFilter] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [programFilter, setProgramFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -63,19 +76,17 @@ export default function EnrolmentsManagement() {
 
   async function fetchData() {
     setLoading(true);
-    
+
     // Fetch all programs for the filter dropdown
-    const { data: programsData } = await supabase
-      .from('programs')
-      .select('id, name')
-      .order('name');
-    
+    const { data: programsData } = await supabase.from("programs").select("id, name").order("name");
+
     setPrograms(programsData || []);
 
     // Fetch all enrolments with related data
     const { data: enrolmentsData, error } = await supabase
-      .from('client_enrollments')
-      .select(`
+      .from("client_enrollments")
+      .select(
+        `
         id,
         client_user_id,
         program_id,
@@ -86,36 +97,44 @@ export default function EnrolmentsManagement() {
         created_at,
         programs (id, name, slug),
         program_plans (id, name, tier_level)
-      `)
-      .order('created_at', { ascending: false });
+      `,
+      )
+      .order("created_at", { ascending: false });
 
     if (error) {
-      toast.error('Failed to load enrolments');
+      toast.error("Failed to load enrolments");
       setLoading(false);
       return;
     }
 
     // Fetch profiles for all client_user_ids
-    const userIds = [...new Set((enrolmentsData || []).map(e => e.client_user_id).filter((x): x is string => x != null))];
-    
+    const userIds = [
+      ...new Set(
+        (enrolmentsData || []).map((e) => e.client_user_id).filter((x): x is string => x != null),
+      ),
+    ];
+
     let profilesMap: Record<string, { id: string; name: string; username: string | null }> = {};
-    
+
     if (userIds.length > 0) {
       const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, name, username')
-        .in('id', userIds);
-      
-      profilesMap = (profilesData || []).reduce((acc, p) => {
-        acc[p.id] = p;
-        return acc;
-      }, {} as Record<string, { id: string; name: string; username: string | null }>);
+        .from("profiles")
+        .select("id, name, username")
+        .in("id", userIds);
+
+      profilesMap = (profilesData || []).reduce(
+        (acc, p) => {
+          acc[p.id] = p;
+          return acc;
+        },
+        {} as Record<string, { id: string; name: string; username: string | null }>,
+      );
     }
 
     // Merge profiles into enrolments
-    const enrichedEnrolments = (enrolmentsData || []).map(e => ({
+    const enrichedEnrolments = (enrolmentsData || []).map((e) => ({
       ...e,
-      profiles: e.client_user_id ? profilesMap[e.client_user_id] || null : null
+      profiles: e.client_user_id ? profilesMap[e.client_user_id] || null : null,
     }));
 
     setEnrolments(enrichedEnrolments as Enrolment[]);
@@ -123,80 +142,96 @@ export default function EnrolmentsManagement() {
   }
 
   // Apply filters
-  const filteredEnrolments = enrolments.filter(e => {
+  const filteredEnrolments = enrolments.filter((e) => {
     // Status filter
-    if (statusFilter !== 'all' && e.status !== statusFilter) return false;
-    
+    if (statusFilter !== "all" && e.status !== statusFilter) return false;
+
     // Program filter
-    if (programFilter !== 'all' && e.program_id !== programFilter) return false;
-    
+    if (programFilter !== "all" && e.program_id !== programFilter) return false;
+
     // Search query (client name or email)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      const clientName = e.profiles?.name?.toLowerCase() || '';
-      const clientEmail = e.profiles?.username?.toLowerCase() || '';
+      const clientName = e.profiles?.name?.toLowerCase() || "";
+      const clientEmail = e.profiles?.username?.toLowerCase() || "";
       if (!clientName.includes(query) && !clientEmail.includes(query)) return false;
     }
-    
+
     // Date range filter (based on created_at)
     if (dateFrom) {
       const fromDate = new Date(dateFrom);
       const enrolmentDate = new Date(e.created_at);
       if (enrolmentDate < fromDate) return false;
     }
-    
+
     if (dateTo) {
       const toDate = new Date(dateTo);
       toDate.setHours(23, 59, 59, 999);
       const enrolmentDate = new Date(e.created_at);
       if (enrolmentDate > toDate) return false;
     }
-    
+
     return true;
   });
 
   // Stats
-  const activeCount = enrolments.filter(e => e.status === 'active').length;
-  const completedCount = enrolments.filter(e => e.status === 'completed').length;
-  const pausedCount = enrolments.filter(e => e.status === 'paused').length;
+  const activeCount = enrolments.filter((e) => e.status === "active").length;
+  const completedCount = enrolments.filter((e) => e.status === "completed").length;
+  const pausedCount = enrolments.filter((e) => e.status === "paused").length;
 
   function clearFilters() {
-    setStatusFilter('all');
-    setProgramFilter('all');
-    setSearchQuery('');
-    setDateFrom('');
-    setDateTo('');
+    setStatusFilter("all");
+    setProgramFilter("all");
+    setSearchQuery("");
+    setDateFrom("");
+    setDateTo("");
   }
 
-  function getStatusVariant(status: string): 'default' | 'secondary' | 'outline' | 'destructive' {
+  function getStatusVariant(status: string): "default" | "secondary" | "outline" | "destructive" {
     switch (status) {
-      case 'active': return 'default';
-      case 'completed': return 'secondary';
-      case 'paused': return 'outline';
-      case 'cancelled': return 'destructive';
-      default: return 'outline';
+      case "active":
+        return "default";
+      case "completed":
+        return "secondary";
+      case "paused":
+        return "outline";
+      case "cancelled":
+        return "destructive";
+      default:
+        return "outline";
     }
   }
 
   function exportToCsv() {
-    const headers = ['Client Name', 'Email', 'Programme', 'Status', 'Tier', 'Plan', 'Start Date', 'Enrolled On'];
-    const rows = filteredEnrolments.map(e => [
-      e.profiles?.name || 'Unknown',
-      e.profiles?.username || '',
-      e.programs?.name || '',
+    const headers = [
+      "Client Name",
+      "Email",
+      "Programme",
+      "Status",
+      "Tier",
+      "Plan",
+      "Start Date",
+      "Enrolled On",
+    ];
+    const rows = filteredEnrolments.map((e) => [
+      e.profiles?.name || "Unknown",
+      e.profiles?.username || "",
+      e.programs?.name || "",
       e.status,
-      e.tier || '',
-      e.program_plans?.name || '',
-      e.start_date ? format(new Date(e.start_date), 'yyyy-MM-dd') : '',
-      format(new Date(e.created_at), 'yyyy-MM-dd')
+      e.tier || "",
+      e.program_plans?.name || "",
+      e.start_date ? format(new Date(e.start_date), "yyyy-MM-dd") : "",
+      format(new Date(e.created_at), "yyyy-MM-dd"),
     ]);
-    
-    const csvContent = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${cell}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `enrolments-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.download = `enrolments-${format(new Date(), "yyyy-MM-dd")}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -271,7 +306,7 @@ export default function EnrolmentsManagement() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Programme</Label>
               <Select value={programFilter} onValueChange={setProgramFilter}>
@@ -280,13 +315,15 @@ export default function EnrolmentsManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Programmes</SelectItem>
-                  {programs.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  {programs.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -302,26 +339,18 @@ export default function EnrolmentsManagement() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Enrolled From</Label>
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
             </div>
-            
+
             <div className="space-y-2">
               <Label>Enrolled To</Label>
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
+              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             </div>
           </div>
-          
+
           <div className="flex gap-2 mt-4">
             <Button variant="outline" size="sm" onClick={clearFilters}>
               <X className="h-4 w-4 mr-1" />
@@ -343,9 +372,8 @@ export default function EnrolmentsManagement() {
             Enrolments ({filteredEnrolments.length})
           </CardTitle>
           <CardDescription>
-            {filteredEnrolments.length !== enrolments.length && 
-              `Showing ${filteredEnrolments.length} of ${enrolments.length} enrolments`
-            }
+            {filteredEnrolments.length !== enrolments.length &&
+              `Showing ${filteredEnrolments.length} of ${enrolments.length} enrolments`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -373,11 +401,17 @@ export default function EnrolmentsManagement() {
                     <TableRow key={enrolment.id}>
                       <TableCell>
                         <div className="min-w-[180px]">
-                          <div className="font-medium truncate">{enrolment.profiles?.name || 'Unknown'}</div>
-                          <div className="text-sm text-muted-foreground truncate">{enrolment.profiles?.username}</div>
+                          <div className="font-medium truncate">
+                            {enrolment.profiles?.name || "Unknown"}
+                          </div>
+                          <div className="text-sm text-muted-foreground truncate">
+                            {enrolment.profiles?.username}
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="truncate max-w-[200px]">{enrolment.programs?.name}</TableCell>
+                      <TableCell className="truncate max-w-[200px]">
+                        {enrolment.programs?.name}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(enrolment.status)}>
                           {enrolment.status}
@@ -385,7 +419,9 @@ export default function EnrolmentsManagement() {
                       </TableCell>
                       <TableCell>
                         {enrolment.tier ? (
-                          <Badge variant="outline" className="capitalize">{enrolment.tier}</Badge>
+                          <Badge variant="outline" className="capitalize">
+                            {enrolment.tier}
+                          </Badge>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
@@ -398,13 +434,14 @@ export default function EnrolmentsManagement() {
                         )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        {enrolment.start_date 
-                          ? format(new Date(enrolment.start_date), 'dd MMM yyyy')
-                          : <span className="text-muted-foreground">—</span>
-                        }
+                        {enrolment.start_date ? (
+                          format(new Date(enrolment.start_date), "dd MMM yyyy")
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        {format(new Date(enrolment.created_at), 'dd MMM yyyy')}
+                        {format(new Date(enrolment.created_at), "dd MMM yyyy")}
                       </TableCell>
                       <TableCell>
                         <Button

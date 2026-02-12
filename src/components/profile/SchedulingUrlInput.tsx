@@ -1,6 +1,6 @@
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { ExternalLink, Calendar } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ExternalLink, Calendar } from "lucide-react";
 
 interface SchedulingUrlInputProps {
   value: string;
@@ -39,7 +39,7 @@ export function SchedulingUrlInput({ value, onChange, disabled }: SchedulingUrlI
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          className={!isValid ? 'border-destructive' : ''}
+          className={!isValid ? "border-destructive" : ""}
         />
         {hasValue && isValid && (
           <a
@@ -52,9 +52,7 @@ export function SchedulingUrlInput({ value, onChange, disabled }: SchedulingUrlI
           </a>
         )}
       </div>
-      {!isValid && (
-        <p className="text-xs text-destructive">Please enter a valid URL</p>
-      )}
+      {!isValid && <p className="text-xs text-destructive">Please enter a valid URL</p>}
     </div>
   );
 }

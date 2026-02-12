@@ -1,22 +1,59 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Pencil, Trash2, ArrowLeft, GripVertical, FileQuestion, FolderTree, Link2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { BackButton } from '@/components/navigation/BackButton';
+import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  ArrowLeft,
+  GripVertical,
+  FileQuestion,
+  FolderTree,
+  Link2,
+} from "lucide-react";
+import { toast } from "sonner";
+import { BackButton } from "@/components/navigation/BackButton";
 
 interface SurveyQuestion {
   id: string;
@@ -50,17 +87,17 @@ interface TemplateCondition {
 
 interface QuestionFormData {
   question_text: string;
-  question_type: 'boolean' | 'single_choice' | 'multi_choice' | 'date';
+  question_type: "boolean" | "single_choice" | "multi_choice" | "date";
   options: { value: string; label: string }[];
   help_text: string;
   is_required: boolean;
 }
 
 const defaultQuestionForm: QuestionFormData = {
-  question_text: '',
-  question_type: 'boolean',
+  question_text: "",
+  question_type: "boolean",
   options: [],
-  help_text: '',
+  help_text: "",
   is_required: true,
 };
 
@@ -68,21 +105,21 @@ export default function GuidedPathFamilyDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  
+
   const [questionDialogOpen, setQuestionDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<SurveyQuestion | null>(null);
   const [deletingQuestion, setDeletingQuestion] = useState<SurveyQuestion | null>(null);
   const [questionForm, setQuestionForm] = useState<QuestionFormData>(defaultQuestionForm);
-  const [newOption, setNewOption] = useState({ value: '', label: '' });
+  const [newOption, setNewOption] = useState({ value: "", label: "" });
 
   // Fetch family details
   const { data: family, isLoading: familyLoading } = useQuery({
-    queryKey: ['guided-path-family', id],
+    queryKey: ["guided-path-family", id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('guided_path_template_families')
-        .select('*')
-        .eq('id', id!)
+        .from("guided_path_template_families")
+        .select("*")
+        .eq("id", id!)
         .single();
       if (error) throw error;
       return data;
@@ -92,15 +129,15 @@ export default function GuidedPathFamilyDetail() {
 
   // Fetch survey questions
   const { data: questions = [], isLoading: questionsLoading } = useQuery({
-    queryKey: ['family-survey-questions', id],
+    queryKey: ["family-survey-questions", id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('family_survey_questions')
-        .select('*')
-        .eq('family_id', id!)
-        .order('order_index');
+        .from("family_survey_questions")
+        .select("*")
+        .eq("family_id", id!)
+        .order("order_index");
       if (error) throw error;
-      return (data || []).map(q => ({
+      return (data || []).map((q) => ({
         ...q,
         options: q.options as { value: string; label: string }[] | null,
       })) as SurveyQuestion[];
@@ -110,33 +147,35 @@ export default function GuidedPathFamilyDetail() {
 
   // Fetch linked templates
   const { data: templates = [], isLoading: templatesLoading } = useQuery({
-    queryKey: ['family-templates', id],
+    queryKey: ["family-templates", id],
     queryFn: async () => {
       const { data: templatesData, error } = await supabase
-        .from('guided_path_templates')
-        .select('id, name, description, is_base_template, order_in_family, is_active')
-        .eq('family_id', id!)
-        .order('order_in_family');
+        .from("guided_path_templates")
+        .select("id, name, description, is_base_template, order_in_family, is_active")
+        .eq("family_id", id!)
+        .order("order_in_family");
       if (error) throw error;
 
       // Fetch conditions for each template
       const templatesWithConditions = await Promise.all(
         (templatesData || []).map(async (template) => {
           const { data: conditions } = await supabase
-            .from('template_conditions')
-            .select('*, question:family_survey_questions(*)')
-            .eq('template_id', template.id);
-          
-          const mappedConditions = (conditions || []).map(cond => ({
+            .from("template_conditions")
+            .select("*, question:family_survey_questions(*)")
+            .eq("template_id", template.id);
+
+          const mappedConditions = (conditions || []).map((cond) => ({
             ...cond,
-            question: cond.question ? {
-              ...cond.question,
-              options: cond.question.options as { value: string; label: string }[] | null,
-            } : undefined,
+            question: cond.question
+              ? {
+                  ...cond.question,
+                  options: cond.question.options as { value: string; label: string }[] | null,
+                }
+              : undefined,
           }));
-          
+
           return { ...template, conditions: mappedConditions };
-        })
+        }),
       );
 
       return templatesWithConditions as Template[];
@@ -147,24 +186,21 @@ export default function GuidedPathFamilyDetail() {
   // Question mutations
   const createQuestionMutation = useMutation({
     mutationFn: async (data: QuestionFormData) => {
-      const { error } = await supabase
-        .from('family_survey_questions')
-        .insert({
-          family_id: id!,
-          question_text: data.question_text,
-          question_type: data.question_type,
-          options: data.question_type !== 'boolean' && data.question_type !== 'date' 
-            ? data.options 
-            : null,
-          help_text: data.help_text || null,
-          is_required: data.is_required,
-          order_index: questions.length,
-        });
+      const { error } = await supabase.from("family_survey_questions").insert({
+        family_id: id!,
+        question_text: data.question_text,
+        question_type: data.question_type,
+        options:
+          data.question_type !== "boolean" && data.question_type !== "date" ? data.options : null,
+        help_text: data.help_text || null,
+        is_required: data.is_required,
+        order_index: questions.length,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Question added');
-      queryClient.invalidateQueries({ queryKey: ['family-survey-questions', id] });
+      toast.success("Question added");
+      queryClient.invalidateQueries({ queryKey: ["family-survey-questions", id] });
       setQuestionDialogOpen(false);
       setQuestionForm(defaultQuestionForm);
     },
@@ -176,22 +212,21 @@ export default function GuidedPathFamilyDetail() {
   const updateQuestionMutation = useMutation({
     mutationFn: async ({ questionId, data }: { questionId: string; data: QuestionFormData }) => {
       const { error } = await supabase
-        .from('family_survey_questions')
+        .from("family_survey_questions")
         .update({
           question_text: data.question_text,
           question_type: data.question_type,
-          options: data.question_type !== 'boolean' && data.question_type !== 'date' 
-            ? data.options 
-            : null,
+          options:
+            data.question_type !== "boolean" && data.question_type !== "date" ? data.options : null,
           help_text: data.help_text || null,
           is_required: data.is_required,
         })
-        .eq('id', questionId);
+        .eq("id", questionId);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Question updated');
-      queryClient.invalidateQueries({ queryKey: ['family-survey-questions', id] });
+      toast.success("Question updated");
+      queryClient.invalidateQueries({ queryKey: ["family-survey-questions", id] });
       setQuestionDialogOpen(false);
       setEditingQuestion(null);
       setQuestionForm(defaultQuestionForm);
@@ -204,14 +239,14 @@ export default function GuidedPathFamilyDetail() {
   const deleteQuestionMutation = useMutation({
     mutationFn: async (questionId: string) => {
       const { error } = await supabase
-        .from('family_survey_questions')
+        .from("family_survey_questions")
         .delete()
-        .eq('id', questionId);
+        .eq("id", questionId);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Question deleted');
-      queryClient.invalidateQueries({ queryKey: ['family-survey-questions', id] });
+      toast.success("Question deleted");
+      queryClient.invalidateQueries({ queryKey: ["family-survey-questions", id] });
       setDeletingQuestion(null);
     },
     onError: (error: Error) => {
@@ -224,9 +259,9 @@ export default function GuidedPathFamilyDetail() {
       setEditingQuestion(question);
       setQuestionForm({
         question_text: question.question_text,
-        question_type: question.question_type as QuestionFormData['question_type'],
+        question_type: question.question_type as QuestionFormData["question_type"],
         options: question.options || [],
-        help_text: question.help_text || '',
+        help_text: question.help_text || "",
         is_required: question.is_required,
       });
     } else {
@@ -239,7 +274,7 @@ export default function GuidedPathFamilyDetail() {
   function handleQuestionSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!questionForm.question_text.trim()) {
-      toast.error('Question text is required');
+      toast.error("Question text is required");
       return;
     }
 
@@ -252,14 +287,14 @@ export default function GuidedPathFamilyDetail() {
 
   function addOption() {
     if (!newOption.value.trim() || !newOption.label.trim()) {
-      toast.error('Both value and label are required');
+      toast.error("Both value and label are required");
       return;
     }
     setQuestionForm((prev) => ({
       ...prev,
       options: [...prev.options, { ...newOption }],
     }));
-    setNewOption({ value: '', label: '' });
+    setNewOption({ value: "", label: "" });
   }
 
   function removeOption(index: number) {
@@ -271,11 +306,16 @@ export default function GuidedPathFamilyDetail() {
 
   function getQuestionTypeLabel(type: string) {
     switch (type) {
-      case 'boolean': return 'Yes/No';
-      case 'single_choice': return 'Single Choice';
-      case 'multi_choice': return 'Multiple Choice';
-      case 'date': return 'Date';
-      default: return type;
+      case "boolean":
+        return "Yes/No";
+      case "single_choice":
+        return "Single Choice";
+      case "multi_choice":
+        return "Multiple Choice";
+      case "date":
+        return "Date";
+      default:
+        return type;
     }
   }
 
@@ -293,7 +333,9 @@ export default function GuidedPathFamilyDetail() {
         <BackButton />
         <div>
           <h1 className="text-3xl font-bold">{family.name}</h1>
-          <p className="text-muted-foreground">{family.description || 'Configure survey and template blocks'}</p>
+          <p className="text-muted-foreground">
+            {family.description || "Configure survey and template blocks"}
+          </p>
         </div>
       </div>
 
@@ -338,9 +380,7 @@ export default function GuidedPathFamilyDetail() {
                 <TableBody>
                   {questions.map((question, index) => (
                     <TableRow key={question.id}>
-                      <TableCell className="text-muted-foreground">
-                        {index + 1}
-                      </TableCell>
+                      <TableCell className="text-muted-foreground">{index + 1}</TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium">{question.question_text}</p>
@@ -422,7 +462,7 @@ export default function GuidedPathFamilyDetail() {
                   Templates linked to this family. Configure conditions for each.
                 </CardDescription>
               </div>
-              <Button onClick={() => navigate('/admin/guided-path-templates')}>
+              <Button onClick={() => navigate("/admin/guided-path-templates")}>
                 <Link2 className="mr-2 h-4 w-4" />
                 Manage Templates
               </Button>
@@ -479,8 +519,8 @@ export default function GuidedPathFamilyDetail() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={template.is_active ? 'default' : 'secondary'}>
-                          {template.is_active ? 'Active' : 'Inactive'}
+                        <Badge variant={template.is_active ? "default" : "secondary"}>
+                          {template.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -512,12 +552,8 @@ export default function GuidedPathFamilyDetail() {
       <Dialog open={questionDialogOpen} onOpenChange={setQuestionDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>
-              {editingQuestion ? 'Edit Question' : 'Add Question'}
-            </DialogTitle>
-            <DialogDescription>
-              Configure the survey question for path selection
-            </DialogDescription>
+            <DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle>
+            <DialogDescription>Configure the survey question for path selection</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleQuestionSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -537,7 +573,7 @@ export default function GuidedPathFamilyDetail() {
               <Label htmlFor="question_type">Question Type</Label>
               <Select
                 value={questionForm.question_type}
-                onValueChange={(value: QuestionFormData['question_type']) =>
+                onValueChange={(value: QuestionFormData["question_type"]) =>
                   setQuestionForm((prev) => ({ ...prev, question_type: value }))
                 }
               >
@@ -553,8 +589,8 @@ export default function GuidedPathFamilyDetail() {
               </Select>
             </div>
 
-            {(questionForm.question_type === 'single_choice' ||
-              questionForm.question_type === 'multi_choice') && (
+            {(questionForm.question_type === "single_choice" ||
+              questionForm.question_type === "multi_choice") && (
               <div className="space-y-2">
                 <Label>Options</Label>
                 <div className="space-y-2">
@@ -623,7 +659,7 @@ export default function GuidedPathFamilyDetail() {
                 type="submit"
                 disabled={createQuestionMutation.isPending || updateQuestionMutation.isPending}
               >
-                {editingQuestion ? 'Update' : 'Add'}
+                {editingQuestion ? "Update" : "Add"}
               </Button>
             </div>
           </form>
@@ -636,8 +672,8 @@ export default function GuidedPathFamilyDetail() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Question</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this question? This will also remove any
-              conditions using this question.
+              Are you sure you want to delete this question? This will also remove any conditions
+              using this question.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

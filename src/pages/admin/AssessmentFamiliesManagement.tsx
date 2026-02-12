@@ -1,6 +1,6 @@
 /**
  * REFACTORED VERSION - Example of using useAdminCRUD pattern
- * 
+ *
  * This demonstrates the consolidated admin CRUD infrastructure.
  * Compare with the original file to see how much boilerplate is eliminated.
  */
@@ -13,7 +13,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { FolderTree, Gauge } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -63,7 +70,7 @@ const generateSlug = (name: string) => {
 
 export default function AssessmentFamiliesManagement() {
   const { toast } = useToast();
-  
+
   // Use the consolidated CRUD hook - eliminates ~80 lines of boilerplate
   const {
     data: families,
@@ -121,7 +128,7 @@ export default function AssessmentFamiliesManagement() {
     (familyId: string) => {
       return assessmentCounts?.find((c) => c.family_id === familyId)?.count || 0;
     },
-    [assessmentCounts]
+    [assessmentCounts],
   );
 
   const handleNameChange = (name: string) => {

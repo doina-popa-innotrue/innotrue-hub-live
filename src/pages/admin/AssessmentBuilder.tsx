@@ -9,11 +9,22 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/ca
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Edit, Trash2, Loader2, Eye, FileText, Settings, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminCRUD } from "@/hooks/useAdminCRUD";
-import { AdminPageHeader, AdminLoadingState, AdminEmptyState, AdminFormActions } from "@/components/admin";
+import {
+  AdminPageHeader,
+  AdminLoadingState,
+  AdminEmptyState,
+  AdminFormActions,
+} from "@/components/admin";
 
 type Assessment = {
   id: string;
@@ -109,10 +120,7 @@ export default function AssessmentBuilder() {
   const { data: features } = useQuery({
     queryKey: ["admin-features-list"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("features")
-        .select("id, key, name")
-        .order("name");
+      const { data, error } = await supabase.from("features").select("id, key, name").order("name");
 
       if (error) throw error;
       return data as Feature[];
@@ -141,9 +149,7 @@ export default function AssessmentBuilder() {
         feature_key: data.feature_key || null,
         category_id: data.category_id || null,
       };
-      const { error } = await supabase
-        .from("assessment_definitions")
-        .insert([insertData]);
+      const { error } = await supabase.from("assessment_definitions").insert([insertData]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -312,7 +318,11 @@ export default function AssessmentBuilder() {
       toast({ description: "Assessment cloned successfully" });
     },
     onError: (error) => {
-      toast({ title: "Error cloning assessment", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error cloning assessment",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -344,10 +354,10 @@ export default function AssessmentBuilder() {
                 id="name"
                 value={formData.name}
                 onChange={(e) => {
-                  setFormData({ 
-                    ...formData, 
+                  setFormData({
+                    ...formData,
                     name: e.target.value,
-                    slug: editingItem ? formData.slug : generateSlug(e.target.value)
+                    slug: editingItem ? formData.slug : generateSlug(e.target.value),
                   });
                 }}
                 required
@@ -482,15 +492,15 @@ export default function AssessmentBuilder() {
                       <Badge variant={assessment.is_active ? "default" : "secondary"}>
                         {assessment.is_active ? "Active" : "Inactive"}
                       </Badge>
-                      {assessment.is_public && (
-                        <Badge variant="outline">Public</Badge>
-                      )}
+                      {assessment.is_public && <Badge variant="outline">Public</Badge>}
                       {assessment.assessment_categories?.name && (
                         <Badge variant="outline">{assessment.assessment_categories.name}</Badge>
                       )}
                     </div>
                     <CardDescription>
-                      <code className="text-xs bg-muted px-1 py-0.5 rounded">/assess/{assessment.slug}</code>
+                      <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                        /assess/{assessment.slug}
+                      </code>
                     </CardDescription>
                     {assessment.description && (
                       <p className="text-sm text-muted-foreground line-clamp-2">
@@ -510,16 +520,12 @@ export default function AssessmentBuilder() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(`/assess/${assessment.slug}`, '_blank')}
+                      onClick={() => window.open(`/assess/${assessment.slug}`, "_blank")}
                     >
                       <Eye className="h-4 w-4 mr-1" />
                       Preview
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(assessment)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(assessment)}>
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
@@ -534,11 +540,7 @@ export default function AssessmentBuilder() {
                         <Copy className="h-4 w-4" />
                       )}
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(assessment.id)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => handleDelete(assessment.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

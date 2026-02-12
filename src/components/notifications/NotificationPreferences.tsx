@@ -1,27 +1,45 @@
-import { 
-  Bell, Mail, Monitor, Lock, RotateCcw,
-  BookOpen, Calendar, FileText, Target, Scale, 
-  CreditCard, Users, Settings
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { useNotificationPreferences, NotificationTypeWithPreference } from '@/hooks/useNotificationPreferences';
-import { cn } from '@/lib/utils';
+import {
+  Bell,
+  Mail,
+  Monitor,
+  Lock,
+  RotateCcw,
+  BookOpen,
+  Calendar,
+  FileText,
+  Target,
+  Scale,
+  CreditCard,
+  Users,
+  Settings,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  useNotificationPreferences,
+  NotificationTypeWithPreference,
+} from "@/hooks/useNotificationPreferences";
+import { cn } from "@/lib/utils";
 
 const categoryIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  'programs': BookOpen,
-  'sessions': Calendar,
-  'assignments': FileText,
-  'goals': Target,
-  'decisions': Scale,
-  'credits': CreditCard,
-  'groups': Users,
-  'system': Settings,
+  programs: BookOpen,
+  sessions: Calendar,
+  assignments: FileText,
+  goals: Target,
+  decisions: Scale,
+  credits: CreditCard,
+  groups: Users,
+  system: Settings,
 };
 
 export function NotificationPreferences() {
@@ -42,7 +60,7 @@ export function NotificationPreferences() {
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-4">
-            {[1, 2, 3].map(i => (
+            {[1, 2, 3].map((i) => (
               <div key={i} className="h-16 bg-muted rounded" />
             ))}
           </div>
@@ -53,16 +71,16 @@ export function NotificationPreferences() {
 
   const handleToggle = (
     type: NotificationTypeWithPreference,
-    field: 'email_enabled' | 'in_app_enabled',
-    value: boolean
+    field: "email_enabled" | "in_app_enabled",
+    value: boolean,
   ) => {
     // Can't disable critical notifications
     if (type.is_critical) return;
 
     updatePreference({
       typeId: type.id,
-      emailEnabled: field === 'email_enabled' ? value : type.email_enabled,
-      inAppEnabled: field === 'in_app_enabled' ? value : type.in_app_enabled,
+      emailEnabled: field === "email_enabled" ? value : type.email_enabled,
+      inAppEnabled: field === "in_app_enabled" ? value : type.in_app_enabled,
     });
   };
 
@@ -107,11 +125,19 @@ export function NotificationPreferences() {
           </div>
         </div>
 
-        <Accordion type="multiple" defaultValue={typesByCategory.map(c => c.key)} className="space-y-2">
+        <Accordion
+          type="multiple"
+          defaultValue={typesByCategory.map((c) => c.key)}
+          className="space-y-2"
+        >
           {typesByCategory.map((category) => {
             const CategoryIcon = categoryIconMap[category.key] || Bell;
-            const allEmailEnabled = category.types.filter(t => !t.is_critical).every(t => t.email_enabled);
-            const allInAppEnabled = category.types.filter(t => !t.is_critical).every(t => t.in_app_enabled);
+            const allEmailEnabled = category.types
+              .filter((t) => !t.is_critical)
+              .every((t) => t.email_enabled);
+            const allInAppEnabled = category.types
+              .filter((t) => !t.is_critical)
+              .every((t) => t.in_app_enabled);
 
             return (
               <AccordionItem key={category.id} value={category.key} className="border rounded-lg">
@@ -136,7 +162,7 @@ export function NotificationPreferences() {
                       <Mail className="h-4 w-4 text-muted-foreground" />
                       <Switch
                         checked={allEmailEnabled}
-                        onCheckedChange={(checked) => 
+                        onCheckedChange={(checked) =>
                           bulkUpdateCategory({ categoryId: category.id, emailEnabled: checked })
                         }
                         disabled={isUpdating}
@@ -146,7 +172,7 @@ export function NotificationPreferences() {
                       <Monitor className="h-4 w-4 text-muted-foreground" />
                       <Switch
                         checked={allInAppEnabled}
-                        onCheckedChange={(checked) => 
+                        onCheckedChange={(checked) =>
                           bulkUpdateCategory({ categoryId: category.id, inAppEnabled: checked })
                         }
                         disabled={isUpdating}
@@ -160,8 +186,8 @@ export function NotificationPreferences() {
                       <div
                         key={type.id}
                         className={cn(
-                          'flex items-center justify-between p-3 rounded-lg',
-                          type.is_critical ? 'bg-muted/50' : 'hover:bg-muted/30'
+                          "flex items-center justify-between p-3 rounded-lg",
+                          type.is_critical ? "bg-muted/50" : "hover:bg-muted/30",
                         )}
                       >
                         <div className="flex-1">
@@ -183,8 +209,8 @@ export function NotificationPreferences() {
                             <Mail className="h-4 w-4 text-muted-foreground" />
                             <Switch
                               checked={type.email_enabled}
-                              onCheckedChange={(checked) => 
-                                handleToggle(type, 'email_enabled', checked)
+                              onCheckedChange={(checked) =>
+                                handleToggle(type, "email_enabled", checked)
                               }
                               disabled={type.is_critical || isUpdating}
                             />
@@ -193,8 +219,8 @@ export function NotificationPreferences() {
                             <Monitor className="h-4 w-4 text-muted-foreground" />
                             <Switch
                               checked={type.in_app_enabled}
-                              onCheckedChange={(checked) => 
-                                handleToggle(type, 'in_app_enabled', checked)
+                              onCheckedChange={(checked) =>
+                                handleToggle(type, "in_app_enabled", checked)
                               }
                               disabled={type.is_critical || isUpdating}
                             />

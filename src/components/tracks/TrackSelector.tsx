@@ -1,19 +1,13 @@
-import { useUserTracks } from '@/hooks/useUserTracks';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Layers, Check } from 'lucide-react';
+import { useUserTracks } from "@/hooks/useUserTracks";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Layers, Check } from "lucide-react";
 
 export function TrackSelector() {
-  const { 
-    allTracks, 
-    userTracks, 
-    isLoading, 
-    toggleTrack, 
-    isToggling 
-  } = useUserTracks();
+  const { allTracks, userTracks, isLoading, toggleTrack, isToggling } = useUserTracks();
 
   if (isLoading) {
     return (
@@ -31,7 +25,7 @@ export function TrackSelector() {
   }
 
   const isTrackActive = (trackId: string) => {
-    const userTrack = userTracks?.find(ut => ut.track_id === trackId);
+    const userTrack = userTracks?.find((ut) => ut.track_id === trackId);
     return userTrack?.is_active ?? false;
   };
 
@@ -43,7 +37,8 @@ export function TrackSelector() {
           My Tracks
         </CardTitle>
         <CardDescription>
-          Select which tracks are relevant to you. This customizes your experience to show only what matters.
+          Select which tracks are relevant to you. This customizes your experience to show only what
+          matters.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -53,14 +48,14 @@ export function TrackSelector() {
             <div
               key={track.id}
               className={`flex items-start justify-between p-4 rounded-lg border transition-colors ${
-                isActive 
-                  ? 'border-primary bg-primary/5' 
-                  : 'border-border hover:border-muted-foreground/50'
+                isActive
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-muted-foreground/50"
               }`}
             >
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <Label 
+                  <Label
                     htmlFor={`track-${track.id}`}
                     className="text-base font-medium cursor-pointer"
                   >
@@ -74,17 +69,13 @@ export function TrackSelector() {
                   )}
                 </div>
                 {track.description && (
-                  <p className="text-sm text-muted-foreground">
-                    {track.description}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{track.description}</p>
                 )}
               </div>
               <Switch
                 id={`track-${track.id}`}
                 checked={isActive}
-                onCheckedChange={(checked) => 
-                  toggleTrack({ trackId: track.id, isActive: checked })
-                }
+                onCheckedChange={(checked) => toggleTrack({ trackId: track.id, isActive: checked })}
                 disabled={isToggling}
               />
             </div>
@@ -92,9 +83,7 @@ export function TrackSelector() {
         })}
 
         {(!allTracks || allTracks.length === 0) && (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            No tracks available
-          </p>
+          <p className="text-sm text-muted-foreground text-center py-4">No tracks available</p>
         )}
       </CardContent>
     </Card>

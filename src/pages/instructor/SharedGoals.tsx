@@ -1,15 +1,20 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Target, Calendar, User } from 'lucide-react';
-import { format } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
-import GoalComments from '@/components/goals/GoalComments';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Target, Calendar, User } from "lucide-react";
+import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import GoalComments from "@/components/goals/GoalComments";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface SharedGoal {
   id: string;
@@ -28,25 +33,25 @@ interface SharedGoal {
   };
 }
 
-import { CATEGORY_LABELS } from '@/lib/wheelOfLifeCategories';
+import { CATEGORY_LABELS } from "@/lib/wheelOfLifeCategories";
 
 const TIMEFRAME_LABELS: Record<string, string> = {
-  short: 'Short-term',
-  medium: 'Medium-term',
-  long: 'Long-term',
+  short: "Short-term",
+  medium: "Medium-term",
+  long: "Long-term",
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  not_started: 'bg-secondary text-secondary-foreground',
-  in_progress: 'bg-primary/15 text-primary',
-  completed: 'bg-success/15 text-success',
-  paused: 'bg-warning/15 text-warning',
+  not_started: "bg-secondary text-secondary-foreground",
+  in_progress: "bg-primary/15 text-primary",
+  completed: "bg-success/15 text-success",
+  paused: "bg-warning/15 text-warning",
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  low: 'bg-muted text-muted-foreground',
-  medium: 'bg-primary/15 text-primary',
-  high: 'bg-destructive/15 text-destructive',
+  low: "bg-muted text-muted-foreground",
+  medium: "bg-primary/15 text-primary",
+  high: "bg-destructive/15 text-destructive",
 };
 
 export default function SharedGoals() {
@@ -65,8 +70,9 @@ export default function SharedGoals() {
   const fetchSharedGoals = async () => {
     try {
       const { data, error } = await supabase
-        .from('goal_shares')
-        .select(`
+        .from("goal_shares")
+        .select(
+          `
           goal_id,
           goals!inner (
             id,
@@ -81,38 +87,37 @@ export default function SharedGoals() {
             created_at,
             user_id
           )
-        `)
-        .eq('shared_with_user_id', user?.id ?? '');
+        `,
+        )
+        .eq("shared_with_user_id", user?.id ?? "");
 
       if (error) throw error;
 
       // Flatten the data and fetch user profiles separately
-      const sharedGoals = data
-        .map(share => share.goals)
-        .filter(Boolean) as any[];
+      const sharedGoals = data.map((share) => share.goals).filter(Boolean) as any[];
 
       // Fetch profiles for each goal
       const goalsWithProfiles = await Promise.all(
         sharedGoals.map(async (goal) => {
           const { data: profile } = await supabase
-            .from('profiles')
-            .select('name')
-            .eq('id', goal.user_id)
+            .from("profiles")
+            .select("name")
+            .eq("id", goal.user_id)
             .single();
-          
+
           return {
             ...goal,
-            profiles: profile || { name: 'Unknown' },
+            profiles: profile || { name: "Unknown" },
           };
-        })
+        }),
       );
 
       setGoals(goalsWithProfiles);
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to load shared goals',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load shared goals",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -151,14 +156,14 @@ export default function SharedGoals() {
         </Card>
       ) : (
         <Accordion type="single" collapsible className="space-y-4">
-          {goals.map(goal => (
+          {goals.map((goal) => (
             <AccordionItem key={goal.id} value={goal.id} className="border rounded-lg">
               <AccordionTrigger className="px-6 hover:no-underline">
                 <div className="flex items-start justify-between w-full pr-4">
                   <div className="flex-1 text-left">
                     <div className="flex items-center gap-2 mb-2">
                       <Badge className={STATUS_COLORS[goal.status]}>
-                        {goal.status.replace('_', ' ')}
+                        {goal.status.replace("_", " ")}
                       </Badge>
                       <Badge className={PRIORITY_COLORS[goal.priority]} variant="outline">
                         {goal.priority}
@@ -178,9 +183,7 @@ export default function SharedGoals() {
               </AccordionTrigger>
               <AccordionContent className="px-6 pb-6">
                 <div className="space-y-6">
-                  {goal.description && (
-                    <p className="text-muted-foreground">{goal.description}</p>
-                  )}
+                  {goal.description && <p className="text-muted-foreground">{goal.description}</p>}
 
                   <div>
                     <div className="flex items-center justify-between mb-2 text-sm">
@@ -204,14 +207,14 @@ export default function SharedGoals() {
                         <span className="text-muted-foreground">Target Date:</span>
                         <p className="font-medium flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {format(new Date(goal.target_date), 'MMM d, yyyy')}
+                          {format(new Date(goal.target_date), "MMM d, yyyy")}
                         </p>
                       </div>
                     )}
                     <div>
                       <span className="text-muted-foreground">Created:</span>
                       <p className="font-medium">
-                        {format(new Date(goal.created_at), 'MMM d, yyyy')}
+                        {format(new Date(goal.created_at), "MMM d, yyyy")}
                       </p>
                     </div>
                   </div>

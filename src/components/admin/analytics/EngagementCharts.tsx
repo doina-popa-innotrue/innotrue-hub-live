@@ -43,18 +43,15 @@ export function EngagementCharts({ analytics, isLoading }: EngagementChartsProps
 
   // Format page paths for display
   const pageData = (analytics.top_pages || [])
-    .filter(p => p.page_path)
+    .filter((p) => p.page_path)
     .slice(0, 10)
-    .map(page => ({
+    .map((page) => ({
       ...page,
-      displayPath: page.page_path.length > 30 
-        ? page.page_path.substring(0, 30) + "..." 
-        : page.page_path,
+      displayPath:
+        page.page_path.length > 30 ? page.page_path.substring(0, 30) + "..." : page.page_path,
     }));
 
-  const featureData = (analytics.feature_usage || [])
-    .filter(f => f.feature)
-    .slice(0, 10);
+  const featureData = (analytics.feature_usage || []).filter((f) => f.feature).slice(0, 10);
 
   return (
     <div className="space-y-6">
@@ -102,23 +99,25 @@ export function EngagementCharts({ analytics, isLoading }: EngagementChartsProps
               <BarChart data={featureData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis type="number" className="text-xs" />
-                <YAxis 
-                  type="category" 
-                  dataKey="feature" 
+                <YAxis
+                  type="category"
+                  dataKey="feature"
                   width={150}
                   className="text-xs"
-                  tickFormatter={(value) => value.length > 20 ? value.substring(0, 20) + "..." : value}
+                  tickFormatter={(value) =>
+                    value.length > 20 ? value.substring(0, 20) + "..." : value
+                  }
                 />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))', 
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: 'var(--radius)'
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "var(--radius)",
                   }}
                 />
-                <Bar 
-                  dataKey="usage_count" 
-                  fill="hsl(var(--primary))" 
+                <Bar
+                  dataKey="usage_count"
+                  fill="hsl(var(--primary))"
                   radius={[0, 4, 4, 0]}
                   name="Usage Count"
                 />
@@ -128,7 +127,8 @@ export function EngagementCharts({ analytics, isLoading }: EngagementChartsProps
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <p>No feature usage data available</p>
               <p className="text-sm mt-2">
-                Features are tracked when you call <code className="bg-muted px-1 rounded">trackFeatureUsage()</code>
+                Features are tracked when you call{" "}
+                <code className="bg-muted px-1 rounded">trackFeatureUsage()</code>
               </p>
             </div>
           )}

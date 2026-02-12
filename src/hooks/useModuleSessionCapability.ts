@@ -18,11 +18,11 @@ interface ModuleSessionCapabilityResult {
 
 /**
  * Resilient hook to check if a module type supports sessions.
- * 
+ *
  * Uses a dual-layer approach:
  * 1. First tries edge function (same-origin, bypasses browser privacy blocks)
  * 2. Falls back to direct RPC if edge function fails
- * 
+ *
  * This ensures the session section is visible even when browsers block
  * cross-site requests to the Supabase API domain.
  */
@@ -50,7 +50,7 @@ export function useModuleSessionCapability({
           "check-module-capability",
           {
             body: { moduleType, moduleId },
-          }
+          },
         );
 
         if (!edgeError && edgeData && typeof edgeData.hasMapping === "boolean") {
@@ -68,9 +68,9 @@ export function useModuleSessionCapability({
       // Strategy 2: Fall back to direct RPC (works when not blocked)
       try {
         console.log("[Session Capability] Falling back to direct RPC...");
-        
+
         let resolvedModuleType = moduleType;
-        
+
         // If we only have moduleId, fetch the module type first
         if (!resolvedModuleType && moduleId) {
           const { data: moduleData, error: moduleError } = await supabase
@@ -93,7 +93,7 @@ export function useModuleSessionCapability({
 
         const { data: rpcData, error: rpcError } = await supabase.rpc(
           "module_type_has_session_capability",
-          { _module_type: resolvedModuleType }
+          { _module_type: resolvedModuleType },
         );
 
         if (rpcError) {

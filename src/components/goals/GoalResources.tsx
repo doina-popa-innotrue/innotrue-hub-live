@@ -1,17 +1,41 @@
-import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Link2, FileImage, FileText, ExternalLink, Upload, Download } from 'lucide-react';
-import { format } from 'date-fns';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Plus,
+  Trash2,
+  Link2,
+  FileImage,
+  FileText,
+  ExternalLink,
+  Upload,
+  Download,
+} from "lucide-react";
+import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Resource {
   id: string;
@@ -42,14 +66,14 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
   const [showDialog, setShowDialog] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [uploadMode, setUploadMode] = useState<'url' | 'file'>('url');
+  const [uploadMode, setUploadMode] = useState<"url" | "file">("url");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  
+
   const [formData, setFormData] = useState({
-    title: '',
-    resource_type: 'link',
-    url: '',
-    description: '',
+    title: "",
+    resource_type: "link",
+    url: "",
+    description: "",
   });
 
   useEffect(() => {
@@ -59,18 +83,18 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
   const fetchResources = async () => {
     try {
       const { data, error } = await supabase
-        .from('goal_resources')
-        .select('*')
-        .eq('goal_id', goalId)
-        .order('created_at', { ascending: false });
+        .from("goal_resources")
+        .select("*")
+        .eq("goal_id", goalId)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setResources(data || []);
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to load resources',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load resources",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -82,12 +106,12 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
     if (!file) return;
 
     // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
     if (!validTypes.includes(file.type)) {
       toast({
-        title: 'Invalid file type',
-        description: 'Please upload an image (JPG, PNG, GIF, WEBP) or PDF file',
-        variant: 'destructive',
+        title: "Invalid file type",
+        description: "Please upload an image (JPG, PNG, GIF, WEBP) or PDF file",
+        variant: "destructive",
       });
       return;
     }
@@ -95,93 +119,90 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast({
-        title: 'File too large',
-        description: 'Please upload a file smaller than 10MB',
-        variant: 'destructive',
+        title: "File too large",
+        description: "Please upload a file smaller than 10MB",
+        variant: "destructive",
       });
       return;
     }
 
     setSelectedFile(file);
-    
+
     // Auto-set title if empty
     if (!formData.title) {
       setFormData({ ...formData, title: file.name });
     }
 
     // Auto-detect resource type
-    if (file.type.startsWith('image/')) {
-      setFormData({ ...formData, resource_type: 'image', title: formData.title || file.name });
-    } else if (file.type === 'application/pdf') {
-      setFormData({ ...formData, resource_type: 'pdf', title: formData.title || file.name });
+    if (file.type.startsWith("image/")) {
+      setFormData({ ...formData, resource_type: "image", title: formData.title || file.name });
+    } else if (file.type === "application/pdf") {
+      setFormData({ ...formData, resource_type: "pdf", title: formData.title || file.name });
     }
   };
 
   const uploadFile = async (file: File, userId: string) => {
-    const fileExt = file.name.split('.').pop();
+    const fileExt = file.name.split(".").pop();
     const fileName = `${userId}/${goalId}/${Date.now()}.${fileExt}`;
 
-    const { data, error } = await supabase.storage
-      .from('goal-resources')
-      .upload(fileName, file);
+    const { data, error } = await supabase.storage.from("goal-resources").upload(fileName, file);
 
     if (error) throw error;
     return fileName;
   };
 
   const getPublicUrl = (filePath: string) => {
-    const { data } = supabase.storage
-      .from('goal-resources')
-      .getPublicUrl(filePath);
+    const { data } = supabase.storage.from("goal-resources").getPublicUrl(filePath);
     return data.publicUrl;
   };
 
   const handleSave = async () => {
     if (!formData.title.trim()) {
       toast({
-        title: 'Validation Error',
-        description: 'Title is required',
-        variant: 'destructive',
+        title: "Validation Error",
+        description: "Title is required",
+        variant: "destructive",
       });
       return;
     }
 
-    if (uploadMode === 'url' && !formData.url.trim()) {
+    if (uploadMode === "url" && !formData.url.trim()) {
       toast({
-        title: 'Validation Error',
-        description: 'URL is required',
-        variant: 'destructive',
+        title: "Validation Error",
+        description: "URL is required",
+        variant: "destructive",
       });
       return;
     }
 
-    if (uploadMode === 'file' && !selectedFile) {
+    if (uploadMode === "file" && !selectedFile) {
       toast({
-        title: 'Validation Error',
-        description: 'Please select a file to upload',
-        variant: 'destructive',
+        title: "Validation Error",
+        description: "Please select a file to upload",
+        variant: "destructive",
       });
       return;
     }
 
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
       let filePath: string | null = null;
       let url: string | null = null;
 
-      if (uploadMode === 'file' && selectedFile) {
+      if (uploadMode === "file" && selectedFile) {
         filePath = await uploadFile(selectedFile, user.id);
         url = getPublicUrl(filePath);
       } else {
         url = formData.url;
       }
 
-      const { error } = await supabase
-        .from('goal_resources')
-        .insert([{
+      const { error } = await supabase.from("goal_resources").insert([
+        {
           goal_id: goalId,
           user_id: user.id,
           title: formData.title,
@@ -189,20 +210,21 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
           url: url,
           file_path: filePath,
           description: formData.description || null,
-        }]);
+        },
+      ]);
 
       if (error) throw error;
 
-      toast({ title: 'Success', description: 'Resource added successfully' });
-      setFormData({ title: '', resource_type: 'link', url: '', description: '' });
+      toast({ title: "Success", description: "Resource added successfully" });
+      setFormData({ title: "", resource_type: "link", url: "", description: "" });
       setSelectedFile(null);
       setShowDialog(false);
       fetchResources();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to add resource',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to add resource",
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -214,34 +236,31 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
 
     try {
       // Get the resource to check if it has a file_path
-      const resource = resources.find(r => r.id === deleteId);
-      
+      const resource = resources.find((r) => r.id === deleteId);
+
       // Delete from storage if it has a file_path
       if (resource?.file_path) {
         const { error: storageError } = await supabase.storage
-          .from('goal-resources')
+          .from("goal-resources")
           .remove([resource.file_path]);
-        
+
         if (storageError) {
-          console.error('Storage deletion error:', storageError);
+          console.error("Storage deletion error:", storageError);
           // Continue with database deletion even if storage fails
         }
       }
 
       // Delete from database
-      const { error } = await supabase
-        .from('goal_resources')
-        .delete()
-        .eq('id', deleteId);
+      const { error } = await supabase.from("goal_resources").delete().eq("id", deleteId);
 
       if (error) throw error;
-      toast({ title: 'Success', description: 'Resource deleted successfully' });
+      toast({ title: "Success", description: "Resource deleted successfully" });
       fetchResources();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to delete resource',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to delete resource",
+        variant: "destructive",
       });
     } finally {
       setDeleteId(null);
@@ -251,20 +270,20 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
   const handleDownload = async (resource: Resource) => {
     if (!resource.file_path) {
       // If no file_path, just open the URL
-      window.open(resource.url || '#', '_blank');
+      window.open(resource.url || "#", "_blank");
       return;
     }
 
     try {
       const { data, error } = await supabase.storage
-        .from('goal-resources')
+        .from("goal-resources")
         .download(resource.file_path);
 
       if (error) throw error;
 
       // Create download link
       const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = resource.title;
       document.body.appendChild(a);
@@ -273,9 +292,9 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
       URL.revokeObjectURL(url);
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to download file',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to download file",
+        variant: "destructive",
       });
     }
   };
@@ -308,7 +327,8 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
               {resources.map((resource) => {
-                const Icon = RESOURCE_ICONS[resource.resource_type as keyof typeof RESOURCE_ICONS] || FileText;
+                const Icon =
+                  RESOURCE_ICONS[resource.resource_type as keyof typeof RESOURCE_ICONS] || FileText;
                 return (
                   <div
                     key={resource.id}
@@ -337,7 +357,7 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
                               </Button>
                             ) : (
                               <a
-                                href={resource.url || '#'}
+                                href={resource.url || "#"}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs text-primary hover:underline flex items-center gap-1"
@@ -346,16 +366,12 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
                               </a>
                             )}
                             <span className="text-xs text-muted-foreground">
-                              {format(new Date(resource.created_at), 'MMM d, yyyy')}
+                              {format(new Date(resource.created_at), "MMM d, yyyy")}
                             </span>
                           </div>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleteId(resource.id)}
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteId(resource.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
@@ -372,8 +388,8 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
           <DialogHeader>
             <DialogTitle>Add Resource</DialogTitle>
           </DialogHeader>
-          
-          <Tabs value={uploadMode} onValueChange={(v) => setUploadMode(v as 'url' | 'file')}>
+
+          <Tabs value={uploadMode} onValueChange={(v) => setUploadMode(v as "url" | "file")}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="url">
                 <Link2 className="h-4 w-4 mr-2" />
@@ -466,7 +482,7 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
                       onClick={() => {
                         setSelectedFile(null);
                         if (fileInputRef.current) {
-                          fileInputRef.current.value = '';
+                          fileInputRef.current.value = "";
                         }
                       }}
                     >
@@ -479,7 +495,8 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
                 </p>
                 {selectedFile && (
                   <div className="text-sm text-muted-foreground">
-                    Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                    Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}{" "}
+                    MB)
                   </div>
                 )}
               </div>
@@ -498,15 +515,19 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
           </Tabs>
 
           <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => {
-              setShowDialog(false);
-              setSelectedFile(null);
-              setFormData({ title: '', resource_type: 'link', url: '', description: '' });
-            }} disabled={saving}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDialog(false);
+                setSelectedFile(null);
+                setFormData({ title: "", resource_type: "link", url: "", description: "" });
+              }}
+              disabled={saving}
+            >
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Adding...' : 'Add Resource'}
+              {saving ? "Adding..." : "Add Resource"}
             </Button>
           </div>
         </DialogContent>
@@ -522,7 +543,10 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

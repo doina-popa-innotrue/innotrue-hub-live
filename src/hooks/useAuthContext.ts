@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface AuthContextData {
   id: string;
@@ -25,34 +25,35 @@ export interface AuthContextData {
 
 const DEFAULT_FEATURES = [
   {
-    icon: 'Target',
-    title: 'Goal-Driven Growth',
-    description: 'Set meaningful goals and track your progress with structured milestones'
+    icon: "Target",
+    title: "Goal-Driven Growth",
+    description: "Set meaningful goals and track your progress with structured milestones",
   },
   {
-    icon: 'Users',
-    title: 'Expert Training and Coaching',
-    description: 'Partner up with certified coaches and instructors for personalized development'
+    icon: "Users",
+    title: "Expert Training and Coaching",
+    description: "Partner up with certified coaches and instructors for personalized development",
   },
   {
-    icon: 'TrendingUp',
-    title: 'Decision Intelligence',
-    description: 'Make better decisions with proven frameworks and reflection tools'
+    icon: "TrendingUp",
+    title: "Decision Intelligence",
+    description: "Make better decisions with proven frameworks and reflection tools",
   },
   {
-    icon: 'Sparkles',
-    title: 'AI-Powered Insights',
-    description: 'Receive intelligent recommendations tailored to your journey'
-  }
+    icon: "Sparkles",
+    title: "AI-Powered Insights",
+    description: "Receive intelligent recommendations tailored to your journey",
+  },
 ];
 
 const DEFAULT_CONTEXT: AuthContextData = {
-  id: 'default',
-  slug: 'default',
-  context_type: 'generic',
-  headline: 'Your platform for lifelong development',
-  subheadline: 'Evolving people. Strengthening organisations.',
-  description: 'InnoTrue Hub is your comprehensive platform for personal and professional evolution. Transform your potential through structured programs, expert coaching, and intelligent insights.',
+  id: "default",
+  slug: "default",
+  context_type: "generic",
+  headline: "Your platform for lifelong development",
+  subheadline: "Evolving people. Strengthening organisations.",
+  description:
+    "InnoTrue Hub is your comprehensive platform for personal and professional evolution. Transform your potential through structured programs, expert coaching, and intelligent insights.",
   features: DEFAULT_FEATURES,
   logo_url: null,
   primary_color: null,
@@ -84,33 +85,33 @@ export function useAuthContext(contextSlug: string | null) {
         // Use the public view for auth context lookups (safer - only exposes necessary columns)
         // First try to find by public_code
         let { data, error: fetchError } = await supabase
-          .from('auth_contexts_public')
-          .select('*')
-          .eq('public_code', contextSlug)
+          .from("auth_contexts_public")
+          .select("*")
+          .eq("public_code", contextSlug)
           .maybeSingle();
 
         // If not found by public_code, try slug (only if context allows it)
         if (!data) {
           const { data: slugData } = await supabase
-            .from('auth_contexts_public')
-            .select('*')
-            .eq('slug', contextSlug)
-            .eq('allow_slug_access', true)
+            .from("auth_contexts_public")
+            .select("*")
+            .eq("slug", contextSlug)
+            .eq("allow_slug_access", true)
             .maybeSingle();
-          
+
           data = slugData;
         }
 
         if (!data) {
-          console.warn('Auth context not found:', contextSlug);
+          console.warn("Auth context not found:", contextSlug);
           setContext(DEFAULT_CONTEXT);
         } else {
           // Merge with defaults for any missing fields
-          const features = data.features as AuthContextData['features'];
+          const features = data.features as AuthContextData["features"];
           setContext({
-            id: data.id ?? '',
-            slug: data.slug ?? '',
-            context_type: data.context_type ?? 'generic',
+            id: data.id ?? "",
+            slug: data.slug ?? "",
+            context_type: data.context_type ?? "generic",
             headline: data.headline || DEFAULT_CONTEXT.headline,
             subheadline: data.subheadline || DEFAULT_CONTEXT.subheadline,
             description: data.description || DEFAULT_CONTEXT.description,
@@ -126,8 +127,8 @@ export function useAuthContext(contextSlug: string | null) {
           });
         }
       } catch (err) {
-        console.error('Error fetching auth context:', err);
-        setError('Failed to load context');
+        console.error("Error fetching auth context:", err);
+        setError("Failed to load context");
         setContext(DEFAULT_CONTEXT);
       } finally {
         setIsLoading(false);

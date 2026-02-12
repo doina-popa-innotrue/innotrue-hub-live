@@ -9,7 +9,22 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { ClipboardCheck, Save, CheckCircle, FileText, Plus, BookOpen, ExternalLink, Trash2, Lightbulb, StickyNote, Target, Link as LinkIcon, ArrowRight, TrendingUp } from "lucide-react";
+import {
+  ClipboardCheck,
+  Save,
+  CheckCircle,
+  FileText,
+  Plus,
+  BookOpen,
+  ExternalLink,
+  Trash2,
+  Lightbulb,
+  StickyNote,
+  Target,
+  Link as LinkIcon,
+  ArrowRight,
+  TrendingUp,
+} from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { DevelopmentItemDialog } from "@/components/capabilities/DevelopmentItemDialog";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -38,12 +53,12 @@ interface InstructorAssignmentScoringProps {
   onComplete?: () => void;
 }
 
-export function InstructorAssignmentScoring({ 
-  assignmentId, 
+export function InstructorAssignmentScoring({
+  assignmentId,
   assignmentTypeId,
   moduleProgressId,
   linkedCapabilityAssessmentId,
-  onComplete 
+  onComplete,
 }: InstructorAssignmentScoringProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -74,7 +89,8 @@ export function InstructorAssignmentScoring({
   });
 
   // Determine which assessment ID to use - linked takes priority
-  const effectiveAssessmentId = linkedCapabilityAssessmentId || assignmentType?.scoring_assessment_id;
+  const effectiveAssessmentId =
+    linkedCapabilityAssessmentId || assignmentType?.scoring_assessment_id;
 
   // Get the scoring/evaluation assessment details
   const { data: assessment } = useQuery({
@@ -113,7 +129,7 @@ export function InstructorAssignmentScoring({
             .eq("domain_id", domain.id)
             .order("order_index");
           return { ...domain, questions: questions || [] } as Domain;
-        })
+        }),
       );
       return domainsWithQuestions;
     },
@@ -130,7 +146,7 @@ export function InstructorAssignmentScoring({
         .eq("id", assignmentId)
         .single();
       if (assignmentError) throw assignmentError;
-      
+
       if (!assignment.scoring_snapshot_id) {
         return {
           assignmentStatus: assignment.status,
@@ -140,7 +156,7 @@ export function InstructorAssignmentScoring({
           instructorNotes: assignment.instructor_notes || "",
         };
       }
-      
+
       const { data: snapshot, error: snapshotError } = await supabase
         .from("capability_snapshots")
         .select("id, status")
@@ -181,13 +197,13 @@ export function InstructorAssignmentScoring({
   useEffect(() => {
     if (existingSnapshot) {
       const ratingsMap: Record<string, number> = {};
-      existingSnapshot.ratings.forEach(r => {
+      existingSnapshot.ratings.forEach((r) => {
         ratingsMap[r.question_id] = r.rating;
       });
       setRatings(ratingsMap);
 
       const notesMap: Record<string, string> = {};
-      existingSnapshot.notes.forEach(n => {
+      existingSnapshot.notes.forEach((n) => {
         notesMap[n.question_id] = n.content;
       });
       setNotes(notesMap);
@@ -226,20 +242,21 @@ export function InstructorAssignmentScoring({
     queryKey: ["instructor-resources", snapshotId],
     queryFn: async () => {
       if (!snapshotId) return [];
-      
+
       // Get items linked to this snapshot
       const { data: links, error: linksError } = await supabase
         .from("development_item_snapshot_links")
         .select("development_item_id")
         .eq("snapshot_id", snapshotId);
-      
+
       if (linksError) throw linksError;
       if (!links || links.length === 0) return [];
 
-      const itemIds = links.map(l => l.development_item_id);
+      const itemIds = links.map((l) => l.development_item_id);
       const { data: items, error: itemsError } = await supabase
         .from("development_items")
-        .select(`
+        .select(
+          `
           id, 
           item_type, 
           title, 
@@ -255,7 +272,8 @@ export function InstructorAssignmentScoring({
             resource_type,
             file_path
           )
-        `)
+        `,
+        )
         .in("id", itemIds)
         .in("item_type", ["resource", "note", "action_item", "reflection"]);
 
@@ -270,16 +288,16 @@ export function InstructorAssignmentScoring({
     queryKey: ["instructor-question-dev-items", snapshotId],
     queryFn: async () => {
       if (!snapshotId) return {};
-      
+
       const { data: links, error: linksError } = await supabase
         .from("development_item_question_links")
         .select("question_id, development_item_id")
         .eq("snapshot_id", snapshotId);
-      
+
       if (linksError) throw linksError;
       if (!links || links.length === 0) return {};
 
-      const itemIds = [...new Set(links.map(l => l.development_item_id))];
+      const itemIds = [...new Set(links.map((l) => l.development_item_id))];
       const { data: items, error: itemsError } = await supabase
         .from("development_items")
         .select("id, item_type, title, content, resource_url, library_resource_id, file_path")
@@ -288,23 +306,27 @@ export function InstructorAssignmentScoring({
       if (itemsError) throw itemsError;
 
       // For items with library_resource_id, fetch the resource details
-      const libraryResourceIds = items?.filter(i => i.library_resource_id).map(i => i.library_resource_id!) || [];
+      const libraryResourceIds =
+        items?.filter((i) => i.library_resource_id).map((i) => i.library_resource_id!) || [];
       let libraryResources: Record<string, { title: string; resource_url: string | null }> = {};
-      
+
       if (libraryResourceIds.length > 0) {
         const { data: libRes } = await supabase
           .from("resource_library")
           .select("id, title, url")
           .in("id", libraryResourceIds);
-        
-        libraryResources = (libRes || []).reduce((acc, r) => {
-          acc[r.id] = { title: r.title, resource_url: r.url };
-          return acc;
-        }, {} as Record<string, { title: string; resource_url: string | null }>);
+
+        libraryResources = (libRes || []).reduce(
+          (acc, r) => {
+            acc[r.id] = { title: r.title, resource_url: r.url };
+            return acc;
+          },
+          {} as Record<string, { title: string; resource_url: string | null }>,
+        );
       }
 
       // Enhance items with library resource info
-      const enhancedItems = items?.map(item => {
+      const enhancedItems = items?.map((item) => {
         if (item.library_resource_id && libraryResources[item.library_resource_id]) {
           const libRes = libraryResources[item.library_resource_id];
           return {
@@ -315,11 +337,11 @@ export function InstructorAssignmentScoring({
         }
         return item;
       });
-      
+
       // Group by question_id
       const grouped: Record<string, typeof enhancedItems> = {};
       for (const link of links) {
-        const item = enhancedItems?.find(i => i.id === link.development_item_id);
+        const item = enhancedItems?.find((i) => i.id === link.development_item_id);
         if (item) {
           if (!grouped[link.question_id]) grouped[link.question_id] = [];
           grouped[link.question_id].push(item);
@@ -332,10 +354,7 @@ export function InstructorAssignmentScoring({
 
   const deleteResourceMutation = useMutation({
     mutationFn: async (itemId: string) => {
-      const { error } = await supabase
-        .from("development_items")
-        .delete()
-        .eq("id", itemId);
+      const { error } = await supabase.from("development_items").delete().eq("id", itemId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -344,7 +363,11 @@ export function InstructorAssignmentScoring({
       toast({ description: "Resource removed" });
     },
     onError: (error) => {
-      toast({ title: "Error removing resource", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error removing resource",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -448,10 +471,10 @@ export function InstructorAssignmentScoring({
     onSuccess: async (_, { status }) => {
       queryClient.invalidateQueries({ queryKey: ["assignment-scoring-snapshot", assignmentId] });
       queryClient.invalidateQueries({ queryKey: ["module-assignment"] });
-      toast({ 
-        title: status === "completed" ? "Scoring completed" : "Scoring saved as draft" 
+      toast({
+        title: status === "completed" ? "Scoring completed" : "Scoring saved as draft",
       });
-      
+
       // Send notification to client when scoring is completed
       if (status === "completed") {
         try {
@@ -465,17 +488,17 @@ export function InstructorAssignmentScoring({
         } catch (notifyError) {
           console.error("Failed to send grading notification:", notifyError);
         }
-        
+
         if (onComplete) {
           onComplete();
         }
       }
     },
     onError: (error) => {
-      toast({ 
-        title: "Error saving scoring", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Error saving scoring",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
@@ -543,7 +566,7 @@ export function InstructorAssignmentScoring({
                 </Button>
               )}
             </div>
-            
+
             {domain.questions.map((question) => (
               <div key={question.id} className="pl-4 border-l-2 border-muted space-y-2">
                 <div className="flex items-start justify-between gap-2">
@@ -568,7 +591,7 @@ export function InstructorAssignmentScoring({
                     </Button>
                   )}
                 </div>
-                
+
                 <div className="space-y-2 pt-1">
                   <Slider
                     value={[ratings[question.id] || 1]}
@@ -611,38 +634,50 @@ export function InstructorAssignmentScoring({
                       Resources & Items ({questionDevItems[question.id].length})
                     </p>
                     {questionDevItems[question.id].map((item) => {
-                      const TypeIcon = item.item_type === "reflection" ? StickyNote 
-                        : item.item_type === "action_item" ? Target
-                        : item.item_type === "resource" ? LinkIcon
-                        : FileText;
+                      const TypeIcon =
+                        item.item_type === "reflection"
+                          ? StickyNote
+                          : item.item_type === "action_item"
+                            ? Target
+                            : item.item_type === "resource"
+                              ? LinkIcon
+                              : FileText;
                       const hasDirectUrl = !!item.resource_url;
                       const hasLibraryResource = !!item.library_resource_id;
                       const isClickable = hasDirectUrl || hasLibraryResource;
-                      
+
                       const handleItemClick = () => {
                         if (hasDirectUrl) {
-                          window.open(item.resource_url!, '_blank');
+                          window.open(item.resource_url!, "_blank");
                         } else if (hasLibraryResource) {
                           navigate(`/resources/${item.library_resource_id}`);
                         }
                       };
-                      
+
                       return (
-                        <div 
-                          key={item.id} 
-                          className={`flex items-start gap-2 pl-4 py-1.5 rounded-md bg-muted/30 text-sm ${isClickable ? 'cursor-pointer hover:bg-muted/50' : ''}`}
+                        <div
+                          key={item.id}
+                          className={`flex items-start gap-2 pl-4 py-1.5 rounded-md bg-muted/30 text-sm ${isClickable ? "cursor-pointer hover:bg-muted/50" : ""}`}
                           onClick={isClickable ? handleItemClick : undefined}
                         >
                           <TypeIcon className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <span className={`font-medium ${isClickable ? 'text-primary hover:underline' : ''}`}>{item.title}</span>
+                            <span
+                              className={`font-medium ${isClickable ? "text-primary hover:underline" : ""}`}
+                            >
+                              {item.title}
+                            </span>
                             {item.content && (
-                              <p className="text-xs text-muted-foreground line-clamp-1">{item.content}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-1">
+                                {item.content}
+                              </p>
                             )}
                             {isClickable && (
                               <span className="text-xs text-primary flex items-center gap-1 mt-0.5">
                                 <ExternalLink className="h-3 w-3" />
-                                {hasLibraryResource && !hasDirectUrl ? "View resource" : "Open resource"}
+                                {hasLibraryResource && !hasDirectUrl
+                                  ? "View resource"
+                                  : "Open resource"}
                               </span>
                             )}
                           </div>
@@ -743,9 +778,10 @@ export function InstructorAssignmentScoring({
               </Button>
             )}
           </div>
-          
+
           <p className="text-xs text-muted-foreground">
-            Add helpful resources, links, or notes that will be visible to the client with their evaluation.
+            Add helpful resources, links, or notes that will be visible to the client with their
+            evaluation.
           </p>
 
           {instructorResources && instructorResources.length > 0 ? (
@@ -753,25 +789,34 @@ export function InstructorAssignmentScoring({
               {instructorResources.map((item) => {
                 const libraryResource = (item as any).library_resources;
                 const resourceType = (item as any).resource_type;
-                const isLibraryResource = resourceType === 'library' && libraryResource;
-                
+                const isLibraryResource = resourceType === "library" && libraryResource;
+
                 return (
-                  <div key={item.id} className="flex items-start gap-2 p-2 rounded-md bg-background border">
+                  <div
+                    key={item.id}
+                    className="flex items-start gap-2 p-2 rounded-md bg-background border"
+                  >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs shrink-0">
-                          {item.item_type === "resource" ? (isLibraryResource ? "Library" : "Resource") : "Note"}
+                          {item.item_type === "resource"
+                            ? isLibraryResource
+                              ? "Library"
+                              : "Resource"
+                            : "Note"}
                         </Badge>
                         <span className="font-medium text-sm truncate">{item.title}</span>
                       </div>
                       {item.content && (
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.content}</p>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                          {item.content}
+                        </p>
                       )}
                       {/* URL-based resource */}
                       {item.resource_url && (
-                        <a 
-                          href={item.resource_url} 
-                          target="_blank" 
+                        <a
+                          href={item.resource_url}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
                         >
@@ -781,9 +826,9 @@ export function InstructorAssignmentScoring({
                       )}
                       {/* Library resource */}
                       {isLibraryResource && libraryResource.url && (
-                        <a 
-                          href={libraryResource.url} 
-                          target="_blank" 
+                        <a
+                          href={libraryResource.url}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
                         >
@@ -878,10 +923,15 @@ export function InstructorAssignmentScoring({
           domainId={devItemContext.domainId}
           forUserId={clientUserId}
           allowedTypes={["resource", "note", "action_item", "reflection"]}
-          dialogTitle={devItemContext.questionId ? "Add Development Item for Question" : "Add Resource for Client"}
-          dialogDescription={devItemContext.questionId 
-            ? "Add a development item linked to this specific question."
-            : "Add a helpful resource or note that will be visible to the client with their evaluation results."
+          dialogTitle={
+            devItemContext.questionId
+              ? "Add Development Item for Question"
+              : "Add Resource for Client"
+          }
+          dialogDescription={
+            devItemContext.questionId
+              ? "Add a development item linked to this specific question."
+              : "Add a helpful resource or note that will be visible to the client with their evaluation results."
           }
         />
       )}

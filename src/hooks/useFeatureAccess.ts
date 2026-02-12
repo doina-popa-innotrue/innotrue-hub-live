@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useEntitlements, checkFeatureAccessAsync } from './useEntitlements';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEntitlements, checkFeatureAccessAsync } from "./useEntitlements";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FeatureAccess {
   hasAccess: boolean;
@@ -18,7 +18,12 @@ interface FeatureAccess {
  */
 export function useFeatureAccess(featureKey: string): FeatureAccess {
   const { user } = useAuth();
-  const { isLoading: entitlementsLoading, hasFeature, getLimit, getAccessSource } = useEntitlements();
+  const {
+    isLoading: entitlementsLoading,
+    hasFeature,
+    getLimit,
+    getAccessSource,
+  } = useEntitlements();
   const [currentUsage, setCurrentUsage] = useState(0);
   const [usageLoading, setUsageLoading] = useState(true);
 
@@ -38,13 +43,13 @@ export function useFeatureAccess(featureKey: string): FeatureAccess {
       }
 
       try {
-        const { data: usageData } = await supabase.rpc('get_current_usage', {
+        const { data: usageData } = await supabase.rpc("get_current_usage", {
           _user_id: user.id,
           _feature_key: featureKey,
         });
         setCurrentUsage(usageData ?? 0);
       } catch (error) {
-        console.error('Error fetching usage:', error);
+        console.error("Error fetching usage:", error);
       } finally {
         setUsageLoading(false);
       }
@@ -64,7 +69,7 @@ export function useFeatureAccess(featureKey: string): FeatureAccess {
     limit,
     currentUsage,
     remainingUsage: limit !== null ? Math.max(0, limit - currentUsage) : null,
-    fromAddOn: accessSource === 'add_on',
+    fromAddOn: accessSource === "add_on",
   };
 }
 
@@ -72,13 +77,15 @@ export function useFeatureAccess(featureKey: string): FeatureAccess {
  * Increment usage for a feature.
  */
 export async function incrementFeatureUsage(featureKey: string): Promise<number> {
-  const { data: { user } } = await supabase.auth.getUser();
-  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user) {
-    throw new Error('User not authenticated');
+    throw new Error("User not authenticated");
   }
 
-  const { data, error } = await supabase.rpc('increment_usage', {
+  const { data, error } = await supabase.rpc("increment_usage", {
     _user_id: user.id,
     _feature_key: featureKey,
   });

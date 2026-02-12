@@ -1,11 +1,23 @@
-import { Link } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Video, Repeat, Clock, MapPin, Calendar, Download, ExternalLink, Trash2, Pencil, ChevronRight, Edit2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
+import { Link } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Video,
+  Repeat,
+  Clock,
+  MapPin,
+  Calendar,
+  Download,
+  ExternalLink,
+  Trash2,
+  Pencil,
+  ChevronRight,
+  Edit2,
+} from "lucide-react";
+import { format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 
 export interface GroupSessionCardProps {
   session: any;
@@ -30,7 +42,7 @@ export function GroupSessionCard({
   session,
   groupId,
   userTimezone,
-  linkPrefix = '/groups',
+  linkPrefix = "/groups",
   isAdmin = false,
   isSelected = false,
   onToggleSelect,
@@ -45,20 +57,25 @@ export function GroupSessionCard({
   const zonedDate = toZonedTime(sessionDate, userTimezone);
   const isGenerated = session.isGeneratedOccurrence;
   const isPast = sessionDate < new Date();
-  
-  const linkTo = isGenerated 
-    ? `${linkPrefix}/${groupId}/sessions/${session.parentSessionId}` 
+
+  const linkTo = isGenerated
+    ? `${linkPrefix}/${groupId}/sessions/${session.parentSessionId}`
     : `${linkPrefix}/${groupId}/sessions/${session.id}`;
 
   // Prefer meeting_link over location
-  const videoLink = session.meeting_link || (session.location?.startsWith('http') ? session.location : null);
+  const videoLink =
+    session.meeting_link || (session.location?.startsWith("http") ? session.location : null);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'scheduled': return <Badge>Scheduled</Badge>;
-      case 'completed': return <Badge variant="secondary">Completed</Badge>;
-      case 'cancelled': return <Badge variant="destructive">Cancelled</Badge>;
-      default: return <Badge variant="outline">{status}</Badge>;
+      case "scheduled":
+        return <Badge>Scheduled</Badge>;
+      case "completed":
+        return <Badge variant="secondary">Completed</Badge>;
+      case "cancelled":
+        return <Badge variant="destructive">Cancelled</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
@@ -84,7 +101,7 @@ export function GroupSessionCard({
                 className="mt-1"
               />
             )}
-            
+
             {/* Main content - clickable link */}
             <Link to={linkTo} className="flex-1 min-w-0">
               <div className="space-y-2">
@@ -98,28 +115,30 @@ export function GroupSessionCard({
                     </Badge>
                   )}
                   {isGenerated && (
-                    <Badge variant="secondary" className="text-xs">Recurring</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      Recurring
+                    </Badge>
                   )}
                   {getStatusBadge(session.status)}
                 </div>
-                
+
                 {session.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-1">{session.description}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-1">
+                    {session.description}
+                  </p>
                 )}
-                
+
                 <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3.5 w-3.5" />
-                    {format(zonedDate, 'EEE, MMM d')}
+                    {format(zonedDate, "EEE, MMM d")}
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5" />
-                    {format(zonedDate, 'h:mm a')}
+                    {format(zonedDate, "h:mm a")}
                   </span>
-                  {session.duration_minutes && (
-                    <span>({session.duration_minutes} min)</span>
-                  )}
-                  {session.location && !session.location.startsWith('http') && (
+                  {session.duration_minutes && <span>({session.duration_minutes} min)</span>}
+                  {session.location && !session.location.startsWith("http") && (
                     <span className="flex items-center gap-1">
                       <MapPin className="h-3.5 w-3.5" />
                       {session.location}
@@ -128,11 +147,11 @@ export function GroupSessionCard({
                 </div>
               </div>
             </Link>
-            
+
             {/* Arrow indicator for clickable link */}
             <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" />
           </div>
-          
+
           {/* Action buttons row */}
           <div className="flex flex-wrap items-center gap-2 pl-0 sm:pl-7">
             {/* Join Meeting button */}
@@ -144,7 +163,7 @@ export function GroupSessionCard({
                 </a>
               </Button>
             )}
-            
+
             {/* Download ICS */}
             {onDownloadICS && (
               <Button size="sm" variant="outline" onClick={() => onDownloadICS(session)}>
@@ -152,15 +171,15 @@ export function GroupSessionCard({
                 Add to Calendar
               </Button>
             )}
-            
+
             {/* Edit button - works for both regular and generated sessions */}
             {(onEdit || onEditParent) && (
               <Button size="sm" variant="ghost" onClick={handleEditClick}>
                 <Edit2 className="h-3.5 w-3.5 mr-1" />
-                {isGenerated ? 'Edit Series' : 'Edit'}
+                {isGenerated ? "Edit Series" : "Edit"}
               </Button>
             )}
-            
+
             {/* Admin-only actions */}
             {isAdmin && (
               <>
@@ -169,11 +188,11 @@ export function GroupSessionCard({
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
                 )}
-                {onStatusChange && session.status === 'scheduled' && isPast && (
-                  <Button 
-                    size="sm" 
+                {onStatusChange && session.status === "scheduled" && isPast && (
+                  <Button
+                    size="sm"
                     variant="outline"
-                    onClick={() => onStatusChange(session.id, 'completed')}
+                    onClick={() => onStatusChange(session.id, "completed")}
                   >
                     Mark Complete
                   </Button>

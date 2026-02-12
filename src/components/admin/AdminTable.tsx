@@ -1,14 +1,27 @@
-import { ReactNode, useState, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { AdminLoadingState } from './AdminLoadingState';
-import { AdminEmptyState } from './AdminEmptyState';
-import { LucideIcon } from 'lucide-react';
-import { usePagination } from '@/hooks/usePagination';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ReactNode, useState, useMemo } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { AdminLoadingState } from "./AdminLoadingState";
+import { AdminEmptyState } from "./AdminEmptyState";
+import { LucideIcon } from "lucide-react";
+import { usePagination } from "@/hooks/usePagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export interface AdminTableColumn<T> {
   /** Unique key for the column */
@@ -61,7 +74,7 @@ interface AdminTableProps<T extends { id: string }> {
   /** Initial sort column key */
   initialSortKey?: string;
   /** Initial sort direction */
-  initialSortDirection?: 'asc' | 'desc';
+  initialSortDirection?: "asc" | "desc";
   /** Enable pagination */
   paginated?: boolean;
   /** Items per page (default: 10) */
@@ -70,11 +83,11 @@ interface AdminTableProps<T extends { id: string }> {
   pageSizeOptions?: number[];
 }
 
-type SortDirection = 'asc' | 'desc' | null;
+type SortDirection = "asc" | "desc" | null;
 
 /**
  * Standardized admin table with sorting, loading states, and empty state.
- * 
+ *
  * @example
  * ```tsx
  * <AdminTable
@@ -108,33 +121,33 @@ export function AdminTable<T extends { id: string }>({
   emptyState,
   renderActions,
   showActions = true,
-  actionsHeader = 'Actions',
+  actionsHeader = "Actions",
   onRowClick,
   rowClassName,
   hideCard,
   initialSortKey,
-  initialSortDirection = 'asc',
+  initialSortDirection = "asc",
   paginated = false,
   pageSize: initialPageSize = 10,
   pageSizeOptions = [10, 25, 50, 100],
 }: AdminTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(initialSortKey ?? null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(
-    initialSortKey ? initialSortDirection : null
+    initialSortKey ? initialSortDirection : null,
   );
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
       // Cycle through: asc -> desc -> null
-      if (sortDirection === 'asc') {
-        setSortDirection('desc');
-      } else if (sortDirection === 'desc') {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
         setSortDirection(null);
         setSortKey(null);
       }
     } else {
       setSortKey(key);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
@@ -148,14 +161,14 @@ export function AdminTable<T extends { id: string }>({
       // Use custom sort function if provided
       if (column.sortFn) {
         const result = column.sortFn(a, b);
-        return sortDirection === 'asc' ? result : -result;
+        return sortDirection === "asc" ? result : -result;
       }
 
       // Default sorting
       let aValue: unknown;
       let bValue: unknown;
 
-      if (typeof column.accessor === 'function') {
+      if (typeof column.accessor === "function") {
         aValue = column.accessor(a);
         bValue = column.accessor(b);
       } else {
@@ -169,21 +182,29 @@ export function AdminTable<T extends { id: string }>({
       if (bValue == null) return -1;
 
       // String comparison
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
+      if (typeof aValue === "string" && typeof bValue === "string") {
         const result = aValue.localeCompare(bValue);
-        return sortDirection === 'asc' ? result : -result;
+        return sortDirection === "asc" ? result : -result;
       }
 
       // Number comparison
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
       }
 
       // Boolean comparison
-      if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
-        return sortDirection === 'asc' 
-          ? (aValue === bValue ? 0 : aValue ? -1 : 1)
-          : (aValue === bValue ? 0 : aValue ? 1 : -1);
+      if (typeof aValue === "boolean" && typeof bValue === "boolean") {
+        return sortDirection === "asc"
+          ? aValue === bValue
+            ? 0
+            : aValue
+              ? -1
+              : 1
+          : aValue === bValue
+            ? 0
+            : aValue
+              ? 1
+              : -1;
       }
 
       return 0;
@@ -212,15 +233,15 @@ export function AdminTable<T extends { id: string }>({
   const displayData = paginated ? paginatedData : sortedData;
 
   const getCellValue = (item: T, column: AdminTableColumn<T>): ReactNode => {
-    if (typeof column.accessor === 'function') {
+    if (typeof column.accessor === "function") {
       return column.accessor(item);
     }
     const value = item[column.accessor];
     if (value === null || value === undefined) {
       return <span className="text-muted-foreground">—</span>;
     }
-    if (typeof value === 'boolean') {
-      return value ? 'Yes' : 'No';
+    if (typeof value === "boolean") {
+      return value ? "Yes" : "No";
     }
     return String(value);
   };
@@ -229,7 +250,7 @@ export function AdminTable<T extends { id: string }>({
     if (sortKey !== columnKey) {
       return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
     }
-    if (sortDirection === 'asc') {
+    if (sortDirection === "asc") {
       return <ArrowUp className="h-4 w-4 ml-1" />;
     }
     return <ArrowDown className="h-4 w-4 ml-1" />;
@@ -241,10 +262,7 @@ export function AdminTable<T extends { id: string }>({
         <span>
           Showing {startIndex + 1}-{Math.min(endIndex + 1, totalItems)} of {totalItems}
         </span>
-        <Select
-          value={String(pageSize)}
-          onValueChange={(value) => setPageSize(Number(value))}
-        >
+        <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value))}>
           <SelectTrigger className="h-8 w-[70px]" aria-label="Items per page">
             <SelectValue placeholder={pageSize} />
           </SelectTrigger>
@@ -271,23 +289,23 @@ export function AdminTable<T extends { id: string }>({
         </Button>
         <div className="flex items-center gap-1">
           {getPageNumbers(5).map((page, index) =>
-            page === 'ellipsis' ? (
+            page === "ellipsis" ? (
               <span key={`ellipsis-${index}`} className="px-2 text-muted-foreground">
                 …
               </span>
             ) : (
               <Button
                 key={page}
-                variant={currentPage === page ? 'default' : 'outline'}
+                variant={currentPage === page ? "default" : "outline"}
                 size="sm"
                 onClick={() => goToPage(page)}
                 aria-label={`Go to page ${page}`}
-                aria-current={currentPage === page ? 'page' : undefined}
+                aria-current={currentPage === page ? "page" : undefined}
                 className="min-w-[36px]"
               >
                 {page}
               </Button>
-            )
+            ),
           )}
         </div>
         <Button
@@ -332,15 +350,15 @@ export function AdminTable<T extends { id: string }>({
                         key={column.key}
                         className={cn(
                           column.className,
-                          column.hideOnMobile && 'hidden md:table-cell',
-                          column.sortable && 'cursor-pointer select-none'
+                          column.hideOnMobile && "hidden md:table-cell",
+                          column.sortable && "cursor-pointer select-none",
                         )}
                         onClick={column.sortable ? () => handleSort(column.key) : undefined}
                         aria-sort={
                           sortKey === column.key
-                            ? sortDirection === 'asc'
-                              ? 'ascending'
-                              : 'descending'
+                            ? sortDirection === "asc"
+                              ? "ascending"
+                              : "descending"
                             : undefined
                         }
                       >
@@ -359,10 +377,7 @@ export function AdminTable<T extends { id: string }>({
                   {displayData?.map((item) => (
                     <TableRow
                       key={item.id}
-                      className={cn(
-                        onRowClick && 'cursor-pointer',
-                        rowClassName?.(item)
-                      )}
+                      className={cn(onRowClick && "cursor-pointer", rowClassName?.(item))}
                       onClick={onRowClick ? () => onRowClick(item) : undefined}
                     >
                       {columns.map((column) => (
@@ -370,7 +385,7 @@ export function AdminTable<T extends { id: string }>({
                           key={column.key}
                           className={cn(
                             column.className,
-                            column.hideOnMobile && 'hidden md:table-cell'
+                            column.hideOnMobile && "hidden md:table-cell",
                           )}
                         >
                           {getCellValue(item, column)}
@@ -378,9 +393,7 @@ export function AdminTable<T extends { id: string }>({
                       ))}
                       {showActions && renderActions && (
                         <TableCell className="text-right">
-                          <div onClick={(e) => e.stopPropagation()}>
-                            {renderActions(item)}
-                          </div>
+                          <div onClick={(e) => e.stopPropagation()}>{renderActions(item)}</div>
                         </TableCell>
                       )}
                     </TableRow>
@@ -407,7 +420,7 @@ export function AdminTable<T extends { id: string }>({
           {description && <CardDescription>{description}</CardDescription>}
         </CardHeader>
       )}
-      <CardContent className={!title && !description ? 'pt-6' : undefined}>
+      <CardContent className={!title && !description ? "pt-6" : undefined}>
         {tableContent}
       </CardContent>
     </Card>

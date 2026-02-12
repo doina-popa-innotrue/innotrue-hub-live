@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useEntitlements, AccessSource, checkFeatureAccessAsync } from './useEntitlements';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEntitlements, AccessSource, checkFeatureAccessAsync } from "./useEntitlements";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CombinedFeatureAccess {
   hasAccess: boolean;
@@ -15,13 +15,18 @@ interface CombinedFeatureAccess {
 /**
  * Combined hook that checks feature access from all sources.
  * Uses the unified useEntitlements hook internally.
- * 
+ *
  * @deprecated Consider using useEntitlements directly for simpler access patterns.
  * This hook is maintained for backward compatibility.
  */
 export function useCombinedFeatureAccess(featureKey: string): CombinedFeatureAccess {
   const { user } = useAuth();
-  const { isLoading: entitlementsLoading, hasFeature, getLimit, getAccessSource } = useEntitlements();
+  const {
+    isLoading: entitlementsLoading,
+    hasFeature,
+    getLimit,
+    getAccessSource,
+  } = useEntitlements();
   const [currentUsage, setCurrentUsage] = useState(0);
   const [usageLoading, setUsageLoading] = useState(true);
 
@@ -41,13 +46,13 @@ export function useCombinedFeatureAccess(featureKey: string): CombinedFeatureAcc
       }
 
       try {
-        const { data: usageData } = await supabase.rpc('get_current_usage', {
+        const { data: usageData } = await supabase.rpc("get_current_usage", {
           _user_id: user.id,
           _feature_key: featureKey,
         });
         setCurrentUsage(usageData ?? 0);
       } catch (error) {
-        console.error('Error fetching usage:', error);
+        console.error("Error fetching usage:", error);
       } finally {
         setUsageLoading(false);
       }

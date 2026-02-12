@@ -5,15 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  FileText,
-  BookOpen,
-  Target,
-  StickyNote,
-  ChevronRight,
-  Plus,
-  Sparkles,
-} from "lucide-react";
+import { FileText, BookOpen, Target, StickyNote, ChevronRight, Plus, Sparkles } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 interface DevelopmentItem {
@@ -57,7 +49,8 @@ export function RecentDevelopmentItemsWidget() {
 
       const { data, error } = await supabase
         .from("development_items")
-        .select(`
+        .select(
+          `
           id,
           item_type,
           title,
@@ -67,7 +60,8 @@ export function RecentDevelopmentItemsWidget() {
             goal_id,
             goal:goals(id, title)
           )
-        `)
+        `,
+        )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(3);
@@ -165,7 +159,8 @@ export function RecentDevelopmentItemsWidget() {
                   )}
                 </div>
                 <p className="text-sm font-medium line-clamp-1">
-                  {item.title || (item.content ? item.content.substring(0, 50) + "..." : "Untitled")}
+                  {item.title ||
+                    (item.content ? item.content.substring(0, 50) + "..." : "Untitled")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {format(parseISO(item.created_at), "MMM d, yyyy")}

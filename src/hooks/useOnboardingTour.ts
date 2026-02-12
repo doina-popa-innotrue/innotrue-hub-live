@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 export interface TourStep {
   target: string;
   title: string;
   content: string;
-  placement?: 'top' | 'bottom' | 'left' | 'right';
+  placement?: "top" | "bottom" | "left" | "right";
 }
 
 export function useOnboardingTour(tourId: string, steps: TourStep[]) {
@@ -15,11 +15,11 @@ export function useOnboardingTour(tourId: string, steps: TourStep[]) {
   useEffect(() => {
     // Only check once per mount, not on every tourId change
     if (hasChecked) return;
-    
-    const completedTours = JSON.parse(localStorage.getItem('completedTours') || '[]');
+
+    const completedTours = JSON.parse(localStorage.getItem("completedTours") || "[]");
     // Mark as checked regardless of whether we start the tour
     setHasChecked(true);
-    
+
     if (!completedTours.includes(tourId)) {
       // Start tour after a short delay to let the page render
       const timer = setTimeout(() => {
@@ -49,10 +49,10 @@ export function useOnboardingTour(tourId: string, steps: TourStep[]) {
   };
 
   const completeTour = () => {
-    const completedTours = JSON.parse(localStorage.getItem('completedTours') || '[]');
+    const completedTours = JSON.parse(localStorage.getItem("completedTours") || "[]");
     if (!completedTours.includes(tourId)) {
       completedTours.push(tourId);
-      localStorage.setItem('completedTours', JSON.stringify(completedTours));
+      localStorage.setItem("completedTours", JSON.stringify(completedTours));
     }
     setIsActive(false);
     setCurrentStep(-1);
@@ -76,11 +76,11 @@ export function useOnboardingTour(tourId: string, steps: TourStep[]) {
 }
 
 export function resetAllTours() {
-  localStorage.removeItem('completedTours');
+  localStorage.removeItem("completedTours");
 }
 
 export function resetTour(tourId: string) {
-  const completedTours = JSON.parse(localStorage.getItem('completedTours') || '[]');
+  const completedTours = JSON.parse(localStorage.getItem("completedTours") || "[]");
   const filtered = completedTours.filter((id: string) => id !== tourId);
-  localStorage.setItem('completedTours', JSON.stringify(filtered));
+  localStorage.setItem("completedTours", JSON.stringify(filtered));
 }

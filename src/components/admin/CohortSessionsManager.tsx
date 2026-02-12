@@ -1,18 +1,30 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Clock, MapPin, Video, GripVertical } from 'lucide-react';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { TimezoneSelect } from '@/components/profile/TimezoneSelect';
-import { useUserTimezone } from '@/hooks/useUserTimezone';
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Pencil, Trash2, Clock, MapPin, Video, GripVertical } from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { TimezoneSelect } from "@/components/profile/TimezoneSelect";
+import { useUserTimezone } from "@/hooks/useUserTimezone";
 import {
   DndContext,
   closestCenter,
@@ -21,15 +33,15 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from '@dnd-kit/core';
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface CohortSessionsManagerProps {
   cohortId: string;
@@ -66,15 +78,15 @@ interface SessionFormData {
 }
 
 const defaultFormData: SessionFormData = {
-  title: '',
-  description: '',
-  session_date: '',
-  start_time: '',
-  end_time: '',
-  location: '',
-  meeting_link: '',
-  module_id: '',
-  notes: '',
+  title: "",
+  description: "",
+  session_date: "",
+  start_time: "",
+  end_time: "",
+  location: "",
+  meeting_link: "",
+  module_id: "",
+  notes: "",
 };
 
 interface SortableSessionProps {
@@ -84,14 +96,9 @@ interface SortableSessionProps {
 }
 
 function SortableSession({ session, onEdit, onDelete }: SortableSessionProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: session.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: session.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -103,7 +110,7 @@ function SortableSession({ session, onEdit, onDelete }: SortableSessionProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-start gap-3 p-3 rounded-lg border bg-card ${isDragging ? 'shadow-lg' : ''}`}
+      className={`flex items-start gap-3 p-3 rounded-lg border bg-card ${isDragging ? "shadow-lg" : ""}`}
     >
       <button
         className="mt-1 cursor-grab active:cursor-grabbing touch-none shrink-0"
@@ -139,7 +146,7 @@ function SortableSession({ session, onEdit, onDelete }: SortableSessionProps) {
         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
-            {format(new Date(session.session_date), 'MMM d, yyyy')}
+            {format(new Date(session.session_date), "MMM d, yyyy")}
             {session.start_time && ` at ${session.start_time.slice(0, 5)}`}
             {session.end_time && ` - ${session.end_time.slice(0, 5)}`}
           </span>
@@ -166,11 +173,11 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<CohortSession | null>(null);
   const [formData, setFormData] = useState<SessionFormData>(defaultFormData);
-  
+
   // Get user's timezone with fallback
   const { timezone: userTimezone } = useUserTimezone();
   const [selectedTimezone, setSelectedTimezone] = useState(userTimezone);
-  
+
   // Update timezone when user timezone loads
   useEffect(() => {
     setSelectedTimezone(userTimezone);
@@ -180,17 +187,17 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const { data: sessions, isLoading } = useQuery({
-    queryKey: ['cohort-sessions', cohortId],
+    queryKey: ["cohort-sessions", cohortId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('cohort_sessions')
-        .select('*')
-        .eq('cohort_id', cohortId)
-        .order('order_index');
+        .from("cohort_sessions")
+        .select("*")
+        .eq("cohort_id", cohortId)
+        .order("order_index");
 
       if (error) throw error;
       return data as CohortSession[];
@@ -198,13 +205,13 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
   });
 
   const { data: modules } = useQuery({
-    queryKey: ['program-modules-select', programId],
+    queryKey: ["program-modules-select", programId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('program_modules')
-        .select('id, title, order_index')
-        .eq('program_id', programId)
-        .order('order_index');
+        .from("program_modules")
+        .select("id, title, order_index")
+        .eq("program_id", programId)
+        .order("order_index");
 
       if (error) throw error;
       return data;
@@ -225,46 +232,41 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
         module_id: data.module_id || null,
         notes: data.notes || null,
         order_index: editingSession?.order_index ?? (sessions?.length || 0),
-        timezone: selectedTimezone || 'UTC',
+        timezone: selectedTimezone || "UTC",
       };
 
       if (editingSession) {
         const { error } = await supabase
-          .from('cohort_sessions')
+          .from("cohort_sessions")
           .update(payload)
-          .eq('id', editingSession.id);
+          .eq("id", editingSession.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('cohort_sessions')
-          .insert(payload);
+        const { error } = await supabase.from("cohort_sessions").insert(payload);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cohort-sessions', cohortId] });
-      toast.success(editingSession ? 'Session updated' : 'Session added');
+      queryClient.invalidateQueries({ queryKey: ["cohort-sessions", cohortId] });
+      toast.success(editingSession ? "Session updated" : "Session added");
       handleCloseDialog();
     },
     onError: () => {
-      toast.error('Failed to save session');
+      toast.error("Failed to save session");
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (sessionId: string) => {
-      const { error } = await supabase
-        .from('cohort_sessions')
-        .delete()
-        .eq('id', sessionId);
+      const { error } = await supabase.from("cohort_sessions").delete().eq("id", sessionId);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cohort-sessions', cohortId] });
-      toast.success('Session deleted');
+      queryClient.invalidateQueries({ queryKey: ["cohort-sessions", cohortId] });
+      toast.success("Session deleted");
     },
     onError: () => {
-      toast.error('Failed to delete session');
+      toast.error("Failed to delete session");
     },
   });
 
@@ -277,17 +279,17 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
 
       for (const update of updates) {
         const { error } = await supabase
-          .from('cohort_sessions')
+          .from("cohort_sessions")
           .update({ order_index: update.order_index })
-          .eq('id', update.id);
+          .eq("id", update.id);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cohort-sessions', cohortId] });
+      queryClient.invalidateQueries({ queryKey: ["cohort-sessions", cohortId] });
     },
     onError: () => {
-      toast.error('Failed to reorder sessions');
+      toast.error("Failed to reorder sessions");
     },
   });
 
@@ -296,14 +298,14 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
       setEditingSession(session);
       setFormData({
         title: session.title,
-        description: session.description || '',
+        description: session.description || "",
         session_date: session.session_date,
-        start_time: session.start_time?.slice(0, 5) || '',
-        end_time: session.end_time?.slice(0, 5) || '',
-        location: session.location || '',
-        meeting_link: session.meeting_link || '',
-        module_id: session.module_id || '',
-        notes: session.notes || '',
+        start_time: session.start_time?.slice(0, 5) || "",
+        end_time: session.end_time?.slice(0, 5) || "",
+        location: session.location || "",
+        meeting_link: session.meeting_link || "",
+        module_id: session.module_id || "",
+        notes: session.notes || "",
       });
     } else {
       setEditingSession(null);
@@ -321,18 +323,18 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) {
-      toast.error('Session title is required');
+      toast.error("Session title is required");
       return;
     }
     if (!formData.session_date) {
-      toast.error('Session date is required');
+      toast.error("Session date is required");
       return;
     }
     saveMutation.mutate(formData);
   };
 
   const handleDelete = (sessionId: string) => {
-    if (confirm('Are you sure you want to delete this session?')) {
+    if (confirm("Are you sure you want to delete this session?")) {
       deleteMutation.mutate(sessionId);
     }
   };
@@ -366,7 +368,7 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>{editingSession ? 'Edit Session' : 'Add Session'}</DialogTitle>
+              <DialogTitle>{editingSession ? "Edit Session" : "Add Session"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -421,10 +423,7 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
               </div>
 
               {/* Timezone Selection */}
-              <TimezoneSelect
-                value={selectedTimezone}
-                onChange={setSelectedTimezone}
-              />
+              <TimezoneSelect value={selectedTimezone} onChange={setSelectedTimezone} />
 
               <div className="space-y-2">
                 <Label htmlFor="location">Location</Label>
@@ -451,7 +450,9 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
                 <Label htmlFor="module-link">Link to Module (optional)</Label>
                 <Select
                   value={formData.module_id}
-                  onValueChange={(value) => setFormData({ ...formData, module_id: value === 'none' ? '' : value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, module_id: value === "none" ? "" : value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="No module linked" />
@@ -482,7 +483,7 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
                   Cancel
                 </Button>
                 <Button type="submit" disabled={saveMutation.isPending}>
-                  {saveMutation.isPending ? 'Saving...' : editingSession ? 'Update' : 'Add'}
+                  {saveMutation.isPending ? "Saving..." : editingSession ? "Update" : "Add"}
                 </Button>
               </div>
             </form>
@@ -495,11 +496,7 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
           No sessions scheduled. Click "Add Session" to create one.
         </p>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
             items={sessions?.map((s) => s.id) || []}
             strategy={verticalListSortingStrategy}

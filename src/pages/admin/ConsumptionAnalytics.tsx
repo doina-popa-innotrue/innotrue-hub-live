@@ -1,15 +1,49 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { TrendingUp, Users, Zap, Brain, Coins, ChevronLeft, ChevronRight, Search, Download } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import {
+  TrendingUp,
+  Users,
+  Zap,
+  Brain,
+  Coins,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Download,
+} from "lucide-react";
 import { useState, useCallback } from "react";
 import { BulkCreditGrantDialog } from "@/components/admin/BulkCreditGrantDialog";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
@@ -44,7 +78,13 @@ interface CreditTransaction {
   user_name: string | null;
 }
 
-const COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
+const COLORS = [
+  "hsl(var(--primary))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+];
 const PAGE_SIZE = 20;
 
 export default function ConsumptionAnalytics() {
@@ -83,12 +123,14 @@ export default function ConsumptionAnalytics() {
 
       let query = supabase
         .from("usage_tracking")
-        .select(`
+        .select(
+          `
           user_id,
           feature_key,
           used_count,
           period_start
-        `)
+        `,
+        )
         .gte("period_start", start.toISOString())
         .lte("period_start", end.toISOString());
 
@@ -190,10 +232,13 @@ export default function ConsumptionAnalytics() {
       const profileMap = new Map(profiles?.map((p) => [p.id, p.name]) || []);
 
       // Filter by search if provided
-      let enriched: CreditTransaction[] = (transactions || []).map((t) => ({
-        ...t,
-        user_name: profileMap.get(t.user_id) || null,
-      } as CreditTransaction));
+      let enriched: CreditTransaction[] = (transactions || []).map(
+        (t) =>
+          ({
+            ...t,
+            user_name: profileMap.get(t.user_id) || null,
+          }) as CreditTransaction,
+      );
 
       if (creditSearch) {
         const searchLower = creditSearch.toLowerCase();
@@ -201,7 +246,7 @@ export default function ConsumptionAnalytics() {
           (t) =>
             t.user_name?.toLowerCase().includes(searchLower) ||
             t.description?.toLowerCase().includes(searchLower) ||
-            t.action_type?.toLowerCase().includes(searchLower)
+            t.action_type?.toLowerCase().includes(searchLower),
         );
       }
 
@@ -249,31 +294,39 @@ export default function ConsumptionAnalytics() {
   const exportCreditTransactionsCSV = useCallback(async () => {
     try {
       toast.info("Preparing export...");
-      
+
       // Fetch all transactions (not paginated)
       let query = supabase
         .from("user_credit_transactions")
         .select("*")
         .order("created_at", { ascending: false });
-      
+
       if (creditActionType !== "all") {
         query = query.eq("action_type", creditActionType);
       }
-      
+
       const { data: allTransactions, error } = await query;
       if (error) throw error;
-      
+
       // Get user names
       const userIds = [...new Set((allTransactions || []).map((t) => t.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, name")
         .in("id", userIds);
-      
+
       const profileMap = new Map(profiles?.map((p) => [p.id, p.name]) || []);
-      
+
       // Build CSV
-      const headers = ["Date", "User", "Type", "Action Type", "Amount", "Balance After", "Description"];
+      const headers = [
+        "Date",
+        "User",
+        "Type",
+        "Action Type",
+        "Amount",
+        "Balance After",
+        "Description",
+      ];
       const rows = ((allTransactions || []) as unknown as CreditTransaction[]).map((tx) => [
         format(new Date(tx.created_at), "yyyy-MM-dd HH:mm:ss"),
         profileMap.get(tx.user_id) || tx.user_id,
@@ -283,19 +336,19 @@ export default function ConsumptionAnalytics() {
         tx.balance_after,
         tx.description || "",
       ]);
-      
+
       const csvContent = [
         headers.join(","),
         ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")),
       ].join("\n");
-      
+
       // Download
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = `credit-transactions-${format(new Date(), "yyyy-MM-dd")}.csv`;
       link.click();
-      
+
       toast.success("Export completed");
     } catch (error) {
       console.error("Export failed:", error);
@@ -306,29 +359,29 @@ export default function ConsumptionAnalytics() {
   const exportFeatureUsageCSV = useCallback(async () => {
     try {
       toast.info("Preparing export...");
-      
+
       let query = supabase
         .from("usage_tracking")
         .select("user_id, feature_key, used_count, period_start")
         .gte("period_start", start.toISOString())
         .lte("period_start", end.toISOString());
-      
+
       if (selectedFeature !== "all") {
         query = query.eq("feature_key", selectedFeature);
       }
-      
+
       const { data: usageRecords, error } = await query;
       if (error) throw error;
-      
+
       // Get user names
       const userIds = [...new Set((usageRecords || []).map((r) => r.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, name")
         .in("id", userIds);
-      
+
       const profileMap = new Map(profiles?.map((p) => [p.id, p.name]) || []);
-      
+
       // Build CSV
       const headers = ["Period", "User", "Feature", "Usage Count"];
       const rows = (usageRecords || []).map((record) => [
@@ -337,19 +390,19 @@ export default function ConsumptionAnalytics() {
         features?.find((f) => f.key === record.feature_key)?.name || record.feature_key,
         record.used_count,
       ]);
-      
+
       const csvContent = [
         headers.join(","),
         ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")),
       ].join("\n");
-      
+
       // Download
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = `feature-usage-${format(start, "yyyy-MM")}.csv`;
       link.click();
-      
+
       toast.success("Export completed");
     } catch (error) {
       console.error("Export failed:", error);
@@ -627,9 +680,7 @@ export default function ConsumptionAnalytics() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{usageData?.stats.length || 0}</div>
-                    <p className="text-xs text-muted-foreground">
-                      consumable features active
-                    </p>
+                    <p className="text-xs text-muted-foreground">consumable features active</p>
                   </CardContent>
                 </Card>
               </div>
@@ -648,13 +699,17 @@ export default function ConsumptionAnalytics() {
                           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                           <XAxis dataKey="feature_name" className="text-xs" />
                           <YAxis className="text-xs" />
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: 'hsl(var(--background))', 
-                              border: '1px solid hsl(var(--border))' 
-                            }} 
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: "hsl(var(--background))",
+                              border: "1px solid hsl(var(--border))",
+                            }}
                           />
-                          <Bar dataKey="total_usage" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                          <Bar
+                            dataKey="total_usage"
+                            fill="hsl(var(--primary))"
+                            radius={[4, 4, 0, 0]}
+                          />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
@@ -681,17 +736,19 @@ export default function ConsumptionAnalytics() {
                             cx="50%"
                             cy="50%"
                             outerRadius={100}
-                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                            label={({ name, percent }) =>
+                              `${name} (${(percent * 100).toFixed(0)}%)`
+                            }
                           >
                             {usageData.stats.map((_, index) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: 'hsl(var(--background))', 
-                              border: '1px solid hsl(var(--border))' 
-                            }} 
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: "hsl(var(--background))",
+                              border: "1px solid hsl(var(--border))",
+                            }}
                           />
                         </PieChart>
                       </ResponsiveContainer>
@@ -732,7 +789,8 @@ export default function ConsumptionAnalytics() {
                               </TableCell>
                               <TableCell>
                                 <Badge variant="outline">
-                                  {features?.find((f) => f.key === record.feature_key)?.name || record.feature_key}
+                                  {features?.find((f) => f.key === record.feature_key)?.name ||
+                                    record.feature_key}
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-right font-mono">

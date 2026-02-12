@@ -1,31 +1,64 @@
-import { useState, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAdminCRUD } from '@/hooks/useAdminCRUD';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Tag, Loader2, CalendarIcon, Copy, Users, Percent, Share2, Sparkles, RefreshCw } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAdminCRUD } from "@/hooks/useAdminCRUD";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Tag,
+  Loader2,
+  CalendarIcon,
+  Copy,
+  Users,
+  Percent,
+  Share2,
+  Sparkles,
+  RefreshCw,
+} from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Helper to generate unique referral codes
 function generateReferralCode(): string {
-  const prefix = 'REF';
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude confusing chars (0, O, I, 1)
-  let code = '';
+  const prefix = "REF";
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Exclude confusing chars (0, O, I, 1)
+  let code = "";
   for (let i = 0; i < 6; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
@@ -36,7 +69,7 @@ interface DiscountCode {
   id: string;
   code: string;
   description: string | null;
-  discount_type: 'percent' | 'fixed_amount';
+  discount_type: "percent" | "fixed_amount";
   discount_value: number;
   valid_for_program_ids: string[] | null;
   valid_for_tier_names: string[] | null;
@@ -57,14 +90,14 @@ interface Program {
 }
 
 const defaultFormData = {
-  code: '',
-  description: '',
-  discount_type: 'percent' as 'percent' | 'fixed_amount',
-  discount_value: '',
+  code: "",
+  description: "",
+  discount_type: "percent" as "percent" | "fixed_amount",
+  discount_value: "",
   valid_for_program_ids: [] as string[],
   valid_for_tier_names: [] as string[],
-  max_uses: '',
-  assigned_user_email: '',
+  max_uses: "",
+  assigned_user_email: "",
   starts_at: new Date(),
   expires_at: null as Date | null,
   is_active: true,
@@ -74,10 +107,10 @@ export default function DiscountCodesManagement() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState(defaultFormData);
-  
+
   // Referral code generator state
-  const [referralDiscountPercent, setReferralDiscountPercent] = useState('5');
-  const [generatedReferralCode, setGeneratedReferralCode] = useState('');
+  const [referralDiscountPercent, setReferralDiscountPercent] = useState("5");
+  const [generatedReferralCode, setGeneratedReferralCode] = useState("");
   const [isGeneratingReferral, setIsGeneratingReferral] = useState(false);
 
   // Generate a new unique referral code
@@ -89,17 +122,17 @@ export default function DiscountCodesManagement() {
   const createReferralMutation = useMutation({
     mutationFn: async () => {
       if (!generatedReferralCode) {
-        throw new Error('Please generate a code first');
+        throw new Error("Please generate a code first");
       }
       const discountValue = parseFloat(referralDiscountPercent);
       if (isNaN(discountValue) || discountValue <= 0 || discountValue > 100) {
-        throw new Error('Discount must be between 1 and 100%');
+        throw new Error("Discount must be between 1 and 100%");
       }
 
       const insertData = {
         code: generatedReferralCode.toUpperCase(),
         description: `Referral code - ${discountValue}% discount`,
-        discount_type: 'percent' as const,
+        discount_type: "percent" as const,
         discount_value: discountValue,
         valid_for_program_ids: null as string[] | null,
         valid_for_tier_names: null as string[] | null,
@@ -111,42 +144,42 @@ export default function DiscountCodesManagement() {
         created_by: user?.id,
       };
 
-      const { error } = await supabase.from('discount_codes').insert(insertData);
+      const { error } = await supabase.from("discount_codes").insert(insertData);
       if (error) throw error;
       return generatedReferralCode;
     },
     onSuccess: (code) => {
-      queryClient.invalidateQueries({ queryKey: ['discount-codes'] });
+      queryClient.invalidateQueries({ queryKey: ["discount-codes"] });
       navigator.clipboard.writeText(code);
       toast.success(`Referral code ${code} created and copied to clipboard!`);
-      setGeneratedReferralCode('');
+      setGeneratedReferralCode("");
     },
     onError: (error: any) => {
-      if (error.code === '23505') {
-        toast.error('This code already exists. Generate a new one.');
-        setGeneratedReferralCode('');
+      if (error.code === "23505") {
+        toast.error("This code already exists. Generate a new one.");
+        setGeneratedReferralCode("");
       } else {
-        toast.error(error.message || 'Failed to create referral code');
+        toast.error(error.message || "Failed to create referral code");
       }
     },
   });
 
   // Fetch programs for restriction selection
   const { data: programs } = useQuery({
-    queryKey: ['programs-for-discount'],
+    queryKey: ["programs-for-discount"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('programs')
-        .select('id, name, tiers')
-        .eq('is_active', true)
-        .order('name');
+        .from("programs")
+        .select("id, name, tiers")
+        .eq("is_active", true)
+        .order("name");
       if (error) throw error;
       return data as Program[];
     },
   });
 
   // Get unique tiers from all programs
-  const allTiers = [...new Set(programs?.flatMap(p => p.tiers || []) || [])];
+  const allTiers = [...new Set(programs?.flatMap((p) => p.tiers || []) || [])];
 
   const {
     data: discountCodes,
@@ -157,19 +190,19 @@ export default function DiscountCodesManagement() {
     openCreate,
     openEdit,
   } = useAdminCRUD<DiscountCode, typeof defaultFormData>({
-    queryKey: 'discount-codes',
-    tableName: 'discount_codes',
-    entityName: 'Discount Code',
+    queryKey: "discount-codes",
+    tableName: "discount_codes",
+    entityName: "Discount Code",
     initialFormData: defaultFormData,
     mapItemToForm: (code) => ({
       code: code.code,
-      description: code.description || '',
+      description: code.description || "",
       discount_type: code.discount_type,
       discount_value: code.discount_value.toString(),
       valid_for_program_ids: code.valid_for_program_ids || [],
       valid_for_tier_names: code.valid_for_tier_names || [],
-      max_uses: code.max_uses?.toString() || '',
-      assigned_user_email: code.assigned_user_email || '',
+      max_uses: code.max_uses?.toString() || "",
+      assigned_user_email: code.assigned_user_email || "",
       starts_at: new Date(code.starts_at),
       expires_at: code.expires_at ? new Date(code.expires_at) : null,
       is_active: code.is_active,
@@ -183,8 +216,10 @@ export default function DiscountCodesManagement() {
         description: data.description || null,
         discount_type: data.discount_type,
         discount_value: parseFloat(data.discount_value),
-        valid_for_program_ids: data.valid_for_program_ids.length > 0 ? data.valid_for_program_ids : null,
-        valid_for_tier_names: data.valid_for_tier_names.length > 0 ? data.valid_for_tier_names : null,
+        valid_for_program_ids:
+          data.valid_for_program_ids.length > 0 ? data.valid_for_program_ids : null,
+        valid_for_tier_names:
+          data.valid_for_tier_names.length > 0 ? data.valid_for_tier_names : null,
         max_uses: data.max_uses ? parseInt(data.max_uses) : null,
         assigned_user_email: data.assigned_user_email || null,
         starts_at: data.starts_at.toISOString(),
@@ -193,20 +228,20 @@ export default function DiscountCodesManagement() {
         created_by: user?.id,
       };
 
-      const { error } = await supabase.from('discount_codes').insert(insertData);
+      const { error } = await supabase.from("discount_codes").insert(insertData);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['discount-codes'] });
+      queryClient.invalidateQueries({ queryKey: ["discount-codes"] });
       setIsDialogOpen(false);
       setFormData(defaultFormData);
-      toast.success('Discount code created');
+      toast.success("Discount code created");
     },
     onError: (error: any) => {
-      if (error.code === '23505') {
-        toast.error('A discount code with this code already exists');
+      if (error.code === "23505") {
+        toast.error("A discount code with this code already exists");
       } else {
-        toast.error(error.message || 'Failed to create discount code');
+        toast.error(error.message || "Failed to create discount code");
       }
     },
   });
@@ -214,14 +249,16 @@ export default function DiscountCodesManagement() {
   const updateMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       if (!editingItem) return;
-      
+
       const updateData: any = {
         code: data.code.toUpperCase().trim(),
         description: data.description || null,
         discount_type: data.discount_type,
         discount_value: parseFloat(data.discount_value),
-        valid_for_program_ids: data.valid_for_program_ids.length > 0 ? data.valid_for_program_ids : null,
-        valid_for_tier_names: data.valid_for_tier_names.length > 0 ? data.valid_for_tier_names : null,
+        valid_for_program_ids:
+          data.valid_for_program_ids.length > 0 ? data.valid_for_program_ids : null,
+        valid_for_tier_names:
+          data.valid_for_tier_names.length > 0 ? data.valid_for_tier_names : null,
         max_uses: data.max_uses ? parseInt(data.max_uses) : null,
         assigned_user_email: data.assigned_user_email || null,
         starts_at: data.starts_at.toISOString(),
@@ -230,48 +267,48 @@ export default function DiscountCodesManagement() {
       };
 
       const { error } = await supabase
-        .from('discount_codes')
+        .from("discount_codes")
         .update(updateData)
-        .eq('id', editingItem.id);
+        .eq("id", editingItem.id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['discount-codes'] });
+      queryClient.invalidateQueries({ queryKey: ["discount-codes"] });
       setIsDialogOpen(false);
       setFormData(defaultFormData);
-      toast.success('Discount code updated');
+      toast.success("Discount code updated");
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to update discount code');
+      toast.error(error.message || "Failed to update discount code");
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('discount_codes').delete().eq('id', id);
+      const { error } = await supabase.from("discount_codes").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['discount-codes'] });
-      toast.success('Discount code deleted');
+      queryClient.invalidateQueries({ queryKey: ["discount-codes"] });
+      toast.success("Discount code deleted");
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to delete discount code');
+      toast.error(error.message || "Failed to delete discount code");
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.code.trim()) {
-      toast.error('Code is required');
+      toast.error("Code is required");
       return;
     }
     if (!formData.discount_value || parseFloat(formData.discount_value) <= 0) {
-      toast.error('Discount value must be greater than 0');
+      toast.error("Discount value must be greater than 0");
       return;
     }
-    if (formData.discount_type === 'percent' && parseFloat(formData.discount_value) > 100) {
-      toast.error('Percentage discount cannot exceed 100%');
+    if (formData.discount_type === "percent" && parseFloat(formData.discount_value) > 100) {
+      toast.error("Percentage discount cannot exceed 100%");
       return;
     }
 
@@ -291,13 +328,13 @@ export default function DiscountCodesManagement() {
     openEdit(code);
     setFormData({
       code: code.code,
-      description: code.description || '',
+      description: code.description || "",
       discount_type: code.discount_type,
       discount_value: code.discount_value.toString(),
       valid_for_program_ids: code.valid_for_program_ids || [],
       valid_for_tier_names: code.valid_for_tier_names || [],
-      max_uses: code.max_uses?.toString() || '',
-      assigned_user_email: code.assigned_user_email || '',
+      max_uses: code.max_uses?.toString() || "",
+      assigned_user_email: code.assigned_user_email || "",
       starts_at: new Date(code.starts_at),
       expires_at: code.expires_at ? new Date(code.expires_at) : null,
       is_active: code.is_active,
@@ -306,23 +343,23 @@ export default function DiscountCodesManagement() {
 
   const copyToClipboard = (code: string) => {
     navigator.clipboard.writeText(code);
-    toast.success('Code copied to clipboard');
+    toast.success("Code copied to clipboard");
   };
 
   const toggleProgramSelection = (programId: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       valid_for_program_ids: prev.valid_for_program_ids.includes(programId)
-        ? prev.valid_for_program_ids.filter(id => id !== programId)
+        ? prev.valid_for_program_ids.filter((id) => id !== programId)
         : [...prev.valid_for_program_ids, programId],
     }));
   };
 
   const toggleTierSelection = (tier: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       valid_for_tier_names: prev.valid_for_tier_names.includes(tier)
-        ? prev.valid_for_tier_names.filter(t => t !== tier)
+        ? prev.valid_for_tier_names.filter((t) => t !== tier)
         : [...prev.valid_for_tier_names, tier],
     }));
   };
@@ -368,7 +405,8 @@ export default function DiscountCodesManagement() {
             Quick Referral Code Generator
           </CardTitle>
           <CardDescription>
-            Generate single-use referral codes for clients or partners. Codes are automatically copied to your clipboard.
+            Generate single-use referral codes for clients or partners. Codes are automatically
+            copied to your clipboard.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -387,7 +425,7 @@ export default function DiscountCodesManagement() {
                 <span className="text-sm text-muted-foreground">%</span>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Generated Code</Label>
               <div className="flex items-center gap-2">
@@ -422,10 +460,11 @@ export default function DiscountCodesManagement() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-3">
-            Each referral code is single-use and valid for all programs. 
+            Each referral code is single-use and valid for all programs.
             <Button variant="link" size="sm" className="h-auto p-0 ml-1" onClick={handleOpenCreate}>
               Create a custom code
-            </Button> for more options.
+            </Button>{" "}
+            for more options.
           </p>
         </CardContent>
       </Card>
@@ -433,9 +472,7 @@ export default function DiscountCodesManagement() {
       <Card>
         <CardHeader>
           <CardTitle>All Discount Codes</CardTitle>
-          <CardDescription>
-            {discountCodes?.length || 0} discount codes configured
-          </CardDescription>
+          <CardDescription>{discountCodes?.length || 0} discount codes configured</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -477,8 +514,8 @@ export default function DiscountCodesManagement() {
                     </TableCell>
                     <TableCell>
                       <span className="font-medium">
-                        {code.discount_type === 'percent' 
-                          ? `${code.discount_value}%` 
+                        {code.discount_type === "percent"
+                          ? `${code.discount_value}%`
                           : `€${code.discount_value}`}
                       </span>
                     </TableCell>
@@ -491,7 +528,7 @@ export default function DiscountCodesManagement() {
                         )}
                         {code.valid_for_tier_names && code.valid_for_tier_names.length > 0 && (
                           <div className="text-muted-foreground">
-                            Tiers: {code.valid_for_tier_names.join(', ')}
+                            Tiers: {code.valid_for_tier_names.join(", ")}
                           </div>
                         )}
                         {code.assigned_user_email && (
@@ -500,25 +537,23 @@ export default function DiscountCodesManagement() {
                             {code.assigned_user_email}
                           </div>
                         )}
-                        {!code.valid_for_program_ids && !code.valid_for_tier_names && !code.assigned_user_email && (
-                          <span className="text-muted-foreground">All programs</span>
-                        )}
+                        {!code.valid_for_program_ids &&
+                          !code.valid_for_tier_names &&
+                          !code.assigned_user_email && (
+                            <span className="text-muted-foreground">All programs</span>
+                          )}
                       </div>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm">
                         {code.uses_count}
-                        {code.max_uses ? ` / ${code.max_uses}` : ' uses'}
+                        {code.max_uses ? ` / ${code.max_uses}` : " uses"}
                       </span>
                     </TableCell>
                     <TableCell>{getStatusBadge(code)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenEdit(code)}
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(code)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
@@ -548,13 +583,11 @@ export default function DiscountCodesManagement() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingItem ? 'Edit Discount Code' : 'Create Discount Code'}
-            </DialogTitle>
+            <DialogTitle>{editingItem ? "Edit Discount Code" : "Create Discount Code"}</DialogTitle>
             <DialogDescription>
-              {editingItem 
-                ? 'Update the discount code settings' 
-                : 'Create a new discount code for program enrollments'}
+              {editingItem
+                ? "Update the discount code settings"
+                : "Create a new discount code for program enrollments"}
             </DialogDescription>
           </DialogHeader>
 
@@ -588,7 +621,9 @@ export default function DiscountCodesManagement() {
                 <Label>Discount Type *</Label>
                 <Select
                   value={formData.discount_type}
-                  onValueChange={(v) => setFormData({ ...formData, discount_type: v as 'percent' | 'fixed_amount' })}
+                  onValueChange={(v) =>
+                    setFormData({ ...formData, discount_type: v as "percent" | "fixed_amount" })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -601,17 +636,17 @@ export default function DiscountCodesManagement() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="discount_value">
-                  Discount Value * {formData.discount_type === 'percent' ? '(%)' : '(€)'}
+                  Discount Value * {formData.discount_type === "percent" ? "(%)" : "(€)"}
                 </Label>
                 <Input
                   id="discount_value"
                   type="number"
                   min="0"
-                  max={formData.discount_type === 'percent' ? '100' : undefined}
+                  max={formData.discount_type === "percent" ? "100" : undefined}
                   step="0.01"
                   value={formData.discount_value}
                   onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
-                  placeholder={formData.discount_type === 'percent' ? 'e.g. 25' : 'e.g. 500'}
+                  placeholder={formData.discount_type === "percent" ? "e.g. 25" : "e.g. 500"}
                 />
               </div>
             </div>
@@ -627,7 +662,10 @@ export default function DiscountCodesManagement() {
                       checked={formData.valid_for_program_ids.includes(program.id)}
                       onCheckedChange={() => toggleProgramSelection(program.id)}
                     />
-                    <Label htmlFor={`program-${program.id}`} className="text-sm font-normal cursor-pointer">
+                    <Label
+                      htmlFor={`program-${program.id}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
                       {program.name}
                     </Label>
                   </div>
@@ -646,7 +684,7 @@ export default function DiscountCodesManagement() {
                   {allTiers.map((tier) => (
                     <Badge
                       key={tier}
-                      variant={formData.valid_for_tier_names.includes(tier) ? 'default' : 'outline'}
+                      variant={formData.valid_for_tier_names.includes(tier) ? "default" : "outline"}
                       className="cursor-pointer"
                       onClick={() => toggleTierSelection(tier)}
                     >
@@ -676,7 +714,9 @@ export default function DiscountCodesManagement() {
                   id="assigned_user_email"
                   type="email"
                   value={formData.assigned_user_email}
-                  onChange={(e) => setFormData({ ...formData, assigned_user_email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, assigned_user_email: e.target.value })
+                  }
                   placeholder="user@example.com"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -695,7 +735,7 @@ export default function DiscountCodesManagement() {
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !formData.starts_at && "text-muted-foreground"
+                        !formData.starts_at && "text-muted-foreground",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -706,7 +746,9 @@ export default function DiscountCodesManagement() {
                     <Calendar
                       mode="single"
                       selected={formData.starts_at}
-                      onSelect={(date) => setFormData({ ...formData, starts_at: date || new Date() })}
+                      onSelect={(date) =>
+                        setFormData({ ...formData, starts_at: date || new Date() })
+                      }
                     />
                   </PopoverContent>
                 </Popover>
@@ -719,7 +761,7 @@ export default function DiscountCodesManagement() {
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !formData.expires_at && "text-muted-foreground"
+                        !formData.expires_at && "text-muted-foreground",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -753,7 +795,7 @@ export default function DiscountCodesManagement() {
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingItem ? 'Update' : 'Create'}
+                {editingItem ? "Update" : "Create"}
               </Button>
             </DialogFooter>
           </form>

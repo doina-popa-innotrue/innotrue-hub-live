@@ -1,7 +1,7 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { useCreditBatches } from './useCreditBatches';
-import { useQuery } from '@tanstack/react-query';
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useCreditBatches } from "./useCreditBatches";
+import { useQuery } from "@tanstack/react-query";
 
 interface ResourceAccessResult {
   hasAccess: boolean;
@@ -49,14 +49,14 @@ export function useResourceCredits(resourceId?: string) {
 
   // Fetch resource credit info
   const { data: resourceInfo, isLoading } = useQuery({
-    queryKey: ['resource-credit-info', resourceId],
+    queryKey: ["resource-credit-info", resourceId],
     queryFn: async () => {
       if (!resourceId) return null;
-      
+
       const { data, error } = await supabase
-        .from('resource_library')
-        .select('id, title, credit_cost, is_consumable')
-        .eq('id', resourceId)
+        .from("resource_library")
+        .select("id, title, credit_cost, is_consumable")
+        .eq("id", resourceId)
         .single();
 
       if (error) throw error;
@@ -77,11 +77,11 @@ export function useResourceCredits(resourceId?: string) {
         isFree: false,
         availableCredits: 0,
         wouldRemain: 0,
-        error: 'Not authenticated',
+        error: "Not authenticated",
       };
     }
 
-    const { data, error } = await supabase.rpc('check_resource_access', {
+    const { data, error } = await supabase.rpc("check_resource_access", {
       p_user_id: user.id,
       p_resource_id: checkId,
       p_org_id: null as unknown as string,
@@ -114,18 +114,20 @@ export function useResourceCredits(resourceId?: string) {
    * Consume credits for accessing a resource.
    * Returns success if free resource or credits consumed successfully.
    */
-  const consumeResourceCredit = async (targetResourceId?: string): Promise<ConsumeResourceResult> => {
+  const consumeResourceCredit = async (
+    targetResourceId?: string,
+  ): Promise<ConsumeResourceResult> => {
     const consumeId = targetResourceId || resourceId;
     if (!user || !consumeId) {
       return {
         success: false,
         free: false,
         creditsConsumed: 0,
-        error: 'Not authenticated',
+        error: "Not authenticated",
       };
     }
 
-    const { data, error } = await supabase.rpc('consume_resource_credit', {
+    const { data, error } = await supabase.rpc("consume_resource_credit", {
       p_user_id: user.id,
       p_resource_id: consumeId,
       p_org_id: null as unknown as string,
@@ -170,7 +172,7 @@ export function useResourceCredits(resourceId?: string) {
     canAfford,
     availableCredits,
     resourceInfo,
-    
+
     // Actions
     checkAccess,
     consumeResourceCredit,
@@ -183,13 +185,8 @@ export function useResourceCredits(resourceId?: string) {
  * Legacy hook maintained for backwards compatibility.
  */
 export function useResourceUsage(resourceId: string) {
-  const { 
-    isLoading, 
-    canAfford, 
-    consumeResourceCredit,
-    availableCredits,
-    isFree,
-  } = useResourceCredits(resourceId);
+  const { isLoading, canAfford, consumeResourceCredit, availableCredits, isFree } =
+    useResourceCredits(resourceId);
 
   return {
     isLoading,

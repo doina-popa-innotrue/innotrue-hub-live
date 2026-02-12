@@ -24,10 +24,10 @@ export {
   useModuleScenarios,
   useScenariosForModule,
   useModuleScenarioMutations,
-} from './scenarios';
+} from "./scenarios";
 
 export type {
   CreateAssignmentData,
   BulkAssignmentData,
   ModuleScenarioMutationData,
-} from './scenarios';
+} from "./scenarios";

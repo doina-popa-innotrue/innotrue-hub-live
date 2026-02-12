@@ -1,20 +1,26 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { useWheelCategories } from '@/hooks/useWheelCategories';
-import type { Database } from '@/integrations/supabase/types';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { useWheelCategories } from "@/hooks/useWheelCategories";
+import type { Database } from "@/integrations/supabase/types";
 
-type GoalCategory = Database['public']['Enums']['goal_category'];
-type GoalTimeframe = Database['public']['Enums']['goal_timeframe'];
-type GoalPriority = Database['public']['Enums']['goal_priority'];
-type GoalStatus = Database['public']['Enums']['goal_status'];
+type GoalCategory = Database["public"]["Enums"]["goal_category"];
+type GoalTimeframe = Database["public"]["Enums"]["goal_timeframe"];
+type GoalPriority = Database["public"]["Enums"]["goal_priority"];
+type GoalStatus = Database["public"]["Enums"]["goal_status"];
 
 interface GoalFormProps {
   goalId?: string;
@@ -26,7 +32,9 @@ interface GoalFormProps {
 export default function GoalForm({ goalId, defaultCategory, onSuccess, onCancel }: GoalFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { data: categories = [], isLoading: categoriesLoading } = useWheelCategories({ includeLegacy: false });
+  const { data: categories = [], isLoading: categoriesLoading } = useWheelCategories({
+    includeLegacy: false,
+  });
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<{
     title: string;
@@ -38,13 +46,13 @@ export default function GoalForm({ goalId, defaultCategory, onSuccess, onCancel 
     status: GoalStatus;
     is_private: boolean;
   }>({
-    title: '',
-    description: '',
-    category: (defaultCategory || 'personal_growth') as GoalCategory,
-    timeframe_type: 'short_term' as GoalTimeframe,
-    priority: 'medium' as GoalPriority,
-    target_date: '',
-    status: 'active' as GoalStatus,
+    title: "",
+    description: "",
+    category: (defaultCategory || "personal_growth") as GoalCategory,
+    timeframe_type: "short_term" as GoalTimeframe,
+    priority: "medium" as GoalPriority,
+    target_date: "",
+    status: "active" as GoalStatus,
     is_private: false,
   });
 
@@ -57,28 +65,28 @@ export default function GoalForm({ goalId, defaultCategory, onSuccess, onCancel 
   const fetchGoal = async () => {
     try {
       const { data, error } = await supabase
-        .from('goals')
-        .select('*')
-        .eq('id', goalId ?? '')
+        .from("goals")
+        .select("*")
+        .eq("id", goalId ?? "")
         .single();
 
       if (error) throw error;
 
       setFormData({
         title: data.title,
-        description: data.description || '',
+        description: data.description || "",
         category: data.category as GoalCategory,
         timeframe_type: data.timeframe_type as GoalTimeframe,
         priority: data.priority as GoalPriority,
-        target_date: data.target_date || '',
+        target_date: data.target_date || "",
         status: data.status as GoalStatus,
         is_private: data.is_private || false,
       });
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to load goal',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load goal",
+        variant: "destructive",
       });
     }
   };
@@ -97,36 +105,31 @@ export default function GoalForm({ goalId, defaultCategory, onSuccess, onCancel 
       };
 
       if (goalId) {
-        const { error } = await supabase
-          .from('goals')
-          .update(goalData)
-          .eq('id', goalId);
+        const { error } = await supabase.from("goals").update(goalData).eq("id", goalId);
 
         if (error) throw error;
 
         toast({
-          title: 'Success',
-          description: 'Goal updated successfully',
+          title: "Success",
+          description: "Goal updated successfully",
         });
       } else {
-        const { error } = await supabase
-          .from('goals')
-          .insert([goalData]);
+        const { error } = await supabase.from("goals").insert([goalData]);
 
         if (error) throw error;
 
         toast({
-          title: 'Success',
-          description: 'Goal created successfully',
+          title: "Success",
+          description: "Goal created successfully",
         });
       }
 
       onSuccess();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: `Failed to ${goalId ? 'update' : 'create'} goal`,
-        variant: 'destructive',
+        title: "Error",
+        description: `Failed to ${goalId ? "update" : "create"} goal`,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -157,11 +160,11 @@ export default function GoalForm({ goalId, defaultCategory, onSuccess, onCancel 
         />
       </div>
 
-        <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="category">Category *</Label>
-          <Select 
-            value={formData.category} 
+          <Select
+            value={formData.category}
             onValueChange={(value) => setFormData({ ...formData, category: value as GoalCategory })}
             disabled={categoriesLoading}
           >
@@ -180,7 +183,12 @@ export default function GoalForm({ goalId, defaultCategory, onSuccess, onCancel 
 
         <div className="space-y-2">
           <Label htmlFor="timeframe">Timeframe *</Label>
-          <Select value={formData.timeframe_type} onValueChange={(value) => setFormData({ ...formData, timeframe_type: value as GoalTimeframe })}>
+          <Select
+            value={formData.timeframe_type}
+            onValueChange={(value) =>
+              setFormData({ ...formData, timeframe_type: value as GoalTimeframe })
+            }
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -196,7 +204,10 @@ export default function GoalForm({ goalId, defaultCategory, onSuccess, onCancel 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="priority">Priority *</Label>
-          <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value as GoalPriority })}>
+          <Select
+            value={formData.priority}
+            onValueChange={(value) => setFormData({ ...formData, priority: value as GoalPriority })}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -210,7 +221,10 @@ export default function GoalForm({ goalId, defaultCategory, onSuccess, onCancel 
 
         <div className="space-y-2">
           <Label htmlFor="status">Status *</Label>
-          <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as GoalStatus })}>
+          <Select
+            value={formData.status}
+            onValueChange={(value) => setFormData({ ...formData, status: value as GoalStatus })}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -253,7 +267,7 @@ export default function GoalForm({ goalId, defaultCategory, onSuccess, onCancel 
           Cancel
         </Button>
         <Button type="submit" disabled={loading}>
-          {loading ? 'Saving...' : goalId ? 'Update Goal' : 'Create Goal'}
+          {loading ? "Saving..." : goalId ? "Update Goal" : "Create Goal"}
         </Button>
       </div>
     </form>

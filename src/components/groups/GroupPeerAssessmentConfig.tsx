@@ -1,13 +1,26 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useToast } from '@/hooks/use-toast';
-import { useAdminGroupPeerAssessments } from '@/hooks/useGroupPeerAssessments';
-import { Plus, Trash2, Loader2, ClipboardCheck } from 'lucide-react';
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+import { useAdminGroupPeerAssessments } from "@/hooks/useGroupPeerAssessments";
+import { Plus, Trash2, Loader2, ClipboardCheck } from "lucide-react";
 
 interface GroupPeerAssessmentConfigProps {
   groupId: string;
@@ -15,35 +28,29 @@ interface GroupPeerAssessmentConfigProps {
 
 export function GroupPeerAssessmentConfig({ groupId }: GroupPeerAssessmentConfigProps) {
   const { toast } = useToast();
-  const [selectedAssessmentId, setSelectedAssessmentId] = useState('');
-  
-  const {
-    configs,
-    isLoading,
-    availableAssessments,
-    addConfig,
-    removeConfig,
-    toggleActive,
-  } = useAdminGroupPeerAssessments(groupId);
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState("");
+
+  const { configs, isLoading, availableAssessments, addConfig, removeConfig, toggleActive } =
+    useAdminGroupPeerAssessments(groupId);
 
   const handleAdd = async () => {
     if (!selectedAssessmentId) return;
-    
+
     try {
       await addConfig.mutateAsync(selectedAssessmentId);
-      toast({ title: 'Peer assessment added' });
-      setSelectedAssessmentId('');
+      toast({ title: "Peer assessment added" });
+      setSelectedAssessmentId("");
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
   const handleRemove = async (configId: string) => {
     try {
       await removeConfig.mutateAsync(configId);
-      toast({ title: 'Peer assessment removed' });
+      toast({ title: "Peer assessment removed" });
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
@@ -51,7 +58,7 @@ export function GroupPeerAssessmentConfig({ groupId }: GroupPeerAssessmentConfig
     try {
       await toggleActive.mutateAsync({ configId, isActive });
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 

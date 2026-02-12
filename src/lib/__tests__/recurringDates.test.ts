@@ -1,57 +1,61 @@
-import { describe, it, expect } from 'vitest';
-import { getNextRecurringDate, generateRecurringDates, generateRecurringDatesSimple } from '../recurringDates';
-import { addDays, addWeeks, addMonths, differenceInDays } from 'date-fns';
+import { describe, it, expect } from "vitest";
+import {
+  getNextRecurringDate,
+  generateRecurringDates,
+  generateRecurringDatesSimple,
+} from "../recurringDates";
+import { addDays, addWeeks, addMonths, differenceInDays } from "date-fns";
 
-describe('getNextRecurringDate', () => {
-  const baseDate = new Date('2026-03-01T10:00:00Z');
+describe("getNextRecurringDate", () => {
+  const baseDate = new Date("2026-03-01T10:00:00Z");
 
-  it('adds 1 day for daily pattern', () => {
-    const result = getNextRecurringDate(baseDate, 'daily');
+  it("adds 1 day for daily pattern", () => {
+    const result = getNextRecurringDate(baseDate, "daily");
     expect(result.getTime()).toBe(addDays(baseDate, 1).getTime());
   });
 
-  it('adds 1 week for weekly pattern', () => {
-    const result = getNextRecurringDate(baseDate, 'weekly');
+  it("adds 1 week for weekly pattern", () => {
+    const result = getNextRecurringDate(baseDate, "weekly");
     expect(result.getTime()).toBe(addWeeks(baseDate, 1).getTime());
   });
 
-  it('adds 2 weeks for bi-weekly pattern', () => {
-    const result = getNextRecurringDate(baseDate, 'bi-weekly');
+  it("adds 2 weeks for bi-weekly pattern", () => {
+    const result = getNextRecurringDate(baseDate, "bi-weekly");
     expect(result.getTime()).toBe(addWeeks(baseDate, 2).getTime());
   });
 
-  it('adds 1 month for monthly pattern', () => {
-    const result = getNextRecurringDate(baseDate, 'monthly');
+  it("adds 1 month for monthly pattern", () => {
+    const result = getNextRecurringDate(baseDate, "monthly");
     expect(result.getTime()).toBe(addMonths(baseDate, 1).getTime());
   });
 
-  it('defaults to weekly for unknown pattern', () => {
-    const result = getNextRecurringDate(baseDate, 'unknown-pattern');
+  it("defaults to weekly for unknown pattern", () => {
+    const result = getNextRecurringDate(baseDate, "unknown-pattern");
     expect(result.getTime()).toBe(addWeeks(baseDate, 1).getTime());
   });
 
-  it('is case-insensitive', () => {
-    const result = getNextRecurringDate(baseDate, 'DAILY');
+  it("is case-insensitive", () => {
+    const result = getNextRecurringDate(baseDate, "DAILY");
     expect(result.getTime()).toBe(addDays(baseDate, 1).getTime());
   });
 
-  it('does not mutate the original date', () => {
-    const original = new Date('2026-03-01T10:00:00Z');
+  it("does not mutate the original date", () => {
+    const original = new Date("2026-03-01T10:00:00Z");
     const originalTime = original.getTime();
-    getNextRecurringDate(original, 'daily');
+    getNextRecurringDate(original, "daily");
     expect(original.getTime()).toBe(originalTime);
   });
 });
 
-describe('generateRecurringDates', () => {
-  const startDate = new Date('2026-03-01T10:00:00Z');
+describe("generateRecurringDates", () => {
+  const startDate = new Date("2026-03-01T10:00:00Z");
 
   // --- Count-based generation ---
-  it('generates correct number of dates with count-based end type', () => {
+  it("generates correct number of dates with count-based end type", () => {
     const dates = generateRecurringDates({
       startDate,
-      pattern: 'weekly',
-      endType: 'count',
+      pattern: "weekly",
+      endType: "count",
       count: 5,
       maxLimit: 10,
     });
@@ -59,11 +63,11 @@ describe('generateRecurringDates', () => {
     expect(dates.length).toBe(4);
   });
 
-  it('respects maxLimit when count exceeds it', () => {
+  it("respects maxLimit when count exceeds it", () => {
     const dates = generateRecurringDates({
       startDate,
-      pattern: 'weekly',
-      endType: 'count',
+      pattern: "weekly",
+      endType: "count",
       count: 100,
       maxLimit: 5,
     });
@@ -71,11 +75,11 @@ describe('generateRecurringDates', () => {
     expect(dates.length).toBe(4);
   });
 
-  it('excludes the start date (master session)', () => {
+  it("excludes the start date (master session)", () => {
     const dates = generateRecurringDates({
       startDate,
-      pattern: 'weekly',
-      endType: 'count',
+      pattern: "weekly",
+      endType: "count",
       count: 3,
       maxLimit: 10,
     });
@@ -84,11 +88,11 @@ describe('generateRecurringDates', () => {
     });
   });
 
-  it('generates weekly dates in correct sequence', () => {
+  it("generates weekly dates in correct sequence", () => {
     const dates = generateRecurringDates({
       startDate,
-      pattern: 'weekly',
-      endType: 'count',
+      pattern: "weekly",
+      endType: "count",
       count: 4,
       maxLimit: 10,
     });
@@ -100,11 +104,11 @@ describe('generateRecurringDates', () => {
     expect(differenceInDays(dates[0], startDate)).toBe(7);
   });
 
-  it('generates daily dates in correct sequence', () => {
+  it("generates daily dates in correct sequence", () => {
     const dates = generateRecurringDates({
       startDate,
-      pattern: 'daily',
-      endType: 'count',
+      pattern: "daily",
+      endType: "count",
       count: 4,
       maxLimit: 10,
     });
@@ -114,12 +118,12 @@ describe('generateRecurringDates', () => {
   });
 
   // --- Date-based generation ---
-  it('stops at endDate for date-based end type', () => {
+  it("stops at endDate for date-based end type", () => {
     const endDate = addWeeks(startDate, 3).toISOString();
     const dates = generateRecurringDates({
       startDate,
-      pattern: 'weekly',
-      endType: 'date',
+      pattern: "weekly",
+      endType: "date",
       endDate,
       maxLimit: 100,
     });
@@ -130,11 +134,11 @@ describe('generateRecurringDates', () => {
     expect(dates.length).toBeGreaterThan(0);
   });
 
-  it('respects 6-month safety limit', () => {
+  it("respects 6-month safety limit", () => {
     const dates = generateRecurringDates({
       startDate,
-      pattern: 'weekly',
-      endType: 'date',
+      pattern: "weekly",
+      endType: "date",
       endDate: addMonths(startDate, 12).toISOString(), // 12 months out
       maxLimit: 1000,
     });
@@ -145,12 +149,12 @@ describe('generateRecurringDates', () => {
     });
   });
 
-  it('returns empty array when endDate is before first recurrence', () => {
+  it("returns empty array when endDate is before first recurrence", () => {
     const endDate = startDate.toISOString(); // Same as start
     const dates = generateRecurringDates({
       startDate,
-      pattern: 'weekly',
-      endType: 'date',
+      pattern: "weekly",
+      endType: "date",
       endDate,
       maxLimit: 10,
     });
@@ -158,10 +162,10 @@ describe('generateRecurringDates', () => {
   });
 
   // --- Default values ---
-  it('defaults to count=4 and endType=count', () => {
+  it("defaults to count=4 and endType=count", () => {
     const dates = generateRecurringDates({
       startDate,
-      pattern: 'weekly',
+      pattern: "weekly",
       maxLimit: 10,
     });
     // Default count=4, effectiveMax=4, generates 3
@@ -169,11 +173,11 @@ describe('generateRecurringDates', () => {
   });
 
   // --- Returns new Date instances ---
-  it('returns new Date instances (not references)', () => {
+  it("returns new Date instances (not references)", () => {
     const dates = generateRecurringDates({
       startDate,
-      pattern: 'weekly',
-      endType: 'count',
+      pattern: "weekly",
+      endType: "count",
       count: 3,
       maxLimit: 10,
     });
@@ -186,27 +190,27 @@ describe('generateRecurringDates', () => {
   });
 });
 
-describe('generateRecurringDatesSimple', () => {
-  const startDate = new Date('2026-03-01T10:00:00Z');
+describe("generateRecurringDatesSimple", () => {
+  const startDate = new Date("2026-03-01T10:00:00Z");
 
-  it('delegates to generateRecurringDates with endType=date', () => {
+  it("delegates to generateRecurringDates with endType=date", () => {
     const endDate = addWeeks(startDate, 5).toISOString();
-    const dates = generateRecurringDatesSimple(startDate, 'weekly', endDate, 100);
+    const dates = generateRecurringDatesSimple(startDate, "weekly", endDate, 100);
     expect(dates.length).toBeGreaterThan(0);
     dates.forEach((date) => {
       expect(date.getTime()).toBeLessThanOrEqual(new Date(endDate).getTime());
     });
   });
 
-  it('handles null endDate', () => {
-    const dates = generateRecurringDatesSimple(startDate, 'weekly', null, 10);
+  it("handles null endDate", () => {
+    const dates = generateRecurringDatesSimple(startDate, "weekly", null, 10);
     // Should still generate dates (up to 6-month limit and maxLimit)
     expect(dates.length).toBeGreaterThan(0);
   });
 
-  it('respects maxLimit', () => {
+  it("respects maxLimit", () => {
     const endDate = addMonths(startDate, 6).toISOString();
-    const dates = generateRecurringDatesSimple(startDate, 'daily', endDate, 5);
+    const dates = generateRecurringDatesSimple(startDate, "daily", endDate, 5);
     expect(dates.length).toBeLessThanOrEqual(4); // maxLimit - 1
   });
 });

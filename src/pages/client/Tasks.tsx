@@ -5,7 +5,19 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, LayoutGrid, Clock, Zap, Focus, ArrowUpRight, CheckSquare, AlertTriangle, Filter, Eye, EyeOff } from "lucide-react";
+import {
+  Plus,
+  LayoutGrid,
+  Clock,
+  Zap,
+  Focus,
+  ArrowUpRight,
+  CheckSquare,
+  AlertTriangle,
+  Filter,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -18,7 +30,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { FeatureGate } from "@/components/FeatureGate";
 import { useWheelCategories } from "@/hooks/useWheelCategories";
@@ -29,31 +47,31 @@ function TasksFallback() {
 
   const quadrants = [
     {
-      title: 'Do First',
-      subtitle: 'Important & Urgent',
-      description: 'Crisis, deadlines, pressing problems that need immediate attention',
-      color: 'bg-destructive/10 border-destructive/20',
+      title: "Do First",
+      subtitle: "Important & Urgent",
+      description: "Crisis, deadlines, pressing problems that need immediate attention",
+      color: "bg-destructive/10 border-destructive/20",
       icon: AlertTriangle,
     },
     {
-      title: 'Schedule',
-      subtitle: 'Important & Not Urgent',
-      description: 'Planning, improvement, relationships, and personal development',
-      color: 'bg-primary/10 border-primary/20',
+      title: "Schedule",
+      subtitle: "Important & Not Urgent",
+      description: "Planning, improvement, relationships, and personal development",
+      color: "bg-primary/10 border-primary/20",
       icon: Clock,
     },
     {
-      title: 'Delegate',
-      subtitle: 'Not Important & Urgent',
-      description: 'Interruptions, some calls, emails that can be handed off',
-      color: 'bg-secondary/50 border-secondary',
+      title: "Delegate",
+      subtitle: "Not Important & Urgent",
+      description: "Interruptions, some calls, emails that can be handed off",
+      color: "bg-secondary/50 border-secondary",
       icon: ArrowUpRight,
     },
     {
-      title: 'Eliminate',
-      subtitle: 'Not Important & Not Urgent',
-      description: 'Time wasters, busywork, and activities to minimize or avoid',
-      color: 'bg-muted/50 border-muted',
+      title: "Eliminate",
+      subtitle: "Not Important & Not Urgent",
+      description: "Time wasters, busywork, and activities to minimize or avoid",
+      color: "bg-muted/50 border-muted",
       icon: CheckSquare,
     },
   ];
@@ -61,18 +79,18 @@ function TasksFallback() {
   const benefits = [
     {
       icon: Focus,
-      title: 'Focus on What Matters',
-      description: 'Prioritize tasks based on importance and urgency to maximize productivity',
+      title: "Focus on What Matters",
+      description: "Prioritize tasks based on importance and urgency to maximize productivity",
     },
     {
       icon: Zap,
-      title: 'Reduce Overwhelm',
-      description: 'Clearly categorize tasks to eliminate decision fatigue and stress',
+      title: "Reduce Overwhelm",
+      description: "Clearly categorize tasks to eliminate decision fatigue and stress",
     },
     {
       icon: LayoutGrid,
-      title: 'Visual Organization',
-      description: 'See all your tasks organized in an intuitive matrix view',
+      title: "Visual Organization",
+      description: "See all your tasks organized in an intuitive matrix view",
     },
   ];
 
@@ -84,8 +102,8 @@ function TasksFallback() {
         </div>
         <h1 className="text-3xl font-bold mb-3">Eisenhower Matrix</h1>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          The proven task prioritization framework used by leaders worldwide. 
-          Organize your tasks by importance and urgency to focus on what truly matters.
+          The proven task prioritization framework used by leaders worldwide. Organize your tasks by
+          importance and urgency to focus on what truly matters.
         </p>
       </div>
 
@@ -98,7 +116,9 @@ function TasksFallback() {
                 <quadrant.icon className="h-5 w-5" />
                 <CardTitle className="text-lg">{quadrant.title}</CardTitle>
               </div>
-              <Badge variant="outline" className="w-fit">{quadrant.subtitle}</Badge>
+              <Badge variant="outline" className="w-fit">
+                {quadrant.subtitle}
+              </Badge>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">{quadrant.description}</p>
@@ -128,14 +148,12 @@ function TasksFallback() {
           <div className="text-center">
             <h3 className="text-xl font-semibold mb-2">Unlock Task Prioritization</h3>
             <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
-              This feature is part of the Decision Toolkit, available with premium programs. 
-              Start organizing your tasks with the Eisenhower Matrix today.
+              This feature is part of the Decision Toolkit, available with premium programs. Start
+              organizing your tasks with the Eisenhower Matrix today.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button onClick={() => navigate('/explore-programs')}>
-                Explore Programs
-              </Button>
-              <Button variant="outline" onClick={() => navigate('/subscription')}>
+              <Button onClick={() => navigate("/explore-programs")}>Explore Programs</Button>
+              <Button variant="outline" onClick={() => navigate("/subscription")}>
                 View Subscription Options
               </Button>
             </div>
@@ -167,8 +185,8 @@ interface Goal {
 
 export default function Tasks() {
   // Track page view for analytics
-  usePageView('Tasks');
-  
+  usePageView("Tasks");
+
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -219,7 +237,9 @@ export default function Tasks() {
     important_urgent: filteredTasks.filter((t) => t.quadrant === "important_urgent"),
     important_not_urgent: filteredTasks.filter((t) => t.quadrant === "important_not_urgent"),
     not_important_urgent: filteredTasks.filter((t) => t.quadrant === "not_important_urgent"),
-    not_important_not_urgent: filteredTasks.filter((t) => t.quadrant === "not_important_not_urgent"),
+    not_important_not_urgent: filteredTasks.filter(
+      (t) => t.quadrant === "not_important_not_urgent",
+    ),
   };
 
   if (loading) {
@@ -271,9 +291,16 @@ export default function Tasks() {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Create New Task</DialogTitle>
-                  <DialogDescription>Add a new task to your prioritization matrix</DialogDescription>
+                  <DialogDescription>
+                    Add a new task to your prioritization matrix
+                  </DialogDescription>
                 </DialogHeader>
-                <TaskForm onSuccess={() => { setDialogOpen(false); fetchTasks(); }} />
+                <TaskForm
+                  onSuccess={() => {
+                    setDialogOpen(false);
+                    fetchTasks();
+                  }}
+                />
               </DialogContent>
             </Dialog>
           </div>
@@ -315,16 +342,16 @@ export default function Tasks() {
   );
 }
 
-function QuadrantCard({ 
-  title, 
-  subtitle, 
-  tasks, 
-  color, 
-  onTaskClick 
-}: { 
-  title: string; 
-  subtitle: string; 
-  tasks: Task[]; 
+function QuadrantCard({
+  title,
+  subtitle,
+  tasks,
+  color,
+  onTaskClick,
+}: {
+  title: string;
+  subtitle: string;
+  tasks: Task[];
   color: string;
   onTaskClick: (id: string) => void;
 }) {
@@ -344,35 +371,38 @@ function QuadrantCard({
           {tasks.map((task) => {
             const isDone = task.status === "done";
             return (
-              <div 
-                key={task.id} 
+              <div
+                key={task.id}
                 className={`p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors ${
-                  isDone ? 'bg-primary/10 border-primary/30' : 'bg-card'
+                  isDone ? "bg-primary/10 border-primary/30" : "bg-card"
                 }`}
                 onClick={() => onTaskClick(task.id)}
               >
-                <div className={`font-medium ${isDone ? 'line-through text-muted-foreground' : ''}`}>
+                <div
+                  className={`font-medium ${isDone ? "line-through text-muted-foreground" : ""}`}
+                >
                   {task.title}
                 </div>
                 {task.description && (
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                    {task.description}
+                  </p>
                 )}
                 <div className="flex items-center gap-2 mt-2">
-                  <Badge 
-                    variant={isDone ? "default" : "outline"} 
-                    className="capitalize text-xs"
-                  >
+                  <Badge variant={isDone ? "default" : "outline"} className="capitalize text-xs">
                     {task.status.replace("_", " ")}
                   </Badge>
                   {task.due_date && (
                     <span className="text-xs text-muted-foreground">Due: {task.due_date}</span>
-                )}
+                  )}
                 </div>
               </div>
             );
           })}
           {tasks.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">No tasks in this quadrant</p>
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No tasks in this quadrant
+            </p>
           )}
         </div>
       </CardContent>
@@ -383,7 +413,9 @@ function QuadrantCard({
 function TaskForm({ onSuccess }: { onSuccess: () => void }) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { data: categories = [], isLoading: categoriesLoading } = useWheelCategories({ includeLegacy: false });
+  const { data: categories = [], isLoading: categoriesLoading } = useWheelCategories({
+    includeLegacy: false,
+  });
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -416,7 +448,14 @@ function TaskForm({ onSuccess }: { onSuccess: () => void }) {
     }
   }
 
-  function getQuadrant(imp: boolean, urg: boolean): "important_urgent" | "important_not_urgent" | "not_important_urgent" | "not_important_not_urgent" {
+  function getQuadrant(
+    imp: boolean,
+    urg: boolean,
+  ):
+    | "important_urgent"
+    | "important_not_urgent"
+    | "not_important_urgent"
+    | "not_important_not_urgent" {
     if (imp && urg) return "important_urgent";
     if (imp && !urg) return "important_not_urgent";
     if (!imp && urg) return "not_important_urgent";
@@ -425,7 +464,7 @@ function TaskForm({ onSuccess }: { onSuccess: () => void }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    
+
     if (!title.trim()) {
       toast({
         title: "Title required",
@@ -438,22 +477,22 @@ function TaskForm({ onSuccess }: { onSuccess: () => void }) {
     setSaving(true);
     const cleanCategory = category && category !== "_none" ? category : null;
     const cleanGoalId = goalId && goalId !== "_none" ? goalId : null;
-    
+
     try {
       const { error } = await supabase.from("tasks").insert({
-          user_id: user!.id,
-          title,
-          description,
-          category: cleanCategory,
-          goal_id: cleanGoalId,
-          importance,
-          urgency,
-          quadrant: getQuadrant(importance, urgency),
-          due_date: dueDate || null,
-          source_type: cleanGoalId ? "goal" : "manual",
-          status: "todo",
-          is_private: isPrivate,
-        });
+        user_id: user!.id,
+        title,
+        description,
+        category: cleanCategory,
+        goal_id: cleanGoalId,
+        importance,
+        urgency,
+        quadrant: getQuadrant(importance, urgency),
+        due_date: dueDate || null,
+        source_type: cleanGoalId ? "goal" : "manual",
+        status: "todo",
+        is_private: isPrivate,
+      });
 
       if (error) throw error;
 
@@ -500,7 +539,9 @@ function TaskForm({ onSuccess }: { onSuccess: () => void }) {
         <Label htmlFor="category">Life Area</Label>
         <Select value={category} onValueChange={setCategory} disabled={categoriesLoading}>
           <SelectTrigger>
-            <SelectValue placeholder={categoriesLoading ? "Loading..." : "Select life area (optional)"} />
+            <SelectValue
+              placeholder={categoriesLoading ? "Loading..." : "Select life area (optional)"}
+            />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="_none">None</SelectItem>
@@ -543,9 +584,7 @@ function TaskForm({ onSuccess }: { onSuccess: () => void }) {
       <div className="flex items-center justify-between rounded-lg border p-4">
         <div className="space-y-1">
           <Label htmlFor="isPrivate">Private Task</Label>
-          <p className="text-xs text-muted-foreground">
-            Only visible to you and admins
-          </p>
+          <p className="text-xs text-muted-foreground">Only visible to you and admins</p>
         </div>
         <Switch id="isPrivate" checked={isPrivate} onCheckedChange={setIsPrivate} />
       </div>

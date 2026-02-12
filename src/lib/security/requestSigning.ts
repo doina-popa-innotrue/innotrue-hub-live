@@ -3,7 +3,7 @@
  * Works in conjunction with server-side verification in edge functions
  */
 
-const SIGNING_SECRET_KEY = 'request_signing_enabled';
+const SIGNING_SECRET_KEY = "request_signing_enabled";
 
 /**
  * Check if request signing is available (secret configured)
@@ -22,21 +22,21 @@ export function isRequestSigningEnabled(): boolean {
  */
 export async function generateSignedRequestHeaders(
   userId: string,
-  action: string
+  action: string,
 ): Promise<Record<string, string>> {
   const timestamp = Date.now().toString();
-  
+
   // Generate signature using SubtleCrypto
   // Note: In production, consider using a per-session key derived from the JWT
   const message = `${timestamp}:${userId}:${action}`;
-  
+
   // Use a client-side derived key for the signature
   // The server will verify this matches the expected signature
   const signature = await computeClientSignature(message, userId);
-  
+
   return {
-    'x-request-timestamp': timestamp,
-    'x-request-signature': signature,
+    "x-request-timestamp": timestamp,
+    "x-request-signature": signature,
   };
 }
 
@@ -46,20 +46,21 @@ export async function generateSignedRequestHeaders(
  */
 async function computeClientSignature(message: string, userId: string): Promise<string> {
   const encoder = new TextEncoder();
-  
+
   // Derive a key from the user ID (this is visible to the user, which is fine)
   // The security comes from the server verifying with a secret
   const keyMaterial = encoder.encode(userId);
-  
+
   // Create a simple hash of the message
   const messageData = encoder.encode(message);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', 
-    new Uint8Array([...keyMaterial, ...messageData])
+  const hashBuffer = await crypto.subtle.digest(
+    "SHA-256",
+    new Uint8Array([...keyMaterial, ...messageData]),
   );
-  
+
   return Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 /**
@@ -69,10 +70,10 @@ export async function signedFetch(
   url: string,
   userId: string,
   action: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<Response> {
   const signedHeaders = await generateSignedRequestHeaders(userId, action);
-  
+
   return fetch(url, {
     ...options,
     headers: {

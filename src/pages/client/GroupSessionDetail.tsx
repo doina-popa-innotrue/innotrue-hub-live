@@ -1,18 +1,37 @@
-import { useParams, Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar, Clock, MapPin, Video, ArrowLeft, Repeat, Download, Users, Check, X, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
-import { useAuth } from '@/contexts/AuthContext';
-import { downloadICSFile } from '@/lib/icsGenerator';
-import { useToast } from '@/hooks/use-toast';
+import { useParams, Link } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Video,
+  ArrowLeft,
+  Repeat,
+  Download,
+  Users,
+  Check,
+  X,
+  Loader2,
+} from "lucide-react";
+import { format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
+import { useAuth } from "@/contexts/AuthContext";
+import { downloadICSFile } from "@/lib/icsGenerator";
+import { useToast } from "@/hooks/use-toast";
 
 export default function GroupSessionDetail() {
   const { groupId, sessionId } = useParams<{ groupId: string; sessionId: string }>();
@@ -21,13 +40,13 @@ export default function GroupSessionDetail() {
   const queryClient = useQueryClient();
 
   const { data: userProfile } = useQuery({
-    queryKey: ['user-profile-tz-name', user?.id],
+    queryKey: ["user-profile-tz-name", user?.id],
     queryFn: async () => {
       if (!user) return null;
       const { data, error } = await supabase
-        .from('profiles')
-        .select('timezone, name')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("timezone, name")
+        .eq("id", user.id)
         .single();
       if (error) throw error;
       return data;
@@ -38,12 +57,12 @@ export default function GroupSessionDetail() {
   const userTimezone = userProfile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const { data: session, isLoading } = useQuery({
-    queryKey: ['group-session', sessionId],
+    queryKey: ["group-session", sessionId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('group_sessions')
-        .select('*')
-        .eq('id', sessionId ?? '')
+        .from("group_sessions")
+        .select("*")
+        .eq("id", sessionId ?? "")
         .single();
       if (error) throw error;
       return data;
@@ -52,12 +71,12 @@ export default function GroupSessionDetail() {
   });
 
   const { data: group } = useQuery({
-    queryKey: ['group-basic', groupId],
+    queryKey: ["group-basic", groupId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('groups')
-        .select('id, name')
-        .eq('id', groupId ?? '')
+        .from("groups")
+        .select("id, name")
+        .eq("id", groupId ?? "")
         .single();
       if (error) throw error;
       return data;
@@ -67,12 +86,12 @@ export default function GroupSessionDetail() {
 
   // Fetch participants
   const { data: participants } = useQuery({
-    queryKey: ['group-session-participants', sessionId],
+    queryKey: ["group-session-participants", sessionId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('group_session_participants')
-        .select('id, user_id, response_status, responded_at')
-        .eq('session_id', sessionId ?? '');
+        .from("group_session_participants")
+        .select("id, user_id, response_status, responded_at")
+        .eq("session_id", sessionId ?? "");
       if (error) throw error;
       return data;
     },
@@ -80,56 +99,56 @@ export default function GroupSessionDetail() {
   });
 
   // Fetch profiles for participants
-  const participantUserIds = participants?.map(p => p.user_id) || [];
+  const participantUserIds = participants?.map((p) => p.user_id) || [];
   const { data: participantProfiles } = useQuery({
-    queryKey: ['participant-profiles', participantUserIds],
+    queryKey: ["participant-profiles", participantUserIds],
     queryFn: async () => {
       if (participantUserIds.length === 0) return [];
       const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, avatar_url')
-        .in('id', participantUserIds);
+        .from("profiles")
+        .select("id, name, avatar_url")
+        .in("id", participantUserIds);
       if (error) throw error;
       return data;
     },
     enabled: participantUserIds.length > 0,
   });
 
-  const profilesById = new Map(participantProfiles?.map(p => [p.id, p]) || []);
+  const profilesById = new Map(participantProfiles?.map((p) => [p.id, p]) || []);
 
   // Get current user's participation
-  const myParticipation = participants?.find(p => p.user_id === user?.id);
+  const myParticipation = participants?.find((p) => p.user_id === user?.id);
 
   // Mutation to update response status
   const updateResponseMutation = useMutation({
-    mutationFn: async (status: 'accepted' | 'declined') => {
+    mutationFn: async (status: "accepted" | "declined") => {
       const { error } = await supabase
-        .from('group_session_participants')
-        .update({ 
+        .from("group_session_participants")
+        .update({
           response_status: status,
-          responded_at: new Date().toISOString()
+          responded_at: new Date().toISOString(),
         })
-        .eq('session_id', sessionId ?? '')
-        .eq('user_id', user?.id ?? '');
+        .eq("session_id", sessionId ?? "")
+        .eq("user_id", user?.id ?? "");
       if (error) throw error;
       return status;
     },
     onSuccess: async (status) => {
-      queryClient.invalidateQueries({ queryKey: ['group-session-participants', sessionId] });
-      toast({ 
-        title: status === 'accepted' ? 'Accepted' : 'Declined',
-        description: `You have ${status} this session.`
+      queryClient.invalidateQueries({ queryKey: ["group-session-participants", sessionId] });
+      toast({
+        title: status === "accepted" ? "Accepted" : "Declined",
+        description: `You have ${status} this session.`,
       });
-      
+
       // Send email confirmation
       if (user && session) {
-        const participantName = userProfile?.name || user.email?.split('@')[0] || 'Participant';
+        const participantName = userProfile?.name || user.email?.split("@")[0] || "Participant";
         try {
-          await supabase.functions.invoke('send-notification-email', {
+          await supabase.functions.invoke("send-notification-email", {
             body: {
               userId: user.id,
               name: participantName,
-              type: 'session_rsvp_confirmation',
+              type: "session_rsvp_confirmation",
               timestamp: new Date().toISOString(),
               sessionTitle: session.title,
               sessionDate: session.session_date,
@@ -137,26 +156,26 @@ export default function GroupSessionDetail() {
               rsvpStatus: status,
               meetingUrl: session.meeting_link || undefined,
               entityLink: window.location.href,
-            }
+            },
           });
-          console.log('RSVP confirmation email sent');
+          console.log("RSVP confirmation email sent");
         } catch (emailErr) {
-          console.error('Failed to send RSVP confirmation email:', emailErr);
+          console.error("Failed to send RSVP confirmation email:", emailErr);
           // Don't show error to user - email is secondary
         }
       }
     },
     onError: (error: any) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
   });
 
   const handleDownloadICS = () => {
     if (!session) return;
     const startDate = new Date(session.session_date);
     const endDate = new Date(startDate.getTime() + (session.duration_minutes || 60) * 60 * 1000);
-    
-    const sessionTimezone = (session as any).timezone || userTimezone || 'UTC';
+
+    const sessionTimezone = (session as any).timezone || userTimezone || "UTC";
 
     downloadICSFile({
       id: session.id,
@@ -201,41 +220,70 @@ export default function GroupSessionDetail() {
   const isPast = sessionDate < new Date();
 
   // Prefer meeting_link over location
-  const videoLink = session.meeting_link || (session.location?.startsWith('http') ? session.location : null);
+  const videoLink =
+    session.meeting_link || (session.location?.startsWith("http") ? session.location : null);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'scheduled': return <Badge>Scheduled</Badge>;
-      case 'completed': return <Badge variant="secondary">Completed</Badge>;
-      case 'cancelled': return <Badge variant="destructive">Cancelled</Badge>;
-      default: return <Badge variant="outline">{status}</Badge>;
+      case "scheduled":
+        return <Badge>Scheduled</Badge>;
+      case "completed":
+        return <Badge variant="secondary">Completed</Badge>;
+      case "cancelled":
+        return <Badge variant="destructive">Cancelled</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   const getResponseBadge = (status: string) => {
     switch (status) {
-      case 'accepted': return <Badge variant="default" className="text-xs">Accepted</Badge>;
-      case 'declined': return <Badge variant="destructive" className="text-xs">Declined</Badge>;
-      case 'pending': return <Badge variant="outline" className="text-xs">Pending</Badge>;
-      default: return <Badge variant="outline" className="text-xs">{status}</Badge>;
+      case "accepted":
+        return (
+          <Badge variant="default" className="text-xs">
+            Accepted
+          </Badge>
+        );
+      case "declined":
+        return (
+          <Badge variant="destructive" className="text-xs">
+            Declined
+          </Badge>
+        );
+      case "pending":
+        return (
+          <Badge variant="outline" className="text-xs">
+            Pending
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline" className="text-xs">
+            {status}
+          </Badge>
+        );
     }
   };
 
   // Count responses
-  const acceptedCount = participants?.filter(p => p.response_status === 'accepted').length || 0;
-  const declinedCount = participants?.filter(p => p.response_status === 'declined').length || 0;
-  const pendingCount = participants?.filter(p => p.response_status === 'pending').length || 0;
+  const acceptedCount = participants?.filter((p) => p.response_status === "accepted").length || 0;
+  const declinedCount = participants?.filter((p) => p.response_status === "declined").length || 0;
+  const pendingCount = participants?.filter((p) => p.response_status === "pending").length || 0;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild><Link to="/groups">Groups</Link></BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to="/groups">Groups</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink asChild><Link to={`/groups/${groupId}`}>{group?.name || 'Group'}</Link></BreadcrumbLink>
+            <BreadcrumbLink asChild>
+              <Link to={`/groups/${groupId}`}>{group?.name || "Group"}</Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -270,7 +318,12 @@ export default function GroupSessionDetail() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto flex-shrink-0">
-              <Button variant="outline" size="sm" onClick={handleDownloadICS} className="w-full sm:w-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadICS}
+                className="w-full sm:w-auto"
+              >
                 <Download className="mr-2 h-4 w-4" />
                 Add to Calendar
               </Button>
@@ -287,21 +340,21 @@ export default function GroupSessionDetail() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Your Response (if participant) */}
-          {myParticipation && !isPast && session.status === 'scheduled' && (
+          {myParticipation && !isPast && session.status === "scheduled" && (
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 rounded-lg border bg-muted/50">
               <div className="flex-1">
                 <p className="font-medium">Your Response</p>
                 <p className="text-sm text-muted-foreground">
-                  {myParticipation.response_status === 'pending' 
-                    ? 'Will you attend this session?' 
+                  {myParticipation.response_status === "pending"
+                    ? "Will you attend this session?"
                     : `You have ${myParticipation.response_status} this session.`}
                 </p>
               </div>
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  variant={myParticipation.response_status === 'accepted' ? 'default' : 'outline'}
-                  onClick={() => updateResponseMutation.mutate('accepted')}
+                  variant={myParticipation.response_status === "accepted" ? "default" : "outline"}
+                  onClick={() => updateResponseMutation.mutate("accepted")}
                   disabled={updateResponseMutation.isPending}
                 >
                   {updateResponseMutation.isPending ? (
@@ -313,8 +366,10 @@ export default function GroupSessionDetail() {
                 </Button>
                 <Button
                   size="sm"
-                  variant={myParticipation.response_status === 'declined' ? 'destructive' : 'outline'}
-                  onClick={() => updateResponseMutation.mutate('declined')}
+                  variant={
+                    myParticipation.response_status === "declined" ? "destructive" : "outline"
+                  }
+                  onClick={() => updateResponseMutation.mutate("declined")}
                   disabled={updateResponseMutation.isPending}
                 >
                   {updateResponseMutation.isPending ? (
@@ -333,7 +388,7 @@ export default function GroupSessionDetail() {
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Date & Time</p>
-                <p className="font-medium">{format(zonedDate, 'PPP p')}</p>
+                <p className="font-medium">{format(zonedDate, "PPP p")}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -345,11 +400,22 @@ export default function GroupSessionDetail() {
             </div>
             {(videoLink || session.location) && (
               <div className="flex items-center gap-3 md:col-span-2">
-                {videoLink ? <Video className="h-5 w-5 text-muted-foreground" /> : <MapPin className="h-5 w-5 text-muted-foreground" />}
+                {videoLink ? (
+                  <Video className="h-5 w-5 text-muted-foreground" />
+                ) : (
+                  <MapPin className="h-5 w-5 text-muted-foreground" />
+                )}
                 <div>
-                  <p className="text-sm text-muted-foreground">{videoLink ? 'Meeting Link' : 'Location'}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {videoLink ? "Meeting Link" : "Location"}
+                  </p>
                   {videoLink ? (
-                    <a href={videoLink} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline break-all">
+                    <a
+                      href={videoLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-primary hover:underline break-all"
+                    >
                       {videoLink}
                     </a>
                   ) : (
@@ -374,7 +440,7 @@ export default function GroupSessionDetail() {
                 <Users className="h-5 w-5 text-muted-foreground" />
                 <h3 className="font-semibold">Participants ({participants.length})</h3>
               </div>
-              
+
               {/* Response summary */}
               <div className="flex flex-wrap gap-2 mb-4 text-sm">
                 <span className="text-muted-foreground">
@@ -399,18 +465,20 @@ export default function GroupSessionDetail() {
                   const profile = profilesById.get(participant.user_id);
                   const isCurrentUser = participant.user_id === user?.id;
                   return (
-                    <div 
-                      key={participant.id} 
-                      className={`flex items-center gap-3 p-3 rounded-lg border ${isCurrentUser ? 'bg-primary/5 border-primary/20' : 'bg-muted/30'}`}
+                    <div
+                      key={participant.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border ${isCurrentUser ? "bg-primary/5 border-primary/20" : "bg-muted/30"}`}
                     >
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={profile?.avatar_url || undefined} />
-                        <AvatarFallback>{profile?.name?.charAt(0) || '?'}</AvatarFallback>
+                        <AvatarFallback>{profile?.name?.charAt(0) || "?"}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">
-                          {profile?.name || 'Unknown'}
-                          {isCurrentUser && <span className="text-muted-foreground font-normal"> (you)</span>}
+                          {profile?.name || "Unknown"}
+                          {isCurrentUser && (
+                            <span className="text-muted-foreground font-normal"> (you)</span>
+                          )}
                         </p>
                       </div>
                       {getResponseBadge(participant.response_status)}

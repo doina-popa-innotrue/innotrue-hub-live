@@ -1,19 +1,47 @@
-import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Link2, FileImage, FileText, ExternalLink, Upload, Download, StickyNote, ChevronDown, ChevronUp, Paperclip } from 'lucide-react';
-import { format } from 'date-fns';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Badge } from '@/components/ui/badge';
+import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Plus,
+  Trash2,
+  Link2,
+  FileImage,
+  FileText,
+  ExternalLink,
+  Upload,
+  Download,
+  StickyNote,
+  ChevronDown,
+  ChevronUp,
+  Paperclip,
+} from "lucide-react";
+import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Badge } from "@/components/ui/badge";
 
 interface TaskNote {
   id: string;
@@ -58,19 +86,19 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [editingNote, setEditingNote] = useState<TaskNote | null>(null);
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(null);
-  const [uploadMode, setUploadMode] = useState<'url' | 'file'>('url');
+  const [uploadMode, setUploadMode] = useState<"url" | "file">("url");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [noteFormData, setNoteFormData] = useState({
-    title: '',
-    content: '',
+    title: "",
+    content: "",
   });
 
   const [resourceFormData, setResourceFormData] = useState({
-    title: '',
-    resource_type: 'link',
-    url: '',
-    description: '',
+    title: "",
+    resource_type: "link",
+    url: "",
+    description: "",
   });
 
   useEffect(() => {
@@ -80,10 +108,10 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
   const fetchNotes = async () => {
     try {
       const { data: notesData, error: notesError } = await supabase
-        .from('task_notes')
-        .select('*')
-        .eq('task_id', taskId)
-        .order('created_at', { ascending: false });
+        .from("task_notes")
+        .select("*")
+        .eq("task_id", taskId)
+        .order("created_at", { ascending: false });
 
       if (notesError) throw notesError;
 
@@ -91,20 +119,20 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
       const notesWithResources = await Promise.all(
         (notesData || []).map(async (note) => {
           const { data: resources } = await supabase
-            .from('task_note_resources')
-            .select('*')
-            .eq('note_id', note.id)
-            .order('created_at', { ascending: false });
+            .from("task_note_resources")
+            .select("*")
+            .eq("note_id", note.id)
+            .order("created_at", { ascending: false });
           return { ...note, resources: resources || [] };
-        })
+        }),
       );
 
       setNotes(notesWithResources);
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to load notes',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load notes",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -112,7 +140,7 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
   };
 
   const toggleNoteExpanded = (noteId: string) => {
-    setExpandedNotes(prev => {
+    setExpandedNotes((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(noteId)) {
         newSet.delete(noteId);
@@ -126,52 +154,54 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
   const handleSaveNote = async () => {
     if (!noteFormData.title.trim()) {
       toast({
-        title: 'Validation Error',
-        description: 'Title is required',
-        variant: 'destructive',
+        title: "Validation Error",
+        description: "Title is required",
+        variant: "destructive",
       });
       return;
     }
 
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
       if (editingNote) {
         const { error } = await supabase
-          .from('task_notes')
+          .from("task_notes")
           .update({
             title: noteFormData.title,
             content: noteFormData.content || null,
           })
-          .eq('id', editingNote.id);
+          .eq("id", editingNote.id);
 
         if (error) throw error;
-        toast({ title: 'Success', description: 'Note updated successfully' });
+        toast({ title: "Success", description: "Note updated successfully" });
       } else {
-        const { error } = await supabase
-          .from('task_notes')
-          .insert([{
+        const { error } = await supabase.from("task_notes").insert([
+          {
             task_id: taskId,
             user_id: user.id,
             title: noteFormData.title,
             content: noteFormData.content || null,
-          }]);
+          },
+        ]);
 
         if (error) throw error;
-        toast({ title: 'Success', description: 'Note added successfully' });
+        toast({ title: "Success", description: "Note added successfully" });
       }
 
-      setNoteFormData({ title: '', content: '' });
+      setNoteFormData({ title: "", content: "" });
       setEditingNote(null);
       setShowNoteDialog(false);
       fetchNotes();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to save note',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to save note",
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -183,19 +213,16 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
 
     try {
       // Resources will be cascade deleted
-      const { error } = await supabase
-        .from('task_notes')
-        .delete()
-        .eq('id', deleteNoteId);
+      const { error } = await supabase.from("task_notes").delete().eq("id", deleteNoteId);
 
       if (error) throw error;
-      toast({ title: 'Success', description: 'Note deleted successfully' });
+      toast({ title: "Success", description: "Note deleted successfully" });
       fetchNotes();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to delete note',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to delete note",
+        variant: "destructive",
       });
     } finally {
       setDeleteNoteId(null);
@@ -206,44 +233,52 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
     if (!validTypes.includes(file.type)) {
       toast({
-        title: 'Invalid file type',
-        description: 'Please upload an image (JPG, PNG, GIF, WEBP) or PDF file',
-        variant: 'destructive',
+        title: "Invalid file type",
+        description: "Please upload an image (JPG, PNG, GIF, WEBP) or PDF file",
+        variant: "destructive",
       });
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
       toast({
-        title: 'File too large',
-        description: 'Please upload a file smaller than 10MB',
-        variant: 'destructive',
+        title: "File too large",
+        description: "Please upload a file smaller than 10MB",
+        variant: "destructive",
       });
       return;
     }
 
     setSelectedFile(file);
-    
+
     if (!resourceFormData.title) {
       setResourceFormData({ ...resourceFormData, title: file.name });
     }
 
-    if (file.type.startsWith('image/')) {
-      setResourceFormData({ ...resourceFormData, resource_type: 'image', title: resourceFormData.title || file.name });
-    } else if (file.type === 'application/pdf') {
-      setResourceFormData({ ...resourceFormData, resource_type: 'pdf', title: resourceFormData.title || file.name });
+    if (file.type.startsWith("image/")) {
+      setResourceFormData({
+        ...resourceFormData,
+        resource_type: "image",
+        title: resourceFormData.title || file.name,
+      });
+    } else if (file.type === "application/pdf") {
+      setResourceFormData({
+        ...resourceFormData,
+        resource_type: "pdf",
+        title: resourceFormData.title || file.name,
+      });
     }
   };
 
   const uploadFile = async (file: File, userId: string, noteId: string) => {
-    const fileExt = file.name.split('.').pop();
+    const fileExt = file.name.split(".").pop();
     const fileName = `${userId}/${taskId}/${noteId}/${Date.now()}.${fileExt}`;
 
     const { data, error } = await supabase.storage
-      .from('task-note-resources')
+      .from("task-note-resources")
       .upload(fileName, file);
 
     if (error) throw error;
@@ -255,49 +290,50 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
 
     if (!resourceFormData.title.trim()) {
       toast({
-        title: 'Validation Error',
-        description: 'Title is required',
-        variant: 'destructive',
+        title: "Validation Error",
+        description: "Title is required",
+        variant: "destructive",
       });
       return;
     }
 
-    if (uploadMode === 'url' && !resourceFormData.url.trim()) {
+    if (uploadMode === "url" && !resourceFormData.url.trim()) {
       toast({
-        title: 'Validation Error',
-        description: 'URL is required',
-        variant: 'destructive',
+        title: "Validation Error",
+        description: "URL is required",
+        variant: "destructive",
       });
       return;
     }
 
-    if (uploadMode === 'file' && !selectedFile) {
+    if (uploadMode === "file" && !selectedFile) {
       toast({
-        title: 'Validation Error',
-        description: 'Please select a file to upload',
-        variant: 'destructive',
+        title: "Validation Error",
+        description: "Please select a file to upload",
+        variant: "destructive",
       });
       return;
     }
 
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
       let filePath: string | null = null;
       let url: string | null = null;
 
-      if (uploadMode === 'file' && selectedFile) {
+      if (uploadMode === "file" && selectedFile) {
         filePath = await uploadFile(selectedFile, user.id, currentNoteId);
         // Note: url is left null for file uploads - we use signed download URLs
       } else {
         url = resourceFormData.url;
       }
 
-      const { error } = await supabase
-        .from('task_note_resources')
-        .insert([{
+      const { error } = await supabase.from("task_note_resources").insert([
+        {
           note_id: currentNoteId,
           user_id: user.id,
           title: resourceFormData.title,
@@ -305,21 +341,22 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
           url: url,
           file_path: filePath,
           description: resourceFormData.description || null,
-        }]);
+        },
+      ]);
 
       if (error) throw error;
 
-      toast({ title: 'Success', description: 'Resource added successfully' });
-      setResourceFormData({ title: '', resource_type: 'link', url: '', description: '' });
+      toast({ title: "Success", description: "Resource added successfully" });
+      setResourceFormData({ title: "", resource_type: "link", url: "", description: "" });
       setSelectedFile(null);
       setShowResourceDialog(false);
       setCurrentNoteId(null);
       fetchNotes();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to add resource',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to add resource",
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -330,28 +367,26 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
     if (!deleteResourceId) return;
 
     try {
-      const note = notes.find(n => n.resources?.some(r => r.id === deleteResourceId));
-      const resource = note?.resources?.find(r => r.id === deleteResourceId);
-      
+      const note = notes.find((n) => n.resources?.some((r) => r.id === deleteResourceId));
+      const resource = note?.resources?.find((r) => r.id === deleteResourceId);
+
       if (resource?.file_path) {
-        await supabase.storage
-          .from('task-note-resources')
-          .remove([resource.file_path]);
+        await supabase.storage.from("task-note-resources").remove([resource.file_path]);
       }
 
       const { error } = await supabase
-        .from('task_note_resources')
+        .from("task_note_resources")
         .delete()
-        .eq('id', deleteResourceId);
+        .eq("id", deleteResourceId);
 
       if (error) throw error;
-      toast({ title: 'Success', description: 'Resource deleted successfully' });
+      toast({ title: "Success", description: "Resource deleted successfully" });
       fetchNotes();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to delete resource',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to delete resource",
+        variant: "destructive",
       });
     } finally {
       setDeleteResourceId(null);
@@ -360,19 +395,19 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
 
   const handleDownload = async (resource: TaskNoteResource) => {
     if (!resource.file_path) {
-      window.open(resource.url || '#', '_blank');
+      window.open(resource.url || "#", "_blank");
       return;
     }
 
     try {
       const { data, error } = await supabase.storage
-        .from('task-note-resources')
+        .from("task-note-resources")
         .download(resource.file_path);
 
       if (error) throw error;
 
       const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = resource.title;
       document.body.appendChild(a);
@@ -381,24 +416,24 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
       URL.revokeObjectURL(url);
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to download file',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to download file",
+        variant: "destructive",
       });
     }
   };
 
   const openEditNote = (note: TaskNote) => {
     setEditingNote(note);
-    setNoteFormData({ title: note.title, content: note.content || '' });
+    setNoteFormData({ title: note.title, content: note.content || "" });
     setShowNoteDialog(true);
   };
 
   const openAddResource = (noteId: string) => {
     setCurrentNoteId(noteId);
-    setResourceFormData({ title: '', resource_type: 'link', url: '', description: '' });
+    setResourceFormData({ title: "", resource_type: "link", url: "", description: "" });
     setSelectedFile(null);
-    setUploadMode('url');
+    setUploadMode("url");
     setShowResourceDialog(true);
   };
 
@@ -415,11 +450,14 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
               <StickyNote className="h-5 w-5" />
               <CardTitle>Notes</CardTitle>
             </div>
-            <Button onClick={() => {
-              setEditingNote(null);
-              setNoteFormData({ title: '', content: '' });
-              setShowNoteDialog(true);
-            }} size="sm">
+            <Button
+              onClick={() => {
+                setEditingNote(null);
+                setNoteFormData({ title: "", content: "" });
+                setShowNoteDialog(true);
+              }}
+              size="sm"
+            >
               <Plus className="mr-2 h-4 w-4" />
               Add Note
             </Button>
@@ -448,7 +486,7 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
                             <h4 className="font-medium">{note.title}</h4>
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-xs text-muted-foreground">
-                                {format(new Date(note.created_at), 'MMM d, yyyy h:mm a')}
+                                {format(new Date(note.created_at), "MMM d, yyyy h:mm a")}
                               </span>
                               {note.resources && note.resources.length > 0 && (
                                 <Badge variant="secondary" className="text-xs">
@@ -475,14 +513,17 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
                             {note.content}
                           </div>
                         )}
-                        
+
                         {/* Resources */}
                         {note.resources && note.resources.length > 0 && (
                           <div className="mt-4">
                             <h5 className="text-sm font-medium mb-2">Attachments</h5>
                             <div className="grid gap-2">
                               {note.resources.map((resource) => {
-                                const Icon = RESOURCE_ICONS[resource.resource_type as keyof typeof RESOURCE_ICONS] || FileText;
+                                const Icon =
+                                  RESOURCE_ICONS[
+                                    resource.resource_type as keyof typeof RESOURCE_ICONS
+                                  ] || FileText;
                                 return (
                                   <div
                                     key={resource.id}
@@ -507,7 +548,7 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8"
-                                          onClick={() => window.open(resource.url || '#', '_blank')}
+                                          onClick={() => window.open(resource.url || "#", "_blank")}
                                         >
                                           <ExternalLink className="h-4 w-4" />
                                         </Button>
@@ -538,11 +579,7 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
                             <Paperclip className="h-4 w-4 mr-1" />
                             Add Attachment
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditNote(note)}
-                          >
+                          <Button variant="outline" size="sm" onClick={() => openEditNote(note)}>
                             Edit
                           </Button>
                           <Button
@@ -567,7 +604,7 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
       <Dialog open={showNoteDialog} onOpenChange={setShowNoteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingNote ? 'Edit Note' : 'Add Note'}</DialogTitle>
+            <DialogTitle>{editingNote ? "Edit Note" : "Add Note"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -594,7 +631,7 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
                 Cancel
               </Button>
               <Button onClick={handleSaveNote} disabled={saving}>
-                {saving ? 'Saving...' : editingNote ? 'Update' : 'Add Note'}
+                {saving ? "Saving..." : editingNote ? "Update" : "Add Note"}
               </Button>
             </div>
           </div>
@@ -607,8 +644,8 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
           <DialogHeader>
             <DialogTitle>Add Attachment</DialogTitle>
           </DialogHeader>
-          
-          <Tabs value={uploadMode} onValueChange={(v) => setUploadMode(v as 'url' | 'file')}>
+
+          <Tabs value={uploadMode} onValueChange={(v) => setUploadMode(v as "url" | "file")}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="url">
                 <Link2 className="h-4 w-4 mr-2" />
@@ -626,7 +663,9 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
                 <Input
                   id="resource-title"
                   value={resourceFormData.title}
-                  onChange={(e) => setResourceFormData({ ...resourceFormData, title: e.target.value })}
+                  onChange={(e) =>
+                    setResourceFormData({ ...resourceFormData, title: e.target.value })
+                  }
                   placeholder="e.g., Helpful article, Reference PDF"
                 />
               </div>
@@ -635,7 +674,9 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
                 <Label htmlFor="resource-type">Type *</Label>
                 <Select
                   value={resourceFormData.resource_type}
-                  onValueChange={(value) => setResourceFormData({ ...resourceFormData, resource_type: value })}
+                  onValueChange={(value) =>
+                    setResourceFormData({ ...resourceFormData, resource_type: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -655,7 +696,9 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
                   id="resource-url"
                   type="url"
                   value={resourceFormData.url}
-                  onChange={(e) => setResourceFormData({ ...resourceFormData, url: e.target.value })}
+                  onChange={(e) =>
+                    setResourceFormData({ ...resourceFormData, url: e.target.value })
+                  }
                   placeholder="https://example.com/resource"
                 />
               </div>
@@ -665,7 +708,9 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
                 <Textarea
                   id="resource-description"
                   value={resourceFormData.description}
-                  onChange={(e) => setResourceFormData({ ...resourceFormData, description: e.target.value })}
+                  onChange={(e) =>
+                    setResourceFormData({ ...resourceFormData, description: e.target.value })
+                  }
                   placeholder="Brief description..."
                   rows={2}
                 />
@@ -678,7 +723,9 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
                 <Input
                   id="file-title"
                   value={resourceFormData.title}
-                  onChange={(e) => setResourceFormData({ ...resourceFormData, title: e.target.value })}
+                  onChange={(e) =>
+                    setResourceFormData({ ...resourceFormData, title: e.target.value })
+                  }
                   placeholder="Resource title (auto-filled from filename)"
                 />
               </div>
@@ -701,7 +748,7 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
                       onClick={() => {
                         setSelectedFile(null);
                         if (fileInputRef.current) {
-                          fileInputRef.current.value = '';
+                          fileInputRef.current.value = "";
                         }
                       }}
                     >
@@ -714,7 +761,8 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
                 </p>
                 {selectedFile && (
                   <div className="text-sm text-muted-foreground">
-                    Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                    Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)}{" "}
+                    MB)
                   </div>
                 )}
               </div>
@@ -724,7 +772,9 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
                 <Textarea
                   id="file-description"
                   value={resourceFormData.description}
-                  onChange={(e) => setResourceFormData({ ...resourceFormData, description: e.target.value })}
+                  onChange={(e) =>
+                    setResourceFormData({ ...resourceFormData, description: e.target.value })
+                  }
                   placeholder="Brief description..."
                   rows={2}
                 />
@@ -737,7 +787,7 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
               Cancel
             </Button>
             <Button onClick={handleSaveResource} disabled={saving}>
-              {saving ? 'Adding...' : 'Add Attachment'}
+              {saving ? "Adding..." : "Add Attachment"}
             </Button>
           </div>
         </DialogContent>
@@ -749,12 +799,16 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Note</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this note? This will also delete all attachments. This action cannot be undone.
+              Are you sure you want to delete this note? This will also delete all attachments. This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteNote} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDeleteNote}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -772,7 +826,10 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteResource} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDeleteResource}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

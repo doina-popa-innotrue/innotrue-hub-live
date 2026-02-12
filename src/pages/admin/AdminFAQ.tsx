@@ -1,14 +1,48 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { HelpCircle, Layers, Shield, Users, Link2, BookOpen, Target, Settings, FileText, Package, Mail, UsersRound, Award, Sparkles, Calendar, BarChart3, Download, Coins, Route, Building2, ClipboardList } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { useState, useMemo, useRef, useEffect } from 'react';
-import { downloadPlatformDocumentation, downloadTechnicalDocumentation } from '@/lib/documentation';
-import { toast } from 'sonner';
-import { FAQSearch } from '@/components/faq/FAQSearch';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  HelpCircle,
+  Layers,
+  Shield,
+  Users,
+  Link2,
+  BookOpen,
+  Target,
+  Settings,
+  FileText,
+  Package,
+  Mail,
+  UsersRound,
+  Award,
+  Sparkles,
+  Calendar,
+  BarChart3,
+  Download,
+  Coins,
+  Route,
+  Building2,
+  ClipboardList,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { downloadPlatformDocumentation, downloadTechnicalDocumentation } from "@/lib/documentation";
+import { toast } from "sonner";
+import { FAQSearch } from "@/components/faq/FAQSearch";
 
 export default function AdminFAQ() {
   const navigate = useNavigate();
@@ -20,10 +54,10 @@ export default function AdminFAQ() {
     setDownloadingPlatform(true);
     try {
       await downloadPlatformDocumentation();
-      toast.success('Platform documentation downloaded');
+      toast.success("Platform documentation downloaded");
     } catch (error) {
-      console.error('Error downloading platform documentation:', error);
-      toast.error('Failed to download documentation');
+      console.error("Error downloading platform documentation:", error);
+      toast.error("Failed to download documentation");
     } finally {
       setDownloadingPlatform(false);
     }
@@ -33,15 +67,15 @@ export default function AdminFAQ() {
     setDownloadingTechnical(true);
     try {
       await downloadTechnicalDocumentation();
-      toast.success('Technical documentation downloaded');
+      toast.success("Technical documentation downloaded");
     } catch (error) {
-      console.error('Error downloading technical documentation:', error);
-      toast.error('Failed to download documentation');
+      console.error("Error downloading technical documentation:", error);
+      toast.error("Failed to download documentation");
     } finally {
       setDownloadingTechnical(false);
     }
   };
-  
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
@@ -57,11 +91,15 @@ export default function AdminFAQ() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleDownloadPlatform} disabled={downloadingPlatform}>
             <Download className="h-4 w-4 mr-2" />
-            {downloadingPlatform ? 'Downloading...' : 'Platform Docs'}
+            {downloadingPlatform ? "Downloading..." : "Platform Docs"}
           </Button>
-          <Button variant="outline" onClick={handleDownloadTechnical} disabled={downloadingTechnical}>
+          <Button
+            variant="outline"
+            onClick={handleDownloadTechnical}
+            disabled={downloadingTechnical}
+          >
             <Download className="h-4 w-4 mr-2" />
-            {downloadingTechnical ? 'Downloading...' : 'Technical Docs'}
+            {downloadingTechnical ? "Downloading..." : "Technical Docs"}
           </Button>
         </div>
       </div>
@@ -73,10 +111,8 @@ export default function AdminFAQ() {
       />
 
       <div className="grid gap-6" ref={contentRef}>
-        {searchQuery && (
-          <SearchableContent query={searchQuery} contentRef={contentRef} />
-        )}
-        
+        {searchQuery && <SearchableContent query={searchQuery} contentRef={contentRef} />}
+
         {/* Plan Tier System */}
         <Card>
           <CardHeader>
@@ -84,9 +120,7 @@ export default function AdminFAQ() {
               <Layers className="h-5 w-5" />
               Plan Tier System
             </CardTitle>
-            <CardDescription>
-              How tier levels affect user access and features
-            </CardDescription>
+            <CardDescription>How tier levels affect user access and features</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Accordion type="single" collapsible className="w-full">
@@ -94,8 +128,8 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What do tier levels mean?</AccordionTrigger>
                 <AccordionContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Tier levels determine what features and content users can access. Higher tier plans 
-                    inherit access from all lower tiers.
+                    Tier levels determine what features and content users can access. Higher tier
+                    plans inherit access from all lower tiers.
                   </p>
                   <div className="rounded-lg border p-4 bg-muted/30">
                     <div className="flex items-center gap-2 mb-2">
@@ -103,8 +137,13 @@ export default function AdminFAQ() {
                       <span className="font-medium">Tier 0 vs Tier 1+</span>
                     </div>
                     <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
-                      <li><strong>Tier 0</strong> = Free/limited plan with restrictions (e.g., Wheel of Life limits)</li>
-                      <li><strong>Tier 1+</strong> = Paid plans with progressively more features</li>
+                      <li>
+                        <strong>Tier 0</strong> = Free/limited plan with restrictions (e.g., Wheel
+                        of Life limits)
+                      </li>
+                      <li>
+                        <strong>Tier 1+</strong> = Paid plans with progressively more features
+                      </li>
                     </ul>
                   </div>
                 </AccordionContent>
@@ -192,9 +231,7 @@ export default function AdminFAQ() {
               <BookOpen className="h-5 w-5" />
               Program Management
             </CardTitle>
-            <CardDescription>
-              Creating and managing programs, modules, and content
-            </CardDescription>
+            <CardDescription>Creating and managing programs, modules, and content</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
@@ -221,10 +258,18 @@ export default function AdminFAQ() {
                     Open the program detail page → Modules tab → <strong>Add Module</strong>:
                   </p>
                   <ul className="text-sm list-disc list-inside text-muted-foreground">
-                    <li><strong>Content modules:</strong> Learning material, videos, documents</li>
-                    <li><strong>Session modules:</strong> Live workshops or coaching sessions</li>
-                    <li><strong>Academy modules:</strong> Linked to TalentLMS courses</li>
-                    <li><strong>Assignment modules:</strong> Work submissions for review</li>
+                    <li>
+                      <strong>Content modules:</strong> Learning material, videos, documents
+                    </li>
+                    <li>
+                      <strong>Session modules:</strong> Live workshops or coaching sessions
+                    </li>
+                    <li>
+                      <strong>Academy modules:</strong> Linked to TalentLMS courses
+                    </li>
+                    <li>
+                      <strong>Assignment modules:</strong> Work submissions for review
+                    </li>
                   </ul>
                 </AccordionContent>
               </AccordionItem>
@@ -233,8 +278,9 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What are module types?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Module types define the category and behavior. Manage them in <strong>Admin → Module Types</strong>.
-                    Common types: Content, Workshop, Coaching Session, Assessment, Self-Paced Course.
+                    Module types define the category and behavior. Manage them in{" "}
+                    <strong>Admin → Module Types</strong>. Common types: Content, Workshop, Coaching
+                    Session, Assessment, Self-Paced Course.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -243,9 +289,9 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do program versions work?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Programs support versioning to track changes. Each version can have different modules 
-                    and configurations while maintaining enrollment history. Deploy new versions from 
-                    program detail → Version History tab.
+                    Programs support versioning to track changes. Each version can have different
+                    modules and configurations while maintaining enrollment history. Deploy new
+                    versions from program detail → Version History tab.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -254,8 +300,8 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What are program plans?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Program plans are enrollment tiers within a program (e.g., Base, Premium, VIP). 
-                    Each plan can grant different features, module access, and credit allocations. 
+                    Program plans are enrollment tiers within a program (e.g., Base, Premium, VIP).
+                    Each plan can grant different features, module access, and credit allocations.
                     Enrollments are assigned a specific program plan.
                   </p>
                 </AccordionContent>
@@ -265,8 +311,8 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do I set scheduled dates for modules?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    For cohort-based programs, add scheduled dates in module edit → Scheduled Dates section.
-                    Include date/time and meeting links. These appear on users' calendars.
+                    For cohort-based programs, add scheduled dates in module edit → Scheduled Dates
+                    section. Include date/time and meeting links. These appear on users' calendars.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -281,9 +327,7 @@ export default function AdminFAQ() {
               <Users className="h-5 w-5" />
               User Management
             </CardTitle>
-            <CardDescription>
-              Managing users, clients, and roles
-            </CardDescription>
+            <CardDescription>Managing users, clients, and roles</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
@@ -291,11 +335,22 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What are the different user roles?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <ul className="text-sm space-y-2 text-muted-foreground">
-                    <li><strong>Client:</strong> Regular users enrolled in programs</li>
-                    <li><strong>Instructor:</strong> Program teachers who manage content and provide feedback</li>
-                    <li><strong>Coach:</strong> 1:1 support providers who track client progress</li>
-                    <li><strong>Org Admin:</strong> Organization-level administrators</li>
-                    <li><strong>Admin:</strong> Full platform management access</li>
+                    <li>
+                      <strong>Client:</strong> Regular users enrolled in programs
+                    </li>
+                    <li>
+                      <strong>Instructor:</strong> Program teachers who manage content and provide
+                      feedback
+                    </li>
+                    <li>
+                      <strong>Coach:</strong> 1:1 support providers who track client progress
+                    </li>
+                    <li>
+                      <strong>Org Admin:</strong> Organization-level administrators
+                    </li>
+                    <li>
+                      <strong>Admin:</strong> Full platform management access
+                    </li>
                   </ul>
                   <p className="text-sm text-muted-foreground">
                     Users can have multiple roles simultaneously.
@@ -307,8 +362,8 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do I assign a plan to a user?</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-sm text-muted-foreground">
-                    Go to <strong>Admin → Clients → select user → Edit Profile</strong>. 
-                    Assign their subscription plan from the dropdown. This determines their platform tier.
+                    Go to <strong>Admin → Clients → select user → Edit Profile</strong>. Assign
+                    their subscription plan from the dropdown. This determines their platform tier.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -317,8 +372,9 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do I enroll a user in a program?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Go to <strong>Admin → Clients → select user</strong>. Under "Enrollments", 
-                    click <strong>Add Enrollment</strong>. Select program and optionally choose a program plan tier.
+                    Go to <strong>Admin → Clients → select user</strong>. Under "Enrollments", click{" "}
+                    <strong>Add Enrollment</strong>. Select program and optionally choose a program
+                    plan tier.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -327,8 +383,8 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do I assign a coach to a client?</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-sm text-muted-foreground">
-                    Go to <strong>Admin → Clients → select user → Coaches tab</strong>. 
-                    Click Add Coach to assign one or more coaches.
+                    Go to <strong>Admin → Clients → select user → Coaches tab</strong>. Click Add
+                    Coach to assign one or more coaches.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -337,8 +393,9 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What are status markers?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Customizable labels for tracking client status (e.g., "Active", "On Hold", "VIP", "At Risk").
-                    Manage available markers in <strong>Admin → Status Markers</strong>.
+                    Customizable labels for tracking client status (e.g., "Active", "On Hold",
+                    "VIP", "At Risk"). Manage available markers in{" "}
+                    <strong>Admin → Status Markers</strong>.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -353,9 +410,7 @@ export default function AdminFAQ() {
               <UsersRound className="h-5 w-5" />
               Groups Management
             </CardTitle>
-            <CardDescription>
-              Creating and managing learning groups
-            </CardDescription>
+            <CardDescription>Creating and managing learning groups</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
@@ -378,10 +433,18 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What features do groups have?</AccordionTrigger>
                 <AccordionContent>
                   <ul className="text-sm list-disc list-inside text-muted-foreground">
-                    <li><strong>Sessions:</strong> Scheduled group meetings with video links</li>
-                    <li><strong>Check-ins:</strong> Member progress updates</li>
-                    <li><strong>Notes:</strong> Shared documentation and resources</li>
-                    <li><strong>Tasks:</strong> Group action items and assignments</li>
+                    <li>
+                      <strong>Sessions:</strong> Scheduled group meetings with video links
+                    </li>
+                    <li>
+                      <strong>Check-ins:</strong> Member progress updates
+                    </li>
+                    <li>
+                      <strong>Notes:</strong> Shared documentation and resources
+                    </li>
+                    <li>
+                      <strong>Tasks:</strong> Group action items and assignments
+                    </li>
                   </ul>
                 </AccordionContent>
               </AccordionItem>
@@ -390,8 +453,12 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What are group member roles?</AccordionTrigger>
                 <AccordionContent>
                   <ul className="text-sm list-disc list-inside text-muted-foreground">
-                    <li><strong>Leader:</strong> Full management (editing, managing content)</li>
-                    <li><strong>Member:</strong> Can view everything, add check-ins, notes, tasks</li>
+                    <li>
+                      <strong>Leader:</strong> Full management (editing, managing content)
+                    </li>
+                    <li>
+                      <strong>Member:</strong> Can view everything, add check-ins, notes, tasks
+                    </li>
                   </ul>
                 </AccordionContent>
               </AccordionItem>
@@ -414,11 +481,11 @@ export default function AdminFAQ() {
             <div className="rounded-lg border p-4 bg-muted/30">
               <p className="text-sm font-medium mb-2">Key Principle:</p>
               <p className="text-sm text-muted-foreground">
-                A user's feature access is the <strong>union</strong> of all their access sources. 
+                A user's feature access is the <strong>union</strong> of all their access sources.
                 If ANY source grants access to a feature, the user has access.
               </p>
             </div>
-            
+
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="access-sources">
                 <AccordionTrigger>What are the access sources?</AccordionTrigger>
@@ -461,10 +528,14 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do I manage feature flags?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Go to <strong>Admin → Features</strong> to manage feature flags. Features can be:
+                    Go to <strong>Admin → Features</strong> to manage feature flags. Features can
+                    be:
                   </p>
                   <ul className="text-sm list-disc list-inside text-muted-foreground">
-                    <li>Enabled/disabled globally via <code className="bg-muted px-1 rounded">is_active</code></li>
+                    <li>
+                      Enabled/disabled globally via{" "}
+                      <code className="bg-muted px-1 rounded">is_active</code>
+                    </li>
                     <li>Tied to specific plans (subscription or program)</li>
                     <li>Assigned to tracks or add-ons</li>
                     <li>Consumable with usage limits</li>
@@ -477,12 +548,15 @@ export default function AdminFAQ() {
                 <AccordionContent className="space-y-3">
                   <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3">
                     <p className="text-sm font-medium text-destructive">
-                      ⚠️ System features are protected because they control core platform functionality.
+                      ⚠️ System features are protected because they control core platform
+                      functionality.
                     </p>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Features marked "System" control navigation visibility, dashboard widgets, and core workflows.
-                    Set <code className="bg-muted px-1 rounded">is_active = false</code> to globally hide them instead of deleting.
+                    Features marked "System" control navigation visibility, dashboard widgets, and
+                    core workflows. Set{" "}
+                    <code className="bg-muted px-1 rounded">is_active = false</code> to globally
+                    hide them instead of deleting.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -494,9 +568,16 @@ export default function AdminFAQ() {
                     Features have a unified 3-tier visibility system:
                   </p>
                   <ul className="text-sm list-disc list-inside text-muted-foreground">
-                    <li><strong>Hidden:</strong> is_active=false or not monetized → not shown</li>
-                    <li><strong>Locked:</strong> Monetized but user lacks entitlement → shows lock icon with upsell</li>
-                    <li><strong>Accessible:</strong> User has entitlement → full access</li>
+                    <li>
+                      <strong>Hidden:</strong> is_active=false or not monetized → not shown
+                    </li>
+                    <li>
+                      <strong>Locked:</strong> Monetized but user lacks entitlement → shows lock
+                      icon with upsell
+                    </li>
+                    <li>
+                      <strong>Accessible:</strong> User has entitlement → full access
+                    </li>
                   </ul>
                   <p className="text-sm text-muted-foreground mt-2">
                     Locked items show tooltips with the plan/track/add-on name needed for access.
@@ -508,8 +589,9 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What are tracks?</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-sm text-muted-foreground">
-                    Tracks are optional groupings that unlock specific features. Assign users to tracks 
-                    for special access (beta testers, partners). Manage in <strong>Admin → Tracks</strong>.
+                    Tracks are optional groupings that unlock specific features. Assign users to
+                    tracks for special access (beta testers, partners). Manage in{" "}
+                    <strong>Admin → Tracks</strong>.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -524,9 +606,7 @@ export default function AdminFAQ() {
               <Coins className="h-5 w-5" />
               Credits & Services
             </CardTitle>
-            <CardDescription>
-              Managing the credit system and consumable services
-            </CardDescription>
+            <CardDescription>Managing the credit system and consumable services</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
@@ -537,10 +617,18 @@ export default function AdminFAQ() {
                     Credits are consumed when clients use premium services. Credits come from:
                   </p>
                   <ul className="text-sm list-disc list-inside text-muted-foreground">
-                    <li><strong>Subscription Plans:</strong> Renewable monthly allocations</li>
-                    <li><strong>Program Enrollments:</strong> Credits included with enrollment</li>
-                    <li><strong>Bonus Grants:</strong> Admin-assigned one-time credits</li>
-                    <li><strong>Add-ons:</strong> Purchased credit bundles</li>
+                    <li>
+                      <strong>Subscription Plans:</strong> Renewable monthly allocations
+                    </li>
+                    <li>
+                      <strong>Program Enrollments:</strong> Credits included with enrollment
+                    </li>
+                    <li>
+                      <strong>Bonus Grants:</strong> Admin-assigned one-time credits
+                    </li>
+                    <li>
+                      <strong>Add-ons:</strong> Purchased credit bundles
+                    </li>
                   </ul>
                 </AccordionContent>
               </AccordionItem>
@@ -575,8 +663,8 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do I grant credits to users?</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-sm text-muted-foreground">
-                    Go to <strong>Admin → Clients → select user → Credits tab</strong>. 
-                    Click "Grant Credits" to add bonus credits with optional notes.
+                    Go to <strong>Admin → Clients → select user → Credits tab</strong>. Click "Grant
+                    Credits" to add bonus credits with optional notes.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -591,9 +679,7 @@ export default function AdminFAQ() {
               <Target className="h-5 w-5" />
               Assessments
             </CardTitle>
-            <CardDescription>
-              Managing capability and psychometric assessments
-            </CardDescription>
+            <CardDescription>Managing capability and psychometric assessments</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
@@ -601,9 +687,17 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What types of assessments are available?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <ul className="text-sm space-y-2 text-muted-foreground">
-                    <li><strong>Capability Assessments:</strong> Self and peer evaluations with domains and rating scales</li>
-                    <li><strong>Psychometric Assessments:</strong> Third-party assessments with imported results</li>
-                    <li><strong>Custom Assessments:</strong> Built using the Assessment Builder</li>
+                    <li>
+                      <strong>Capability Assessments:</strong> Self and peer evaluations with
+                      domains and rating scales
+                    </li>
+                    <li>
+                      <strong>Psychometric Assessments:</strong> Third-party assessments with
+                      imported results
+                    </li>
+                    <li>
+                      <strong>Custom Assessments:</strong> Built using the Assessment Builder
+                    </li>
                   </ul>
                 </AccordionContent>
               </AccordionItem>
@@ -629,9 +723,9 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What is Guided Learning in assessments?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    You can link programs, modules, and resource library items to assessment domains 
-                    and questions. Users see these as "Development Resources" in their snapshots with 
-                    access state handling (not enrolled, tier-locked, prerequisite-locked).
+                    You can link programs, modules, and resource library items to assessment domains
+                    and questions. Users see these as "Development Resources" in their snapshots
+                    with access state handling (not enrolled, tier-locked, prerequisite-locked).
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -640,8 +734,9 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What are assessment families?</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-sm text-muted-foreground">
-                    Families group related assessments (e.g., "Leadership Competencies", "Technical Skills").
-                    Manage in <strong>Admin → Assessment Families</strong>. Helps users find related assessments.
+                    Families group related assessments (e.g., "Leadership Competencies", "Technical
+                    Skills"). Manage in <strong>Admin → Assessment Families</strong>. Helps users
+                    find related assessments.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -666,9 +761,10 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What are scenario-based assessments?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Scenarios are multi-page, complex assessments where clients respond to realistic 
-                    hypothetical situations. Each scenario contains sections with paragraphs that can 
-                    require written responses, which are then evaluated against capability questions.
+                    Scenarios are multi-page, complex assessments where clients respond to realistic
+                    hypothetical situations. Each scenario contains sections with paragraphs that
+                    can require written responses, which are then evaluated against capability
+                    questions.
                   </p>
                   <ul className="text-sm list-disc list-inside text-muted-foreground">
                     <li>Rich text content with paginated sections</li>
@@ -700,11 +796,13 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do I link scenarios to modules?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Open a module in edit mode → <strong>Scenarios tab → Add Scenario</strong>. 
-                    For each linked scenario, you can:
+                    Open a module in edit mode → <strong>Scenarios tab → Add Scenario</strong>. For
+                    each linked scenario, you can:
                   </p>
                   <ul className="text-sm list-disc list-inside text-muted-foreground">
-                    <li>Mark as "Required for Certification" to block badge approval until evaluated</li>
+                    <li>
+                      Mark as "Required for Certification" to block badge approval until evaluated
+                    </li>
                     <li>Drag to reorder scenarios within the module</li>
                     <li>Remove scenarios if no longer needed</li>
                   </ul>
@@ -718,11 +816,18 @@ export default function AdminFAQ() {
                     Scenarios must be manually assigned by staff:
                   </p>
                   <ul className="text-sm list-disc list-inside text-muted-foreground">
-                    <li><strong>Individual:</strong> From client's module view or via Assignments dashboard</li>
-                    <li><strong>Bulk:</strong> Admins can assign a scenario to all clients enrolled in a module</li>
+                    <li>
+                      <strong>Individual:</strong> From client's module view or via Assignments
+                      dashboard
+                    </li>
+                    <li>
+                      <strong>Bulk:</strong> Admins can assign a scenario to all clients enrolled in
+                      a module
+                    </li>
                   </ul>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Assignments track enrollment and module context for independent progress across re-enrollments.
+                    Assignments track enrollment and module context for independent progress across
+                    re-enrollments.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -731,7 +836,8 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do I evaluate scenario responses?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Go to <strong>Instructor Dashboard → Pending Assignments</strong> or the client's progress page:
+                    Go to <strong>Instructor Dashboard → Pending Assignments</strong> or the
+                    client's progress page:
                   </p>
                   <ul className="text-sm list-disc list-inside text-muted-foreground">
                     <li>View client's responses for each paragraph</li>
@@ -782,7 +888,7 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do scenarios affect certification?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Scenarios marked "Required for Certification" must be completed and evaluated 
+                    Scenarios marked "Required for Certification" must be completed and evaluated
                     before a client can receive their program badge:
                   </p>
                   <ul className="text-sm list-disc list-inside text-muted-foreground">
@@ -806,9 +912,7 @@ export default function AdminFAQ() {
               <Route className="h-5 w-5" />
               Guided Paths
             </CardTitle>
-            <CardDescription>
-              Creating personalized learning journeys
-            </CardDescription>
+            <CardDescription>Creating personalized learning journeys</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
@@ -816,8 +920,9 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What are Guided Paths?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Guided Paths are survey-based recommendation engines. Users answer questions, 
-                    and the system suggests relevant programs and modules based on conditional logic.
+                    Guided Paths are survey-based recommendation engines. Users answer questions,
+                    and the system suggests relevant programs and modules based on conditional
+                    logic.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -847,9 +952,7 @@ export default function AdminFAQ() {
               <Building2 className="h-5 w-5" />
               Organizations
             </CardTitle>
-            <CardDescription>
-              Managing B2B organizations
-            </CardDescription>
+            <CardDescription>Managing B2B organizations</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
@@ -873,7 +976,7 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do I create an organization?</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-sm text-muted-foreground">
-                    Go to <strong>Admin → Organizations → Add Organization</strong>. Configure name, 
+                    Go to <strong>Admin → Organizations → Add Organization</strong>. Configure name,
                     seat limit, sponsored plan, assigned programs, and initial org admin.
                   </p>
                 </AccordionContent>
@@ -889,9 +992,7 @@ export default function AdminFAQ() {
               <Package className="h-5 w-5" />
               Add-ons
             </CardTitle>
-            <CardDescription>
-              Managing feature and credit add-ons
-            </CardDescription>
+            <CardDescription>Managing feature and credit add-ons</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
@@ -899,12 +1000,19 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What are add-ons?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Add-ons are named bundles that grant features or credits independent of subscription plans:
+                    Add-ons are named bundles that grant features or credits independent of
+                    subscription plans:
                   </p>
                   <ul className="text-sm list-disc list-inside text-muted-foreground">
-                    <li><strong>Feature add-ons:</strong> Grant access to specific features</li>
-                    <li><strong>Credit add-ons:</strong> Include consumable credits</li>
-                    <li><strong>Expiring add-ons:</strong> Can have optional expiration dates</li>
+                    <li>
+                      <strong>Feature add-ons:</strong> Grant access to specific features
+                    </li>
+                    <li>
+                      <strong>Credit add-ons:</strong> Include consumable credits
+                    </li>
+                    <li>
+                      <strong>Expiring add-ons:</strong> Can have optional expiration dates
+                    </li>
                   </ul>
                 </AccordionContent>
               </AccordionItem>
@@ -913,8 +1021,8 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do I assign add-ons to users?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Go to <strong>Admin → User Add-ons</strong> or the user's profile. Select add-on, 
-                    set quantity, and configure optional expiration date.
+                    Go to <strong>Admin → User Add-ons</strong> or the user's profile. Select
+                    add-on, set quantity, and configure optional expiration date.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -923,8 +1031,9 @@ export default function AdminFAQ() {
                 <AccordionTrigger>When to use add-ons vs plan upgrades?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Use <strong>add-ons</strong> for one-time purchases, specific features, or à la carte sales.
-                    Use <strong>plan upgrades</strong> for ongoing access to multiple features or when more cost-effective.
+                    Use <strong>add-ons</strong> for one-time purchases, specific features, or à la
+                    carte sales. Use <strong>plan upgrades</strong> for ongoing access to multiple
+                    features or when more cost-effective.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -939,9 +1048,7 @@ export default function AdminFAQ() {
               <FileText className="h-5 w-5" />
               Resources & Content
             </CardTitle>
-            <CardDescription>
-              Managing the resource library and content
-            </CardDescription>
+            <CardDescription>Managing the resource library and content</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
@@ -949,9 +1056,9 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What is the Resource Library?</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-sm text-muted-foreground">
-                    A central repository for documents, templates, videos, and links. Resources can be 
-                    attached to modules, shared directly, or linked to assessment domains for guided learning.
-                    Manage at <strong>Admin → Resource Library</strong>.
+                    A central repository for documents, templates, videos, and links. Resources can
+                    be attached to modules, shared directly, or linked to assessment domains for
+                    guided learning. Manage at <strong>Admin → Resource Library</strong>.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -960,19 +1067,21 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do I tag resources with skills?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    When editing a resource, assign skills from the Skills library. Tagged skills help 
-                    users find relevant resources and track skill development.
+                    When editing a resource, assign skills from the Skills library. Tagged skills
+                    help users find relevant resources and track skill development.
                   </p>
                 </AccordionContent>
               </AccordionItem>
 
               <AccordionItem value="cross-program">
-                <AccordionTrigger>How does cross-program completion tracking work?</AccordionTrigger>
+                <AccordionTrigger>
+                  How does cross-program completion tracking work?
+                </AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    When the same module appears in multiple programs (via TalentLMS course ID or 
-                    canonical code), completing it once marks it "Completed elsewhere" in other programs.
-                    Assign canonical codes in module edit → Canonical Code field.
+                    When the same module appears in multiple programs (via TalentLMS course ID or
+                    canonical code), completing it once marks it "Completed elsewhere" in other
+                    programs. Assign canonical codes in module edit → Canonical Code field.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -981,7 +1090,7 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What are feedback templates?</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-sm text-muted-foreground">
-                    Structured formats for instructor feedback with specific fields and rubrics. 
+                    Structured formats for instructor feedback with specific fields and rubrics.
                     Create reusable templates at <strong>Admin → Feedback Templates</strong>.
                   </p>
                 </AccordionContent>
@@ -997,9 +1106,7 @@ export default function AdminFAQ() {
               <Award className="h-5 w-5" />
               Badges & Credentials
             </CardTitle>
-            <CardDescription>
-              Managing program badges and digital credentials
-            </CardDescription>
+            <CardDescription>Managing program badges and digital credentials</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
@@ -1007,7 +1114,7 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do badges work?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Badges are awarded for program completion. Configure badges in program settings 
+                    Badges are awarded for program completion. Configure badges in program settings
                     with image, criteria, and optional digital credential integration.
                   </p>
                 </AccordionContent>
@@ -1017,8 +1124,9 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How are badges approved?</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-sm text-muted-foreground">
-                    Instructors review badge requests at <strong>Badge Approvals</strong>. They verify 
-                    completion criteria are met before issuing. Clients can then accept digital credentials.
+                    Instructors review badge requests at <strong>Badge Approvals</strong>. They
+                    verify completion criteria are met before issuing. Clients can then accept
+                    digital credentials.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -1033,9 +1141,7 @@ export default function AdminFAQ() {
               <Link2 className="h-5 w-5" />
               Integrations
             </CardTitle>
-            <CardDescription>
-              Connecting external platforms and services
-            </CardDescription>
+            <CardDescription>Connecting external platforms and services</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
@@ -1043,11 +1149,22 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What integrations are available?</AccordionTrigger>
                 <AccordionContent>
                   <ul className="text-sm space-y-2 text-muted-foreground">
-                    <li><strong>InnoTrue Academy (TalentLMS):</strong> Self-paced courses with progress sync</li>
-                    <li><strong>InnoTrue Community (Circle):</strong> Community platform SSO</li>
-                    <li><strong>ActiveCampaign:</strong> Marketing automation sync</li>
-                    <li><strong>Lucid, Miro, Mural:</strong> Visual collaboration tools</li>
-                    <li><strong>Google Drive:</strong> Document storage</li>
+                    <li>
+                      <strong>InnoTrue Academy (TalentLMS):</strong> Self-paced courses with
+                      progress sync
+                    </li>
+                    <li>
+                      <strong>InnoTrue Community (Circle):</strong> Community platform SSO
+                    </li>
+                    <li>
+                      <strong>ActiveCampaign:</strong> Marketing automation sync
+                    </li>
+                    <li>
+                      <strong>Lucid, Miro, Mural:</strong> Visual collaboration tools
+                    </li>
+                    <li>
+                      <strong>Google Drive:</strong> Document storage
+                    </li>
                   </ul>
                 </AccordionContent>
               </AccordionItem>
@@ -1056,8 +1173,8 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How does TalentLMS progress sync work?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    When a user completes a course in TalentLMS, progress syncs back. Modules linked 
-                    to TalentLMS courses are automatically marked complete. Manage at 
+                    When a user completes a course in TalentLMS, progress syncs back. Modules linked
+                    to TalentLMS courses are automatically marked complete. Manage at
                     <strong> Admin → InnoTrue Academy</strong>.
                   </p>
                 </AccordionContent>
@@ -1083,13 +1200,21 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How does Cal.com integration work?</AccordionTrigger>
                 <AccordionContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Cal.com powers 1:1 session booking. The system uses a <strong>hierarchical resolution chain</strong> to 
-                    determine which instructor's calendar a client books with:
+                    Cal.com powers 1:1 session booking. The system uses a{" "}
+                    <strong>hierarchical resolution chain</strong> to determine which instructor's
+                    calendar a client books with:
                   </p>
                   <ol className="text-sm list-decimal list-inside text-muted-foreground space-y-1">
-                    <li><strong>Enrollment-specific:</strong> Instructor/coach assigned to the client's specific module</li>
-                    <li><strong>Module-level:</strong> Default instructor assigned to the module</li>
-                    <li><strong>Program-level:</strong> Default instructor assigned to the program</li>
+                    <li>
+                      <strong>Enrollment-specific:</strong> Instructor/coach assigned to the
+                      client's specific module
+                    </li>
+                    <li>
+                      <strong>Module-level:</strong> Default instructor assigned to the module
+                    </li>
+                    <li>
+                      <strong>Program-level:</strong> Default instructor assigned to the program
+                    </li>
                   </ol>
                   <div className="rounded-lg border p-4 bg-muted/30">
                     <div className="flex items-center gap-2 mb-2">
@@ -1097,7 +1222,8 @@ export default function AdminFAQ() {
                       <span className="font-medium">Personalised Modules</span>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Personalised modules (is_individualized = true) require <strong>enrollment-level staff assignment</strong> 
+                      Personalised modules (is_individualized = true) require{" "}
+                      <strong>enrollment-level staff assignment</strong>
                       so each client books with their dedicated instructor/coach.
                     </p>
                   </div>
@@ -1108,7 +1234,7 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What are Event Type Mappings?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Event Type Mappings connect Cal.com event types to the platform. Configure at 
+                    Event Type Mappings connect Cal.com event types to the platform. Configure at
                     <strong> Admin → Cal.com Integration → Event Type Mappings</strong>:
                   </p>
                   <Table>
@@ -1125,7 +1251,9 @@ export default function AdminFAQ() {
                       </TableRow>
                       <TableRow>
                         <TableCell className="font-medium">Module Type</TableCell>
-                        <TableCell>Which module type uses this event (e.g., Coaching Session, Workshop)</TableCell>
+                        <TableCell>
+                          Which module type uses this event (e.g., Coaching Session, Workshop)
+                        </TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell className="font-medium">Session Target</TableCell>
@@ -1141,10 +1269,13 @@ export default function AdminFAQ() {
               </AccordionItem>
 
               <AccordionItem value="calcom-mapping-comparison">
-                <AccordionTrigger>What's the difference between Event Type Mappings and Instructor Event Types?</AccordionTrigger>
+                <AccordionTrigger>
+                  What's the difference between Event Type Mappings and Instructor Event Types?
+                </AccordionTrigger>
                 <AccordionContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    These two configuration areas serve <strong>different but complementary purposes</strong>:
+                    These two configuration areas serve{" "}
+                    <strong>different but complementary purposes</strong>:
                   </p>
                   <Table>
                     <TableHeader>
@@ -1182,8 +1313,15 @@ export default function AdminFAQ() {
                       <Badge>How They Work Together</Badge>
                     </div>
                     <ol className="text-sm list-decimal list-inside text-muted-foreground space-y-2">
-                      <li><strong>Instructor Event Types</strong> → When a client needs to book, the system looks up the instructor's Child Event Type ID for that module type to build the correct booking URL</li>
-                      <li><strong>Event Type Mappings</strong> → When Cal.com sends a webhook after booking, this determines whether to create a module session or group session</li>
+                      <li>
+                        <strong>Instructor Event Types</strong> → When a client needs to book, the
+                        system looks up the instructor's Child Event Type ID for that module type to
+                        build the correct booking URL
+                      </li>
+                      <li>
+                        <strong>Event Type Mappings</strong> → When Cal.com sends a webhook after
+                        booking, this determines whether to create a module session or group session
+                      </li>
                     </ol>
                   </div>
                   <div className="rounded-lg border p-4 bg-accent/50">
@@ -1192,8 +1330,9 @@ export default function AdminFAQ() {
                       <span className="font-medium text-sm">Scheduling URL Fallback</span>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      The "Scheduling URL" field in Event Type Mappings is a <strong>fallback</strong> — only used if no 
-                      instructor-specific mapping exists. With complete Instructor Event Types mappings, it becomes unused.
+                      The "Scheduling URL" field in Event Type Mappings is a{" "}
+                      <strong>fallback</strong> — only used if no instructor-specific mapping
+                      exists. With complete Instructor Event Types mappings, it becomes unused.
                     </p>
                   </div>
                 </AccordionContent>
@@ -1203,24 +1342,36 @@ export default function AdminFAQ() {
                 <AccordionTrigger>What are Instructor Event Types?</AccordionTrigger>
                 <AccordionContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Instructor Event Types map each staff member to their <strong>personal version</strong> of a 
-                    Cal.com Managed Event. This is <strong>required</strong> for personalised 1:1 scheduling.
+                    Instructor Event Types map each staff member to their{" "}
+                    <strong>personal version</strong> of a Cal.com Managed Event. This is{" "}
+                    <strong>required</strong> for personalised 1:1 scheduling.
                   </p>
                   <div className="rounded-lg border p-4 bg-muted/30">
                     <div className="flex items-center gap-2 mb-2">
                       <Badge>Configuration Steps</Badge>
                     </div>
                     <ol className="text-sm list-decimal list-inside text-muted-foreground space-y-2">
-                      <li>In Cal.com, create a <strong>Managed Event</strong> (e.g., "30-min Coaching")</li>
-                      <li>Add instructors/coaches as <strong>hosts</strong> to this Managed Event</li>
-                      <li>For each host, find their <strong>Child Event Type ID</strong> in Cal.com:
+                      <li>
+                        In Cal.com, create a <strong>Managed Event</strong> (e.g., "30-min
+                        Coaching")
+                      </li>
+                      <li>
+                        Add instructors/coaches as <strong>hosts</strong> to this Managed Event
+                      </li>
+                      <li>
+                        For each host, find their <strong>Child Event Type ID</strong> in Cal.com:
                         <ul className="list-disc list-inside ml-4 mt-1">
                           <li>Go to Settings → Teams → [Your Team] → Event Types</li>
                           <li>Click the team member's version of the managed event</li>
-                          <li>The ID is in the URL (e.g., /event-types/<strong>123456</strong>)</li>
+                          <li>
+                            The ID is in the URL (e.g., /event-types/<strong>123456</strong>)
+                          </li>
                         </ul>
                       </li>
-                      <li>In the platform: <strong>Admin → Cal.com Integration → Instructor Event Types</strong></li>
+                      <li>
+                        In the platform:{" "}
+                        <strong>Admin → Cal.com Integration → Instructor Event Types</strong>
+                      </li>
                       <li>Add a mapping for each instructor + module type combination</li>
                     </ol>
                   </div>
@@ -1238,7 +1389,9 @@ export default function AdminFAQ() {
                       </TableRow>
                       <TableRow>
                         <TableCell className="font-medium">Module Type</TableCell>
-                        <TableCell>The type of session (must match an existing module type)</TableCell>
+                        <TableCell>
+                          The type of session (must match an existing module type)
+                        </TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell className="font-medium">Child Event Type ID</TableCell>
@@ -1253,12 +1406,17 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do I assign staff to client modules?</AccordionTrigger>
                 <AccordionContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    For personalised modules, assign specific instructors/coaches at the <strong>enrollment level</strong>:
+                    For personalised modules, assign specific instructors/coaches at the{" "}
+                    <strong>enrollment level</strong>:
                   </p>
                   <ol className="text-sm list-decimal list-inside text-muted-foreground space-y-1">
-                    <li>Go to <strong>Admin → Clients → [Client Name]</strong></li>
+                    <li>
+                      Go to <strong>Admin → Clients → [Client Name]</strong>
+                    </li>
                     <li>Expand the relevant enrollment</li>
-                    <li>In the <strong>Staff Assignments</strong> section, click "Manage Staff"</li>
+                    <li>
+                      In the <strong>Staff Assignments</strong> section, click "Manage Staff"
+                    </li>
                     <li>For each personalised module, assign the instructor or coach</li>
                   </ol>
                   <div className="rounded-lg border p-4 bg-muted/30">
@@ -1266,10 +1424,11 @@ export default function AdminFAQ() {
                       <Badge variant="outline">Resolution Priority</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      <strong>Enrollment Staff</strong> → Module Staff → Program Staff → Profile URL Fallback
+                      <strong>Enrollment Staff</strong> → Module Staff → Program Staff → Profile URL
+                      Fallback
                     </p>
                     <p className="text-xs text-muted-foreground mt-2">
-                      If no matching instructor event type is found, the system falls back to the 
+                      If no matching instructor event type is found, the system falls back to the
                       instructor's profile scheduling_url field.
                     </p>
                   </div>
@@ -1285,10 +1444,13 @@ export default function AdminFAQ() {
                   <ol className="text-sm list-decimal list-inside text-muted-foreground space-y-1">
                     <li>Update the staff assignment in the client's enrollment</li>
                     <li>Ensure the new instructor has their Child Event Type ID configured</li>
-                    <li>The booking link automatically resolves to the new instructor's calendar</li>
+                    <li>
+                      The booking link automatically resolves to the new instructor's calendar
+                    </li>
                   </ol>
                   <p className="text-sm text-muted-foreground mt-2">
-                    For modules with multiple potential instructors, consider using <strong>Cal.com Team Round-Robin</strong> 
+                    For modules with multiple potential instructors, consider using{" "}
+                    <strong>Cal.com Team Round-Robin</strong>
                     event types which handle availability orchestration automatically.
                   </p>
                 </AccordionContent>
@@ -1298,15 +1460,16 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do I support different session durations?</AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Create separate <strong>module types</strong> for different durations (e.g., "30-min Coaching", "60-min Coaching"). 
-                    Then create corresponding Managed Events in Cal.com and map instructors to each:
+                    Create separate <strong>module types</strong> for different durations (e.g.,
+                    "30-min Coaching", "60-min Coaching"). Then create corresponding Managed Events
+                    in Cal.com and map instructors to each:
                   </p>
                   <ul className="text-sm list-disc list-inside text-muted-foreground space-y-1">
                     <li>Module Type: "Coaching Session - 30min" → 30-minute Managed Event</li>
                     <li>Module Type: "Coaching Session - 60min" → 60-minute Managed Event</li>
                   </ul>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Each instructor needs separate Child Event Type IDs for each duration in their 
+                    Each instructor needs separate Child Event Type IDs for each duration in their
                     Instructor Event Types configuration.
                   </p>
                 </AccordionContent>
@@ -1323,8 +1486,9 @@ export default function AdminFAQ() {
                       <Badge>Cal.com-origin Sessions</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Sessions booked through Cal.com have a <strong>Reschedule</strong> button that redirects 
-                      to the Cal.com reschedule page. Changes sync back automatically via webhooks.
+                      Sessions booked through Cal.com have a <strong>Reschedule</strong> button that
+                      redirects to the Cal.com reschedule page. Changes sync back automatically via
+                      webhooks.
                     </p>
                   </div>
                   <div className="rounded-lg border p-4 bg-muted/30">
@@ -1332,30 +1496,39 @@ export default function AdminFAQ() {
                       <Badge variant="outline">Manual Sessions</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Sessions created manually (non-Cal.com) show a <strong>Rebook</strong> button. 
-                      When clients book a new time through Cal.com, the system automatically updates the 
-                      existing session record rather than creating a duplicate.
+                      Sessions created manually (non-Cal.com) show a <strong>Rebook</strong> button.
+                      When clients book a new time through Cal.com, the system automatically updates
+                      the existing session record rather than creating a duplicate.
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    This "upsert" logic prevents the unique constraint error that would occur if a client 
-                    has an existing active session for the same module.
+                    This "upsert" logic prevents the unique constraint error that would occur if a
+                    client has an existing active session for the same module.
                   </p>
                 </AccordionContent>
               </AccordionItem>
 
               <AccordionItem value="calcom-session-visibility">
-                <AccordionTrigger>When does Session Manager appear for instructors?</AccordionTrigger>
+                <AccordionTrigger>
+                  When does Session Manager appear for instructors?
+                </AccordionTrigger>
                 <AccordionContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">
                     The Session Manager visibility depends on module type:
                   </p>
                   <ul className="text-sm list-disc list-inside text-muted-foreground space-y-1">
-                    <li><strong>Personalised modules:</strong> Only appears when viewing a specific client's enrollment</li>
-                    <li><strong>Non-personalised modules:</strong> Appears in group/cohort context for batch scheduling</li>
+                    <li>
+                      <strong>Personalised modules:</strong> Only appears when viewing a specific
+                      client's enrollment
+                    </li>
+                    <li>
+                      <strong>Non-personalised modules:</strong> Appears in group/cohort context for
+                      batch scheduling
+                    </li>
                   </ul>
                   <p className="text-sm text-muted-foreground mt-2">
-                    This ensures sessions for personalised modules are always correctly associated with a specific enrollment.
+                    This ensures sessions for personalised modules are always correctly associated
+                    with a specific enrollment.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -1367,13 +1540,25 @@ export default function AdminFAQ() {
                     If clients see errors or wrong booking links:
                   </p>
                   <ol className="text-sm list-decimal list-inside text-muted-foreground space-y-1">
-                    <li><strong>Check staff assignment:</strong> Is an instructor assigned at enrollment, module, or program level?</li>
-                    <li><strong>Check Instructor Event Types:</strong> Does the assigned instructor have a Child Event Type ID for this module type?</li>
-                    <li><strong>Check Cal.com:</strong> Is the instructor a host on the Managed Event?</li>
-                    <li><strong>Fallback URL:</strong> Does the instructor have a scheduling_url in their profile?</li>
+                    <li>
+                      <strong>Check staff assignment:</strong> Is an instructor assigned at
+                      enrollment, module, or program level?
+                    </li>
+                    <li>
+                      <strong>Check Instructor Event Types:</strong> Does the assigned instructor
+                      have a Child Event Type ID for this module type?
+                    </li>
+                    <li>
+                      <strong>Check Cal.com:</strong> Is the instructor a host on the Managed Event?
+                    </li>
+                    <li>
+                      <strong>Fallback URL:</strong> Does the instructor have a scheduling_url in
+                      their profile?
+                    </li>
                   </ol>
                   <p className="text-xs text-muted-foreground mt-2">
-                    View webhook logs at <strong>Admin → System Logs → Cal.com Webhooks</strong> to debug booking issues.
+                    View webhook logs at <strong>Admin → System Logs → Cal.com Webhooks</strong> to
+                    debug booking issues.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -1388,9 +1573,7 @@ export default function AdminFAQ() {
               <Settings className="h-5 w-5" />
               System Settings
             </CardTitle>
-            <CardDescription>
-              Platform-wide configuration
-            </CardDescription>
+            <CardDescription>Platform-wide configuration</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
@@ -1413,8 +1596,9 @@ export default function AdminFAQ() {
                 <AccordionTrigger>How do I manage platform terms?</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-sm text-muted-foreground">
-                    Platform terms (ToS, privacy policy) at <strong>Admin → Platform Terms</strong>. 
-                    Users must accept current terms to use the platform. Version and track acceptance.
+                    Platform terms (ToS, privacy policy) at <strong>Admin → Platform Terms</strong>.
+                    Users must accept current terms to use the platform. Version and track
+                    acceptance.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -1447,33 +1631,39 @@ export default function AdminFAQ() {
               <Sparkles className="h-5 w-5" />
               Quick Navigation
             </CardTitle>
-            <CardDescription>
-              Common admin tasks
-            </CardDescription>
+            <CardDescription>Common admin tasks</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigate('/admin/clients')}>
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin/clients")}>
                 <Users className="h-4 w-4 mr-2" />
                 Clients
               </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate('/admin/programs')}>
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin/programs")}>
                 <BookOpen className="h-4 w-4 mr-2" />
                 Programs
               </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate('/admin/groups')}>
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin/groups")}>
                 <UsersRound className="h-4 w-4 mr-2" />
                 Groups
               </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate('/admin/plans')}>
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin/plans")}>
                 <Layers className="h-4 w-4 mr-2" />
                 Plans
               </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate('/admin/resource-library')}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/admin/resource-library")}
+              >
                 <FileText className="h-4 w-4 mr-2" />
                 Resources
               </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate('/admin/canonical-codes')}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/admin/canonical-codes")}
+              >
                 <Link2 className="h-4 w-4 mr-2" />
                 Canonical Codes
               </Button>
@@ -1486,22 +1676,28 @@ export default function AdminFAQ() {
 }
 
 // Search helper component that highlights matching text
-function SearchableContent({ query, contentRef }: { query: string; contentRef: React.RefObject<HTMLDivElement> }): null {
+function SearchableContent({
+  query,
+  contentRef,
+}: {
+  query: string;
+  contentRef: React.RefObject<HTMLDivElement>;
+}): null {
   useEffect(() => {
     if (!contentRef.current || !query) return;
-    
+
     // Remove previous highlights
-    const existingHighlights = contentRef.current.querySelectorAll('.search-highlight');
-    existingHighlights.forEach(el => {
+    const existingHighlights = contentRef.current.querySelectorAll(".search-highlight");
+    existingHighlights.forEach((el) => {
       const parent = el.parentNode;
       if (parent) {
-        parent.replaceChild(document.createTextNode(el.textContent || ''), el);
+        parent.replaceChild(document.createTextNode(el.textContent || ""), el);
         parent.normalize();
       }
     });
-    
+
     // We could add highlighting logic here, but for now just show a result count
   }, [query, contentRef]);
-  
+
   return null;
 }

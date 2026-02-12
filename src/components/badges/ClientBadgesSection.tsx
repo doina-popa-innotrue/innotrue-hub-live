@@ -1,21 +1,16 @@
-import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
-import { Award, ExternalLink, Loader2, Eye, EyeOff, Linkedin } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { generateLinkedInAddToProfileUrl, generateBadgeVerificationUrl } from '@/lib/linkedinUtils';
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { Award, ExternalLink, Loader2, Eye, EyeOff, Linkedin } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { generateLinkedInAddToProfileUrl, generateBadgeVerificationUrl } from "@/lib/linkedinUtils";
 
 interface ClientBadge {
   id: string;
@@ -59,13 +54,14 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
   const [selectedBadge, setSelectedBadge] = useState<ClientBadge | null>(null);
 
   const { data: badges, isLoading } = useQuery({
-    queryKey: ['client-badges', user?.id],
+    queryKey: ["client-badges", user?.id],
     queryFn: async () => {
       if (!user) return [];
 
       const { data, error } = await supabase
-        .from('client_badges')
-        .select(`
+        .from("client_badges")
+        .select(
+          `
           *,
           program_badges (
             id,
@@ -79,10 +75,11 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
             program_badge_credentials (*)
           ),
           client_badge_credentials (*)
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'issued')
-        .order('issued_at', { ascending: false });
+        `,
+        )
+        .eq("user_id", user.id)
+        .eq("status", "issued")
+        .order("issued_at", { ascending: false });
 
       if (error) throw error;
       return data as ClientBadge[];
@@ -93,32 +90,32 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
   const togglePublicMutation = useMutation({
     mutationFn: async ({ badgeId, isPublic }: { badgeId: string; isPublic: boolean }) => {
       const { error } = await supabase
-        .from('client_badges')
+        .from("client_badges")
         .update({ is_public: isPublic })
-        .eq('id', badgeId);
+        .eq("id", badgeId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['client-badges', user?.id] });
-      toast.success('Badge visibility updated');
+      queryClient.invalidateQueries({ queryKey: ["client-badges", user?.id] });
+      toast.success("Badge visibility updated");
     },
     onError: (error: any) => {
       toast.error(`Failed to update visibility: ${error.message}`);
     },
   });
 
-  const getPublicUrl = (path: string, bucket: string = 'program-logos') => {
+  const getPublicUrl = (path: string, bucket: string = "program-logos") => {
     const { data } = supabase.storage.from(bucket).getPublicUrl(path);
     return data.publicUrl;
   };
 
   const getBadgeImageUrl = (badge: ClientBadge) => {
     if (badge.image_path) {
-      return getPublicUrl(badge.image_path, 'client-badges');
+      return getPublicUrl(badge.image_path, "client-badges");
     }
     if (badge.program_badges?.image_path) {
-      return getPublicUrl(badge.program_badges.image_path, 'program-logos');
+      return getPublicUrl(badge.program_badges.image_path, "program-logos");
     }
     return null;
   };
@@ -145,17 +142,13 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
             <Award className="h-5 w-5" />
             My Badges
           </CardTitle>
-          <CardDescription>
-            Badges you've earned from completing programs
-          </CardDescription>
+          <CardDescription>Badges you've earned from completing programs</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-6">
             <Award className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">No badges earned yet</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Complete programs to earn badges
-            </p>
+            <p className="text-sm text-muted-foreground mt-1">Complete programs to earn badges</p>
           </div>
         </CardContent>
       </Card>
@@ -169,16 +162,18 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
           <CardTitle className="flex items-center gap-2">
             <Award className="h-5 w-5" />
             My Badges
-            <Badge variant="secondary" className="ml-2">{badges.length}</Badge>
+            <Badge variant="secondary" className="ml-2">
+              {badges.length}
+            </Badge>
           </CardTitle>
           {!compact && (
-            <CardDescription>
-              Badges you've earned from completing programs
-            </CardDescription>
+            <CardDescription>Badges you've earned from completing programs</CardDescription>
           )}
         </CardHeader>
         <CardContent>
-          <div className={`grid gap-4 ${compact ? 'grid-cols-4' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'}`}>
+          <div
+            className={`grid gap-4 ${compact ? "grid-cols-4" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"}`}
+          >
             {badges.map((badge) => {
               const imageUrl = getBadgeImageUrl(badge);
 
@@ -200,7 +195,9 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
                     )}
                     {!compact && (
                       <>
-                        <p className="font-medium text-sm line-clamp-2">{badge.program_badges.name}</p>
+                        <p className="font-medium text-sm line-clamp-2">
+                          {badge.program_badges.name}
+                        </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {badge.program_badges.programs.name}
                         </p>
@@ -252,7 +249,8 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
                 </p>
                 {selectedBadge.issued_at && (
                   <p className="text-sm">
-                    <strong>Issued:</strong> {new Date(selectedBadge.issued_at).toLocaleDateString()}
+                    <strong>Issued:</strong>{" "}
+                    {new Date(selectedBadge.issued_at).toLocaleDateString()}
                   </p>
                 )}
               </div>
@@ -263,15 +261,24 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
                   <div className="space-y-2">
                     {selectedBadge.program_badges.program_badge_credentials.map((cred) => {
                       const clientCred = selectedBadge.client_badge_credentials.find(
-                        (c) => c.program_badge_credential_id === cred.id
+                        (c) => c.program_badge_credential_id === cred.id,
                       );
 
                       return (
-                        <div key={cred.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                          <span className="text-sm">{cred.service_display_name || cred.service_name}</span>
+                        <div
+                          key={cred.id}
+                          className="flex items-center justify-between p-2 bg-muted/50 rounded"
+                        >
+                          <span className="text-sm">
+                            {cred.service_display_name || cred.service_name}
+                          </span>
                           {clientCred?.acceptance_url ? (
                             <Button size="sm" variant="outline" asChild>
-                              <a href={clientCred.acceptance_url} target="_blank" rel="noopener noreferrer">
+                              <a
+                                href={clientCred.acceptance_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
                                 <ExternalLink className="h-4 w-4 mr-1" />
                                 View
                               </a>
@@ -288,16 +295,16 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
 
               {/* LinkedIn Add to Profile */}
               <div className="pt-2">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  asChild
-                >
+                <Button variant="outline" className="w-full" asChild>
                   <a
                     href={generateLinkedInAddToProfileUrl({
                       name: selectedBadge.program_badges.name,
-                      issueYear: selectedBadge.issued_at ? new Date(selectedBadge.issued_at).getFullYear() : undefined,
-                      issueMonth: selectedBadge.issued_at ? new Date(selectedBadge.issued_at).getMonth() + 1 : undefined,
+                      issueYear: selectedBadge.issued_at
+                        ? new Date(selectedBadge.issued_at).getFullYear()
+                        : undefined,
+                      issueMonth: selectedBadge.issued_at
+                        ? new Date(selectedBadge.issued_at).getMonth() + 1
+                        : undefined,
                       certificationUrl: generateBadgeVerificationUrl(selectedBadge.id),
                       certificationId: selectedBadge.id,
                     })}
@@ -313,7 +320,9 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
               {showPublicToggle && (
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div>
-                    <Label htmlFor="public-toggle" className="font-medium">Show on Public Profile</Label>
+                    <Label htmlFor="public-toggle" className="font-medium">
+                      Show on Public Profile
+                    </Label>
                     <p className="text-xs text-muted-foreground">
                       Make this badge visible on your public profile
                     </p>

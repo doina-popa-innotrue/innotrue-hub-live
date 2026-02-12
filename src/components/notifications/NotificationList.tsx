@@ -1,51 +1,74 @@
-import { formatDistanceToNow } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Bell, Check, CheckCheck, Trash2, Settings, 
-  BookOpen, Calendar, FileText, Target, Scale, 
-  CreditCard, Users, Shield, Megaphone, Clock,
-  Award, Unlock, CalendarPlus, CalendarX, FilePlus,
-  MessageSquare, Flag, Share, AlertTriangle, PlusCircle,
-  UserPlus, ListTodo, UserCog, Hand
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { useNotifications, Notification } from '@/hooks/useNotifications';
-import { cn } from '@/lib/utils';
+import { formatDistanceToNow } from "date-fns";
+import { useNavigate } from "react-router-dom";
+import {
+  Bell,
+  Check,
+  CheckCheck,
+  Trash2,
+  Settings,
+  BookOpen,
+  Calendar,
+  FileText,
+  Target,
+  Scale,
+  CreditCard,
+  Users,
+  Shield,
+  Megaphone,
+  Clock,
+  Award,
+  Unlock,
+  CalendarPlus,
+  CalendarX,
+  FilePlus,
+  MessageSquare,
+  Flag,
+  Share,
+  AlertTriangle,
+  PlusCircle,
+  UserPlus,
+  ListTodo,
+  UserCog,
+  Hand,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { useNotifications, Notification } from "@/hooks/useNotifications";
+import { cn } from "@/lib/utils";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  'bell': Bell,
-  'book-open': BookOpen,
-  'calendar': Calendar,
-  'calendar-plus': CalendarPlus,
-  'calendar-x': CalendarX,
-  'calendar-clock': Clock,
-  'file-text': FileText,
-  'file-plus': FilePlus,
-  'target': Target,
-  'scale': Scale,
-  'credit-card': CreditCard,
-  'users': Users,
-  'settings': Settings,
-  'shield-alert': Shield,
-  'megaphone': Megaphone,
-  'check-circle': Check,
-  'check-square': Check,
-  'award': Award,
-  'unlock': Unlock,
-  'message-square': MessageSquare,
-  'message-circle': MessageSquare,
-  'flag': Flag,
-  'share': Share,
-  'alert-triangle': AlertTriangle,
-  'plus-circle': PlusCircle,
-  'user-plus': UserPlus,
-  'list-todo': ListTodo,
-  'user-cog': UserCog,
-  'hand-wave': Hand,
-  'clock': Clock,
-  'clipboard-check': Check,
+  bell: Bell,
+  "book-open": BookOpen,
+  calendar: Calendar,
+  "calendar-plus": CalendarPlus,
+  "calendar-x": CalendarX,
+  "calendar-clock": Clock,
+  "file-text": FileText,
+  "file-plus": FilePlus,
+  target: Target,
+  scale: Scale,
+  "credit-card": CreditCard,
+  users: Users,
+  settings: Settings,
+  "shield-alert": Shield,
+  megaphone: Megaphone,
+  "check-circle": Check,
+  "check-square": Check,
+  award: Award,
+  unlock: Unlock,
+  "message-square": MessageSquare,
+  "message-circle": MessageSquare,
+  flag: Flag,
+  share: Share,
+  "alert-triangle": AlertTriangle,
+  "plus-circle": PlusCircle,
+  "user-plus": UserPlus,
+  "list-todo": ListTodo,
+  "user-cog": UserCog,
+  "hand-wave": Hand,
+  clock: Clock,
+  "clipboard-check": Check,
 };
 
 interface NotificationListProps {
@@ -75,17 +98,13 @@ export function NotificationList({ onClose }: NotificationListProps) {
   };
 
   const getIcon = (notification: Notification) => {
-    const iconKey = notification.notification_types?.icon || 'bell';
+    const iconKey = notification.notification_types?.icon || "bell";
     const IconComponent = iconMap[iconKey] || Bell;
     return <IconComponent className="h-4 w-4" />;
   };
 
   if (isLoading) {
-    return (
-      <div className="p-4 text-center text-muted-foreground">
-        Loading notifications...
-      </div>
-    );
+    return <div className="p-4 text-center text-muted-foreground">Loading notifications...</div>;
   }
 
   return (
@@ -95,12 +114,7 @@ export function NotificationList({ onClose }: NotificationListProps) {
         <h3 className="font-semibold">Notifications</h3>
         <div className="flex items-center gap-1">
           {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => markAllAsRead()}
-              className="text-xs"
-            >
+            <Button variant="ghost" size="sm" onClick={() => markAllAsRead()} className="text-xs">
               <CheckCheck className="h-4 w-4 mr-1" />
               Mark all read
             </Button>
@@ -110,7 +124,7 @@ export function NotificationList({ onClose }: NotificationListProps) {
             size="icon"
             className="h-8 w-8"
             onClick={() => {
-              navigate('/settings/notifications');
+              navigate("/settings/notifications");
               onClose?.();
             }}
           >
@@ -132,26 +146,25 @@ export function NotificationList({ onClose }: NotificationListProps) {
               <div
                 key={notification.id}
                 className={cn(
-                  'p-4 hover:bg-muted/50 cursor-pointer transition-colors relative group',
-                  !notification.is_read && 'bg-primary/5'
+                  "p-4 hover:bg-muted/50 cursor-pointer transition-colors relative group",
+                  !notification.is_read && "bg-primary/5",
                 )}
                 onClick={() => handleNotificationClick(notification)}
               >
                 <div className="flex gap-3">
-                  <div className={cn(
-                    'flex-shrink-0 p-2 rounded-full',
-                    notification.notification_types?.is_critical 
-                      ? 'bg-destructive/10 text-destructive' 
-                      : 'bg-primary/10 text-primary'
-                  )}>
+                  <div
+                    className={cn(
+                      "flex-shrink-0 p-2 rounded-full",
+                      notification.notification_types?.is_critical
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-primary/10 text-primary",
+                    )}
+                  >
                     {getIcon(notification)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p className={cn(
-                        'text-sm',
-                        !notification.is_read && 'font-medium'
-                      )}>
+                      <p className={cn("text-sm", !notification.is_read && "font-medium")}>
                         {notification.title}
                       </p>
                       {!notification.is_read && (
@@ -203,7 +216,7 @@ export function NotificationList({ onClose }: NotificationListProps) {
               size="sm"
               className="text-xs"
               onClick={() => {
-                navigate('/notifications');
+                navigate("/notifications");
                 onClose?.();
               }}
             >

@@ -1,20 +1,36 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, Clock, Users, ChevronRight, Link as LinkIcon, User, FileText } from 'lucide-react';
-import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
-import { RichTextDisplay } from '@/components/ui/rich-text-display';
-import { ModuleSessionManager } from '@/components/modules/ModuleSessionManager';
-import { ModuleSectionsDisplay } from '@/components/modules/ModuleSectionsDisplay';
-import { ModuleResourceAssignment } from '@/components/modules/ModuleResourceAssignment';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import ModuleClientContentManager from '@/components/admin/ModuleClientContentManager';
-import { InlineClientContentEditor } from '@/components/modules/InlineClientContentEditor';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Loader2,
+  ArrowLeft,
+  Clock,
+  Users,
+  ChevronRight,
+  Link as LinkIcon,
+  User,
+  FileText,
+} from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
+  BreadcrumbPage,
+} from "@/components/ui/breadcrumb";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { ModuleSessionManager } from "@/components/modules/ModuleSessionManager";
+import { ModuleSectionsDisplay } from "@/components/modules/ModuleSectionsDisplay";
+import { ModuleResourceAssignment } from "@/components/modules/ModuleResourceAssignment";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import ModuleClientContentManager from "@/components/admin/ModuleClientContentManager";
+import { InlineClientContentEditor } from "@/components/modules/InlineClientContentEditor";
 
 interface ModuleLink {
   name: string;
@@ -59,17 +75,18 @@ export default function InstructorModuleDetail() {
   const enrollmentIdFromState = state.enrollmentId || null;
   const clientNameFromState = state.clientName || null;
 
-  const enrollmentIdFromUrl = searchParams.get('enrollmentId');
-  const clientNameFromUrl = searchParams.get('clientName');
+  const enrollmentIdFromUrl = searchParams.get("enrollmentId");
+  const clientNameFromUrl = searchParams.get("clientName");
 
   const desiredEnrollmentId = enrollmentIdFromState || enrollmentIdFromUrl;
-  const desiredClientName = clientNameFromState || (clientNameFromUrl ? decodeURIComponent(clientNameFromUrl) : null);
+  const desiredClientName =
+    clientNameFromState || (clientNameFromUrl ? decodeURIComponent(clientNameFromUrl) : null);
 
   const navigate = useNavigate();
   const { user } = useAuth();
   const [module, setModule] = useState<Module | null>(null);
-  const [programName, setProgramName] = useState<string>('Program');
-  const [programSlug, setProgramSlug] = useState<string>('');
+  const [programName, setProgramName] = useState<string>("Program");
+  const [programSlug, setProgramSlug] = useState<string>("");
   const [enrolledClients, setEnrolledClients] = useState<EnrolledClient[]>([]);
   const [selectedEnrollment, setSelectedEnrollment] = useState<EnrolledClient | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,11 +97,11 @@ export default function InstructorModuleDetail() {
 
       // Fetch program info
       const { data: programData } = await supabase
-        .from('programs')
-        .select('name, slug')
-        .eq('id', programId)
+        .from("programs")
+        .select("name, slug")
+        .eq("id", programId)
         .single();
-      
+
       if (programData) {
         setProgramName(programData.name);
         setProgramSlug(programData.slug);
@@ -92,51 +109,54 @@ export default function InstructorModuleDetail() {
 
       // Fetch module
       const { data: moduleData } = await supabase
-        .from('program_modules')
-        .select('*')
-        .eq('id', moduleId)
+        .from("program_modules")
+        .select("*")
+        .eq("id", moduleId)
         .single();
 
       if (moduleData) {
         setModule({
           ...moduleData,
-          links: (moduleData.links as unknown as ModuleLink[]) || []
+          links: (moduleData.links as unknown as ModuleLink[]) || [],
         } as Module);
       }
 
       // Fetch enrolled clients for this program (used when no specific client context is provided)
       // Use staff_enrollments view which respects RLS for instructor/coach access
       const { data: enrollments, error: enrollError } = await supabase
-        .from('staff_enrollments')
-        .select('id, client_user_id')
-        .eq('program_id', programId)
-        .eq('status', 'active');
+        .from("staff_enrollments")
+        .select("id, client_user_id")
+        .eq("program_id", programId)
+        .eq("status", "active");
 
       if (enrollError) {
-        console.error('Error fetching enrollments:', enrollError);
+        console.error("Error fetching enrollments:", enrollError);
       }
 
       // Fetch profiles for enrolled clients
       const clientUserIds = (enrollments || []).map((e: any) => e.client_user_id).filter(Boolean);
       let profilesMap: Record<string, { name: string; username: string }> = {};
-      
+
       if (clientUserIds.length > 0) {
         const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, name, username')
-          .in('id', clientUserIds);
-        
-        profilesMap = (profiles || []).reduce((acc, p) => {
-          acc[p.id] = { name: p.name || 'Unknown', username: p.username || 'N/A' };
-          return acc;
-        }, {} as Record<string, { name: string; username: string }>);
+          .from("profiles")
+          .select("id, name, username")
+          .in("id", clientUserIds);
+
+        profilesMap = (profiles || []).reduce(
+          (acc, p) => {
+            acc[p.id] = { name: p.name || "Unknown", username: p.username || "N/A" };
+            return acc;
+          },
+          {} as Record<string, { name: string; username: string }>,
+        );
       }
 
       const clients: EnrolledClient[] = (enrollments || []).map((e: any) => ({
         enrollment_id: e.id,
         user_id: e.client_user_id,
-        name: profilesMap[e.client_user_id]?.name || 'Unknown',
-        email: profilesMap[e.client_user_id]?.username || 'N/A',
+        name: profilesMap[e.client_user_id]?.name || "Unknown",
+        email: profilesMap[e.client_user_id]?.username || "N/A",
       }));
       setEnrolledClients(clients);
 
@@ -144,39 +164,39 @@ export default function InstructorModuleDetail() {
       if (desiredEnrollmentId) {
         try {
           const { data: enrollment } = await supabase
-            .from('client_enrollments')
-            .select('id, client_user_id')
-            .eq('id', desiredEnrollmentId)
+            .from("client_enrollments")
+            .select("id, client_user_id")
+            .eq("id", desiredEnrollmentId)
             .single();
 
           if (enrollment?.client_user_id) {
             const { data: profile } = await supabase
-              .from('profiles')
-              .select('name, username')
-              .eq('id', enrollment.client_user_id)
+              .from("profiles")
+              .select("name, username")
+              .eq("id", enrollment.client_user_id)
               .single();
 
             setSelectedEnrollment({
               enrollment_id: enrollment.id,
               user_id: enrollment.client_user_id,
-              name: profile?.name || desiredClientName || 'Unknown',
-              email: profile?.username || '',
+              name: profile?.name || desiredClientName || "Unknown",
+              email: profile?.username || "",
             });
           } else if (desiredClientName) {
             setSelectedEnrollment({
               enrollment_id: desiredEnrollmentId,
-              user_id: '',
+              user_id: "",
               name: desiredClientName,
-              email: '',
+              email: "",
             });
           }
         } catch {
           if (desiredClientName) {
             setSelectedEnrollment({
               enrollment_id: desiredEnrollmentId,
-              user_id: '',
+              user_id: "",
               name: desiredClientName,
-              email: '',
+              email: "",
             });
           }
         }
@@ -212,7 +232,10 @@ export default function InstructorModuleDetail() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink onClick={() => navigate('/teaching/programs')} className="cursor-pointer">
+            <BreadcrumbLink
+              onClick={() => navigate("/teaching/programs")}
+              className="cursor-pointer"
+            >
               Programs
             </BreadcrumbLink>
           </BreadcrumbItem>
@@ -220,7 +243,10 @@ export default function InstructorModuleDetail() {
             <ChevronRight className="h-4 w-4" />
           </BreadcrumbSeparator>
           <BreadcrumbItem>
-            <BreadcrumbLink onClick={() => navigate(`/teaching/programs/${programSlug}`)} className="cursor-pointer">
+            <BreadcrumbLink
+              onClick={() => navigate(`/teaching/programs/${programSlug}`)}
+              className="cursor-pointer"
+            >
               {programName}
             </BreadcrumbLink>
           </BreadcrumbItem>
@@ -230,8 +256,8 @@ export default function InstructorModuleDetail() {
                 <ChevronRight className="h-4 w-4" />
               </BreadcrumbSeparator>
               <BreadcrumbItem>
-                <BreadcrumbLink 
-                  onClick={() => navigate(`/teaching/students/${selectedEnrollment.enrollment_id}`)} 
+                <BreadcrumbLink
+                  onClick={() => navigate(`/teaching/students/${selectedEnrollment.enrollment_id}`)}
                   className="cursor-pointer"
                 >
                   {selectedEnrollment.name}
@@ -331,7 +357,9 @@ export default function InstructorModuleDetail() {
                     >
                       <LinkIcon className="h-4 w-4 text-primary" />
                       <span>{link.name}</span>
-                      <Badge variant="outline" className="ml-auto">{link.type}</Badge>
+                      <Badge variant="outline" className="ml-auto">
+                        {link.type}
+                      </Badge>
                     </a>
                   ))}
                 </div>
@@ -362,11 +390,12 @@ export default function InstructorModuleDetail() {
                         Personalised Client Content
                       </CardTitle>
                       <CardDescription className="mt-1.5">
-                        Assign unique scenarios, files, or instructions to individual clients for this module.
+                        Assign unique scenarios, files, or instructions to individual clients for
+                        this module.
                       </CardDescription>
                     </div>
-                    <ModuleClientContentManager 
-                      moduleId={moduleId!} 
+                    <ModuleClientContentManager
+                      moduleId={moduleId!}
                       moduleName={module.title}
                       programId={programId!}
                     />
@@ -388,8 +417,8 @@ export default function InstructorModuleDetail() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ModuleSessionManager 
-                  moduleId={moduleId!} 
+                <ModuleSessionManager
+                  moduleId={moduleId!}
                   programId={programId}
                   enrollmentId={selectedEnrollment.enrollment_id}
                   clientName={selectedEnrollment.name}
@@ -402,12 +431,15 @@ export default function InstructorModuleDetail() {
               <CardHeader>
                 <CardTitle>Individual Sessions</CardTitle>
                 <CardDescription>
-                  This is a personalized module. Select a client to schedule individual sessions with them.
+                  This is a personalized module. Select a client to schedule individual sessions
+                  with them.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {enrolledClients.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No clients currently enrolled in this program.</p>
+                  <p className="text-muted-foreground text-sm">
+                    No clients currently enrolled in this program.
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     {enrolledClients.map((client) => (
@@ -434,12 +466,13 @@ export default function InstructorModuleDetail() {
                 <CardHeader>
                   <CardTitle>Group Sessions</CardTitle>
                   <CardDescription>
-                    Schedule sessions for all or selected enrolled clients. These sessions will be visible to selected participants.
+                    Schedule sessions for all or selected enrolled clients. These sessions will be
+                    visible to selected participants.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ModuleSessionManager 
-                    moduleId={moduleId!} 
+                  <ModuleSessionManager
+                    moduleId={moduleId!}
                     programId={programId}
                     showGroupSessions={true}
                   />
@@ -455,7 +488,9 @@ export default function InstructorModuleDetail() {
                 </CardHeader>
                 <CardContent>
                   {enrolledClients.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">No clients currently enrolled in this program.</p>
+                    <p className="text-muted-foreground text-sm">
+                      No clients currently enrolled in this program.
+                    </p>
                   ) : (
                     <div className="space-y-2">
                       {enrolledClients.map((client) => (
@@ -478,7 +513,6 @@ export default function InstructorModuleDetail() {
             </>
           )}
         </TabsContent>
-
       </Tabs>
     </div>
   );

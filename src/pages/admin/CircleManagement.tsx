@@ -1,16 +1,39 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-import { Trash2, UserPlus, ExternalLink, Clock, Check, X } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Trash2, UserPlus, ExternalLink, Clock, Check, X } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface CircleUser {
   id: string;
@@ -36,19 +59,19 @@ interface Profile {
 
 export default function CircleManagement() {
   const queryClient = useQueryClient();
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [circleUserId, setCircleUserId] = useState('');
-  const [circleEmail, setCircleEmail] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [circleUserId, setCircleUserId] = useState("");
+  const [circleEmail, setCircleEmail] = useState("");
 
   // Fetch all Circle mappings
   const { data: circleUsers, isLoading: loadingMappings } = useQuery({
-    queryKey: ['circle-users'],
+    queryKey: ["circle-users"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('circle_users')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
+        .from("circle_users")
+        .select("*")
+        .order("created_at", { ascending: false });
+
       if (error) throw error;
       return data as CircleUser[];
     },
@@ -56,13 +79,13 @@ export default function CircleManagement() {
 
   // Fetch pending Circle requests
   const { data: pendingRequests, isLoading: loadingRequests } = useQuery({
-    queryKey: ['circle-requests'],
+    queryKey: ["circle-requests"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('circle_interest_registrations')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
+        .from("circle_interest_registrations")
+        .select("*")
+        .order("created_at", { ascending: false });
+
       if (error) throw error;
       return data as CircleRequest[];
     },
@@ -70,58 +93,52 @@ export default function CircleManagement() {
 
   // Fetch all profiles to get user names
   const { data: profiles } = useQuery({
-    queryKey: ['all-profiles'],
+    queryKey: ["all-profiles"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name')
-        .order('name');
-      
+      const { data, error } = await supabase.from("profiles").select("id, name").order("name");
+
       if (error) throw error;
       return data as Profile[];
     },
   });
 
   // Get profiles that don't have Circle mappings
-  const unmappedProfiles = profiles?.filter(
-    profile => !circleUsers?.some(cu => cu.user_id === profile.id)
-  ) || [];
+  const unmappedProfiles =
+    profiles?.filter((profile) => !circleUsers?.some((cu) => cu.user_id === profile.id)) || [];
 
   // Add Circle mapping
   const addMappingMutation = useMutation({
     mutationFn: async () => {
       if (!selectedUserId || !circleEmail) {
-        throw new Error('User and Circle email are required');
+        throw new Error("User and Circle email are required");
       }
 
       // Circle User ID is optional: if omitted, store the email as a placeholder.
       // The backend SSO flow will resolve it to the correct numeric member id.
       const resolvedCircleUserId = (circleUserId || circleEmail).trim();
 
-      const { error } = await supabase
-        .from('circle_users')
-        .insert({
-          user_id: selectedUserId,
-          circle_user_id: resolvedCircleUserId,
-          circle_email: circleEmail.trim(),
-        });
+      const { error } = await supabase.from("circle_users").insert({
+        user_id: selectedUserId,
+        circle_user_id: resolvedCircleUserId,
+        circle_email: circleEmail.trim(),
+      });
 
       if (error) throw error;
 
       // Update any pending request to approved
       await supabase
-        .from('circle_interest_registrations')
-        .update({ status: 'approved' })
-        .eq('user_id', selectedUserId);
+        .from("circle_interest_registrations")
+        .update({ status: "approved" })
+        .eq("user_id", selectedUserId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['circle-users'] });
-      queryClient.invalidateQueries({ queryKey: ['circle-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
-      setSelectedUserId('');
-      setCircleUserId('');
-      setCircleEmail('');
-      toast.success('Community mapping added successfully');
+      queryClient.invalidateQueries({ queryKey: ["circle-users"] });
+      queryClient.invalidateQueries({ queryKey: ["circle-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["all-profiles"] });
+      setSelectedUserId("");
+      setCircleUserId("");
+      setCircleEmail("");
+      toast.success("Community mapping added successfully");
     },
     onError: (error: Error) => {
       toast.error(`Failed to add mapping: ${error.message}`);
@@ -132,15 +149,15 @@ export default function CircleManagement() {
   const updateRequestMutation = useMutation({
     mutationFn: async ({ requestId, status }: { requestId: string; status: string }) => {
       const { error } = await supabase
-        .from('circle_interest_registrations')
+        .from("circle_interest_registrations")
         .update({ status })
-        .eq('id', requestId);
+        .eq("id", requestId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['circle-requests'] });
-      toast.success('Request status updated');
+      queryClient.invalidateQueries({ queryKey: ["circle-requests"] });
+      toast.success("Request status updated");
     },
     onError: (error: Error) => {
       toast.error(`Failed to update request: ${error.message}`);
@@ -150,17 +167,14 @@ export default function CircleManagement() {
   // Delete Circle mapping
   const deleteMappingMutation = useMutation({
     mutationFn: async (mappingId: string) => {
-      const { error } = await supabase
-        .from('circle_users')
-        .delete()
-        .eq('id', mappingId);
+      const { error } = await supabase.from("circle_users").delete().eq("id", mappingId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['circle-users'] });
-      queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
-      toast.success('Community mapping deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ["circle-users"] });
+      queryClient.invalidateQueries({ queryKey: ["all-profiles"] });
+      toast.success("Community mapping deleted successfully");
     },
     onError: (error: Error) => {
       toast.error(`Failed to delete mapping: ${error.message}`);
@@ -168,23 +182,38 @@ export default function CircleManagement() {
   });
 
   const getUserName = (userId: string) => {
-    return profiles?.find(p => p.id === userId)?.name || 'Unknown User';
+    return profiles?.find((p) => p.id === userId)?.name || "Unknown User";
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending':
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
-      case 'approved':
-        return <Badge variant="default" className="bg-green-500"><Check className="h-3 w-3 mr-1" />Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive"><X className="h-3 w-3 mr-1" />Rejected</Badge>;
+      case "pending":
+        return (
+          <Badge variant="secondary">
+            <Clock className="h-3 w-3 mr-1" />
+            Pending
+          </Badge>
+        );
+      case "approved":
+        return (
+          <Badge variant="default" className="bg-green-500">
+            <Check className="h-3 w-3 mr-1" />
+            Approved
+          </Badge>
+        );
+      case "rejected":
+        return (
+          <Badge variant="destructive">
+            <X className="h-3 w-3 mr-1" />
+            Rejected
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  const pendingCount = pendingRequests?.filter(r => r.status === 'pending').length || 0;
+  const pendingCount = pendingRequests?.filter((r) => r.status === "pending").length || 0;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -204,9 +233,7 @@ export default function CircleManagement() {
               Pending Connection Requests
               <Badge variant="secondary">{pendingCount}</Badge>
             </CardTitle>
-            <CardDescription>
-              Users requesting access to the InnoTrue Community
-            </CardDescription>
+            <CardDescription>Users requesting access to the InnoTrue Community</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -219,39 +246,39 @@ export default function CircleManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pendingRequests?.filter(r => r.status === 'pending').map((request) => (
-                  <TableRow key={request.id}>
-                    <TableCell className="font-medium">
-                      {getUserName(request.user_id)}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(request.status)}</TableCell>
-                    <TableCell>
-                      {new Date(request.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedUserId(request.user_id);
-                        }}
-                      >
-                        <UserPlus className="h-4 w-4 mr-1" />
-                        Add Mapping
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => updateRequestMutation.mutate({ 
-                          requestId: request.id, 
-                          status: 'rejected' 
-                        })}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {pendingRequests
+                  ?.filter((r) => r.status === "pending")
+                  .map((request) => (
+                    <TableRow key={request.id}>
+                      <TableCell className="font-medium">{getUserName(request.user_id)}</TableCell>
+                      <TableCell>{getStatusBadge(request.status)}</TableCell>
+                      <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUserId(request.user_id);
+                          }}
+                        >
+                          <UserPlus className="h-4 w-4 mr-1" />
+                          Add Mapping
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            updateRequestMutation.mutate({
+                              requestId: request.id,
+                              status: "rejected",
+                            })
+                          }
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
           </CardContent>
@@ -293,7 +320,8 @@ export default function CircleManagement() {
                 onChange={(e) => setCircleUserId(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                If you don’t know the numeric Circle ID, leave this blank and we’ll resolve it by email.
+                If you don’t know the numeric Circle ID, leave this blank and we’ll resolve it by
+                email.
               </p>
             </div>
 
@@ -324,9 +352,7 @@ export default function CircleManagement() {
       <Card>
         <CardHeader>
           <CardTitle>Existing Community Mappings</CardTitle>
-          <CardDescription>
-            View and manage existing user mappings
-          </CardDescription>
+          <CardDescription>View and manage existing user mappings</CardDescription>
         </CardHeader>
         <CardContent>
           {loadingMappings ? (
@@ -345,14 +371,10 @@ export default function CircleManagement() {
               <TableBody>
                 {circleUsers.map((mapping) => (
                   <TableRow key={mapping.id}>
-                    <TableCell className="font-medium">
-                      {getUserName(mapping.user_id)}
-                    </TableCell>
+                    <TableCell className="font-medium">{getUserName(mapping.user_id)}</TableCell>
                     <TableCell>{mapping.circle_user_id}</TableCell>
                     <TableCell>{mapping.circle_email}</TableCell>
-                    <TableCell>
-                      {new Date(mapping.created_at).toLocaleDateString()}
-                    </TableCell>
+                    <TableCell>{new Date(mapping.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -364,8 +386,9 @@ export default function CircleManagement() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Community Mapping?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will remove the connection between {getUserName(mapping.user_id)} and their InnoTrue Community account.
-                              They will need to be reconnected to access the InnoTrue Community.
+                              This will remove the connection between {getUserName(mapping.user_id)}{" "}
+                              and their InnoTrue Community account. They will need to be reconnected
+                              to access the InnoTrue Community.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -394,9 +417,7 @@ export default function CircleManagement() {
         <Card>
           <CardHeader>
             <CardTitle>Request History</CardTitle>
-            <CardDescription>
-              All Community connection requests
-            </CardDescription>
+            <CardDescription>All Community connection requests</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -411,16 +432,10 @@ export default function CircleManagement() {
               <TableBody>
                 {pendingRequests.map((request) => (
                   <TableRow key={request.id}>
-                    <TableCell className="font-medium">
-                      {getUserName(request.user_id)}
-                    </TableCell>
+                    <TableCell className="font-medium">{getUserName(request.user_id)}</TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
-                    <TableCell>
-                      {new Date(request.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(request.updated_at).toLocaleDateString()}
-                    </TableCell>
+                    <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(request.updated_at).toLocaleDateString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -433,9 +448,7 @@ export default function CircleManagement() {
       <Card>
         <CardHeader>
           <CardTitle>InnoTrue Community Info</CardTitle>
-          <CardDescription>
-            Access your InnoTrue Community dashboard
-          </CardDescription>
+          <CardDescription>Access your InnoTrue Community dashboard</CardDescription>
         </CardHeader>
         <CardContent>
           <Button variant="outline" asChild>

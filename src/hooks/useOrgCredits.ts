@@ -1,8 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { useOrgCreditBatches } from './useCreditBatches';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { useOrgCreditBatches } from "./useCreditBatches";
 
 /**
  * Legacy interface maintained for backward compatibility.
@@ -59,10 +59,10 @@ interface CreditTransaction {
 
 /**
  * Hook for organization credit management.
- * 
+ *
  * **CONSOLIDATED**: Now uses `useOrgCreditBatches` internally for credit calculations.
  * Legacy API maintained for backward compatibility.
- * 
+ *
  * @deprecated Consider using `useOrgCreditBatches` directly for new code.
  */
 export function useOrgCredits(organizationId: string | undefined) {
@@ -82,29 +82,31 @@ export function useOrgCredits(organizationId: string | undefined) {
   } = useOrgCreditBatches(organizationId);
 
   // Transform batch summary to legacy format for backward compatibility
-  const summary: OrgCreditSummary | null = batchSummary ? {
-    available_credits: totalAvailable,
-    total_purchased: bonusCredits,
-    total_consumed: batchSummary.period_usage ?? 0,
-    reserved_credits: 0,
-    expiring_soon: expiringCredits,
-    has_platform_subscription: !!batchSummary.plan_name,
-    subscription_status: batchSummary.plan_name ? 'active' : null,
-    subscription_ends: batchSummary.period_end,
-  } : null;
+  const summary: OrgCreditSummary | null = batchSummary
+    ? {
+        available_credits: totalAvailable,
+        total_purchased: bonusCredits,
+        total_consumed: batchSummary.period_usage ?? 0,
+        reserved_credits: 0,
+        expiring_soon: expiringCredits,
+        has_platform_subscription: !!batchSummary.plan_name,
+        subscription_status: batchSummary.plan_name ? "active" : null,
+        subscription_ends: batchSummary.period_end,
+      }
+    : null;
 
   // Fetch available credit packages
   const { data: packages, isLoading: packagesLoading } = useQuery({
-    queryKey: ['org-credit-packages'],
+    queryKey: ["org-credit-packages"],
     queryFn: async (): Promise<CreditPackage[]> => {
       const { data, error } = await supabase
-        .from('org_credit_packages')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order');
+        .from("org_credit_packages")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
 
       if (error) {
-        console.error('Error fetching packages:', error);
+        console.error("Error fetching packages:", error);
         return [];
       }
 
@@ -115,20 +117,20 @@ export function useOrgCredits(organizationId: string | undefined) {
 
   // Fetch platform tiers
   const { data: tiers, isLoading: tiersLoading } = useQuery({
-    queryKey: ['org-platform-tiers'],
+    queryKey: ["org-platform-tiers"],
     queryFn: async (): Promise<PlatformTier[]> => {
       const { data, error } = await supabase
-        .from('org_platform_tiers')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order');
+        .from("org_platform_tiers")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
 
       if (error) {
-        console.error('Error fetching tiers:', error);
+        console.error("Error fetching tiers:", error);
         return [];
       }
 
-      return (data || []).map(tier => ({
+      return (data || []).map((tier) => ({
         ...tier,
         features: Array.isArray(tier.features) ? tier.features : [],
       })) as PlatformTier[];
@@ -138,19 +140,19 @@ export function useOrgCredits(organizationId: string | undefined) {
 
   // Fetch recent transactions
   const { data: transactions, isLoading: transactionsLoading } = useQuery({
-    queryKey: ['org-credit-transactions', organizationId],
+    queryKey: ["org-credit-transactions", organizationId],
     queryFn: async (): Promise<CreditTransaction[]> => {
       if (!organizationId) return [];
 
       const { data, error } = await supabase
-        .from('org_credit_transactions')
-        .select('id, transaction_type, amount, balance_after, description, created_at')
-        .eq('organization_id', organizationId)
-        .order('created_at', { ascending: false })
+        .from("org_credit_transactions")
+        .select("id, transaction_type, amount, balance_after, description, created_at")
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false })
         .limit(50);
 
       if (error) {
-        console.error('Error fetching transactions:', error);
+        console.error("Error fetching transactions:", error);
         return [];
       }
 
@@ -162,9 +164,9 @@ export function useOrgCredits(organizationId: string | undefined) {
   // Purchase credits mutation
   const purchaseCredits = useMutation({
     mutationFn: async (packageId: string) => {
-      if (!organizationId) throw new Error('No organization selected');
+      if (!organizationId) throw new Error("No organization selected");
 
-      const { data, error } = await supabase.functions.invoke('org-purchase-credits', {
+      const { data, error } = await supabase.functions.invoke("org-purchase-credits", {
         body: { organizationId, packageId },
       });
 
@@ -175,24 +177,30 @@ export function useOrgCredits(organizationId: string | undefined) {
     },
     onSuccess: (data) => {
       if (data.url) {
-        window.open(data.url, '_blank');
+        window.open(data.url, "_blank");
       }
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to initiate purchase',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to initiate purchase",
+        variant: "destructive",
       });
     },
   });
 
   // Subscribe to platform mutation
   const subscribePlatform = useMutation({
-    mutationFn: async ({ tierId, billingPeriod }: { tierId: string; billingPeriod: 'annual' | 'monthly' }) => {
-      if (!organizationId) throw new Error('No organization selected');
+    mutationFn: async ({
+      tierId,
+      billingPeriod,
+    }: {
+      tierId: string;
+      billingPeriod: "annual" | "monthly";
+    }) => {
+      if (!organizationId) throw new Error("No organization selected");
 
-      const { data, error } = await supabase.functions.invoke('org-platform-subscription', {
+      const { data, error } = await supabase.functions.invoke("org-platform-subscription", {
         body: { organizationId, tierId, billingPeriod },
       });
 
@@ -203,14 +211,14 @@ export function useOrgCredits(organizationId: string | undefined) {
     },
     onSuccess: (data) => {
       if (data.url) {
-        window.open(data.url, '_blank');
+        window.open(data.url, "_blank");
       }
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to initiate subscription',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to initiate subscription",
+        variant: "destructive",
       });
     },
   });
@@ -218,9 +226,9 @@ export function useOrgCredits(organizationId: string | undefined) {
   // Confirm credit purchase (call after return from Stripe)
   const confirmPurchase = useMutation({
     mutationFn: async (sessionId: string) => {
-      if (!organizationId) throw new Error('No organization selected');
+      if (!organizationId) throw new Error("No organization selected");
 
-      const { data, error } = await supabase.functions.invoke('org-confirm-credit-purchase', {
+      const { data, error } = await supabase.functions.invoke("org-confirm-credit-purchase", {
         body: { sessionId, organizationId },
       });
 
@@ -232,18 +240,18 @@ export function useOrgCredits(organizationId: string | undefined) {
     onSuccess: (data) => {
       if (data.success) {
         toast({
-          title: 'Credits Added!',
+          title: "Credits Added!",
           description: `${data.creditsAdded.toLocaleString()} credits have been added to your account.`,
         });
-        queryClient.invalidateQueries({ queryKey: ['org-credit-summary', organizationId] });
-        queryClient.invalidateQueries({ queryKey: ['org-credit-transactions', organizationId] });
+        queryClient.invalidateQueries({ queryKey: ["org-credit-summary", organizationId] });
+        queryClient.invalidateQueries({ queryKey: ["org-credit-transactions", organizationId] });
       }
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to confirm purchase',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to confirm purchase",
+        variant: "destructive",
       });
     },
   });
@@ -271,9 +279,9 @@ export function formatCredits(credits: number): string {
 }
 
 // Utility to format price from cents
-export function formatPrice(cents: number, currency: string = 'EUR'): string {
-  return new Intl.NumberFormat('en-EU', {
-    style: 'currency',
+export function formatPrice(cents: number, currency: string = "EUR"): string {
+  return new Intl.NumberFormat("en-EU", {
+    style: "currency",
     currency: currency.toUpperCase(),
   }).format(cents / 100);
 }

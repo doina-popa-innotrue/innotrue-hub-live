@@ -9,13 +9,31 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Edit, Trash2, Loader2, Eye, Settings, Gauge, Copy, Archive, Users } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminCRUD } from "@/hooks/useAdminCRUD";
-import { AdminPageHeader, AdminLoadingState, AdminEmptyState, AdminFormActions } from "@/components/admin";
+import {
+  AdminPageHeader,
+  AdminLoadingState,
+  AdminEmptyState,
+  AdminFormActions,
+} from "@/components/admin";
 
 type CapabilityAssessment = {
   id: string;
@@ -25,7 +43,7 @@ type CapabilityAssessment = {
   instructions: string | null;
   instructions_self: string | null;
   instructions_evaluator: string | null;
-  assessment_mode: 'self' | 'evaluator' | 'both';
+  assessment_mode: "self" | "evaluator" | "both";
   feature_key: string | null;
   program_id: string | null;
   category_id: string | null;
@@ -36,7 +54,7 @@ type CapabilityAssessment = {
   is_public: boolean;
   is_retired: boolean;
   pass_fail_enabled: boolean;
-  pass_fail_mode: 'overall' | 'per_domain' | null;
+  pass_fail_mode: "overall" | "per_domain" | null;
   pass_fail_threshold: number | null;
   created_at: string;
   programs?: { name: string } | null;
@@ -72,7 +90,7 @@ interface FormData {
   instructions: string;
   instructions_self: string;
   instructions_evaluator: string;
-  assessment_mode: 'self' | 'evaluator' | 'both';
+  assessment_mode: "self" | "evaluator" | "both";
   feature_key: string;
   program_id: string;
   category_id: string;
@@ -164,19 +182,17 @@ export default function CapabilityAssessmentsManagement() {
   const { data: snapshotCounts } = useQuery({
     queryKey: ["admin-capability-assessment-snapshot-counts"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("capability_snapshots")
-        .select("assessment_id");
+      const { data, error } = await supabase.from("capability_snapshots").select("assessment_id");
 
       if (error) throw error;
-      
+
       const counts: Record<string, number> = {};
       (data || []).forEach((item) => {
         if (item.assessment_id) {
           counts[item.assessment_id] = (counts[item.assessment_id] || 0) + 1;
         }
       });
-      
+
       return counts;
     },
   });
@@ -216,10 +232,7 @@ export default function CapabilityAssessmentsManagement() {
   const { data: programs } = useQuery({
     queryKey: ["admin-programs-list"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("programs")
-        .select("id, name")
-        .order("name");
+      const { data, error } = await supabase.from("programs").select("id, name").order("name");
 
       if (error) throw error;
       return data as Program[];
@@ -229,10 +242,7 @@ export default function CapabilityAssessmentsManagement() {
   const { data: features } = useQuery({
     queryKey: ["admin-features-list"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("features")
-        .select("id, key, name")
-        .order("name");
+      const { data, error } = await supabase.from("features").select("id, key, name").order("name");
 
       if (error) throw error;
       return data as Feature[];
@@ -254,9 +264,7 @@ export default function CapabilityAssessmentsManagement() {
         pass_fail_mode: data.pass_fail_enabled && data.pass_fail_mode ? data.pass_fail_mode : null,
         pass_fail_threshold: data.pass_fail_enabled ? data.pass_fail_threshold : null,
       };
-      const { error } = await supabase
-        .from("capability_assessments")
-        .insert([insertData]);
+      const { error } = await supabase.from("capability_assessments").insert([insertData]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -328,7 +336,7 @@ export default function CapabilityAssessmentsManagement() {
           instructions: assessment.instructions,
           instructions_self: (assessment as any).instructions_self,
           instructions_evaluator: (assessment as any).instructions_evaluator,
-          assessment_mode: (assessment as any).assessment_mode || 'both',
+          assessment_mode: (assessment as any).assessment_mode || "both",
           feature_key: assessment.feature_key,
           program_id: assessment.program_id,
           category_id: assessment.category_id,
@@ -396,7 +404,11 @@ export default function CapabilityAssessmentsManagement() {
       toast({ description: "Capability assessment cloned successfully" });
     },
     onError: (error) => {
-      toast({ title: "Error cloning assessment", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error cloning assessment",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -435,10 +447,10 @@ export default function CapabilityAssessmentsManagement() {
                   id="name"
                   value={formData.name}
                   onChange={(e) => {
-                    setFormData({ 
-                      ...formData, 
+                    setFormData({
+                      ...formData,
                       name: e.target.value,
-                      slug: editingItem ? formData.slug : generateSlug(e.target.value)
+                      slug: editingItem ? formData.slug : generateSlug(e.target.value),
                     });
                   }}
                   required
@@ -470,7 +482,12 @@ export default function CapabilityAssessmentsManagement() {
                 <Label htmlFor="assessment_mode">Assessment Mode *</Label>
                 <Select
                   value={formData.assessment_mode}
-                  onValueChange={(value) => setFormData({ ...formData, assessment_mode: value as 'self' | 'evaluator' | 'both' })}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      assessment_mode: value as "self" | "evaluator" | "both",
+                    })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -497,38 +514,45 @@ export default function CapabilityAssessmentsManagement() {
                 />
               </div>
 
-              {(formData.assessment_mode === 'self' || formData.assessment_mode === 'both') && (
+              {(formData.assessment_mode === "self" || formData.assessment_mode === "both") && (
                 <div>
                   <Label htmlFor="instructions_self">Self-Assessment Instructions</Label>
                   <Textarea
                     id="instructions_self"
                     value={formData.instructions_self}
-                    onChange={(e) => setFormData({ ...formData, instructions_self: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, instructions_self: e.target.value })
+                    }
                     rows={2}
                     placeholder="Rate yourself on each capability from 1 to N..."
                   />
                 </div>
               )}
 
-              {(formData.assessment_mode === 'evaluator' || formData.assessment_mode === 'both') && (
+              {(formData.assessment_mode === "evaluator" ||
+                formData.assessment_mode === "both") && (
                 <div>
                   <Label htmlFor="instructions_evaluator">Evaluator Instructions</Label>
                   <Textarea
                     id="instructions_evaluator"
                     value={formData.instructions_evaluator}
-                    onChange={(e) => setFormData({ ...formData, instructions_evaluator: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, instructions_evaluator: e.target.value })
+                    }
                     rows={2}
                     placeholder="Rate the participant on each capability from 1 to N..."
                   />
                 </div>
               )}
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="category_id">Category</Label>
                   <Select
                     value={formData.category_id || "_none"}
-                    onValueChange={(value) => setFormData({ ...formData, category_id: value === "_none" ? "" : value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, category_id: value === "_none" ? "" : value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
@@ -547,7 +571,9 @@ export default function CapabilityAssessmentsManagement() {
                   <Label htmlFor="family_id">Assessment Family</Label>
                   <Select
                     value={formData.family_id || "_none"}
-                    onValueChange={(value) => setFormData({ ...formData, family_id: value === "_none" ? "" : value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, family_id: value === "_none" ? "" : value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select family" />
@@ -569,7 +595,9 @@ export default function CapabilityAssessmentsManagement() {
                   <Label htmlFor="program_id">Program</Label>
                   <Select
                     value={formData.program_id || "_none"}
-                    onValueChange={(value) => setFormData({ ...formData, program_id: value === "_none" ? "" : value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, program_id: value === "_none" ? "" : value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select program" />
@@ -588,7 +616,9 @@ export default function CapabilityAssessmentsManagement() {
                   <Label htmlFor="feature_key">Feature Gate (Optional)</Label>
                   <Select
                     value={formData.feature_key || "_none"}
-                    onValueChange={(value) => setFormData({ ...formData, feature_key: value === "_none" ? "" : value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, feature_key: value === "_none" ? "" : value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="No feature gate" />
@@ -613,7 +643,9 @@ export default function CapabilityAssessmentsManagement() {
                   min={3}
                   max={10}
                   value={formData.rating_scale}
-                  onChange={(e) => setFormData({ ...formData, rating_scale: parseInt(e.target.value) || 10 })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, rating_scale: parseInt(e.target.value) || 10 })
+                  }
                 />
               </div>
 
@@ -621,12 +653,16 @@ export default function CapabilityAssessmentsManagement() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="pass_fail_enabled">Pass/Fail Mode</Label>
-                    <p className="text-xs text-muted-foreground">Enable pass/fail threshold checking</p>
+                    <p className="text-xs text-muted-foreground">
+                      Enable pass/fail threshold checking
+                    </p>
                   </div>
                   <Switch
                     id="pass_fail_enabled"
                     checked={formData.pass_fail_enabled}
-                    onCheckedChange={(checked) => setFormData({ ...formData, pass_fail_enabled: checked })}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, pass_fail_enabled: checked })
+                    }
                   />
                 </div>
 
@@ -636,7 +672,12 @@ export default function CapabilityAssessmentsManagement() {
                       <Label htmlFor="pass_fail_mode">Mode</Label>
                       <Select
                         value={formData.pass_fail_mode}
-                        onValueChange={(value) => setFormData({ ...formData, pass_fail_mode: value as "" | "overall" | "per_domain" })}
+                        onValueChange={(value) =>
+                          setFormData({
+                            ...formData,
+                            pass_fail_mode: value as "" | "overall" | "per_domain",
+                          })
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select mode" />
@@ -655,7 +696,12 @@ export default function CapabilityAssessmentsManagement() {
                         min={0}
                         max={100}
                         value={formData.pass_fail_threshold}
-                        onChange={(e) => setFormData({ ...formData, pass_fail_threshold: parseInt(e.target.value) || 75 })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            pass_fail_threshold: parseInt(e.target.value) || 75,
+                          })
+                        }
                       />
                     </div>
                   </div>
@@ -665,12 +711,16 @@ export default function CapabilityAssessmentsManagement() {
               <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="allow_instructor_eval">Allow Instructor Evaluations</Label>
-                  <p className="text-xs text-muted-foreground">Instructors can submit evaluations</p>
+                  <p className="text-xs text-muted-foreground">
+                    Instructors can submit evaluations
+                  </p>
                 </div>
                 <Switch
                   id="allow_instructor_eval"
                   checked={formData.allow_instructor_eval}
-                  onCheckedChange={(checked) => setFormData({ ...formData, allow_instructor_eval: checked })}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, allow_instructor_eval: checked })
+                  }
                 />
               </div>
 
@@ -735,7 +785,10 @@ export default function CapabilityAssessmentsManagement() {
               </TableHeader>
               <TableBody>
                 {sortedAssessments.map((assessment) => (
-                  <TableRow key={assessment.id} className={assessment.is_retired ? "opacity-50" : ""}>
+                  <TableRow
+                    key={assessment.id}
+                    className={assessment.is_retired ? "opacity-50" : ""}
+                  >
                     <TableCell>
                       <div className="space-y-1">
                         <div className="font-medium flex items-center gap-2">
@@ -763,9 +816,11 @@ export default function CapabilityAssessmentsManagement() {
                         )}
                         {assessment.is_public && <Badge variant="outline">Public</Badge>}
                         <Badge variant="outline">
-                          {assessment.assessment_mode === 'self' ? 'Self Only' : 
-                           assessment.assessment_mode === 'evaluator' ? 'Evaluator Only' : 
-                           'Self + Evaluator'}
+                          {assessment.assessment_mode === "self"
+                            ? "Self Only"
+                            : assessment.assessment_mode === "evaluator"
+                              ? "Evaluator Only"
+                              : "Self + Evaluator"}
                         </Badge>
                         {assessment.pass_fail_enabled && (
                           <Tooltip>
@@ -776,21 +831,16 @@ export default function CapabilityAssessmentsManagement() {
                               </Badge>
                             </TooltipTrigger>
                             <TooltipContent>
-                              Pass threshold: {assessment.pass_fail_threshold}% ({assessment.pass_fail_mode})
+                              Pass threshold: {assessment.pass_fail_threshold}% (
+                              {assessment.pass_fail_mode})
                             </TooltipContent>
                           </Tooltip>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {assessment.assessment_categories?.name || "-"}
-                    </TableCell>
-                    <TableCell>
-                      {assessment.programs?.name || "-"}
-                    </TableCell>
-                    <TableCell>
-                      {getSnapshotCount(assessment.id)}
-                    </TableCell>
+                    <TableCell>{assessment.assessment_categories?.name || "-"}</TableCell>
+                    <TableCell>{assessment.programs?.name || "-"}</TableCell>
+                    <TableCell>{getSnapshotCount(assessment.id)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button
@@ -803,15 +853,11 @@ export default function CapabilityAssessmentsManagement() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => window.open(`/capabilities/${assessment.slug}`, '_blank')}
+                          onClick={() => window.open(`/capabilities/${assessment.slug}`, "_blank")}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(assessment)}
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(assessment)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
@@ -830,7 +876,12 @@ export default function CapabilityAssessmentsManagement() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => retireMutation.mutate({ id: assessment.id, retire: !assessment.is_retired })}
+                            onClick={() =>
+                              retireMutation.mutate({
+                                id: assessment.id,
+                                retire: !assessment.is_retired,
+                              })
+                            }
                             disabled={retireMutation.isPending}
                           >
                             <Archive className="h-4 w-4" />

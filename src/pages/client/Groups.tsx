@@ -1,14 +1,14 @@
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Calendar, BookOpen, ArrowRight, UserPlus } from 'lucide-react';
-import { format } from 'date-fns';
-import { FeatureGate } from '@/components/FeatureGate';
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Users, Calendar, BookOpen, ArrowRight, UserPlus } from "lucide-react";
+import { format } from "date-fns";
+import { FeatureGate } from "@/components/FeatureGate";
 
 interface Group {
   id: string;
@@ -30,11 +30,12 @@ export default function Groups() {
 
   // Fetch groups user is a member of
   const { data: myGroups, isLoading: loadingMyGroups } = useQuery({
-    queryKey: ['my-groups', user?.id],
+    queryKey: ["my-groups", user?.id],
     queryFn: async () => {
       const { data: memberships, error } = await supabase
-        .from('group_memberships')
-        .select(`
+        .from("group_memberships")
+        .select(
+          `
           group_id,
           role,
           groups (
@@ -50,50 +51,52 @@ export default function Groups() {
             circle_group_url,
             programs (name)
           )
-        `)
-        .eq('user_id', user?.id ?? '')
-        .eq('status', 'active');
-      
+        `,
+        )
+        .eq("user_id", user?.id ?? "")
+        .eq("status", "active");
+
       if (error) throw error;
-      
+
       // Get member counts for each group
       const groupsWithCounts = await Promise.all(
         (memberships || []).map(async (m: any) => {
           const { count } = await supabase
-            .from('group_memberships')
-            .select('*', { count: 'exact', head: true })
-            .eq('group_id', m.group_id)
-            .eq('status', 'active');
-          
+            .from("group_memberships")
+            .select("*", { count: "exact", head: true })
+            .eq("group_id", m.group_id)
+            .eq("status", "active");
+
           return {
             ...m.groups,
             member_count: count || 0,
-            my_role: m.role
+            my_role: m.role,
           };
-        })
+        }),
       );
-      
+
       return groupsWithCounts;
     },
-    enabled: !!user?.id
+    enabled: !!user?.id,
   });
 
   // Fetch open groups user can join
   const { data: openGroups, isLoading: loadingOpenGroups } = useQuery({
-    queryKey: ['open-groups', user?.id],
+    queryKey: ["open-groups", user?.id],
     queryFn: async () => {
       // Get groups user is already in
       const { data: myMemberships } = await supabase
-        .from('group_memberships')
-        .select('group_id')
-        .eq('user_id', user?.id ?? '');
-      
-      const myGroupIds = myMemberships?.map(m => m.group_id) || [];
-      
+        .from("group_memberships")
+        .select("group_id")
+        .eq("user_id", user?.id ?? "");
+
+      const myGroupIds = myMemberships?.map((m) => m.group_id) || [];
+
       // Get open groups
       let query = supabase
-        .from('groups')
-        .select(`
+        .from("groups")
+        .select(
+          `
           id,
           name,
           description,
@@ -104,28 +107,29 @@ export default function Groups() {
           join_type,
           program_id,
           programs (name)
-        `)
-        .eq('join_type', 'open')
-        .eq('status', 'active');
-      
+        `,
+        )
+        .eq("join_type", "open")
+        .eq("status", "active");
+
       if (myGroupIds.length > 0) {
-        query = query.not('id', 'in', `(${myGroupIds.join(',')})`);
+        query = query.not("id", "in", `(${myGroupIds.join(",")})`);
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id
+    enabled: !!user?.id,
   });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'active':
+      case "active":
         return <Badge variant="default">Active</Badge>;
-      case 'completed':
+      case "completed":
         return <Badge variant="secondary">Completed</Badge>;
-      case 'draft':
+      case "draft":
         return <Badge variant="outline">Draft</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
@@ -134,7 +138,7 @@ export default function Groups() {
 
   return (
     <FeatureGate featureKey="groups">
-    <div className="container mx-auto py-6 px-4 space-y-8 max-w-full">
+      <div className="container mx-auto py-6 px-4 space-y-8 max-w-full">
         <div>
           <h1 className="text-3xl font-bold">My Groups</h1>
           <p className="text-muted-foreground">
@@ -145,10 +149,10 @@ export default function Groups() {
         {/* My Groups */}
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">Groups You're In</h2>
-          
+
           {loadingMyGroups ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {[1, 2, 3, 4].map(i => (
+              {[1, 2, 3, 4].map((i) => (
                 <Skeleton key={i} className="h-48" />
               ))}
             </div>
@@ -176,7 +180,7 @@ export default function Groups() {
                         {group.description}
                       </CardDescription>
                     )}
-                    
+
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Users className="h-4 w-4" />
@@ -185,17 +189,17 @@ export default function Groups() {
                       {group.start_date && (
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
-                          {format(new Date(group.start_date), 'MMM d, yyyy')}
+                          {format(new Date(group.start_date), "MMM d, yyyy")}
                         </div>
                       )}
                     </div>
-                    
+
                     {group.theme && (
                       <Badge variant="outline" className="text-xs">
                         {group.theme}
                       </Badge>
                     )}
-                    
+
                     <Button asChild className="w-full mt-2">
                       <Link to={`/groups/${group.id}`}>
                         View Group <ArrowRight className="ml-2 h-4 w-4" />
@@ -220,13 +224,11 @@ export default function Groups() {
         {/* Open Groups */}
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">Open Groups</h2>
-          <p className="text-sm text-muted-foreground">
-            Groups you can request to join
-          </p>
-          
+          <p className="text-sm text-muted-foreground">Groups you can request to join</p>
+
           {loadingOpenGroups ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {[1, 2].map(i => (
+              {[1, 2].map((i) => (
                 <Skeleton key={i} className="h-48" />
               ))}
             </div>
@@ -254,20 +256,20 @@ export default function Groups() {
                         {group.description}
                       </CardDescription>
                     )}
-                    
+
                     {group.start_date && (
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4" />
-                        Starts {format(new Date(group.start_date), 'MMM d, yyyy')}
+                        Starts {format(new Date(group.start_date), "MMM d, yyyy")}
                       </div>
                     )}
-                    
+
                     {group.theme && (
                       <Badge variant="outline" className="text-xs">
                         {group.theme}
                       </Badge>
                     )}
-                    
+
                     <Button variant="outline" asChild className="w-full mt-2">
                       <Link to={`/groups/${group.id}`}>
                         <UserPlus className="mr-2 h-4 w-4" />
@@ -281,14 +283,12 @@ export default function Groups() {
           ) : (
             <Card>
               <CardContent className="py-8 text-center">
-                <p className="text-muted-foreground">
-                  No open groups available at the moment.
-                </p>
+                <p className="text-muted-foreground">No open groups available at the moment.</p>
               </CardContent>
             </Card>
           )}
         </section>
-    </div>
+      </div>
     </FeatureGate>
   );
 }

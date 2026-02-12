@@ -1,15 +1,9 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -17,7 +11,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -25,35 +19,28 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  UserPlus,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Eye,
-  Loader2,
-} from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { UserPlus, Clock, CheckCircle, XCircle, Eye, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CoachInstructorRequest {
   id: string;
   user_id: string;
-  request_type: 'coach' | 'instructor' | 'both';
+  request_type: "coach" | "instructor" | "both";
   message: string | null;
-  status: 'pending' | 'approved' | 'declined';
+  status: "pending" | "approved" | "declined";
   admin_notes: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
@@ -69,26 +56,24 @@ interface CoachInstructorRequest {
 export default function CoachInstructorRequests() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedRequest, setSelectedRequest] = useState<CoachInstructorRequest | null>(
-    null
-  );
+  const [selectedRequest, setSelectedRequest] = useState<CoachInstructorRequest | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [adminNotes, setAdminNotes] = useState('');
-  const [selectedCoach, setSelectedCoach] = useState('');
-  const [selectedInstructor, setSelectedInstructor] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('pending');
+  const [adminNotes, setAdminNotes] = useState("");
+  const [selectedCoach, setSelectedCoach] = useState("");
+  const [selectedInstructor, setSelectedInstructor] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("pending");
 
   // Fetch requests
   const { data: requests = [], isLoading } = useQuery({
-    queryKey: ['admin-coach-instructor-requests', statusFilter],
+    queryKey: ["admin-coach-instructor-requests", statusFilter],
     queryFn: async () => {
       let query = supabase
-        .from('coach_instructor_requests')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from("coach_instructor_requests")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
       }
 
       const { data, error } = await query;
@@ -97,9 +82,9 @@ export default function CoachInstructorRequests() {
       // Fetch profiles for each request
       const userIds = [...new Set(data.map((r) => r.user_id))];
       const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, name, username')
-        .in('id', userIds);
+        .from("profiles")
+        .select("id, name, username")
+        .in("id", userIds);
 
       const profilesMap = new Map(profiles?.map((p) => [p.id, p]) || []);
 
@@ -112,21 +97,21 @@ export default function CoachInstructorRequests() {
 
   // Fetch available coaches
   const { data: availableCoaches = [] } = useQuery({
-    queryKey: ['available-coaches'],
+    queryKey: ["available-coaches"],
     queryFn: async () => {
       const { data: coachRoles } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'coach');
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "coach");
 
       if (!coachRoles || coachRoles.length === 0) return [];
 
       const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, name')
+        .from("profiles")
+        .select("id, name")
         .in(
-          'id',
-          coachRoles.map((r) => r.user_id)
+          "id",
+          coachRoles.map((r) => r.user_id),
         );
 
       return profiles || [];
@@ -135,21 +120,21 @@ export default function CoachInstructorRequests() {
 
   // Fetch available instructors
   const { data: availableInstructors = [] } = useQuery({
-    queryKey: ['available-instructors'],
+    queryKey: ["available-instructors"],
     queryFn: async () => {
       const { data: instructorRoles } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'instructor');
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "instructor");
 
       if (!instructorRoles || instructorRoles.length === 0) return [];
 
       const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, name')
+        .from("profiles")
+        .select("id, name")
         .in(
-          'id',
-          instructorRoles.map((r) => r.user_id)
+          "id",
+          instructorRoles.map((r) => r.user_id),
         );
 
       return profiles || [];
@@ -159,15 +144,14 @@ export default function CoachInstructorRequests() {
   // Approve mutation
   const approveMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedRequest || !user) throw new Error('Invalid state');
+      if (!selectedRequest || !user) throw new Error("Invalid state");
 
       // Assign coach if selected and requested
       if (
         selectedCoach &&
-        (selectedRequest.request_type === 'coach' ||
-          selectedRequest.request_type === 'both')
+        (selectedRequest.request_type === "coach" || selectedRequest.request_type === "both")
       ) {
-        const { error: coachError } = await supabase.from('client_coaches').insert({
+        const { error: coachError } = await supabase.from("client_coaches").insert({
           client_id: selectedRequest.user_id,
           coach_id: selectedCoach,
         });
@@ -177,10 +161,9 @@ export default function CoachInstructorRequests() {
       // Assign instructor if selected and requested
       if (
         selectedInstructor &&
-        (selectedRequest.request_type === 'instructor' ||
-          selectedRequest.request_type === 'both')
+        (selectedRequest.request_type === "instructor" || selectedRequest.request_type === "both")
       ) {
-        const { error: instructorError } = await supabase.from('client_instructors').insert({
+        const { error: instructorError } = await supabase.from("client_instructors").insert({
           client_id: selectedRequest.user_id,
           instructor_id: selectedInstructor,
         });
@@ -189,87 +172,87 @@ export default function CoachInstructorRequests() {
 
       // Update request status
       const { error } = await supabase
-        .from('coach_instructor_requests')
+        .from("coach_instructor_requests")
         .update({
-          status: 'approved' as const,
+          status: "approved" as const,
           admin_notes: adminNotes || null,
           reviewed_by: user.id,
           reviewed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq('id', selectedRequest.id);
+        .eq("id", selectedRequest.id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-coach-instructor-requests'] });
-      toast.success('Request approved and assignments made');
+      queryClient.invalidateQueries({ queryKey: ["admin-coach-instructor-requests"] });
+      toast.success("Request approved and assignments made");
       closeDialog();
     },
     onError: (error) => {
-      toast.error('Failed to approve request', { description: error.message });
+      toast.error("Failed to approve request", { description: error.message });
     },
   });
 
   // Decline mutation
   const declineMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedRequest || !user) throw new Error('Invalid state');
+      if (!selectedRequest || !user) throw new Error("Invalid state");
 
       const { error } = await supabase
-        .from('coach_instructor_requests')
+        .from("coach_instructor_requests")
         .update({
-          status: 'declined' as const,
+          status: "declined" as const,
           admin_notes: adminNotes || null,
           reviewed_by: user.id,
           reviewed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq('id', selectedRequest.id);
+        .eq("id", selectedRequest.id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-coach-instructor-requests'] });
-      toast.success('Request declined');
+      queryClient.invalidateQueries({ queryKey: ["admin-coach-instructor-requests"] });
+      toast.success("Request declined");
       closeDialog();
     },
     onError: (error) => {
-      toast.error('Failed to decline request', { description: error.message });
+      toast.error("Failed to decline request", { description: error.message });
     },
   });
 
   const openReviewDialog = (request: CoachInstructorRequest) => {
     setSelectedRequest(request);
-    setAdminNotes(request.admin_notes || '');
-    setSelectedCoach('');
-    setSelectedInstructor('');
+    setAdminNotes(request.admin_notes || "");
+    setSelectedCoach("");
+    setSelectedInstructor("");
     setDialogOpen(true);
   };
 
   const closeDialog = () => {
     setDialogOpen(false);
     setSelectedRequest(null);
-    setAdminNotes('');
-    setSelectedCoach('');
-    setSelectedInstructor('');
+    setAdminNotes("");
+    setSelectedCoach("");
+    setSelectedInstructor("");
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending':
+      case "pending":
         return (
           <Badge variant="outline" className="gap-1">
             <Clock className="h-3 w-3" /> Pending
           </Badge>
         );
-      case 'approved':
+      case "approved":
         return (
           <Badge variant="default" className="gap-1">
             <CheckCircle className="h-3 w-3" /> Approved
           </Badge>
         );
-      case 'declined':
+      case "declined":
         return (
           <Badge variant="destructive" className="gap-1">
             <XCircle className="h-3 w-3" /> Declined
@@ -282,11 +265,11 @@ export default function CoachInstructorRequests() {
 
   const getRequestTypeBadge = (type: string) => {
     switch (type) {
-      case 'coach':
+      case "coach":
         return <Badge variant="secondary">Coach</Badge>;
-      case 'instructor':
+      case "instructor":
         return <Badge variant="secondary">Instructor</Badge>;
-      case 'both':
+      case "both":
         return <Badge variant="secondary">Both</Badge>;
       default:
         return null;
@@ -313,8 +296,8 @@ export default function CoachInstructorRequests() {
             <div>
               <CardTitle>Requests</CardTitle>
               <CardDescription>
-                {requests.length} request{requests.length !== 1 ? 's' : ''}{' '}
-                {statusFilter !== 'all' && `(${statusFilter})`}
+                {requests.length} request{requests.length !== 1 ? "s" : ""}{" "}
+                {statusFilter !== "all" && `(${statusFilter})`}
               </CardDescription>
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -338,9 +321,7 @@ export default function CoachInstructorRequests() {
               ))}
             </div>
           ) : requests.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No requests found
-            </div>
+            <div className="text-center py-8 text-muted-foreground">No requests found</div>
           ) : (
             <Table>
               <TableHeader>
@@ -357,9 +338,7 @@ export default function CoachInstructorRequests() {
                   <TableRow key={request.id}>
                     <TableCell>
                       <div>
-                        <div className="font-medium">
-                          {request.profiles?.name || 'Unknown'}
-                        </div>
+                        <div className="font-medium">{request.profiles?.name || "Unknown"}</div>
                         <div className="text-sm text-muted-foreground">
                           {request.profiles?.username}
                         </div>
@@ -367,15 +346,9 @@ export default function CoachInstructorRequests() {
                     </TableCell>
                     <TableCell>{getRequestTypeBadge(request.request_type)}</TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
-                    <TableCell>
-                      {format(new Date(request.created_at), 'MMM d, yyyy')}
-                    </TableCell>
+                    <TableCell>{format(new Date(request.created_at), "MMM d, yyyy")}</TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openReviewDialog(request)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => openReviewDialog(request)}>
                         <Eye className="h-4 w-4 mr-1" />
                         Review
                       </Button>
@@ -408,8 +381,8 @@ export default function CoachInstructorRequests() {
                 <div>
                   <Label className="text-muted-foreground">Request Type</Label>
                   <p className="capitalize font-medium">
-                    {selectedRequest.request_type === 'both'
-                      ? 'Coach & Instructor'
+                    {selectedRequest.request_type === "both"
+                      ? "Coach & Instructor"
                       : selectedRequest.request_type}
                   </p>
                 </div>
@@ -419,24 +392,22 @@ export default function CoachInstructorRequests() {
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Submitted</Label>
-                  <p>{format(new Date(selectedRequest.created_at), 'MMM d, yyyy')}</p>
+                  <p>{format(new Date(selectedRequest.created_at), "MMM d, yyyy")}</p>
                 </div>
               </div>
 
               {selectedRequest.message && (
                 <div>
                   <Label className="text-muted-foreground">Client Message</Label>
-                  <p className="mt-1 p-3 bg-muted rounded-md text-sm">
-                    {selectedRequest.message}
-                  </p>
+                  <p className="mt-1 p-3 bg-muted rounded-md text-sm">{selectedRequest.message}</p>
                 </div>
               )}
 
-              {selectedRequest.status === 'pending' && (
+              {selectedRequest.status === "pending" && (
                 <>
                   {/* Assignment Selectors */}
-                  {(selectedRequest.request_type === 'coach' ||
-                    selectedRequest.request_type === 'both') && (
+                  {(selectedRequest.request_type === "coach" ||
+                    selectedRequest.request_type === "both") && (
                     <div className="space-y-2">
                       <Label>Assign Coach</Label>
                       <Select value={selectedCoach} onValueChange={setSelectedCoach}>
@@ -454,14 +425,11 @@ export default function CoachInstructorRequests() {
                     </div>
                   )}
 
-                  {(selectedRequest.request_type === 'instructor' ||
-                    selectedRequest.request_type === 'both') && (
+                  {(selectedRequest.request_type === "instructor" ||
+                    selectedRequest.request_type === "both") && (
                     <div className="space-y-2">
                       <Label>Assign Instructor</Label>
-                      <Select
-                        value={selectedInstructor}
-                        onValueChange={setSelectedInstructor}
-                      >
+                      <Select value={selectedInstructor} onValueChange={setSelectedInstructor}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select an instructor to assign" />
                         </SelectTrigger>
@@ -488,7 +456,7 @@ export default function CoachInstructorRequests() {
                 </>
               )}
 
-              {selectedRequest.status !== 'pending' && selectedRequest.admin_notes && (
+              {selectedRequest.status !== "pending" && selectedRequest.admin_notes && (
                 <div>
                   <Label className="text-muted-foreground">Admin Notes</Label>
                   <p className="mt-1 p-3 bg-muted rounded-md text-sm">
@@ -500,7 +468,7 @@ export default function CoachInstructorRequests() {
           )}
 
           <DialogFooter>
-            {selectedRequest?.status === 'pending' ? (
+            {selectedRequest?.status === "pending" ? (
               <>
                 <Button variant="outline" onClick={closeDialog} disabled={isPending}>
                   Cancel
@@ -521,10 +489,9 @@ export default function CoachInstructorRequests() {
                   onClick={() => approveMutation.mutate()}
                   disabled={
                     isPending ||
-                    (selectedRequest?.request_type === 'coach' && !selectedCoach) ||
-                    (selectedRequest?.request_type === 'instructor' &&
-                      !selectedInstructor) ||
-                    (selectedRequest?.request_type === 'both' &&
+                    (selectedRequest?.request_type === "coach" && !selectedCoach) ||
+                    (selectedRequest?.request_type === "instructor" && !selectedInstructor) ||
+                    (selectedRequest?.request_type === "both" &&
                       (!selectedCoach || !selectedInstructor))
                   }
                 >

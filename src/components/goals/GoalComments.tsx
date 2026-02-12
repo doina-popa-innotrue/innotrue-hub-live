@@ -1,13 +1,22 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { MessageSquare, Send, Trash2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { MessageSquare, Send, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Comment {
   id: string;
@@ -26,7 +35,7 @@ interface GoalCommentsProps {
 export default function GoalComments({ goalId }: GoalCommentsProps) {
   const { toast } = useToast();
   const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState('');
+  const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -38,17 +47,19 @@ export default function GoalComments({ goalId }: GoalCommentsProps) {
   }, [goalId]);
 
   const getCurrentUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     setCurrentUserId(user?.id || null);
   };
 
   const fetchComments = async () => {
     try {
       const { data: commentsData, error: commentsError } = await supabase
-        .from('goal_comments')
-        .select('id, comment, created_at, user_id')
-        .eq('goal_id', goalId)
-        .order('created_at', { ascending: true });
+        .from("goal_comments")
+        .select("id, comment, created_at, user_id")
+        .eq("goal_id", goalId)
+        .order("created_at", { ascending: true });
 
       if (commentsError) throw commentsError;
 
@@ -59,29 +70,29 @@ export default function GoalComments({ goalId }: GoalCommentsProps) {
       }
 
       // Fetch profiles for each comment
-      const userIds = [...new Set(commentsData.map(c => c.user_id))];
+      const userIds = [...new Set(commentsData.map((c) => c.user_id))];
       const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, name')
-        .in('id', userIds);
+        .from("profiles")
+        .select("id, name")
+        .in("id", userIds);
 
       if (profilesError) throw profilesError;
 
-      const profilesMap = new Map(profilesData?.map(p => [p.id, p.name]) || []);
+      const profilesMap = new Map(profilesData?.map((p) => [p.id, p.name]) || []);
 
-      const commentsWithProfiles = commentsData.map(comment => ({
+      const commentsWithProfiles = commentsData.map((comment) => ({
         ...comment,
         profiles: {
-          name: profilesMap.get(comment.user_id) || 'Unknown User',
+          name: profilesMap.get(comment.user_id) || "Unknown User",
         },
       }));
 
       setComments(commentsWithProfiles);
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to load comments',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load comments",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -94,57 +105,59 @@ export default function GoalComments({ goalId }: GoalCommentsProps) {
 
     setSubmitting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase
-        .from('goal_comments')
-        .insert([{
+      const { error } = await supabase.from("goal_comments").insert([
+        {
           goal_id: goalId,
           user_id: user.id,
           comment: newComment.trim(),
-        }]);
+        },
+      ]);
 
       if (error) throw error;
 
       // Check if commenter is instructor/coach and send notification to goal owner
       const { data: userRoles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
 
-      const isInstructorOrCoach = userRoles?.some(r => 
-        r.role === 'instructor' || r.role === 'coach'
+      const isInstructorOrCoach = userRoles?.some(
+        (r) => r.role === "instructor" || r.role === "coach",
       );
 
       if (isInstructorOrCoach) {
         // Get goal details and owner info
         const { data: goalData } = await supabase
-          .from('goals')
-          .select('title, user_id')
-          .eq('id', goalId)
+          .from("goals")
+          .select("title, user_id")
+          .eq("id", goalId)
           .single();
 
         if (goalData) {
           const { data: ownerProfile } = await supabase
-            .from('profiles')
-            .select('name')
-            .eq('id', goalData.user_id)
+            .from("profiles")
+            .select("name")
+            .eq("id", goalData.user_id)
             .single();
 
           const { data: commenterProfile } = await supabase
-            .from('profiles')
-            .select('name')
-            .eq('id', user.id)
+            .from("profiles")
+            .select("name")
+            .eq("id", user.id)
             .single();
 
           if (ownerProfile && commenterProfile) {
             try {
-              await supabase.functions.invoke('send-notification-email', {
+              await supabase.functions.invoke("send-notification-email", {
                 body: {
-                  userId: goalData.user_id,  // Backend will fetch email
+                  userId: goalData.user_id, // Backend will fetch email
                   name: ownerProfile.name,
-                  type: 'goal_feedback',
+                  type: "goal_feedback",
                   timestamp: new Date().toISOString(),
                   goalTitle: goalData.title,
                   feedbackAuthor: commenterProfile.name,
@@ -153,24 +166,24 @@ export default function GoalComments({ goalId }: GoalCommentsProps) {
                 },
               });
             } catch (err) {
-              console.error('Failed to send notification:', err);
+              console.error("Failed to send notification:", err);
             }
           }
         }
       }
 
       toast({
-        title: 'Success',
-        description: 'Comment added',
+        title: "Success",
+        description: "Comment added",
       });
 
-      setNewComment('');
+      setNewComment("");
       fetchComments();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to add comment',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to add comment",
+        variant: "destructive",
       });
     } finally {
       setSubmitting(false);
@@ -181,24 +194,21 @@ export default function GoalComments({ goalId }: GoalCommentsProps) {
     if (!deleteId) return;
 
     try {
-      const { error } = await supabase
-        .from('goal_comments')
-        .delete()
-        .eq('id', deleteId);
+      const { error } = await supabase.from("goal_comments").delete().eq("id", deleteId);
 
       if (error) throw error;
 
       toast({
-        title: 'Success',
-        description: 'Comment deleted',
+        title: "Success",
+        description: "Comment deleted",
       });
 
       fetchComments();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to delete comment',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to delete comment",
+        variant: "destructive",
       });
     } finally {
       setDeleteId(null);
@@ -221,7 +231,7 @@ export default function GoalComments({ goalId }: GoalCommentsProps) {
             <>
               {comments.length > 0 && (
                 <div className="space-y-4">
-                  {comments.map(comment => (
+                  {comments.map((comment) => (
                     <div key={comment.id} className="flex gap-3 p-4 border rounded-lg">
                       <Avatar className="h-10 w-10">
                         <AvatarFallback>
@@ -233,7 +243,7 @@ export default function GoalComments({ goalId }: GoalCommentsProps) {
                           <div>
                             <p className="font-medium">{comment.profiles.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {format(new Date(comment.created_at), 'MMM d, yyyy at h:mm a')}
+                              {format(new Date(comment.created_at), "MMM d, yyyy at h:mm a")}
                             </p>
                           </div>
                           {currentUserId === comment.user_id && (
@@ -264,7 +274,7 @@ export default function GoalComments({ goalId }: GoalCommentsProps) {
                 <div className="flex justify-end">
                   <Button type="submit" disabled={!newComment.trim() || submitting}>
                     <Send className="mr-2 h-4 w-4" />
-                    {submitting ? 'Posting...' : 'Post Comment'}
+                    {submitting ? "Posting..." : "Post Comment"}
                   </Button>
                 </div>
               </form>
@@ -283,7 +293,10 @@ export default function GoalComments({ goalId }: GoalCommentsProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

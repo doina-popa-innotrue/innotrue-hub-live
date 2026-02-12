@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 export interface Notification {
   id: string;
@@ -34,14 +34,19 @@ export function useNotifications() {
   const { toast } = useToast();
 
   // Fetch notifications
-  const { data: notifications = [], isLoading, refetch } = useQuery({
-    queryKey: ['notifications', user?.id],
+  const {
+    data: notifications = [],
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ["notifications", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      
+
       const { data, error } = await supabase
-        .from('notifications')
-        .select(`
+        .from("notifications")
+        .select(
+          `
           *,
           notification_types (
             key,
@@ -54,11 +59,12 @@ export function useNotifications() {
               icon
             )
           )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+        `,
+        )
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
         .limit(50);
-      
+
       if (error) throw error;
       return data as Notification[];
     },
@@ -66,20 +72,20 @@ export function useNotifications() {
   });
 
   // Count unread
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   // Mark as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
       const { error } = await supabase
-        .from('notifications')
+        .from("notifications")
         .update({ is_read: true, read_at: new Date().toISOString() })
-        .eq('id', notificationId);
-      
+        .eq("id", notificationId);
+
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 
@@ -87,33 +93,30 @@ export function useNotifications() {
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) return;
-      
+
       const { error } = await supabase
-        .from('notifications')
+        .from("notifications")
         .update({ is_read: true, read_at: new Date().toISOString() })
-        .eq('user_id', user.id)
-        .eq('is_read', false);
-      
+        .eq("user_id", user.id)
+        .eq("is_read", false);
+
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      toast({ title: 'All notifications marked as read' });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      toast({ title: "All notifications marked as read" });
     },
   });
 
   // Delete notification
   const deleteMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', notificationId);
-      
+      const { error } = await supabase.from("notifications").delete().eq("id", notificationId);
+
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 
@@ -121,17 +124,14 @@ export function useNotifications() {
   const clearAllMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) return;
-      
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('user_id', user.id);
-      
+
+      const { error } = await supabase.from("notifications").delete().eq("user_id", user.id);
+
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      toast({ title: 'All notifications cleared' });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      toast({ title: "All notifications cleared" });
     },
   });
 
@@ -139,18 +139,18 @@ export function useNotifications() {
   const bulkDeleteMutation = useMutation({
     mutationFn: async (notificationIds: string[]) => {
       if (!user?.id) return;
-      
+
       const { error } = await supabase
-        .from('notifications')
+        .from("notifications")
         .delete()
-        .eq('user_id', user.id)
-        .in('id', notificationIds);
-      
+        .eq("user_id", user.id)
+        .in("id", notificationIds);
+
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      toast({ title: 'Selected notifications deleted' });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      toast({ title: "Selected notifications deleted" });
     },
   });
 
@@ -159,33 +159,33 @@ export function useNotifications() {
     if (!user?.id) return;
 
     const channel = supabase
-      .channel('notifications-realtime')
+      .channel("notifications-realtime")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*', // Listen to INSERT, UPDATE, DELETE
-          schema: 'public',
-          table: 'notifications',
+          event: "*", // Listen to INSERT, UPDATE, DELETE
+          schema: "public",
+          table: "notifications",
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          console.log('[Notifications Realtime] Event received:', payload.eventType);
-          
+          console.log("[Notifications Realtime] Event received:", payload.eventType);
+
           // Invalidate cache to refetch notifications
-          queryClient.invalidateQueries({ queryKey: ['notifications'] });
-          
+          queryClient.invalidateQueries({ queryKey: ["notifications"] });
+
           // Show toast only for new notifications (INSERT)
-          if (payload.eventType === 'INSERT') {
+          if (payload.eventType === "INSERT") {
             const newNotification = payload.new as Notification;
             toast({
               title: newNotification.title,
               description: newNotification.message || undefined,
             });
           }
-        }
+        },
       )
       .subscribe((status) => {
-        console.log('[Notifications Realtime] Subscription status:', status);
+        console.log("[Notifications Realtime] Subscription status:", status);
       });
 
     return () => {

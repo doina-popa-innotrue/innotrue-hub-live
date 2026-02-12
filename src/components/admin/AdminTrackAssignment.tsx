@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
-import { Layers, Check } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { Layers, Check } from "lucide-react";
 
 interface Track {
   id: string;
@@ -39,21 +39,21 @@ export function AdminTrackAssignment({ userId }: AdminTrackAssignmentProps) {
     try {
       // Fetch all active tracks
       const { data: allTracks } = await supabase
-        .from('tracks')
-        .select('id, name, description, is_active')
-        .eq('is_active', true)
-        .order('name');
+        .from("tracks")
+        .select("id, name, description, is_active")
+        .eq("is_active", true)
+        .order("name");
 
       // Fetch user's track assignments
       const { data: userTrackData } = await supabase
-        .from('user_tracks')
-        .select('id, track_id, is_active')
-        .eq('user_id', userId);
+        .from("user_tracks")
+        .select("id, track_id, is_active")
+        .eq("user_id", userId);
 
       setTracks(allTracks || []);
       setUserTracks(userTrackData || []);
     } catch (error) {
-      console.error('Failed to fetch tracks:', error);
+      console.error("Failed to fetch tracks:", error);
     } finally {
       setIsLoading(false);
     }
@@ -62,24 +62,24 @@ export function AdminTrackAssignment({ userId }: AdminTrackAssignmentProps) {
   async function toggleTrack(trackId: string, isActive: boolean) {
     setTogglingTrackId(trackId);
     try {
-      const existingUserTrack = userTracks.find(ut => ut.track_id === trackId);
+      const existingUserTrack = userTracks.find((ut) => ut.track_id === trackId);
 
       if (existingUserTrack) {
         // Update existing record
         const { error } = await supabase
-          .from('user_tracks')
+          .from("user_tracks")
           .update({ is_active: isActive })
-          .eq('id', existingUserTrack.id);
+          .eq("id", existingUserTrack.id);
 
         if (error) throw error;
 
-        setUserTracks(prev => 
-          prev.map(ut => ut.id === existingUserTrack.id ? { ...ut, is_active: isActive } : ut)
+        setUserTracks((prev) =>
+          prev.map((ut) => (ut.id === existingUserTrack.id ? { ...ut, is_active: isActive } : ut)),
         );
       } else {
         // Create new record
         const { data, error } = await supabase
-          .from('user_tracks')
+          .from("user_tracks")
           .insert({
             user_id: userId,
             track_id: trackId,
@@ -90,21 +90,21 @@ export function AdminTrackAssignment({ userId }: AdminTrackAssignmentProps) {
 
         if (error) throw error;
 
-        setUserTracks(prev => [...prev, data]);
+        setUserTracks((prev) => [...prev, data]);
       }
 
-      const track = tracks.find(t => t.id === trackId);
-      toast.success(`Track "${track?.name}" ${isActive ? 'enabled' : 'disabled'}`);
+      const track = tracks.find((t) => t.id === trackId);
+      toast.success(`Track "${track?.name}" ${isActive ? "enabled" : "disabled"}`);
     } catch (error) {
-      console.error('Failed to toggle track:', error);
-      toast.error('Failed to update track assignment');
+      console.error("Failed to toggle track:", error);
+      toast.error("Failed to update track assignment");
     } finally {
       setTogglingTrackId(null);
     }
   }
 
   function isTrackActive(trackId: string): boolean {
-    const userTrack = userTracks.find(ut => ut.track_id === trackId);
+    const userTrack = userTracks.find((ut) => ut.track_id === trackId);
     return userTrack?.is_active ?? false;
   }
 
@@ -143,14 +143,12 @@ export function AdminTrackAssignment({ userId }: AdminTrackAssignmentProps) {
           {tracks.map((track) => {
             const active = isTrackActive(track.id);
             const isToggling = togglingTrackId === track.id;
-            
+
             return (
               <div
                 key={track.id}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${
-                  active 
-                    ? 'border-primary bg-primary/10' 
-                    : 'border-border bg-muted/30'
+                  active ? "border-primary bg-primary/10" : "border-border bg-muted/30"
                 }`}
               >
                 <Switch
@@ -160,7 +158,7 @@ export function AdminTrackAssignment({ userId }: AdminTrackAssignmentProps) {
                   disabled={isToggling}
                   className="scale-90"
                 />
-                <Label 
+                <Label
                   htmlFor={`admin-track-${track.id}`}
                   className="text-sm cursor-pointer flex items-center gap-1"
                 >

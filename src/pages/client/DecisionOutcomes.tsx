@@ -1,7 +1,14 @@
 import { DecisionOutcomeTracker } from "@/components/decisions/DecisionOutcomeTracker";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
-import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from "@/components/ui/breadcrumb";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
+  BreadcrumbPage,
+} from "@/components/ui/breadcrumb";
 import { CapabilityGate } from "@/components/decisions/CapabilityGate";
 
 export default function DecisionOutcomes() {

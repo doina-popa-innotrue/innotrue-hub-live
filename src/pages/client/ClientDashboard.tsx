@@ -1,28 +1,28 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RichTextDisplay } from '@/components/ui/rich-text-display';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
-import { BookOpen, Clock, AlertCircle, Calendar, Award, UsersRound } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { format, isAfter, isBefore, addDays, addWeeks, addMonths } from 'date-fns';
-import { ContinuationBanner } from '@/components/dashboard/ContinuationBanner';
-import { WeeklyReflectionCard } from '@/components/dashboard/WeeklyReflectionCard';
-import { JourneyProgressWidget } from '@/components/dashboard/JourneyProgressWidget';
-import { RecentGradedAssignmentsWidget } from '@/components/dashboard/RecentGradedAssignmentsWidget';
-import { RecentNotificationsWidget } from '@/components/dashboard/RecentNotificationsWidget';
-import { LowBalanceAlert } from '@/components/credits/LowBalanceAlert';
-import { AnnouncementsWidget } from '@/components/dashboard/AnnouncementsWidget';
-import { DevelopmentHubWidget } from '@/components/dashboard/DevelopmentHubWidget';
-import { DevelopmentItemsSection } from '@/components/dashboard/DevelopmentItemsSection';
-import { MyGroupsSection } from '@/components/dashboard/MyGroupsSection';
-import { MyCoachesSection } from '@/components/dashboard/MyCoachesSection';
-import { hasTierAccess } from '@/lib/tierUtils';
-import { useEntitlements } from '@/hooks/useEntitlements';
-import { usePageView } from '@/hooks/useAnalytics';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { BookOpen, Clock, AlertCircle, Calendar, Award, UsersRound } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { format, isAfter, isBefore, addDays, addWeeks, addMonths } from "date-fns";
+import { ContinuationBanner } from "@/components/dashboard/ContinuationBanner";
+import { WeeklyReflectionCard } from "@/components/dashboard/WeeklyReflectionCard";
+import { JourneyProgressWidget } from "@/components/dashboard/JourneyProgressWidget";
+import { RecentGradedAssignmentsWidget } from "@/components/dashboard/RecentGradedAssignmentsWidget";
+import { RecentNotificationsWidget } from "@/components/dashboard/RecentNotificationsWidget";
+import { LowBalanceAlert } from "@/components/credits/LowBalanceAlert";
+import { AnnouncementsWidget } from "@/components/dashboard/AnnouncementsWidget";
+import { DevelopmentHubWidget } from "@/components/dashboard/DevelopmentHubWidget";
+import { DevelopmentItemsSection } from "@/components/dashboard/DevelopmentItemsSection";
+import { MyGroupsSection } from "@/components/dashboard/MyGroupsSection";
+import { MyCoachesSection } from "@/components/dashboard/MyCoachesSection";
+import { hasTierAccess } from "@/lib/tierUtils";
+import { useEntitlements } from "@/hooks/useEntitlements";
+import { usePageView } from "@/hooks/useAnalytics";
 
 interface Enrollment {
   id: string;
@@ -80,7 +80,7 @@ interface UpcomingSession {
   session_date: string;
   next_occurrence: Date;
   location: string | null;
-  type: 'group' | 'module';
+  type: "group" | "module";
   // Group session fields
   group_id?: string;
   group_name?: string;
@@ -108,65 +108,66 @@ interface SkillsSummary {
 const getNextOccurrence = (session: any): Date => {
   const now = new Date();
   const sessionDate = new Date(session.session_date);
-  
+
   if (!session.is_recurring || !session.recurrence_pattern || isAfter(sessionDate, now)) {
     return sessionDate;
   }
-  
+
   if (session.recurrence_end_date && isBefore(new Date(session.recurrence_end_date), now)) {
     return sessionDate;
   }
-  
+
   const pattern = session.recurrence_pattern.toLowerCase();
   let nextDate = new Date(sessionDate);
-  
+
   while (isBefore(nextDate, now)) {
     switch (pattern) {
-      case 'daily':
+      case "daily":
         nextDate = addDays(nextDate, 1);
         break;
-      case 'weekly':
+      case "weekly":
         nextDate = addWeeks(nextDate, 1);
         break;
-      case 'bi-weekly':
+      case "bi-weekly":
         nextDate = addWeeks(nextDate, 2);
         break;
-      case 'monthly':
+      case "monthly":
         nextDate = addMonths(nextDate, 1);
         break;
       default:
         return sessionDate;
     }
-    
+
     if (session.recurrence_end_date && isAfter(nextDate, new Date(session.recurrence_end_date))) {
       return sessionDate;
     }
   }
-  
+
   return nextDate;
 };
 
 const hasUpcomingOccurrence = (session: any): boolean => {
-  if (session.status !== 'scheduled') return false;
-  
+  if (session.status !== "scheduled") return false;
+
   const now = new Date();
   const sessionDate = new Date(session.session_date);
-  
+
   if (!session.is_recurring || !session.recurrence_pattern) {
     return isAfter(sessionDate, now);
   }
-  
+
   const nextOccurrence = getNextOccurrence(session);
   if (!isAfter(nextOccurrence, now)) return false;
-  if (session.recurrence_end_date && isAfter(nextOccurrence, new Date(session.recurrence_end_date))) return false;
-  
+  if (session.recurrence_end_date && isAfter(nextOccurrence, new Date(session.recurrence_end_date)))
+    return false;
+
   return true;
 };
 
 export default function ClientDashboard() {
   // Track page view for analytics
-  usePageView('Dashboard');
-  
+  usePageView("Dashboard");
+
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [decisions, setDecisions] = useState<Decision[]>([]);
@@ -188,25 +189,26 @@ export default function ClientDashboard() {
 
       // Check if user is on Continuation plan
       const { data: profileData } = await supabase
-        .from('profiles')
-        .select('plan_id')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("plan_id")
+        .eq("id", user.id)
         .single();
 
       if (profileData?.plan_id) {
         const { data: planData } = await supabase
-          .from('plans')
-          .select('key')
-          .eq('id', profileData.plan_id)
+          .from("plans")
+          .select("key")
+          .eq("id", profileData.plan_id)
           .single();
 
-        setIsOnContinuationPlan(planData?.key === 'continuation');
+        setIsOnContinuationPlan(planData?.key === "continuation");
       }
 
       // Fetch enrollments with tier
       const { data: enrollmentsData } = await supabase
-        .from('client_enrollments')
-        .select(`
+        .from("client_enrollments")
+        .select(
+          `
           id,
           status,
           tier,
@@ -216,42 +218,44 @@ export default function ClientDashboard() {
             description,
             category
           )
-        `)
-        .eq('client_user_id', user.id)
-        .eq('status', 'active');
+        `,
+        )
+        .eq("client_user_id", user.id)
+        .eq("status", "active");
 
       if (enrollmentsData) {
         const enrichedEnrollments = await Promise.all(
           enrollmentsData.map(async (enrollment) => {
             const { data: programDetails } = await supabase
-              .from('programs')
-              .select('tiers')
-              .eq('id', enrollment.programs.id)
+              .from("programs")
+              .select("tiers")
+              .eq("id", enrollment.programs.id)
               .single();
 
             const programTiers = (programDetails?.tiers as string[]) || [];
-            const userTier = (enrollment as any).tier || programTiers[0] || 'essentials';
+            const userTier = (enrollment as any).tier || programTiers[0] || "essentials";
 
             const { data: modules } = await supabase
-              .from('program_modules')
-              .select('id, tier_required')
-              .eq('program_id', enrollment.programs.id);
+              .from("program_modules")
+              .select("id, tier_required")
+              .eq("program_id", enrollment.programs.id);
 
             const { data: progress } = await supabase
-              .from('module_progress')
-              .select('status, module_id')
-              .eq('enrollment_id', enrollment.id);
+              .from("module_progress")
+              .select("status, module_id")
+              .eq("enrollment_id", enrollment.id);
 
-            const accessibleModules = (modules || []).filter(m => 
-              hasTierAccess(programTiers, userTier, m.tier_required)
+            const accessibleModules = (modules || []).filter((m) =>
+              hasTierAccess(programTiers, userTier, m.tier_required),
             );
 
-            const accessibleModuleIds = new Set(accessibleModules.map(m => m.id));
+            const accessibleModuleIds = new Set(accessibleModules.map((m) => m.id));
             const totalModules = accessibleModules.length;
             const completedModules = (progress || []).filter(
-              p => p.status === 'completed' && accessibleModuleIds.has(p.module_id)
+              (p) => p.status === "completed" && accessibleModuleIds.has(p.module_id),
             ).length;
-            const progressPercentage = totalModules > 0 ? (completedModules / totalModules) * 100 : 0;
+            const progressPercentage =
+              totalModules > 0 ? (completedModules / totalModules) * 100 : 0;
 
             return {
               ...enrollment,
@@ -259,45 +263,46 @@ export default function ClientDashboard() {
               totalModules,
               completedModules,
             };
-          })
+          }),
         );
         setEnrollments(enrichedEnrollments as Enrollment[]);
       }
 
       // Fetch active goals
       const { data: goalsData } = await supabase
-        .from('goals')
-        .select('id, title, category, status, progress_percentage')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
+        .from("goals")
+        .select("id, title, category, status, progress_percentage")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
         .limit(5);
       setGoals((goalsData as Goal[]) || []);
 
       // Fetch active decisions
       const { data: decisionsData } = await supabase
-        .from('decisions')
-        .select('id, title, status, importance, urgency, decision_date')
-        .eq('user_id', user.id)
-        .in('status', ['upcoming', 'in_progress'])
-        .order('created_at', { ascending: false })
+        .from("decisions")
+        .select("id, title, status, importance, urgency, decision_date")
+        .eq("user_id", user.id)
+        .in("status", ["upcoming", "in_progress"])
+        .order("created_at", { ascending: false })
         .limit(5);
       setDecisions((decisionsData as Decision[]) || []);
 
       // Fetch tasks
       const { data: tasksData } = await supabase
-        .from('tasks')
-        .select('id, title, status, due_date, quadrant')
-        .eq('user_id', user.id)
-        .in('status', ['todo', 'in_progress'])
-        .order('due_date', { ascending: true, nullsFirst: false })
+        .from("tasks")
+        .select("id, title, status, due_date, quadrant")
+        .eq("user_id", user.id)
+        .in("status", ["todo", "in_progress"])
+        .order("due_date", { ascending: true, nullsFirst: false })
         .limit(5);
       setTasks((tasksData as Task[]) || []);
 
       // Fetch pending registrations
       const { data: registrationsData } = await supabase
-        .from('ac_interest_registrations')
-        .select(`
+        .from("ac_interest_registrations")
+        .select(
+          `
           id,
           status,
           enrollment_timeframe,
@@ -306,26 +311,33 @@ export default function ClientDashboard() {
             id,
             name
           )
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'pending');
+        `,
+        )
+        .eq("user_id", user.id)
+        .eq("status", "pending");
       setRegistrations((registrationsData as Registration[]) || []);
 
       // Fetch group memberships - separate queries to avoid TypeScript issues
       const memberRecordsResult = await supabase
-        .from('group_memberships' as any)
-        .select('id, role, group_id')
-        .eq('user_id', user.id);
+        .from("group_memberships" as any)
+        .select("id, role, group_id")
+        .eq("user_id", user.id);
 
       const memberRecords = memberRecordsResult.data as any[] | null;
-      let activeGroups: { id: string; group_id: string; group_name: string; group_description: string | null; role: string }[] = [];
+      let activeGroups: {
+        id: string;
+        group_id: string;
+        group_name: string;
+        group_description: string | null;
+        role: string;
+      }[] = [];
 
       if (memberRecords && memberRecords.length > 0) {
         const groupIds = memberRecords.map((m: any) => m.group_id);
         const groupsResult = await supabase
-          .from('groups' as any)
-          .select('id, name, description, status')
-          .in('id', groupIds);
+          .from("groups" as any)
+          .select("id, name, description, status")
+          .in("id", groupIds);
 
         const groupsData = groupsResult.data as any[] | null;
 
@@ -335,7 +347,7 @@ export default function ClientDashboard() {
         }));
 
         activeGroups = groupMemberships
-          .filter((gm: any) => gm.groups?.status === 'active')
+          .filter((gm: any) => gm.groups?.status === "active")
           .map((gm: any) => ({
             id: gm.id,
             group_id: gm.groups.id,
@@ -350,25 +362,26 @@ export default function ClientDashboard() {
       let allUpcomingSessions: UpcomingSession[] = [];
 
       // Fetch upcoming group sessions
-      const activeGroupIds = activeGroups.map(g => g.group_id);
+      const activeGroupIds = activeGroups.map((g) => g.group_id);
       if (activeGroupIds.length > 0) {
         const { data: sessionsData } = await supabase
-          .from('group_sessions')
-          .select('*')
-          .in('group_id', activeGroupIds);
+          .from("group_sessions")
+          .select("*")
+          .in("group_id", activeGroupIds);
 
         if (sessionsData) {
           const upcomingGroupSessions = sessionsData
             .filter(hasUpcomingOccurrence)
-            .map(session => ({
+            .map((session) => ({
               id: session.id,
               title: session.title,
               session_date: session.session_date,
               next_occurrence: getNextOccurrence(session),
               location: session.location,
-              type: 'group' as const,
+              type: "group" as const,
               group_id: session.group_id,
-              group_name: activeGroups.find(g => g.group_id === session.group_id)?.group_name || '',
+              group_name:
+                activeGroups.find((g) => g.group_id === session.group_id)?.group_name || "",
             }));
           allUpcomingSessions = [...upcomingGroupSessions];
         }
@@ -376,28 +389,30 @@ export default function ClientDashboard() {
 
       // Fetch individual module sessions - independent of group membership
       if (enrollmentsData && enrollmentsData.length > 0) {
-        const enrollmentIds = enrollmentsData.map(e => e.id);
-        const programMap = new Map(enrollmentsData.map(e => [e.id, e.programs]));
-        
+        const enrollmentIds = enrollmentsData.map((e) => e.id);
+        const programMap = new Map(enrollmentsData.map((e) => [e.id, e.programs]));
+
         const { data: moduleSessions } = await supabase
-          .from('module_sessions')
-          .select('id, title, session_date, duration_minutes, location, enrollment_id, module_id')
-          .eq('session_type', 'individual')
-          .in('status', ['scheduled', 'confirmed'])
-          .in('enrollment_id', enrollmentIds)
-          .gte('session_date', new Date().toISOString())
-          .order('session_date');
+          .from("module_sessions")
+          .select("id, title, session_date, duration_minutes, location, enrollment_id, module_id")
+          .eq("session_type", "individual")
+          .in("status", ["scheduled", "confirmed"])
+          .in("enrollment_id", enrollmentIds)
+          .gte("session_date", new Date().toISOString())
+          .order("session_date");
 
         if (moduleSessions) {
-          const upcomingModuleSessions = moduleSessions.map(session => {
-            const program = session.enrollment_id ? programMap.get(session.enrollment_id) : undefined;
+          const upcomingModuleSessions = moduleSessions.map((session) => {
+            const program = session.enrollment_id
+              ? programMap.get(session.enrollment_id)
+              : undefined;
             return {
               id: session.id,
-              title: session.title ?? 'Untitled Session',
-              session_date: session.session_date ?? '',
-              next_occurrence: new Date(session.session_date ?? ''),
+              title: session.title ?? "Untitled Session",
+              session_date: session.session_date ?? "",
+              next_occurrence: new Date(session.session_date ?? ""),
               location: session.location,
-              type: 'module' as const,
+              type: "module" as const,
               program_id: program?.id,
               program_name: program?.name,
               module_id: session.module_id ?? undefined,
@@ -414,15 +429,15 @@ export default function ClientDashboard() {
 
       // Fetch skills summary - user_skills tracks acquired skills (no status column)
       const { count: skillsCount } = await supabase
-        .from('user_skills')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-      
+        .from("user_skills")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+
       // Also get total skills available
       const { count: totalSkillsCount } = await supabase
-        .from('skills')
-        .select('*', { count: 'exact', head: true });
-      
+        .from("skills")
+        .select("*", { count: "exact", head: true });
+
       setSkillsSummary({
         total: totalSkillsCount || 0,
         acquired: skillsCount || 0,
@@ -439,36 +454,36 @@ export default function ClientDashboard() {
     if (!user) return;
 
     const channel = supabase
-      .channel('client-enrollments-changes')
+      .channel("client-enrollments-changes")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'client_enrollments',
+          event: "INSERT",
+          schema: "public",
+          table: "client_enrollments",
           filter: `client_user_id=eq.${user.id}`,
         },
         async (payload) => {
           const newEnrollment = payload.new as any;
-          if (newEnrollment.status === 'active') {
+          if (newEnrollment.status === "active") {
             const { data: programData } = await supabase
-              .from('programs')
-              .select('id, name, description, category')
-              .eq('id', newEnrollment.program_id)
+              .from("programs")
+              .select("id, name, description, category")
+              .eq("id", newEnrollment.program_id)
               .single();
 
             if (programData) {
               const { data: modules } = await supabase
-                .from('program_modules')
-                .select('id')
-                .eq('program_id', programData.id);
+                .from("program_modules")
+                .select("id")
+                .eq("program_id", programData.id);
 
               const totalModules = modules?.length || 0;
 
               const newEnrollmentItem: Enrollment = {
                 id: newEnrollment.id,
                 status: newEnrollment.status,
-                programs: { ...programData, description: programData.description ?? '' },
+                programs: { ...programData, description: programData.description ?? "" },
                 progress: 0,
                 totalModules,
                 completedModules: 0,
@@ -477,7 +492,7 @@ export default function ClientDashboard() {
               setEnrollments((prev) => [newEnrollmentItem, ...prev]);
             }
           }
-        }
+        },
       )
       .subscribe();
 
@@ -493,12 +508,12 @@ export default function ClientDashboard() {
     // Get the user's enrollment IDs for filtering
     const fetchEnrollmentIds = async () => {
       const { data: enrollmentsData } = await supabase
-        .from('client_enrollments')
-        .select('id')
-        .eq('client_user_id', user.id)
-        .eq('status', 'active');
-      
-      return enrollmentsData?.map(e => e.id) || [];
+        .from("client_enrollments")
+        .select("id")
+        .eq("client_user_id", user.id)
+        .eq("status", "active");
+
+      return enrollmentsData?.map((e) => e.id) || [];
     };
 
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -507,23 +522,25 @@ export default function ClientDashboard() {
       if (enrollmentIds.length === 0) return;
 
       channel = supabase
-        .channel('client-module-sessions-changes')
+        .channel("client-module-sessions-changes")
         .on(
-          'postgres_changes',
+          "postgres_changes",
           {
-            event: '*', // Listen to INSERT, UPDATE, DELETE
-            schema: 'public',
-            table: 'module_sessions',
+            event: "*", // Listen to INSERT, UPDATE, DELETE
+            schema: "public",
+            table: "module_sessions",
           },
           (payload) => {
             const session = (payload.new || payload.old) as any;
             // Only refresh if the session is for one of the user's enrollments
             if (session?.enrollment_id && enrollmentIds.includes(session.enrollment_id)) {
-              console.log('[Dashboard Realtime] Module session changed, refreshing upcoming sessions');
+              console.log(
+                "[Dashboard Realtime] Module session changed, refreshing upcoming sessions",
+              );
               // Trigger refetch by incrementing the trigger state
-              setRefetchTrigger(prev => prev + 1);
+              setRefetchTrigger((prev) => prev + 1);
             }
-          }
+          },
         )
         .subscribe();
     });
@@ -539,9 +556,8 @@ export default function ClientDashboard() {
     return <div>Loading...</div>;
   }
 
-  const skillsProgress = skillsSummary.total > 0 
-    ? Math.round((skillsSummary.acquired / skillsSummary.total) * 100) 
-    : 0;
+  const skillsProgress =
+    skillsSummary.total > 0 ? Math.round((skillsSummary.acquired / skillsSummary.total) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -549,7 +565,7 @@ export default function ClientDashboard() {
 
       {/* Section 1: Alerts & Banners */}
       {isOnContinuationPlan && <ContinuationBanner />}
-      {hasFeature('credits') && <LowBalanceAlert threshold={10} />}
+      {hasFeature("credits") && <LowBalanceAlert threshold={10} />}
 
       {/* Section 2: Recent Notifications */}
       <RecentNotificationsWidget />
@@ -562,7 +578,10 @@ export default function ClientDashboard() {
 
       {/* Section 4: Quick Stats Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => navigate('/programs')}>
+        <Card
+          className="cursor-pointer hover:border-primary transition-colors"
+          onClick={() => navigate("/programs")}
+        >
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -573,8 +592,11 @@ export default function ClientDashboard() {
             </div>
           </CardContent>
         </Card>
-        {hasFeature('skills_map') && (
-          <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => navigate('/skills')}>
+        {hasFeature("skills_map") && (
+          <Card
+            className="cursor-pointer hover:border-primary transition-colors"
+            onClick={() => navigate("/skills")}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -587,8 +609,11 @@ export default function ClientDashboard() {
             </CardContent>
           </Card>
         )}
-        {hasFeature('groups') && (
-          <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => navigate('/groups')}>
+        {hasFeature("groups") && (
+          <Card
+            className="cursor-pointer hover:border-primary transition-colors"
+            onClick={() => navigate("/groups")}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -600,7 +625,10 @@ export default function ClientDashboard() {
             </CardContent>
           </Card>
         )}
-        <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => navigate('/calendar')}>
+        <Card
+          className="cursor-pointer hover:border-primary transition-colors"
+          onClick={() => navigate("/calendar")}
+        >
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -622,7 +650,7 @@ export default function ClientDashboard() {
               <BookOpen className="h-5 w-5" />
               Active Programs
             </h2>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/programs')}>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/programs")}>
               View All
             </Button>
           </div>
@@ -635,11 +663,17 @@ export default function ClientDashboard() {
           ) : (
             <div className="space-y-3">
               {enrollments.slice(0, 2).map((enrollment) => (
-                <Card key={enrollment.id} className="hover:border-primary transition-colors cursor-pointer"
-                  onClick={() => navigate(`/programs/${enrollment.programs.id}`)}>
+                <Card
+                  key={enrollment.id}
+                  className="hover:border-primary transition-colors cursor-pointer"
+                  onClick={() => navigate(`/programs/${enrollment.programs.id}`)}
+                >
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg">{enrollment.programs.name}</CardTitle>
-                    <RichTextDisplay content={enrollment.programs.description} className="text-sm text-muted-foreground line-clamp-1" />
+                    <RichTextDisplay
+                      content={enrollment.programs.description}
+                      className="text-sm text-muted-foreground line-clamp-1"
+                    />
                   </CardHeader>
                   <CardContent className="pt-0">
                     <div className="space-y-2">
@@ -665,7 +699,7 @@ export default function ClientDashboard() {
               <Calendar className="h-5 w-5" />
               Upcoming Sessions
             </h2>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/calendar')}>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/calendar")}>
               View Calendar
             </Button>
           </div>
@@ -678,20 +712,24 @@ export default function ClientDashboard() {
           ) : (
             <div className="space-y-3">
               {upcomingSessions.slice(0, 3).map((session) => (
-                <Card key={session.id} className="hover:border-primary transition-colors cursor-pointer"
-                  onClick={() => session.type === 'group' 
-                    ? navigate(`/groups/${session.group_id}`)
-                    : navigate(`/programs/${session.program_id}`)
-                  }>
+                <Card
+                  key={session.id}
+                  className="hover:border-primary transition-colors cursor-pointer"
+                  onClick={() =>
+                    session.type === "group"
+                      ? navigate(`/groups/${session.group_id}`)
+                      : navigate(`/programs/${session.program_id}`)
+                  }
+                >
                   <CardContent className="pt-4 pb-4">
                     <div className="space-y-1">
                       <p className="font-medium truncate">{session.title}</p>
                       <p className="text-sm text-muted-foreground">
-                        {session.type === 'group' ? session.group_name : session.program_name}
+                        {session.type === "group" ? session.group_name : session.program_name}
                       </p>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" />
-                        {format(session.next_occurrence, 'MMM d, yyyy h:mm a')}
+                        {format(session.next_occurrence, "MMM d, yyyy h:mm a")}
                       </div>
                     </div>
                   </CardContent>
@@ -709,9 +747,7 @@ export default function ClientDashboard() {
       <DevelopmentItemsSection />
 
       {/* Section 8: My Groups */}
-      {hasFeature('groups') && groups.length > 0 && (
-        <MyGroupsSection groups={groups} />
-      )}
+      {hasFeature("groups") && groups.length > 0 && <MyGroupsSection groups={groups} />}
 
       {/* Section 9: Pending Registrations */}
       {registrations.length > 0 && (

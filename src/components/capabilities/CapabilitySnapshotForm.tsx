@@ -34,7 +34,7 @@ interface Assessment {
   instructions: string | null;
   instructions_self: string | null;
   instructions_evaluator: string | null;
-  assessment_mode: 'self' | 'evaluator' | 'both';
+  assessment_mode: "self" | "evaluator" | "both";
   capability_domains: Domain[];
 }
 
@@ -47,13 +47,18 @@ interface CapabilitySnapshotFormProps {
 
 const AUTO_SAVE_DELAY = 3000; // 3 seconds after last change
 
-export function CapabilitySnapshotForm({ assessment, onCancel, onComplete, existingDraftId }: CapabilitySnapshotFormProps) {
+export function CapabilitySnapshotForm({
+  assessment,
+  onCancel,
+  onComplete,
+  existingDraftId,
+}: CapabilitySnapshotFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: staffRelationships } = useClientStaffRelationships();
   const [expandedDomains, setExpandedDomains] = useState<string[]>(
-    assessment.capability_domains.map((d) => d.id)
+    assessment.capability_domains.map((d) => d.id),
   );
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
@@ -80,15 +85,17 @@ export function CapabilitySnapshotForm({ assessment, onCancel, onComplete, exist
     queryKey: ["capability-draft-by-id", existingDraftId],
     queryFn: async () => {
       if (!existingDraftId) return null;
-      
+
       const { data, error } = await supabase
         .from("capability_snapshots")
-        .select(`
+        .select(
+          `
           *,
           capability_snapshot_ratings(*),
           capability_domain_notes(*),
           capability_question_notes(*)
-        `)
+        `,
+        )
         .eq("id", existingDraftId)
         .maybeSingle();
 
@@ -104,15 +111,17 @@ export function CapabilitySnapshotForm({ assessment, onCancel, onComplete, exist
     queryKey: ["capability-draft", assessment.id, user?.id],
     queryFn: async () => {
       if (!user) return null;
-      
+
       const { data, error } = await supabase
         .from("capability_snapshots")
-        .select(`
+        .select(
+          `
           *,
           capability_snapshot_ratings(*),
           capability_domain_notes(*),
           capability_question_notes(*)
-        `)
+        `,
+        )
         .eq("assessment_id", assessment.id)
         .eq("user_id", user.id)
         .eq("is_self_assessment", true)
@@ -132,9 +141,7 @@ export function CapabilitySnapshotForm({ assessment, onCancel, onComplete, exist
   // - If we have a loaded draft, use its is_self_assessment flag
   // - If we have an existingDraftId but draft hasn't loaded yet, assume evaluator mode
   //   (this prevents incorrectly showing self-assessment UI while loading peer assessments)
-  const isEvaluatorMode = existingDraft 
-    ? existingDraft.is_self_assessment === false 
-    : false;
+  const isEvaluatorMode = existingDraft ? existingDraft.is_self_assessment === false : false;
 
   // Load draft data when found
   useEffect(() => {
@@ -145,31 +152,37 @@ export function CapabilitySnapshotForm({ assessment, onCancel, onComplete, exist
       setShareWithCoach(existingDraft.shared_with_coach);
       setShareWithInstructor((existingDraft as any).shared_with_instructor || false);
       setLastSaved(new Date(existingDraft.updated_at));
-      
+
       // Load ratings
       if (existingDraft.capability_snapshot_ratings) {
         const loadedRatings: Record<string, number> = {};
-        existingDraft.capability_snapshot_ratings.forEach((r: { question_id: string; rating: number }) => {
-          loadedRatings[r.question_id] = r.rating;
-        });
-        setRatings(prev => ({ ...prev, ...loadedRatings }));
+        existingDraft.capability_snapshot_ratings.forEach(
+          (r: { question_id: string; rating: number }) => {
+            loadedRatings[r.question_id] = r.rating;
+          },
+        );
+        setRatings((prev) => ({ ...prev, ...loadedRatings }));
       }
-      
+
       // Load domain notes
       if (existingDraft.capability_domain_notes) {
         const loadedNotes: Record<string, string> = {};
-        existingDraft.capability_domain_notes.forEach((n: { domain_id: string; content: string }) => {
-          loadedNotes[n.domain_id] = n.content;
-        });
+        existingDraft.capability_domain_notes.forEach(
+          (n: { domain_id: string; content: string }) => {
+            loadedNotes[n.domain_id] = n.content;
+          },
+        );
         setDomainNotes(loadedNotes);
       }
-      
+
       // Load question notes
       if (existingDraft.capability_question_notes) {
         const loadedQuestionNotes: Record<string, string> = {};
-        existingDraft.capability_question_notes.forEach((n: { question_id: string; content: string }) => {
-          loadedQuestionNotes[n.question_id] = n.content;
-        });
+        existingDraft.capability_question_notes.forEach(
+          (n: { question_id: string; content: string }) => {
+            loadedQuestionNotes[n.question_id] = n.content;
+          },
+        );
         setQuestionNotes(loadedQuestionNotes);
       }
     }
@@ -177,7 +190,7 @@ export function CapabilitySnapshotForm({ assessment, onCancel, onComplete, exist
 
   const toggleDomain = (domainId: string) => {
     setExpandedDomains((prev) =>
-      prev.includes(domainId) ? prev.filter((id) => id !== domainId) : [...prev, domainId]
+      prev.includes(domainId) ? prev.filter((id) => id !== domainId) : [...prev, domainId],
     );
   };
 
@@ -253,9 +266,12 @@ export function CapabilitySnapshotForm({ assessment, onCancel, onComplete, exist
         const existingDomainIds = Object.entries(domainNotes)
           .filter(([, content]) => content.trim())
           .map(([domainId]) => domainId);
-        
+
         if (existingDomainIds.length === 0) {
-          await supabase.from("capability_domain_notes").delete().eq("snapshot_id", snapshotIdToUpdate);
+          await supabase
+            .from("capability_domain_notes")
+            .delete()
+            .eq("snapshot_id", snapshotIdToUpdate);
         }
 
         // Upsert question notes - use proper upsert to avoid race conditions
@@ -404,12 +420,12 @@ export function CapabilitySnapshotForm({ assessment, onCancel, onComplete, exist
   // Track changes for auto-save
   const markChanged = useCallback(() => {
     setHasUnsavedChanges(true);
-    
+
     // Clear existing timer
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
-    
+
     // Set new auto-save timer
     autoSaveTimerRef.current = setTimeout(() => {
       saveDraftMutation.mutate();
@@ -507,9 +523,7 @@ export function CapabilitySnapshotForm({ assessment, onCancel, onComplete, exist
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>
-              {isEvaluatorMode ? "Evaluate Participant" : "Self-Assessment"}
-            </CardTitle>
+            <CardTitle>{isEvaluatorMode ? "Evaluate Participant" : "Self-Assessment"}</CardTitle>
             <CardDescription>
               {isEvaluatorMode
                 ? `Rate the participant on each capability question from 1 to ${assessment.rating_scale}`
@@ -611,9 +625,7 @@ export function CapabilitySnapshotForm({ assessment, onCancel, onComplete, exist
                           )}
                         </div>
                       </div>
-                      <Badge variant="secondary">
-                        Avg: {getDomainAverage(domain).toFixed(1)}
-                      </Badge>
+                      <Badge variant="secondary">Avg: {getDomainAverage(domain).toFixed(1)}</Badge>
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -623,9 +635,7 @@ export function CapabilitySnapshotForm({ assessment, onCancel, onComplete, exist
                       <div key={question.id} className="space-y-3">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
-                            <Label className="text-sm font-medium">
-                              {question.question_text}
-                            </Label>
+                            <Label className="text-sm font-medium">{question.question_text}</Label>
                             {question.description && (
                               <p className="text-xs text-muted-foreground mt-0.5">
                                 {question.description}
@@ -684,7 +694,12 @@ export function CapabilitySnapshotForm({ assessment, onCancel, onComplete, exist
         </div>
 
         <div className="flex flex-col sm:flex-row justify-between gap-3">
-          <Button variant="outline" onClick={handleManualSave} disabled={saveDraftMutation.isPending} className="w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={handleManualSave}
+            disabled={saveDraftMutation.isPending}
+            className="w-full sm:w-auto"
+          >
             <Save className="mr-2 h-4 w-4" />
             Save Draft
           </Button>
@@ -693,8 +708,8 @@ export function CapabilitySnapshotForm({ assessment, onCancel, onComplete, exist
               <X className="mr-2 h-4 w-4" />
               Cancel
             </Button>
-            <Button 
-              onClick={() => completeMutation.mutate()} 
+            <Button
+              onClick={() => completeMutation.mutate()}
               disabled={completeMutation.isPending || !draftId}
               className="w-full sm:w-auto"
             >

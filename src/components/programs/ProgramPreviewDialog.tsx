@@ -1,11 +1,11 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Clock, GraduationCap, User, Layers, CheckCircle, Percent } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { RichTextDisplay } from '@/components/ui/rich-text-display';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Clock, GraduationCap, User, Layers, CheckCircle, Percent } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Module {
   id: string;
@@ -32,7 +32,7 @@ interface CrossProgramModule {
   moduleTitle: string;
   completedInProgram: string;
   completedAt: string | null;
-  completionSource: 'internal' | 'talentlms';
+  completionSource: "internal" | "talentlms";
 }
 
 interface ProgramPreviewDialogProps {
@@ -73,31 +73,33 @@ export function ProgramPreviewDialog({
   const remainingMinutes = totalMinutes % 60;
   const programTiers = program.tiers || [];
 
-  const completedModuleIds = new Set(crossCompletions?.completedElsewhere.map(c => c.moduleId) || []);
-  const getCompletionInfo = (moduleId: string) => 
-    crossCompletions?.completedElsewhere.find(c => c.moduleId === moduleId);
+  const completedModuleIds = new Set(
+    crossCompletions?.completedElsewhere.map((c) => c.moduleId) || [],
+  );
+  const getCompletionInfo = (moduleId: string) =>
+    crossCompletions?.completedElsewhere.find((c) => c.moduleId === moduleId);
 
   const getModuleTypeColor = (type: string) => {
     switch (type) {
-      case 'session':
-        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-      case 'assignment':
-        return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
-      case 'reflection':
-        return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
-      case 'resource':
-        return 'bg-green-500/10 text-green-500 border-green-500/20';
+      case "session":
+        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+      case "assignment":
+        return "bg-orange-500/10 text-orange-500 border-orange-500/20";
+      case "reflection":
+        return "bg-purple-500/10 text-purple-500 border-purple-500/20";
+      case "resource":
+        return "bg-green-500/10 text-green-500 border-green-500/20";
       default:
-        return 'bg-muted text-muted-foreground';
+        return "bg-muted text-muted-foreground";
     }
   };
 
   const getTierColor = (tier: string) => {
     const lowerTier = tier.toLowerCase();
-    const tierIndex = programTiers.findIndex(t => t.toLowerCase() === lowerTier);
-    if (tierIndex === 0) return 'bg-primary/10 text-primary border-primary/20';
-    if (tierIndex === 1) return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
-    return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
+    const tierIndex = programTiers.findIndex((t) => t.toLowerCase() === lowerTier);
+    if (tierIndex === 0) return "bg-primary/10 text-primary border-primary/20";
+    if (tierIndex === 1) return "bg-amber-500/10 text-amber-600 border-amber-500/20";
+    return "bg-purple-500/10 text-purple-600 border-purple-500/20";
   };
 
   return (
@@ -106,7 +108,7 @@ export function ProgramPreviewDialog({
         <DialogHeader>
           <DialogTitle className="text-2xl">{program.name}</DialogTitle>
         </DialogHeader>
-        
+
         <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
           <div className="space-y-6">
             {/* Cross-Completion Banner */}
@@ -118,13 +120,14 @@ export function ProgramPreviewDialog({
                 </AlertTitle>
                 <AlertDescription className="text-green-600 dark:text-green-300">
                   <p className="mb-2">
-                    {crossCompletions.completedElsewhere.length} of {crossCompletions.totalModules} modules 
-                    have been completed in other programs.
+                    {crossCompletions.completedElsewhere.length} of {crossCompletions.totalModules}{" "}
+                    modules have been completed in other programs.
                   </p>
                   {crossCompletions.suggestedDiscountPercent > 0 && (
                     <p className="flex items-center gap-2 font-medium">
                       <Percent className="h-4 w-4" />
-                      Suggested discount: {crossCompletions.suggestedDiscountPercent}% based on prior learning
+                      Suggested discount: {crossCompletions.suggestedDiscountPercent}% based on
+                      prior learning
                     </p>
                   )}
                 </AlertDescription>
@@ -260,9 +263,9 @@ export function ProgramPreviewDialog({
                       <div
                         key={module.id}
                         className={`border rounded-lg p-4 transition-colors ${
-                          isCompleted 
-                            ? 'border-green-500/30 bg-green-500/5' 
-                            : 'hover:border-primary/50'
+                          isCompleted
+                            ? "border-green-500/30 bg-green-500/5"
+                            : "hover:border-primary/50"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-4">
@@ -275,15 +278,18 @@ export function ProgramPreviewDialog({
                                 {module.module_type}
                               </Badge>
                               {module.tier_required && (
-                                <Badge variant="outline" className={getTierColor(module.tier_required)}>
+                                <Badge
+                                  variant="outline"
+                                  className={getTierColor(module.tier_required)}
+                                >
                                   {module.tier_required}
                                 </Badge>
                               )}
                               {isCompleted && completionInfo && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Badge 
-                                      variant="outline" 
+                                    <Badge
+                                      variant="outline"
                                       className="border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400 cursor-help"
                                     >
                                       <CheckCircle className="h-3 w-3 mr-1" />

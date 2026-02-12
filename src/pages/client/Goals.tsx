@@ -1,51 +1,51 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Target, CheckCircle2, TrendingUp, Share2, Calendar, Sparkles } from 'lucide-react';
-import GoalCard from '@/components/goals/GoalCard';
-import GoalFilters from '@/components/goals/GoalFilters';
-import GoalForm from '@/components/goals/GoalForm';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
-import { FeatureGate } from '@/components/FeatureGate';
-import { usePageView } from '@/hooks/useAnalytics';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus, Target, CheckCircle2, TrendingUp, Share2, Calendar, Sparkles } from "lucide-react";
+import GoalCard from "@/components/goals/GoalCard";
+import GoalFilters from "@/components/goals/GoalFilters";
+import GoalForm from "@/components/goals/GoalForm";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { FeatureGate } from "@/components/FeatureGate";
+import { usePageView } from "@/hooks/useAnalytics";
 
 function GoalsFallback() {
   const navigate = useNavigate();
-  
+
   const features = [
     {
       icon: Target,
-      title: 'Set Meaningful Goals',
-      description: 'Define goals across all life areas using the Wheel of Life framework',
+      title: "Set Meaningful Goals",
+      description: "Define goals across all life areas using the Wheel of Life framework",
     },
     {
       icon: TrendingUp,
-      title: 'Track Progress',
-      description: 'Monitor your journey with visual progress indicators and milestones',
+      title: "Track Progress",
+      description: "Monitor your journey with visual progress indicators and milestones",
     },
     {
       icon: CheckCircle2,
-      title: 'Break Down Goals',
-      description: 'Create actionable milestones and track completion step by step',
+      title: "Break Down Goals",
+      description: "Create actionable milestones and track completion step by step",
     },
     {
       icon: Share2,
-      title: 'Share with Coach',
-      description: 'Get personalized feedback by sharing goals with your instructor or coach',
+      title: "Share with Coach",
+      description: "Get personalized feedback by sharing goals with your instructor or coach",
     },
     {
       icon: Calendar,
-      title: 'Set Target Dates',
-      description: 'Stay accountable with timeframes for short, medium, and long-term goals',
+      title: "Set Target Dates",
+      description: "Stay accountable with timeframes for short, medium, and long-term goals",
     },
     {
       icon: Sparkles,
-      title: 'Reflect & Learn',
-      description: 'Add reflections and resources to document your growth journey',
+      title: "Reflect & Learn",
+      description: "Add reflections and resources to document your growth journey",
     },
   ];
 
@@ -57,8 +57,8 @@ function GoalsFallback() {
         </div>
         <h1 className="text-3xl font-bold mb-3">Goal Setting & Tracking</h1>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          Transform your aspirations into achievements with our comprehensive goal management system. 
-          Set, track, and accomplish goals across all dimensions of your life.
+          Transform your aspirations into achievements with our comprehensive goal management
+          system. Set, track, and accomplish goals across all dimensions of your life.
         </p>
       </div>
 
@@ -81,13 +81,12 @@ function GoalsFallback() {
           <div className="text-center">
             <h3 className="text-xl font-semibold mb-2">Unlock Goal Management</h3>
             <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
-              This feature is available with our premium programs. Enroll in a program or upgrade your plan to start setting and achieving your goals.
+              This feature is available with our premium programs. Enroll in a program or upgrade
+              your plan to start setting and achieving your goals.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button onClick={() => navigate('/explore-programs')}>
-                Explore Programs
-              </Button>
-              <Button variant="outline" onClick={() => navigate('/subscription')}>
+              <Button onClick={() => navigate("/explore-programs")}>Explore Programs</Button>
+              <Button variant="outline" onClick={() => navigate("/subscription")}>
                 View Subscription Options
               </Button>
             </div>
@@ -114,8 +113,8 @@ interface Goal {
 
 export default function Goals() {
   // Track page view for analytics
-  usePageView('Goals');
-  
+  usePageView("Goals");
+
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -123,25 +122,25 @@ export default function Goals() {
   const [filteredGoals, setFilteredGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  
+
   // Initialize filters from URL params
-  const categoryParam = searchParams.get('category') || 'all';
-  const newParam = searchParams.get('new');
-  
+  const categoryParam = searchParams.get("category") || "all";
+  const newParam = searchParams.get("new");
+
   const [filters, setFilters] = useState({
     category: categoryParam,
-    timeframe: 'all',
-    status: 'all',
-    priority: 'all',
-    search: '',
+    timeframe: "all",
+    status: "all",
+    priority: "all",
+    search: "",
   });
 
   // Open create dialog if ?new=true
   useEffect(() => {
-    if (newParam === 'true') {
+    if (newParam === "true") {
       setShowCreateDialog(true);
       // Clear the new param from URL
-      searchParams.delete('new');
+      searchParams.delete("new");
       setSearchParams(searchParams, { replace: true });
     }
   }, [newParam]);
@@ -149,7 +148,7 @@ export default function Goals() {
   // Update filters when URL category changes
   useEffect(() => {
     if (categoryParam && categoryParam !== filters.category) {
-      setFilters(prev => ({ ...prev, category: categoryParam }));
+      setFilters((prev) => ({ ...prev, category: categoryParam }));
     }
   }, [categoryParam]);
 
@@ -165,21 +164,21 @@ export default function Goals() {
 
   const fetchGoals = async () => {
     if (!user) return;
-    
+
     try {
       const { data, error } = await supabase
-        .from('goals')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .from("goals")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setGoals(data || []);
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to load goals',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load goals",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -189,23 +188,24 @@ export default function Goals() {
   const applyFilters = () => {
     let filtered = [...goals];
 
-    if (filters.category !== 'all') {
-      filtered = filtered.filter(g => g.category === filters.category);
+    if (filters.category !== "all") {
+      filtered = filtered.filter((g) => g.category === filters.category);
     }
-    if (filters.timeframe !== 'all') {
-      filtered = filtered.filter(g => g.timeframe_type === filters.timeframe);
+    if (filters.timeframe !== "all") {
+      filtered = filtered.filter((g) => g.timeframe_type === filters.timeframe);
     }
-    if (filters.status !== 'all') {
-      filtered = filtered.filter(g => g.status === filters.status);
+    if (filters.status !== "all") {
+      filtered = filtered.filter((g) => g.status === filters.status);
     }
-    if (filters.priority !== 'all') {
-      filtered = filtered.filter(g => g.priority === filters.priority);
+    if (filters.priority !== "all") {
+      filtered = filtered.filter((g) => g.priority === filters.priority);
     }
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter(g =>
-        g.title.toLowerCase().includes(searchLower) ||
-        g.description?.toLowerCase().includes(searchLower)
+      filtered = filtered.filter(
+        (g) =>
+          g.title.toLowerCase().includes(searchLower) ||
+          g.description?.toLowerCase().includes(searchLower),
       );
     }
 
@@ -254,8 +254,8 @@ export default function Goals() {
             <h3 className="text-xl font-semibold mb-2">No goals found</h3>
             <p className="text-muted-foreground mb-4">
               {goals.length === 0
-                ? 'Start by creating your first goal'
-                : 'Try adjusting your filters'}
+                ? "Start by creating your first goal"
+                : "Try adjusting your filters"}
             </p>
             {goals.length === 0 && (
               <Button onClick={() => setShowCreateDialog(true)}>
@@ -266,12 +266,8 @@ export default function Goals() {
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredGoals.map(goal => (
-              <GoalCard
-                key={goal.id}
-                goal={goal}
-                onDelete={handleGoalDeleted}
-              />
+            {filteredGoals.map((goal) => (
+              <GoalCard key={goal.id} goal={goal} onDelete={handleGoalDeleted} />
             ))}
           </div>
         )}
@@ -281,10 +277,10 @@ export default function Goals() {
             <DialogHeader>
               <DialogTitle>Create New Goal</DialogTitle>
             </DialogHeader>
-            <GoalForm 
-              defaultCategory={categoryParam !== 'all' ? categoryParam : undefined}
-              onSuccess={handleGoalCreated} 
-              onCancel={() => setShowCreateDialog(false)} 
+            <GoalForm
+              defaultCategory={categoryParam !== "all" ? categoryParam : undefined}
+              onSuccess={handleGoalCreated}
+              onCancel={() => setShowCreateDialog(false)}
             />
           </DialogContent>
         </Dialog>
