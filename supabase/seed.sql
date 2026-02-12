@@ -1020,6 +1020,16 @@ BEGIN
   END IF;
 
   -- =========================================================================
+  -- Notification preferences for demo users
+  -- =========================================================================
+  INSERT INTO public.notification_preferences (user_id) VALUES (v_admin_id) ON CONFLICT (user_id) DO NOTHING;
+  INSERT INTO public.notification_preferences (user_id) VALUES (v_admin2_id) ON CONFLICT (user_id) DO NOTHING;
+  INSERT INTO public.notification_preferences (user_id) VALUES (v_client1_id) ON CONFLICT (user_id) DO NOTHING;
+  INSERT INTO public.notification_preferences (user_id) VALUES (v_client2_id) ON CONFLICT (user_id) DO NOTHING;
+  INSERT INTO public.notification_preferences (user_id) VALUES (v_coach_id) ON CONFLICT (user_id) DO NOTHING;
+  INSERT INTO public.notification_preferences (user_id) VALUES (v_instructor_id) ON CONFLICT (user_id) DO NOTHING;
+
+  -- =========================================================================
   -- Credit balances for demo users
   -- =========================================================================
   INSERT INTO public.user_credit_balances (user_id, available_credits, total_received, total_consumed)
