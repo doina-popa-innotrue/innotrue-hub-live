@@ -50,6 +50,9 @@ EXCLUDE_PATTERNS=(
   "src/main.tsx"
   "src/lib/vitals.ts"
   "src/components/ErrorBoundary.tsx"
+  "src/integrations/supabase/client.ts"
+  "src/integrations/supabase/types.ts"
+  "supabase/config.toml"
 )
 
 # Check if a file should be excluded
