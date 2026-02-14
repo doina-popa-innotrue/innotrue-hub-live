@@ -221,26 +221,6 @@ export default function Subscription() {
     enabled: !!user,
   });
 
-  // Stripe price IDs mapping
-  const stripePriceIds: Record<string, { month: string; year: string }> = {
-    base: {
-      month: "price_1SlKDWKTUzwyKyi3yFJlmUMR",
-      year: "price_1SlKDnKTUzwyKyi37Y0BPNeE",
-    },
-    pro: {
-      month: "price_1SlKE4KTUzwyKyi3UtmUNeJ8",
-      year: "price_1SlKEKKTUzwyKyi3MSVe9J7f",
-    },
-    advanced: {
-      month: "price_1SlKFxKTUzwyKyi3szdFPBSC",
-      year: "price_1SlKGEKTUzwyKyi3wm6q3ZU2",
-    },
-    elite: {
-      month: "price_1SlKGPKTUzwyKyi3w8z5lnBm",
-      year: "price_1SlKGaKTUzwyKyi3hl22G7RJ",
-    },
-  };
-
   const handlePlanClick = (plan: Plan) => {
     // Check if this is a downgrade
     if (currentPlan && plan.tier_level < currentPlan.tier_level) {
@@ -254,17 +234,20 @@ export default function Subscription() {
   };
 
   const handleCheckout = async (plan: Plan) => {
-    const priceMapping = stripePriceIds[plan.key];
-    if (!priceMapping) {
+    // Use stripe_price_id from plan_prices (populated per-environment in DB)
+    const price = plan.plan_prices.find(
+      (p) => p.billing_interval === billingInterval && p.stripe_price_id,
+    );
+    const stripePriceId = price?.stripe_price_id;
+
+    if (!stripePriceId) {
       toast({
         title: "Plan not available",
-        description: "This plan is not available for direct checkout. Please contact support.",
+        description: "This plan is not configured for checkout in this environment. Please contact support.",
         variant: "destructive",
       });
       return;
     }
-
-    const stripePriceId = priceMapping[billingInterval];
 
     setSubmitting(plan.id);
     try {
