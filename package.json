@@ -20,6 +20,7 @@
     "import:lovable": "bash scripts/import-from-lovable.sh",
     "cleanup:lovable": "bash scripts/cleanup-lovable-code.sh",
     "sync:lovable": "bash scripts/lovable-sync.sh",
+    "update:lovable": "bash scripts/lovable-update.sh",
     "verify": "bash scripts/verify.sh"
   },
   "dependencies": {

@@ -142,10 +142,23 @@ git pull origin develop
 
 | Script | Command | Purpose |
 |--------|---------|---------|
+| **Sync** | `npm run sync:lovable` | One-command: pull → diff → import → verify → commit → PR |
+| **Update** | `npm run update:lovable` | Push live changes TO Lovable sandbox |
 | Diff | `npm run diff:lovable -- <path> [scope...]` | Compare repos, generate pick-list |
 | Import | `npm run import:lovable -- <path> <files...>` | Copy files, create branch, run cleanup |
 | Cleanup | `npm run cleanup:lovable [-- scope]` | Run cleanup on already-imported files |
 | Verify | `npm run verify` | Full lint + typecheck + test + build |
+
+### Sync flags (Lovable → Live)
+- `npm run sync:lovable` — Full pipeline
+- `npm run sync:lovable -- --diff-only` — Just compare, don't import
+- `npm run sync:lovable -- --no-pr` — Import but skip PR creation
+- `npm run sync:lovable -- --scope src/components src/hooks` — Scope to specific dirs
+
+### Update flags (Live → Lovable)
+- `npm run update:lovable` — Merge live main → Lovable main, push
+- `npm run update:lovable -- --dry-run` — Show what would merge, don't do it
+- `npm run update:lovable -- --source preprod` — Merge from preprod instead of main
 
 ## What Gets Auto-Excluded
 
@@ -177,13 +190,42 @@ For importing database content (programs, modules, assessment questions, etc.) c
 
 See `docs/LOVABLE_INTEGRATION.md` for full details.
 
-## Dry-Run Example (2026-02-14)
+## Updating Lovable Sandbox (Live → Lovable)
 
-Current state: 507 identical files, 9 modified (all live-ahead), 0 new, 5 auto-excluded.
+After deploying changes to production, bring the Lovable sandbox up to date:
 
-The 9 modified files are all changes we made in the live repo that Lovable doesn't have yet:
-- 6 files: `is_published` → `visibility` cleanup
-- 1 file: Stripe hardcoded price IDs removal
-- 2 files: `user!.id` → `user.id` null guard fix
+```bash
+# Dry-run first (see what would merge)
+npm run update:lovable -- --dry-run
 
-**None should be imported** — importing them would revert our production fixes. This is the correct behavior: the diff shows them as "modified" and you'd remove them all from the pick-list.
+# Actually merge and push
+npm run update:lovable
+```
+
+**What it does:**
+1. Pulls latest from both repos
+2. Merges live `main` into Lovable's `main` using git merge
+3. Verifies Lovable-specific files are preserved (`vite.config.ts`, `client.ts`, `types.ts`)
+4. Pushes to Lovable's GitHub repo
+5. Lovable IDE picks up the changes on next pull/refresh
+
+**Safe because:**
+- Uses `git merge` (not force-push) — preserves Lovable's local patches
+- Aborts on conflicts — you resolve manually in the Lovable clone
+- Verifies critical Lovable-owned files weren't modified
+- Never touches the live repo
+
+**Expected steady-state diff after update:**
+Only 2 files should differ (Lovable's intentional patches):
+- `src/pages/instructor/CoachingTasks.tsx` (`user!.id` vs `user.id`)
+- `src/pages/instructor/CoachingDecisions.tsx` (`user!.id` vs `user.id`)
+
+Plus ~5 auto-excluded config files (vite.config, types.ts, client.ts, etc.)
+
+## Repo Locations
+
+| Repo | Path | Purpose |
+|------|------|---------|
+| Live (primary) | `.../Work_GDrive/innotrue-hub-live` | Production codebase |
+| Lovable clone | `.../Work_GDrive/lovable-sandbox` | Local clone for sync scripts |
+| Backup (outdated) | `.../Backups/innotrue_hub_app-main_copy` | DO NOT USE |
