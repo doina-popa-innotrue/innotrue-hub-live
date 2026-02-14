@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
 import { getStagingRecipient, getStagingSubject } from "../_shared/email-utils.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -67,22 +68,34 @@ const templateKeyMap: Record<string, string> = {
 
 const handler = async (req: Request): Promise<Response> => {
   try {
-    // Validate request is from Supabase Auth (must include valid service role key ONLY)
-    // SECURITY: Do NOT accept anon key - it's public and would allow anyone to trigger auth emails
-    const authHeader = req.headers.get('Authorization');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    const providedToken = authHeader?.replace('Bearer ', '');
-    if (providedToken !== supabaseServiceKey) {
-      console.error('Unauthorized: Invalid or missing service role key');
+    // Validate request is from Supabase Auth using Standard Webhooks HMAC verification
+    const hookSecret = Deno.env.get('SEND_EMAIL_HOOK_SECRET');
+    if (!hookSecret) {
+      console.error('SEND_EMAIL_HOOK_SECRET not set');
+      return new Response(
+        JSON.stringify({ error: 'Server misconfiguration' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const payload = await req.text();
+    const headers = Object.fromEntries(req.headers);
+    const wh = new Webhook(hookSecret.replace('v1,whsec_', ''));
+
+    let user: AuthEmailRequest['user'];
+    let email_data: AuthEmailRequest['email_data'];
+    try {
+      const verified = wh.verify(payload, headers) as AuthEmailRequest;
+      user = verified.user;
+      email_data = verified.email_data;
+    } catch (err) {
+      console.error('Webhook verification failed:', err);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const payload: AuthEmailRequest = await req.json();
-    const { user, email_data } = payload;
     const { email_action_type, token_hash, redirect_to } = email_data;
 
     console.log(`Processing ${email_action_type} email for ${user.email}`);
