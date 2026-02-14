@@ -48,19 +48,18 @@ After verification against actual migration files:
 **Problem:** Frontend hook does INSERT/UPDATE/DELETE, but only admin has write access.
 **Fix:** Add instructor/coach ALL policies scoped via `is_program_instructor_or_coach`.
 
-### 2.6 `assessment_option_scores` + `assessment_interpretations` — Public exposure
-**Problem:** Anonymous users can read scoring matrix and interpretation rules (reveals answer key).
-**Decision needed:** Move scoring server-side via edge function, OR accept the exposure for now.
-**Action:** Flag for future sprint — requires frontend refactor to compute scores via edge function.
+### ~~2.6 `assessment_option_scores` + `assessment_interpretations` — Public exposure~~
+**RESOLVED:** Scoring already moved server-side via `compute-assessment-scores` edge function (uses `service_role`). Both tables tightened to admin-only SELECT in migrations `20260212190000` (authenticated-only) and `20260212200000` (admin-only). Frontend returns computed scores only, never raw scoring matrix. No further action needed.
 
 ### 2.7 `sessions` + related tables — Overly permissive staff ALL
 **Problem:** Any instructor/coach has FOR ALL on ANY session record.
 **Decision needed:** Scope to related sessions only, OR accept broad access.
 **Action:** Flag for future sprint — requires careful analysis of all session workflows.
 
-### 2.8 `group_session_participants` — Any auth can view ALL
-**Problem:** `USING (true)` SELECT policy.
-**Action:** Flag for future sprint — needs group membership scoping.
+### 2.8 `group_session_participants` — Staff overpermission on SELECT
+**Problem:** SELECT policy allows any instructor/coach to view ALL participants platform-wide (not group-scoped).
+**Fix:** Scope instructor/coach access via `group_memberships` (same check used for regular users). Admin retains broad access.
+**Migration:** `20260214180000_rls_fix_group_session_participants.sql`
 
 ## Priority 3: MEDIUM (Migration C)
 
@@ -94,17 +93,18 @@ After verification against actual migration files:
 ### ~~3.10 `email_change_requests` — Frontend queries base table~~
 **NOT NEEDED:** `AccountSettings.tsx` only does INSERT (not SELECT) on the base table. The `USING(false)` SELECT policy doesn't affect INSERTs. The safe view is for reading only. No change required.
 
-### 3.11 `resource_library_skills` + `resource_library_programs` — `is_published` vs `visibility`
-**Action:** Flag for future sprint — requires understanding of the `can_access_resource()` function.
+### ~~3.11 `resource_library_skills` + `resource_library_programs` — `is_published` vs `visibility`~~
+**RLS RESOLVED:** Migration `20260212190000` already updated both tables' SELECT policies to use `can_access_resource()` (which checks the new `visibility` field). RLS is correct.
+**Frontend cleanup remaining:** `MyResources.tsx` still filters by deprecated `is_published` field, and admin UI still toggles `is_published` instead of `visibility`. This is a functional inconsistency, not a security risk. Deferred to frontend cleanup sprint.
 
-## Deferred Items (Future Sprint)
+## Deferred Items — Re-assessed 2026-02-14
 
-| Item | Reason |
-|---|---|
-| Assessment scoring exposure (#2.6) | Requires frontend refactor to server-side scoring |
-| Sessions overly permissive (#2.7) | Requires analysis of all session workflows |
-| Group session participants (#2.8) | Requires group membership scoping |
-| Resource library visibility model (#3.11) | Requires `can_access_resource()` analysis |
+| Item | Status | Notes |
+|---|---|---|
+| Assessment scoring exposure (#2.6) | ✅ **RESOLVED** | Already server-side via `compute-assessment-scores` edge function. RLS tightened to admin-only in migrations `20260212190000` + `20260212200000`. |
+| Sessions "overly permissive" (#2.7) | ✅ **FALSE POSITIVE** | Re-verified: migration `20260113132730` recreated the instructor/coach policy with proper scoping (module-level + program-level via `is_program_instructor_or_coach`). Admin ALL, Client SELECT/INSERT, and Instructor/Coach ALL policies all exist and are correctly scoped. |
+| Group session participants (#2.8) | ✅ **FIXED** | Migration `20260214180000`: Scoped instructor/coach SELECT to groups they're members of (via `group_memberships`). Admin retains broad access. |
+| Resource library visibility model (#3.11) | ✅ **RLS RESOLVED** | Migration `20260212190000` already updated policies to use `can_access_resource()`. Frontend still references deprecated `is_published` — cosmetic cleanup deferred. |
 
 ## Deployment Plan
 
@@ -121,3 +121,6 @@ After verification against actual migration files:
 - `20260212180000_rls_fix_critical.sql` — Priority 1 fixes
 - `20260212180100_rls_fix_high.sql` — Priority 2 fixes
 - `20260212180200_rls_fix_medium.sql` — Priority 3 fixes
+- `20260212190000_rls_fix_deferred.sql` — Deferred items (#2.6, #2.7, #3.11)
+- `20260212200000_assessment_scoring_server_side.sql` — Assessment scoring admin-only
+- `20260214180000_rls_fix_group_session_participants.sql` — #2.8 staff scoping fix
