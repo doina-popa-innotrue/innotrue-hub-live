@@ -19,6 +19,7 @@
     "diff:lovable": "bash scripts/diff-lovable.sh",
     "import:lovable": "bash scripts/import-from-lovable.sh",
     "cleanup:lovable": "bash scripts/cleanup-lovable-code.sh",
+    "sync:lovable": "bash scripts/lovable-sync.sh",
     "verify": "bash scripts/verify.sh"
   },
   "dependencies": {

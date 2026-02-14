@@ -92,12 +92,12 @@ fi
 
 # 4c. Unknown Supabase project refs (not our known 3 projects)
 HARDCODED_SUPA=$(grep -rn "supabase\.co" $TARGETS 2>/dev/null \
-  | grep -v "qfdztdgublwlmewobxmx\|jtzcrirqflfnagceendt\|pfwlsxovvqdiwaztqxrj" \
+  | grep -v "qfdztdgublwlmewobxmx\|jtzcrirqflfnagceendt\|pfwlsxovvqdiwaztqxrj\|cezlnvdjildzxpyxyabb" \
   | grep -v node_modules | grep -v "\.sh:" | grep -v "placeholder" | wc -l | tr -d ' ')
 echo "  Unknown Supabase project refs: $HARDCODED_SUPA"
 if [ "$HARDCODED_SUPA" -gt 0 ]; then
   grep -rn "supabase\.co" $TARGETS 2>/dev/null \
-    | grep -v "qfdztdgublwlmewobxmx\|jtzcrirqflfnagceendt\|pfwlsxovvqdiwaztqxrj" \
+    | grep -v "qfdztdgublwlmewobxmx\|jtzcrirqflfnagceendt\|pfwlsxovvqdiwaztqxrj\|cezlnvdjildzxpyxyabb" \
     | grep -v node_modules | grep -v "\.sh:" | grep -v "placeholder" | head -10 | sed 's/^/    /'
 fi
 
