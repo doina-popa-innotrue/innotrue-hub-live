@@ -124,11 +124,14 @@ echo ""
 echo "━━━ Step 3/5: Recording Lovable file checksums ━━━"
 echo ""
 
-declare -A FILE_CHECKSUMS
+FILE_CHECKSUMS=()
 for F in "${LOVABLE_OWNED_FILES[@]}"; do
   if [ -f "$F" ]; then
-    FILE_CHECKSUMS["$F"]=$(md5 -q "$F" 2>/dev/null || md5sum "$F" | cut -d' ' -f1)
-    echo "  $F: ${FILE_CHECKSUMS[$F]:0:8}..."
+    CKSUM=$(md5 -q "$F" 2>/dev/null || md5sum "$F" | cut -d' ' -f1)
+    FILE_CHECKSUMS+=("$CKSUM")
+    echo "  $F: ${CKSUM:0:8}..."
+  else
+    FILE_CHECKSUMS+=("")
   fi
 done
 echo ""
@@ -191,16 +194,19 @@ echo "━━━ Step 5/5: Verifying Lovable files preserved ━━━"
 echo ""
 
 VERIFICATION_FAILED=false
+IDX=0
 for F in "${LOVABLE_OWNED_FILES[@]}"; do
   if [ -f "$F" ]; then
     NEW_CHECKSUM=$(md5 -q "$F" 2>/dev/null || md5sum "$F" | cut -d' ' -f1)
-    if [ "${FILE_CHECKSUMS[$F]:-}" = "$NEW_CHECKSUM" ]; then
+    OLD_CHECKSUM="${FILE_CHECKSUMS[$IDX]:-}"
+    if [ "$OLD_CHECKSUM" = "$NEW_CHECKSUM" ]; then
       echo "  ✓ $F (unchanged)"
     else
       echo "  ⚠ $F (CHANGED — Lovable patch may be lost!)"
       VERIFICATION_FAILED=true
     fi
   fi
+  IDX=$((IDX + 1))
 done
 echo ""
 
