@@ -58,6 +58,7 @@ interface Plan {
   stripe_product_id: string | null;
   is_active: boolean;
   is_free: boolean;
+  is_purchasable: boolean;
   tier_level: number;
   fallback_plan_id: string | null;
   plan_prices: PlanPrice[];
@@ -71,6 +72,7 @@ interface PlanFormData {
   stripe_product_id: string;
   is_active: boolean;
   is_free: boolean;
+  is_purchasable: boolean;
   tier_level: number;
   fallback_plan_id: string | null;
   credit_allowance: number | null;
@@ -91,6 +93,7 @@ const initialPlanFormData: PlanFormData = {
   stripe_product_id: "",
   is_active: true,
   is_free: false,
+  is_purchasable: true,
   tier_level: 1,
   fallback_plan_id: null,
   credit_allowance: null,
@@ -139,6 +142,7 @@ export default function PlansManagement() {
       stripe_product_id: item.stripe_product_id || "",
       is_active: item.is_active,
       is_free: item.is_free,
+      is_purchasable: item.is_purchasable,
       tier_level: item.tier_level,
       fallback_plan_id: item.fallback_plan_id,
       credit_allowance: (item as any).credit_allowance ?? null,
@@ -156,6 +160,7 @@ export default function PlansManagement() {
         stripe_product_id: data.stripe_product_id || null,
         is_active: data.is_active,
         is_free: data.is_free,
+        is_purchasable: data.is_purchasable,
         tier_level: data.tier_level,
         fallback_plan_id: data.fallback_plan_id,
         credit_allowance: data.credit_allowance,
@@ -189,6 +194,7 @@ export default function PlansManagement() {
           stripe_product_id: data.stripe_product_id || null,
           is_active: data.is_active,
           is_free: data.is_free,
+          is_purchasable: data.is_purchasable,
           tier_level: data.tier_level,
           fallback_plan_id: data.fallback_plan_id,
           credit_allowance: data.credit_allowance,
@@ -452,6 +458,7 @@ export default function PlansManagement() {
                         {plan.is_active ? "Active" : "Inactive"}
                       </Badge>
                       {plan.is_free && <Badge variant="outline">Free</Badge>}
+                      {!plan.is_purchasable && <Badge variant="secondary">Admin-assigned</Badge>}
                       <Badge variant="outline">Tier {plan.tier_level}</Badge>
                     </div>
                     <CardDescription>
@@ -695,6 +702,19 @@ export default function PlansManagement() {
                 id="is_free"
                 checked={formData.is_free}
                 onCheckedChange={(checked) => setFormData({ ...formData, is_free: checked })}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="is_purchasable">Purchasable</Label>
+                <p className="text-xs text-muted-foreground">
+                  Shown in subscription checkout. Turn off for admin-assigned plans (e.g. Programs, Continuation).
+                </p>
+              </div>
+              <Switch
+                id="is_purchasable"
+                checked={formData.is_purchasable}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_purchasable: checked })}
               />
             </div>
             <div className="flex items-center justify-between">
