@@ -76,7 +76,6 @@ interface Resource {
   mime_type: string | null;
   metadata: Record<string, any> | null;
   is_active: boolean;
-  is_published: boolean;
   visibility: string | null;
   downloadable: boolean;
   created_by: string;
@@ -282,7 +281,6 @@ export default function ResourceLibraryManagement() {
           mime_type,
           created_by: user.id,
           is_active: true,
-          is_published: false,
           visibility: "private",
           downloadable: data.downloadable,
         })
@@ -385,10 +383,7 @@ export default function ResourceLibraryManagement() {
     mutationFn: async ({ id, visibility }: { id: string; visibility: string }) => {
       const { error } = await supabase
         .from("resource_library")
-        .update({
-          visibility,
-          is_published: visibility === "public",
-        })
+        .update({ visibility })
         .eq("id", id);
 
       if (error) throw error;
