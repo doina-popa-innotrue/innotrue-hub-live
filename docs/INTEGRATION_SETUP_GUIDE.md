@@ -196,6 +196,10 @@ Stripe has built-in test mode on the same account — no extra cost.
 | Preprod | `STRIPE_SECRET_KEY` | `sk_test_...` | [ ] Verified |
 | Sandbox | `STRIPE_SECRET_KEY` | Not set | [ ] Verified |
 
+### Future: Stripe Sandboxes
+
+Stripe now recommends Sandboxes over test mode for multi-developer teams. Sandboxes provide fully isolated test environments (separate data, webhooks, logs) per developer. Currently we use a single test mode key on preprod — sufficient for a solo developer. When adding more developers, consider creating per-developer Sandboxes in the Stripe Dashboard and issuing separate sandbox API keys. See: https://docs.stripe.com/sandboxes
+
 ---
 
 ## 2. Cal.com (Scheduling)

@@ -94,6 +94,8 @@ Set via: **Supabase Dashboard → Project Settings → Edge Function Secrets**
 
 **Used by:** `create-checkout`, `customer-portal`, `confirm-credit-topup`, `org-confirm-credit-purchase`, `purchase-credit-topup`, `org-purchase-credits`
 
+**Future: Stripe Sandboxes.** As of 2026, Stripe recommends Sandboxes over test mode for teams with multiple developers. Sandboxes provide fully isolated test environments (separate data, webhooks, logs) per developer. Currently we use a single test mode key on preprod which is fine for a solo developer. When the team grows, consider creating per-developer Sandboxes in the Stripe Dashboard and issuing separate sandbox API keys.
+
 ### AI — Vertex AI (Google Cloud)
 
 | Secret | Production | Preprod | Lovable Sandbox |
