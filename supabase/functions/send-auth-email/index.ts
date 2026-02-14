@@ -118,9 +118,11 @@ const handler = async (req: Request): Promise<Response> => {
       ? `<img src="${logoData.file_url}" alt="${logoData.name}" style="max-width: 200px; height: auto;" />`
       : '';
 
-    // Build confirmation link — apikey is required by the /auth/v1/verify endpoint
+    // Build confirmation link — must use SUPABASE_URL (not site_url which is the app URL)
+    // The /auth/v1/verify endpoint lives on the Supabase project, not the frontend
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    const confirmationLink = `${email_data.site_url}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${encodeURIComponent(redirect_to)}&apikey=${supabaseAnonKey}`;
+    const confirmationLink = `${supabaseUrl}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${encodeURIComponent(redirect_to)}&apikey=${supabaseAnonKey}`;
 
     // Get template key for this action type
     const templateKey = templateKeyMap[email_action_type];
