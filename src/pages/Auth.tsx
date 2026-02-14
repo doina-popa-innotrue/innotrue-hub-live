@@ -18,6 +18,7 @@ import {
   Sparkles,
   LucideIcon,
   KeyRound,
+  Mail,
 } from "lucide-react";
 import { usePageView } from "@/hooks/useAnalytics";
 
@@ -83,6 +84,11 @@ export default function Auth() {
   const [signupName, setSignupName] = useState(prefilledName);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
+
+  // Forgot password states
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
 
   // Password reset states
   const [newPassword, setNewPassword] = useState("");
@@ -239,6 +245,31 @@ export default function Auth() {
         console.error("Password reset exception:", error);
         toast.error("An error occurred while resetting password");
       }
+    }
+
+    setIsLoading(false);
+  };
+
+  // Handle forgot password request
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const currentOrigin = window.location.origin;
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
+        redirectTo: `${currentOrigin}/auth?mode=reset`,
+      });
+
+      if (error) {
+        toast.error(error.message || "Failed to send reset email");
+      } else {
+        setForgotPasswordSent(true);
+        toast.success("Check your email for a password reset link.");
+      }
+    } catch (error) {
+      console.error("Forgot password exception:", error);
+      toast.error("An error occurred. Please try again.");
     }
 
     setIsLoading(false);
@@ -625,16 +656,81 @@ export default function Auth() {
           <div className="max-w-md mx-auto w-full">
             <div className="mb-6 sm:mb-8">
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-                {activeTab === "login" ? "Welcome back!" : "Create your account"}
+                {showForgotPassword
+                  ? "Reset your password"
+                  : activeTab === "login"
+                    ? "Welcome back!"
+                    : "Create your account"}
               </h2>
               <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-                {activeTab === "login"
-                  ? "Enter your credentials to access your account."
-                  : "Start your evolution journey today."}
+                {showForgotPassword
+                  ? "Enter your email and we'll send you a reset link."
+                  : activeTab === "login"
+                    ? "Enter your credentials to access your account."
+                    : "Start your evolution journey today."}
               </p>
             </div>
 
-            {activeTab === "login" ? (
+            {showForgotPassword ? (
+              forgotPasswordSent ? (
+                <div className="text-center py-8 space-y-4">
+                  <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                    <Mail className="h-8 w-8 text-green-600" />
+                  </div>
+                  <p className="text-foreground font-medium">Check your email</p>
+                  <p className="text-sm text-muted-foreground">
+                    We sent a password reset link to <strong>{forgotPasswordEmail}</strong>.
+                    Click the link in the email to set a new password.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowForgotPassword(false);
+                      setForgotPasswordSent(false);
+                      setForgotPasswordEmail("");
+                    }}
+                    className="mt-4"
+                  >
+                    Back to Sign In
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-4 sm:space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="forgot-email">Email address</Label>
+                    <Input
+                      id="forgot-email"
+                      type="email"
+                      value={forgotPasswordEmail}
+                      onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                      required
+                      placeholder="your@email.com"
+                      className="h-11 sm:h-12"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full h-11 sm:h-12 text-base"
+                    style={{ backgroundColor: primaryColor }}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Sending reset link..." : "Send Reset Link"}
+                  </Button>
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowForgotPassword(false);
+                        setForgotPasswordEmail("");
+                      }}
+                      className="text-sm font-semibold hover:underline text-muted-foreground"
+                    >
+                      Back to Sign In
+                    </button>
+                  </div>
+                </form>
+              )
+            ) : activeTab === "login" ? (
               <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email address</Label>
@@ -649,7 +745,20 @@ export default function Auth() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="login-password">Password</Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowForgotPassword(true);
+                        setForgotPasswordEmail(loginEmail);
+                      }}
+                      className="text-xs font-medium hover:underline"
+                      style={{ color: primaryColor }}
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <div className="relative">
                     <Input
                       id="login-password"
