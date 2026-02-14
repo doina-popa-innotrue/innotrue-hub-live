@@ -217,9 +217,13 @@ if [ ${#MODIFIED_FILES[@]} -gt 0 ]; then
   done
   echo ""
 
-  # Show diffs
-  read -p "  Show diffs? (y/n) " -n 1 -r
-  echo ""
+  # Show diffs (skip prompt in --diff-only mode)
+  if [ "$DIFF_ONLY" = true ]; then
+    REPLY="n"
+  else
+    read -p "  Show diffs? (y/n) " -n 1 -r
+    echo ""
+  fi
   if [[ $REPLY =~ ^[Yy]$ ]]; then
     for F in "${MODIFIED_FILES[@]}"; do
       echo ""

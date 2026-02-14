@@ -54,3 +54,7 @@ lovable-export*.json
 
 # Storage backups (kept on Google Drive, not in repo)
 backups/
+
+# Supabase CLI temp files
+supabase/.temp/
+.lovable-diff-pick.txt
