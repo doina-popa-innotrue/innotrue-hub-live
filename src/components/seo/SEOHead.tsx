@@ -185,11 +185,12 @@ export function SEOHead({
  * Generate JSON-LD for an Organization
  */
 export function generateOrganizationJsonLd() {
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://app.innotrue.com";
   return {
     "@type": "Organization",
     name: "InnoTrue",
-    url: "https://app.innotrue.com",
-    logo: "https://app.innotrue.com/pwa-512x512.png",
+    url: baseUrl,
+    logo: `${baseUrl}/pwa-512x512.png`,
     sameAs: [] as string[],
   };
 }
@@ -206,7 +207,7 @@ export function generateWebPageJsonLd(title: string, description: string, url: s
     isPartOf: {
       "@type": "WebSite",
       name: "InnoTrue Hub",
-      url: "https://app.innotrue.com",
+      url: typeof window !== "undefined" ? window.location.origin : "https://app.innotrue.com",
     },
   };
 }

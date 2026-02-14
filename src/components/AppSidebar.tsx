@@ -782,16 +782,6 @@ export function AppSidebar() {
       url: "/admin/google-drive",
       icon: Link2,
     },
-    {
-      title: "Miro",
-      url: "/admin/miro",
-      icon: Link2,
-    },
-    {
-      title: "Mural",
-      url: "/admin/mural",
-      icon: Link2,
-    },
   ];
 
   // Instructor/Coach items
@@ -843,6 +833,12 @@ export function AppSidebar() {
       url: "/teaching/assessments",
       icon: ClipboardCheck,
       tourId: "teaching-assessments",
+    },
+    {
+      title: "Scenarios",
+      url: "/teaching/scenarios",
+      icon: Lightbulb,
+      tourId: "teaching-scenarios",
     },
     {
       title: "Badge Approvals",

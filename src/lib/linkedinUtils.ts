@@ -4,7 +4,7 @@
  * This file provides utilities for integrating with LinkedIn's profile features.
  */
 
-const PLATFORM_BASE_URL = "https://app.innotrue.com";
+const PLATFORM_BASE_URL = typeof window !== "undefined" ? window.location.origin : "https://app.innotrue.com";
 const ORGANIZATION_NAME = "InnoTrue";
 
 /**
