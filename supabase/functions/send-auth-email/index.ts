@@ -118,8 +118,9 @@ const handler = async (req: Request): Promise<Response> => {
       ? `<img src="${logoData.file_url}" alt="${logoData.name}" style="max-width: 200px; height: auto;" />`
       : '';
 
-    // Build confirmation link
-    const confirmationLink = `${email_data.site_url}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to}`;
+    // Build confirmation link — apikey is required by the /auth/v1/verify endpoint
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const confirmationLink = `${email_data.site_url}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${encodeURIComponent(redirect_to)}&apikey=${supabaseAnonKey}`;
 
     // Get template key for this action type
     const templateKey = templateKeyMap[email_action_type];
