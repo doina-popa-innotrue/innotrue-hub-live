@@ -325,8 +325,7 @@ export default function MyResources() {
       const { data, error } = await supabase
         .from("resource_library")
         .select("*")
-        .eq("is_active", true)
-        .eq("is_published", true);
+        .eq("is_active", true);
       if (error) throw error;
       return (data || []).map(
         (r: any): UnifiedResource => ({

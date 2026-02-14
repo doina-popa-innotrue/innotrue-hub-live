@@ -135,7 +135,6 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
         .from("resource_library")
         .select("id, canonical_id, title, description, resource_type")
         .eq("is_active", true)
-        .eq("is_published", true)
         .order("title", { ascending: true });
 
       if (error) throw error;

@@ -77,6 +77,7 @@ interface Resource {
   metadata: Record<string, any> | null;
   is_active: boolean;
   is_published: boolean;
+  visibility: string | null;
   downloadable: boolean;
   created_by: string;
   created_at: string;
@@ -282,6 +283,7 @@ export default function ResourceLibraryManagement() {
           created_by: user.id,
           is_active: true,
           is_published: false,
+          visibility: "private",
           downloadable: data.downloadable,
         })
         .select("id")
@@ -380,10 +382,13 @@ export default function ResourceLibraryManagement() {
   });
 
   const togglePublishMutation = useMutation({
-    mutationFn: async ({ id, is_published }: { id: string; is_published: boolean }) => {
+    mutationFn: async ({ id, visibility }: { id: string; visibility: string }) => {
       const { error } = await supabase
         .from("resource_library")
-        .update({ is_published })
+        .update({
+          visibility,
+          is_published: visibility === "public",
+        })
         .eq("id", id);
 
       if (error) throw error;
@@ -902,7 +907,7 @@ export default function ResourceLibraryManagement() {
                   <TableHead>File</TableHead>
                   <TableHead>Download</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Published</TableHead>
+                  <TableHead>Visibility</TableHead>
                   <TableHead className="text-right sticky right-0 bg-background">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1023,28 +1028,39 @@ export default function ResourceLibraryManagement() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
+                      <Select
+                        value={resource.visibility || "private"}
+                        onValueChange={(value) =>
                           togglePublishMutation.mutate({
                             id: resource.id,
-                            is_published: !resource.is_published,
+                            visibility: value,
                           })
                         }
                       >
-                        {resource.is_published ? (
-                          <>
-                            <Eye className="h-4 w-4 mr-1" />
-                            Published
-                          </>
-                        ) : (
-                          <>
-                            <EyeOff className="h-4 w-4 mr-1" />
-                            Draft
-                          </>
-                        )}
-                      </Button>
+                        <SelectTrigger className="w-[130px] h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="private">
+                            <span className="flex items-center gap-1">
+                              <EyeOff className="h-3 w-3" />
+                              Private
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="enrolled">
+                            <span className="flex items-center gap-1">
+                              <Lock className="h-3 w-3" />
+                              Enrolled
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="public">
+                            <span className="flex items-center gap-1">
+                              <Eye className="h-3 w-3" />
+                              Public
+                            </span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(resource.created_at), "MMM d, yyyy")}

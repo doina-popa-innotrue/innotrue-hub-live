@@ -105,7 +105,7 @@ export function GuidedLearningLinksEditor({
       const { data, error } = await supabase
         .from("resource_library")
         .select("id, title")
-        .eq("is_published", true)
+        .eq("is_active", true)
         .order("title");
       if (error) throw error;
       return data;
