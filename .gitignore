@@ -58,3 +58,6 @@ backups/
 # Supabase CLI temp files
 supabase/.temp/
 .lovable-diff-pick.txt
+
+# Data sync temp files
+.supabase-data-sync/

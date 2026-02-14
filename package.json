@@ -21,7 +21,12 @@
     "cleanup:lovable": "bash scripts/cleanup-lovable-code.sh",
     "sync:lovable": "bash scripts/lovable-sync.sh",
     "update:lovable": "bash scripts/lovable-update.sh",
-    "verify": "bash scripts/verify.sh"
+    "verify": "bash scripts/verify.sh",
+    "deploy:functions": "bash scripts/supabase-deploy.sh",
+    "push:migrations": "bash scripts/supabase-push.sh",
+    "sync:data": "bash scripts/supabase-data-sync.sh",
+    "sync:storage": "bash scripts/supabase-storage-sync.sh",
+    "backup:storage": "bash scripts/backup-storage.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
