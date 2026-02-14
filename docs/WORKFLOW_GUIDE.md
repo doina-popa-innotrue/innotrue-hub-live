@@ -220,6 +220,19 @@ If you start a new session about a topic covered in a previous session, mention 
 | Check database migrations | Database > Migrations |
 | Configure OAuth providers | Authentication > Providers |
 | Check Auth Email Hook | Authentication > Hooks |
+| Configure email rate limits | Authentication > Email > SMTP Settings |
+| Manage Auth Email Hook secret | Authentication > Hooks > Send Email > Secret |
+
+### Auth Email Hook
+
+The `send-auth-email` edge function handles all auth emails (signup confirmation, password reset, magic link, email change). It uses **Standard Webhooks** HMAC verification — not Bearer token auth.
+
+**Required setup per Supabase project:**
+1. **Authentication > Hooks:** Enable "Send Email" hook, point URL to the `send-auth-email` function
+2. **Edge Functions > Secrets:** Set `SEND_EMAIL_HOOK_SECRET` = the `v1,whsec_...` value from the hook's Secret field
+3. **Authentication > Email > SMTP Settings:** Configure Resend SMTP (`smtp.resend.com`, port `465`, username `resend`, password = Resend API key) — this unlocks rate limit configuration
+
+**Rate limits:** Default is 2/hour. Increase temporarily in Authentication > Rate Limits when testing, then reset. Requires custom SMTP to be configured (see step 3).
 
 ### Important Supabase operations
 
@@ -374,32 +387,38 @@ Sentry only initializes when both `VITE_SENTRY_DSN` and `VITE_APP_ENV=production
    supabase migration new my_change_description
    ```
    This creates a file in `supabase/migrations/`. Paste your SQL.
-3. **Cursor:** If the change affects TypeScript types, regenerate types:
+3. **Push migrations** using the npm script:
+   ```bash
+   npm run push:migrations -- preprod          # Push to preprod only
+   npm run push:migrations -- all              # Push to all 3 envs (preprod → prod → sandbox)
+   npm run push:migrations -- --dry-run        # Preview pending migrations
+   ```
+4. **Cursor:** If the change affects TypeScript types, regenerate types:
    ```bash
    supabase gen types typescript --project-id jtzcrirqflfnagceendt > src/integrations/supabase/types.ts
    ```
-4. **Cursor:** Update any affected components/hooks to use new schema.
-5. **Test:** Run unit and E2E tests.
-6. **Deploy edge functions** if they reference new tables/columns:
+5. **Cursor:** Update any affected components/hooks to use new schema.
+6. **Test:** Run unit and E2E tests.
+7. **Deploy edge functions** if they reference new tables/columns:
    ```bash
-   supabase functions deploy <function-name> --project-ref jtzcrirqflfnagceendt
+   npm run deploy:functions -- preprod --only <function-name>
    ```
-7. **After staging verification:** Apply migration on production and deploy there too.
+8. **After staging verification:** Push migration and deploy to production too.
 
 ### Scenario D: Change an edge function
 
 1. **Cursor:** Edit the function in `supabase/functions/<name>/index.ts`.
 2. **Test locally** (optional): `supabase functions serve <name>`
-3. **Deploy to preprod:**
+3. **Deploy using npm scripts:**
    ```bash
-   supabase functions deploy <name> --project-ref jtzcrirqflfnagceendt
+   npm run deploy:functions -- preprod --only <name>    # Deploy to preprod
+   npm run deploy:functions -- prod --only <name>       # Deploy to prod
+   npm run deploy:functions                              # Deploy ALL functions to prod
+   npm run deploy:functions -- --dry-run                 # Preview what would deploy
    ```
 4. **Verify** by testing the feature that uses this function.
 5. **Supabase Dashboard (preprod):** Check edge function logs for errors.
-6. **Deploy to production:**
-   ```bash
-   supabase functions deploy <name> --project-ref qfdztdgublwlmewobxmx
-   ```
+6. **Deploy to production** once verified.
 
 ### Scenario E: Update platform Terms of Service
 
@@ -414,7 +433,56 @@ Sentry only initializes when both `VITE_SENTRY_DSN` and `VITE_APP_ENV=production
 2. **Test on preprod:** Log in and verify the ToS gate/banner appears.
 3. **Apply same SQL on production.**
 
-### Scenario F: Add a new E2E test
+### Scenario F: Sync code between Lovable and Live repo
+
+**Push live changes TO Lovable sandbox:**
+```bash
+npm run update:lovable                        # Merge main → Lovable main
+npm run update:lovable -- --source preprod    # Merge preprod → Lovable main
+npm run update:lovable -- --dry-run           # Preview without pushing
+```
+
+**Import Lovable changes INTO the live repo:**
+```bash
+npm run sync:lovable                          # Full pipeline: pull → diff → pick → import → cleanup → PR
+npm run sync:lovable -- --diff-only           # Just compare, no import
+npm run sync:lovable -- --no-pr               # Import but skip PR creation
+npm run sync:lovable -- --scope src/components # Scope to specific dirs
+```
+
+**Key points:**
+- Lovable sandbox is a **separate repo** — used for prototyping only
+- Code always flows through the live repo's branch pipeline (`develop` → `preprod` → `main`)
+- The sync script auto-excludes config files (vite.config, package.json, client.ts, types.ts)
+- After `update:lovable`, Lovable IDE may need a refresh/pull to see new code
+- Full docs: `docs/LOVABLE_IMPORT_QUICKSTART.md` and `docs/LOVABLE_INTEGRATION.md`
+
+### Scenario G: Sync config data or storage between environments
+
+**Sync config tables (plans, features, programs, etc.):**
+```bash
+npm run sync:data -- --from prod --to preprod                    # Full config sync
+npm run sync:data -- --from prod --to preprod --tables programs   # Specific tables only
+npm run sync:data -- --from prod --export-only                   # Export JSON only
+```
+
+**Sync storage buckets:**
+```bash
+npm run sync:storage -- --from prod --to preprod                 # All 15 buckets
+npm run sync:storage -- --from prod --to preprod --buckets avatars program-logos  # Specific buckets
+```
+
+**Backup storage:**
+```bash
+npm run backup:storage
+```
+
+**Key points:**
+- Data sync only copies safe config tables (26 tables) — user data is blocked
+- All scripts support `--dry-run`
+- Full docs: `docs/SUPABASE_OPS_QUICKSTART.md`
+
+### Scenario H: Add a new E2E test
 
 1. **Cursor:** Create or edit a test file in `e2e/tests/{role}/`.
 2. **Follow existing patterns** — import from `../../fixtures/auth`, use role fixtures (`adminPage`, `clientPage`, etc.).
@@ -571,17 +639,24 @@ Usually means the test user's credentials changed or expired on preprod:
 
 | What | Command / Action |
 |------|-----------------|
-| Start dev server | `npm run dev` (in Cursor terminal) |
-| Run all quality checks | Cursor > Terminal > Run Task > "CI: Full Quality Check" |
+| Start dev server | `npm run dev` |
+| Run all quality checks | `npm run verify` or Cursor > Run Task > "CI: Full Quality Check" |
 | Run E2E tests | Cursor > Terminal > Run Task > "E2E: Run All Tests" |
 | Commit changes | `git add <files> && git commit -m "message"` |
 | Push to develop | `git push origin develop` |
 | Deploy to staging | `git checkout preprod && git merge develop --no-edit && git push origin preprod && git checkout develop` |
 | Deploy to production | `git checkout main && git merge preprod --no-edit && git push origin main && git checkout develop` |
+| Deploy edge functions | `npm run deploy:functions -- preprod` or `npm run deploy:functions` (prod) |
+| Deploy specific function | `npm run deploy:functions -- preprod --only send-auth-email` |
+| Push migrations | `npm run push:migrations -- all` (all envs) |
+| Sync config data | `npm run sync:data -- --from prod --to preprod` |
+| Sync storage | `npm run sync:storage -- --from prod --to preprod` |
+| Push code to Lovable | `npm run update:lovable` |
+| Import from Lovable | `npm run sync:lovable` |
+| Backup storage | `npm run backup:storage` |
 | Check CI results | GitHub > Actions tab |
 | Check production errors | Sentry dashboard |
 | Run SQL on preprod | Supabase Dashboard (preprod) > SQL Editor |
-| Deploy edge function | `supabase functions deploy <name> --project-ref <ref>` |
 
 ### URLs you'll visit
 
@@ -602,10 +677,16 @@ Usually means the test user's credentials changed or expired on preprod:
 | Project root | `/Users/doina/.../Work_GDrive/innotrue-hub-live` |
 | AI context | `.cursorrules` |
 | Architecture reference | `docs/TECHNICAL_REFERENCE.md` |
-| Onboarding guide | `CONTRIBUTING.md` |
+| This workflow guide | `docs/WORKFLOW_GUIDE.md` |
+| Environment config reference | `docs/ENVIRONMENT_CONFIGURATION.md` |
+| Integration setup guide | `docs/INTEGRATION_SETUP_GUIDE.md` |
+| Supabase ops quickstart | `docs/SUPABASE_OPS_QUICKSTART.md` |
+| Lovable sync quickstart | `docs/LOVABLE_IMPORT_QUICKSTART.md` |
 | CI pipeline | `.github/workflows/ci.yml` |
 | E2E tests | `e2e/tests/` |
 | Unit tests | `src/lib/__tests__/` |
 | Edge functions | `supabase/functions/` |
+| Auth email hook | `supabase/functions/send-auth-email/index.ts` |
 | Seed data | `supabase/seed.sql` |
-| Migration history | `InnoTrue_Hub_Migration_Plan.md` |
+| Lovable sandbox clone | `.../Work_GDrive/lovable-sandbox/` |
+| Claude Code memory | `~/.claude/projects/.../.../memory/MEMORY.md` |

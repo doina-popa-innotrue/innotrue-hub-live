@@ -9,8 +9,10 @@ Stack: React 18 + Vite 5 + TypeScript + Supabase + Tailwind CSS + shadcn/ui.
 - **Backend:** Supabase (PostgreSQL + Auth + Storage + Edge Functions)
 - **AI:** Google Vertex AI Gemini 3 Flash (EU/Frankfurt, europe-west3)
 - **Auth:** Supabase native OAuth (Google provider)
-- **Email:** Resend (13 edge functions send branded emails)
+- **Email:** Resend via `mail.innotrue.com` (13 edge functions send branded emails)
+- **Email Hook:** `send-auth-email` uses Standard Webhooks HMAC verification (not Bearer token)
 - **Payments:** Stripe (credit system with individual + org balances)
+- **Community:** Circle SSO (fully built, active on prod)
 
 ## Key Conventions
 - Use `@/` path alias for imports (maps to `src/`)
@@ -52,11 +54,27 @@ Stack: React 18 + Vite 5 + TypeScript + Supabase + Tailwind CSS + shadcn/ui.
 - E2E tests: Playwright
 - CI: GitHub Actions (lint, typecheck, test, build)
 
+## Environments
+- **Production:** `main` branch → `app.innotrue.com` → Supabase `qfdztdgublwlmewobxmx`
+- **Pre-production:** `preprod` branch → Cloudflare preview → Supabase `jtzcrirqflfnagceendt`
+- **Development:** `develop` branch → localhost
+- **Lovable Sandbox:** separate repo → Supabase `cezlnvdjildzxpyxyabb` (prototyping only)
+
 ## Git Workflow
 - `main` → production (app.innotrue.com)
 - `preprod` → pre-production testing
 - `develop` → daily development
 - Feature branches: `feature/xyz` → PR to `develop`
+
+## npm Scripts (Supabase Ops & Lovable Sync)
+- `npm run deploy:functions -- [env] [--only fn1 fn2]` — Deploy edge functions
+- `npm run push:migrations -- [env|all] [--dry-run]` — Push DB migrations
+- `npm run sync:data -- --from [env] --to [env]` — Sync config tables
+- `npm run sync:storage -- --from [env] --to [env]` — Sync storage buckets
+- `npm run update:lovable [-- --source preprod]` — Push live code to Lovable sandbox
+- `npm run sync:lovable` — Import Lovable changes into live repo
+- `npm run backup:storage` — Backup all storage buckets
+- `npm run verify` — Run lint + typecheck + tests + build
 
 ## Code Style
 - TypeScript with 2-space indentation
