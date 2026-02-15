@@ -590,3 +590,417 @@ Gen Z (born 1997-2012) and young millennials are increasingly the target audienc
 
 ### Key Insight for Young Generation Strategy
 The platform already has **deep functionality** (assessments, scenarios, goals, decisions, groups, AI). The gap isn't features — it's **experience design**. Wrapping existing features in a more engaging, mobile-first, gamified, AI-native experience will resonate with younger users without requiring new backend systems. Most recommendations above are **frontend-only changes** that leverage existing data and infrastructure.
+
+---
+
+## Part 7: Self-Signup Flow Analysis (All Roles)
+
+### Current Signup Architecture
+
+There are **3 ways to create accounts** in the system:
+
+| Method | Entry Point | Available Roles | Who Triggers | Status |
+|--------|------------|----------------|-------------|--------|
+| **Self-signup** | `/auth` signup form | `client` only (hardcoded) | User | **DISABLED** (pilot lockdown) |
+| **Admin creation** | Admin → Users Management | Any role(s) | Admin | **WORKING** |
+| **Org invite** | `/accept-invite?token=...` | `org_admin`, `org_member` | Org admin | **WORKING** |
+
+### Self-Signup Flow (when re-enabled)
+
+**Step 1 — Signup form** (`Auth.tsx` → calls `signup-user` edge function):
+- Rate limited: 5 attempts per IP per 5 minutes (timing-safe)
+- Creates unconfirmed user via Supabase admin API
+- Generates SHA-256 hashed verification token (24h expiry)
+- Sends verification email via Resend (template: `signup_verification`)
+- Verification link: `/verify-signup?token={plainToken}`
+
+**Step 2 — Email verification** (`verify-signup` edge function):
+- Hashes plain token, compares against stored hash
+- Confirms email via Supabase admin API
+- **Hardcodes `client` role** (no role selection)
+- Creates profile, notification preferences
+- Transfers placeholder enrollments if matching `real_email` exists
+
+**Step 3 — Post-login redirect** (`AuthContext.tsx` → `Index.tsx`):
+- Fetches roles from `user_roles` table
+- Priority: saved preference → admin → org_admin → first role → **fallback to `client`**
+- Redirects: admin → `/admin`, instructor/coach → `/teaching`, client → `/dashboard`
+
+### Self-Signup for Non-Client Roles: NOT SUPPORTED
+
+| Role | Self-signup? | Current path | Gap |
+|------|------------|-------------|-----|
+| **Client** | Yes (disabled during pilot) | Signup form → verify email → client role | Only role available via self-signup |
+| **Coach** | No | Admin creates manually | No "Become a Coach" application form |
+| **Instructor** | No | Admin creates manually | No instructor registration flow |
+| **Org Admin** | No | Admin creates org → invites org admin | No self-service org creation |
+| **Admin** | No | Created via `create-admin-user` | Correct — should never be self-signup |
+
+### Critical Issues for Re-enabling Self-Signup
+
+#### 7.1 AuthContext Role Fallback — SECURITY RISK
+**File:** `src/contexts/AuthContext.tsx` (line 135)
+**Problem:** `if (roles.length === 0) roles = ["client"]` — any Google OAuth user with no roles gets auto-assigned `client`. When Google OAuth is re-enabled, unregistered Google users bypass the signup flow entirely and get client access.
+**Fix:** Instead of defaulting to `client`, redirect to a "complete registration" page or block access until admin approves.
+
+**Cursor prompt:**
+```
+In src/contexts/AuthContext.tsx, line 135 has a dangerous fallback: if a user has no roles, they default to "client". This is a security risk when Google OAuth is re-enabled because unregistered users bypass signup.
+
+Fix this by:
+1. Remove the `roles = ["client"]` fallback
+2. If roles.length === 0 after fetching from user_roles:
+   - Set a new state: `needsRegistration = true`
+   - In the auth flow, redirect users with no roles to a new page `/complete-registration`
+3. Create src/pages/CompleteRegistration.tsx that:
+   - Shows "Your account needs to be set up by an administrator"
+   - Has a "Request Access" button that inserts into a new `access_requests` table
+   - Shows a "Back to Login" button
+4. Add route in App.tsx for /complete-registration (public, requires auth but no role)
+```
+
+#### 7.2 No Role Selection During Signup
+**Problem:** Self-signup always assigns `client`. There's no way for coaches, instructors, or org admins to self-register.
+**Impact:** All non-client users must be admin-created one-by-one.
+**Recommendation:** Add a role-selection step to signup with admin approval for privileged roles:
+- Client → auto-approved (immediate access)
+- Coach/Instructor → "Application submitted" → admin reviews → approves/rejects
+- Org Admin → "Create organization" flow → admin reviews → approves
+
+**Cursor prompt:**
+```
+Add a role selection step to the signup flow. After email verification:
+
+1. Create src/pages/RoleSelection.tsx:
+   - Show 3 options: "I'm a Client" (immediate), "I'm a Coach/Instructor" (needs approval), "I represent an Organization" (needs approval)
+   - Client selection: assign client role immediately, redirect to /dashboard
+   - Coach/Instructor: show a form (specialties, certifications, bio) → insert into `coach_applications` table → show "Application under review" message
+   - Organization: show a form (org name, size, industry) → insert into `org_applications` table → show "Application under review" message
+
+2. In verify-signup edge function: don't auto-assign client role. Instead, set a `registration_status = 'pending_role_selection'` flag on the profile
+
+3. In AuthContext: if profile has `registration_status = 'pending_role_selection'`, redirect to /role-selection
+
+4. Create admin page for reviewing coach/org applications
+```
+
+#### 7.3 Wheel of Life → Signup Broken Pipeline
+**File:** `src/pages/public/WheelAssessment.tsx`
+**Problem:** The Wheel of Life assessment at `/wheel` collects leads into `ac_signup_intents` table, but:
+1. RLS for `ac_signup_intents` INSERT is broken (documented in RLS_FIX_PLAN.md as critical #1)
+2. Even if working, context data (plan_interest, wheel ratings) is NOT used by `verify-signup`
+3. The signup button navigates to `/auth` with prefilled data, but signup is disabled during pilot
+
+**Fix needed:** (1) Fix RLS for public INSERT, (2) Wire context from `ac_signup_intents` into signup flow so plan interest carries through, (3) After verification, auto-assign the selected plan tier.
+
+#### 7.4 Welcome Email Not Auto-Triggered
+**Problem:** `send-welcome-email` is only invoked manually from the admin Users Management page. Self-signup users never receive a welcome email — they only get the verification email.
+**Impact:** No onboarding guidance, no "what's next" after email verification.
+**Fix:** Call `send-welcome-email` at the end of `verify-signup` (after profile creation and role assignment).
+
+**Cursor prompt:**
+```
+In supabase/functions/verify-signup/index.ts, after the profile is created and role assigned (around line 150), add a call to send the welcome email:
+
+1. After successful verification, invoke the send-welcome-email function:
+   - Use supabase.functions.invoke("send-welcome-email", { body: { userId: user.id } })
+   - Or copy the relevant Resend email logic inline
+2. Don't fail the verification if the welcome email fails — log the error but return success
+3. The welcome email template should include: platform overview, first steps, link to profile setup, help resources
+```
+
+#### 7.5 No Bulk User Import
+**Problem:** Admin must create users one-by-one via the Users Management page. No CSV upload or batch creation.
+**Impact:** Onboarding 50+ org members or a cohort of clients is extremely time-consuming.
+**Recommendation:** Add CSV upload in admin panel → validate → bulk create via `create-admin-user` in a loop.
+
+### Signup Flow Summary Diagram
+
+```
+PUBLIC ENTRY POINTS:
+  /wheel (Wheel of Life) ──→ ac_signup_intents ──→ /auth (signup disabled)
+  /auth (login form)     ──→ login or "invitation only" message
+  /accept-invite?token=  ──→ org invite acceptance (working)
+
+ADMIN ENTRY POINTS:
+  Admin Users Management ──→ create-admin-user ──→ send-welcome-email (manual)
+  Admin Org Management   ──→ create org ──→ send-org-invite ──→ /accept-invite
+
+SELF-SIGNUP (when re-enabled):
+  /auth signup form
+    → signup-user (rate limited, verification email)
+    → /verify-signup?token=
+    → verify-signup (confirm email, assign client role, transfer placeholders)
+    → /auth login form
+    → AuthContext (fetch roles, redirect by role)
+    → /dashboard (client)
+    ⚠ No welcome email
+    ⚠ No role selection
+    ⚠ No onboarding wizard
+```
+
+---
+
+## Part 8: User Behavior Flow Analysis — Can It Actually Work?
+
+### Method
+Traced every user journey from login to feature usage, testing each role against the actual implementation. Verified routing, feature gates, data fetching, and UI rendering.
+
+### 8.1 Role-Based Routing — WORKING
+
+| Role | Login → Redirect | Dashboard | Protected By |
+|------|-----------------|-----------|-------------|
+| Admin | `/admin` | AdminDashboard.tsx | `requireRole="admin"` |
+| Org Admin | `/org-admin` | OrgAdminDashboard.tsx | OrgAdminLayout |
+| Instructor/Coach | `/teaching` | InstructorCoachDashboard.tsx | Role check in ProtectedRoute |
+| Client | `/dashboard` | ClientDashboard.tsx | `requireRole="client"` |
+
+Role switching works via `RoleSwitcher` in sidebar (for users with multiple roles). Saved to localStorage.
+
+### 8.2 Client Journeys — Issues Found
+
+#### JOURNEY A: Brand-New Client (No Enrollments)
+
+```
+Login → /dashboard → ClientDashboard.tsx
+```
+
+**What they see:** Mostly empty sections — no enrollments, no goals, no decisions, no tasks, no groups, no sessions. Some widgets still render (announcements, development hub, coaches section, weekly reflection card).
+
+**Problem:** No onboarding guidance. No "Browse Programs" call-to-action. No "Getting Started" checklist. User doesn't know what to do next.
+
+**Recommendation:**
+```
+Add a first-login detection and onboarding card to ClientDashboard.tsx:
+
+1. Detect first login: check if user has 0 enrollments AND 0 goals AND profile.onboarding_completed is false/null
+2. Show a prominent "Welcome to InnoTrue" card at the top of the dashboard with:
+   - "Complete your profile" → /settings/profile
+   - "Browse programs" → /programs/explore
+   - "Set your first goal" → /goals
+   - "Complete the Wheel of Life" → /wheel-of-life
+3. Card dismisses when user completes all steps or clicks "Skip"
+4. Track completion in profile.onboarding_completed boolean
+```
+
+#### JOURNEY B: Free-Tier Client Wants to Access Paid Program
+
+```
+/dashboard → /programs/explore → clicks paid program → PlanLockOverlay
+```
+
+**What works:**
+- Program browsing shows tier requirements
+- `PlanLockBadge` shows lock reason (crown icon for plan required)
+- `PlanLockOverlay` shows "Upgrade to [Plan]" with "View Plans" button
+- "View Plans" → `/subscription` → Stripe checkout → plan upgrade → program unlocked
+
+**What's broken — Credits circular dependency (CRITICAL):**
+- Credits page (`/credits`) is wrapped in `<FeatureGate featureKey="credits">`
+- Free plan may not include the `credits` feature
+- User who needs credits to purchase a top-up package → navigates to `/credits` → blocked by FeatureGate → sees "Premium Feature" with "Upgrade Plan" button
+- **Dead-end:** User needs credits but can't reach the credits page to buy them
+
+**Fix:**
+```
+In src/pages/client/Credits.tsx, the credit purchase section should NOT be behind a FeatureGate.
+
+Option A (recommended): Split the page into two sections:
+1. "My Credit Balance" + "Purchase Top-ups" → always visible to all authenticated users
+2. "Credit Usage History" + "Advanced Credit Management" → behind FeatureGate
+
+Option B: Remove FeatureGate from Credits.tsx entirely. Credits are a currency, not a feature.
+
+Also update the sidebar: the "Credits" nav item in AppSidebar.tsx should NOT have a featureKey gate,
+or should use a separate "credits_visible" feature that's enabled on all plans.
+```
+
+#### JOURNEY C: Client Wants to Express Interest in a Locked Program
+
+```
+/programs/explore → paid program → "Express Interest" button → ExpressInterestDialog
+```
+
+**What works:**
+- Dialog collects timeframe, tier preference, discount code
+- Cross-completion detection for discount eligibility
+- Submits to backend
+
+**What's broken:**
+- After submission, no client-facing status page
+- ClientDashboard shows "Pending Registrations" count but no detail view
+- Client has no way to check: "Did admin approve my interest? When will I hear back?"
+
+**Fix:**
+```
+Create a client-facing "My Interest Registrations" section:
+
+1. In ClientDashboard.tsx, expand the "Pending Registrations" card to show:
+   - Program name, date submitted, current status (pending/approved/rejected)
+   - If approved: "Enroll Now" button
+   - If rejected: reason text (optional, from admin notes)
+
+2. Or create a dedicated page: src/pages/client/MyInterestRegistrations.tsx
+   - List all interest registrations with status
+   - Filter by status
+   - Link from dashboard "Pending Registrations" count
+```
+
+#### JOURNEY D: Client Books a Coaching Session
+
+```
+/dashboard → enrolled program → module (type=session) → ModuleDetail → ModuleSessionDisplay
+```
+
+**What works:**
+- `ModuleSessionDisplay` renders booking UI when module type is session
+- Cal.com booking URL built via `useModuleSchedulingUrl` hook
+- Session creation via `ClientSessionForm` component
+- Reschedule via `buildCalcomRescheduleUrl`
+- Calendar view at `/calendar` shows scheduled sessions
+
+**Verdict:** Session booking flow is **functional** when all prerequisites are met (Cal.com mapping exists, module type is session, enrollment active, not plan-locked).
+
+#### JOURNEY E: Client Requests a Coach
+
+```
+/dashboard → "My Coaches" section → RequestCoachInstructorDialog
+```
+
+**What works:**
+- Dialog shows current assignments (direct + program-level)
+- Request form: coach/instructor/both selection + optional message
+- Submits to `coach_instructor_requests` table
+- Request history with status tracking
+- Admin reviews in admin panel
+
+**Verdict:** Coach request flow is **functional**. The dialog is comprehensive.
+
+#### JOURNEY F: Client Takes an Assessment
+
+```
+/dashboard → sidebar "Assessments" → My Assessments / Capability / Psychometric
+```
+
+**What works:**
+- Assessment taking flow works (questions, responses, server-side scoring)
+- Results displayed with interpretations (never raw scoring matrix)
+
+**What's gated:**
+- Assessment pages behind feature gates (`capabilities`, etc.)
+- If feature disabled, user sees "Premium Feature" with upgrade button
+- Same circular issue as credits if the feature they need is gated
+
+### 8.3 Instructor/Coach Journeys — WORKING
+
+```
+Login → /teaching → InstructorCoachDashboard.tsx
+```
+
+**Tabs:** Programs, Modules, Shared Goals, Shared Decisions, Shared Tasks, Sessions, Badges
+
+**Key flows verified:**
+- View assigned programs and enrolled students
+- Grade pending assignments (`/teaching/pending-assignments`)
+- Manage scenarios (`/teaching/scenarios`)
+- View student progress (`/teaching/students/:id`)
+- Manage groups, sessions, coaching decisions/tasks
+
+**No critical dead-ends found.** Instructor/coach dashboards are comprehensive.
+
+### 8.4 Org Admin Journeys — WORKING (Limited)
+
+```
+Login → /org-admin → OrgAdminDashboard.tsx
+```
+
+**Available:** Members, Programs, Enrollments, Analytics, Billing, Terms, FAQ
+
+**Issues:**
+- Only `org_admin` and `org_manager` roles recognized — `org_member` has no org-level dashboard
+- No org-level branding customization
+- No org SSO (SAML/OIDC)
+- No data export capability
+
+### 8.5 Admin Journeys — FULLY WORKING
+
+40+ management pages, all properly protected. No dead-ends found.
+
+### 8.6 Cross-Role Issues
+
+#### Feature Gate Confusion
+**Problem:** When a feature is disabled, `FeatureGate` shows "This feature is not available on your current plan" with an "Upgrade Plan" button. But sometimes the user IS on the right plan — the feature just isn't mapped to their plan in `plan_features`.
+
+**Impact:** User clicks upgrade → sees they're already on the highest plan → confused.
+
+**Fix:**
+```
+In src/components/FeatureGate.tsx, improve the blocked state message:
+
+1. Check if user is already on the highest purchasable plan
+2. If yes: show "This feature requires additional configuration. Contact your administrator."
+3. If no: show current "Upgrade Plan" message
+4. Add a "Learn More" link to a help page explaining the feature system
+```
+
+#### Locked Sidebar Items — Confusing UX
+**Problem:** Sidebar shows locked items with a lock icon and tooltip. Users see features they can't access, creating frustration.
+
+**Options:**
+1. **Hide locked items** (less frustration, but users don't know what's available)
+2. **Keep showing with clear upgrade path** (current approach, needs better messaging)
+3. **Show locked items in a separate "Premium" section** (best of both — clear that it exists, clearly premium)
+
+**Recommendation:** Option 3. Group locked items under a collapsible "Premium Features" section in the sidebar.
+
+#### Empty Dashboard Sections — No Guidance
+**Problem:** Multiple dashboard sections render empty with no call-to-action when a user has no data.
+
+**Fix:**
+```
+For each major dashboard section (enrollments, goals, decisions, tasks, groups, sessions), add an empty state component:
+
+1. Create src/components/EmptyState.tsx:
+   - icon, title, description, actionButton (optional)
+   - Example: icon=BookOpen, title="No programs yet", description="Browse available programs to get started", action="Explore Programs" → /programs/explore
+
+2. Use in ClientDashboard.tsx for each section when data array is empty
+3. Use in InstructorCoachDashboard.tsx for "No assigned students yet" etc.
+```
+
+### 8.7 Summary: What Works vs What Doesn't
+
+| Flow | Status | Blocking? | Notes |
+|------|--------|-----------|-------|
+| Login + role-based redirect | WORKING | No | All roles route correctly |
+| Password reset | WORKING | No | Full flow functional |
+| Self-signup | DISABLED | Yes (pilot) | Multiple issues for re-enablement (see Part 7) |
+| Program browsing | WORKING | No | Filters, tier badges, interest all work |
+| Program enrollment (paid) | WORKING | No | Stripe checkout → plan upgrade → enroll |
+| Credit purchase | BROKEN | Yes | FeatureGate blocks `/credits` for users who need it most |
+| Express interest | PARTIAL | No | Submission works, no status tracking for client |
+| Session booking (Cal.com) | WORKING | No | Requires Cal.com mapping + module type |
+| Coach request | WORKING | No | Dialog functional, admin reviews |
+| Assessments | WORKING | No | Feature-gated but functional when enabled |
+| Goals/Decisions/Tasks | WORKING | No | Full CRUD, no gates |
+| Wheel of Life | WORKING | No | Public page + logged-in dashboard widget |
+| Groups | WORKING | No | Requires instructor invitation |
+| Community/Academy | EXTERNAL LINKS | No | Redirect to Circle/TalentLMS |
+| Client empty dashboard | POOR UX | No | No onboarding, no CTAs, many empty sections |
+| Welcome email (self-signup) | NOT SENT | No | Only manual via admin panel |
+| Org admin dashboard | WORKING | No | Limited but functional |
+
+### 8.8 Priority Fix List
+
+| # | Issue | Severity | Effort | Fix |
+|---|-------|----------|--------|-----|
+| 1 | Credits page FeatureGate blocks self-service | CRITICAL | 1 hour | Remove/split FeatureGate on Credits.tsx |
+| 2 | AuthContext role fallback security risk | CRITICAL | 2 hours | Replace default "client" with registration redirect |
+| 3 | Empty client dashboard — no onboarding | HIGH | 1 day | Add first-login welcome card with action checklist |
+| 4 | Express interest — no status tracking | MEDIUM | 4 hours | Add status view to dashboard |
+| 5 | Welcome email not auto-triggered | MEDIUM | 1 hour | Call send-welcome-email from verify-signup |
+| 6 | Feature gate messaging for max-plan users | MEDIUM | 2 hours | Improve FeatureGate blocked state |
+| 7 | Locked sidebar items confusing | LOW | 4 hours | Group under "Premium Features" section |
+| 8 | Empty state components for all sections | LOW | 1 day | Create reusable EmptyState component |
+| 9 | No role selection in self-signup | LOW (pilot) | 1 week | Role selection page + admin approval |
+| 10 | No bulk user import | LOW (pilot) | 3 days | CSV upload in admin panel |
