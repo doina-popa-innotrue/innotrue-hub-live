@@ -375,6 +375,17 @@ export function InstructorAssignmentScoring({
     mutationFn: async ({ status }: { status: "draft" | "completed" }) => {
       if (!assessment || !user || !progressData) throw new Error("Missing data");
 
+      // Guard: only allow grading if assignment is in "submitted" status
+      // (prevents grading draft assignments or re-grading already reviewed ones)
+      const currentStatus = existingSnapshot?.assignmentStatus;
+      if (status === "completed" && currentStatus !== "submitted") {
+        throw new Error(
+          currentStatus === "reviewed"
+            ? "This assignment has already been reviewed"
+            : "This assignment has not been submitted yet",
+        );
+      }
+
       const clientUserId = (progressData.client_enrollments as any)?.client_user_id;
       const enrollmentId = (progressData.client_enrollments as any)?.id;
       if (!clientUserId) throw new Error("Could not find client user");

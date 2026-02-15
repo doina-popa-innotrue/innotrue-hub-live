@@ -454,18 +454,24 @@ export default function ClientDetail() {
       .order("order_index");
 
     if (modules) {
-      const modulesWithProgress = await Promise.all(
-        modules.map(async (module) => {
-          const { data: progress } = await supabase
-            .from("module_progress")
-            .select("*")
-            .eq("enrollment_id", enrollmentId)
-            .eq("module_id", module.id)
-            .maybeSingle();
+      // Single query for all module progress (replaces N+1 per-module queries)
+      const { data: allProgress } = await supabase
+        .from("module_progress")
+        .select("*")
+        .eq("enrollment_id", enrollmentId)
+        .in(
+          "module_id",
+          modules.map((m) => m.id),
+        );
 
-          return { ...module, progress };
-        }),
+      const progressByModule = new Map(
+        (allProgress || []).map((p) => [p.module_id, p]),
       );
+
+      const modulesWithProgress = modules.map((module) => ({
+        ...module,
+        progress: progressByModule.get(module.id) || null,
+      }));
 
       setEnrollmentModules((prev) => ({ ...prev, [enrollmentId]: modulesWithProgress }));
       setExpandedEnrollment(enrollmentId);

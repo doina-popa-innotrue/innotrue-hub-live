@@ -25,7 +25,6 @@ import {
 import { format } from "date-fns";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
-import { FeatureGate } from "@/components/FeatureGate";
 
 export default function Credits() {
   const navigate = useNavigate();
@@ -75,8 +74,7 @@ export default function Credits() {
   const expiringSoon = summary?.expiring_soon ?? 0;
 
   return (
-    <FeatureGate featureKey="credits">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -360,6 +358,5 @@ export default function Credits() {
           </CardContent>
         </Card>
       </div>
-    </FeatureGate>
   );
 }

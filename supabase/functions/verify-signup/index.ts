@@ -195,6 +195,23 @@ const handler = async (req: Request): Promise<Response> => {
       .delete()
       .eq("id", verificationRequest.id);
 
+    // Trigger welcome email (non-blocking — don't fail verification if email fails)
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+      fetch(`${supabaseUrl}/functions/v1/send-welcome-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify({ userId: verificationRequest.user_id }),
+      }).catch(err => console.error("Welcome email trigger failed:", err));
+    } catch (welcomeError) {
+      console.error("Error triggering welcome email:", welcomeError);
+      // Non-fatal — verification succeeded regardless
+    }
+
     console.log(`User ${verificationRequest.email} verified successfully`);
 
     return delayResponse(new Response(

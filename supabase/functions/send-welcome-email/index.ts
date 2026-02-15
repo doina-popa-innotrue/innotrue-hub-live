@@ -64,7 +64,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Verify the request is from an authenticated admin
+    // Verify the request is from an authenticated admin or internal service call
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -78,31 +78,36 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const siteUrl = Deno.env.get("SITE_URL") || "https://app.innotrue.com";
 
-    // Create client with user's token to verify they're an admin
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    // Allow internal service-to-service calls (e.g. from verify-signup)
+    const isServiceCall = authHeader === `Bearer ${supabaseServiceKey}`;
 
-    const { data: { user: callingUser } } = await userClient.auth.getUser();
-    if (!callingUser) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    if (!isServiceCall) {
+      // Create client with user's token to verify they're an admin
+      const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      });
 
-    // Check if calling user is admin
-    const { data: roles } = await userClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", callingUser.id);
+      const { data: { user: callingUser } } = await userClient.auth.getUser();
+      if (!callingUser) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-    const isAdmin = roles?.some((r) => r.role === "admin");
-    if (!isAdmin) {
-      return new Response(
-        JSON.stringify({ error: "Only admins can send welcome emails" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // Check if calling user is admin
+      const { data: roles } = await userClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", callingUser.id);
+
+      const isAdmin = roles?.some((r) => r.role === "admin");
+      if (!isAdmin) {
+        return new Response(
+          JSON.stringify({ error: "Only admins can send welcome emails" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Parse request
