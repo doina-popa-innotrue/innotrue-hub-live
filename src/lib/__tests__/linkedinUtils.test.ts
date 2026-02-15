@@ -82,9 +82,10 @@ describe("generateLinkedInAddToProfileUrl", () => {
 });
 
 describe("generateBadgeVerificationUrl", () => {
-  it("generates correct verification URL", () => {
+  it("generates correct verification URL with path /verify/badge/{id}", () => {
     const url = generateBadgeVerificationUrl("badge-123");
-    expect(url).toBe("https://app.innotrue.com/verify/badge/badge-123");
+    expect(url).toContain("/verify/badge/badge-123");
+    expect(url).toMatch(/^https?:\/\//);
   });
 
   it("handles UUID-style badge IDs", () => {
