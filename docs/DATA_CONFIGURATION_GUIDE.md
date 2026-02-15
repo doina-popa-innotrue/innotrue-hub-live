@@ -1,0 +1,923 @@
+# Data Configuration Guide — Dependency Order
+
+This guide explains what data must be configured, in what order, and what depends on what for the InnoTrue Hub to function correctly.
+
+---
+
+## Layer 1 — Foundations (no dependencies, configure first)
+
+These tables have no foreign keys to other config tables. They must exist before anything else references them.
+
+### 1.1 System Settings (`system_settings`)
+Key-value pairs that control platform-wide behavior.
+
+| Key | Purpose | Default |
+|-----|---------|---------|
+| `ai_monthly_credit_limit` | Max AI credits across the platform per month | 1000 |
+| `platform_name` | Displayed in emails, UI | InnoTrue Hub |
+| `support_email` | Shown in error pages, emails | support@innotrue.com |
+| `default_timezone` | Default for scheduling | Europe/Berlin |
+
+**Admin UI:** System Settings page
+**Needed by:** AI edge functions, email templates, scheduling
+
+### 1.2 Module Types (`module_types`)
+Define the types of content a program module can be.
+
+| Type | Purpose |
+|------|---------|
+| `session` | Live scheduled session (coaching, workshop, etc.) |
+| `assignment` | Async work the client submits for grading |
+| `reflection` | Self-guided journaling / reflection exercise |
+| `resource` | Static learning material (PDF, video, link) |
+
+**Admin UI:** Module Types Management
+**Needed by:** Program modules (each module has a `module_type`)
+
+### 1.3 Tracks (`tracks`)
+Certification or learning paths that programs belong to.
+
+| Track | Key | Description |
+|-------|-----|-------------|
+| CTA Track | `cta` | Certified Technology Architect certification path |
+| Leadership Track | `leadership` | Leadership development path |
+
+**Admin UI:** Tracks Management
+**Needed by:** Programs (categorized by track), credit services (track-specific pricing)
+
+### 1.4 Wheel of Life Categories (`wheel_categories`)
+Categories for the Wheel of Life self-assessment feature.
+
+10 categories: Career, Finances, Health, Relationships, Personal Growth, Fun & Recreation, Physical Environment, Family, Romance, Contribution
+
+**Admin UI:** Wheel Categories Management
+**Needed by:** Wheel of Life assessment feature (client-facing)
+
+### 1.5 Assessment Categories (`assessment_categories`)
+Top-level groupings for capability assessments.
+
+11 categories: capability, leadership, values, communication, technical, strategic, etc.
+
+**Admin UI:** Assessments Management
+**Needed by:** Capability assessments (each assessment belongs to a category)
+
+---
+
+## Layer 2 — Plans & Features (core gating system)
+
+This is the foundation of the entitlement system. Everything that controls "who can access what" starts here.
+
+### 2.1 Features (`features`)
+Define every gatable capability in the platform. Each feature has a unique `key` used in code.
+
+| Feature Key | Name | Is Consumable | Purpose |
+|-------------|------|---------------|---------|
+| `ai_coach` | AI Coach | Yes | AI coaching chat (costs credits per use) |
+| `ai_insights` | AI Insights | Yes | AI-generated insights |
+| `ai_recommendations` | AI Recommendations | Yes | AI course/action recommendations |
+| `session_coaching` | Coaching Sessions | Yes | 1:1 coaching sessions |
+| `session_group` | Group Sessions | Yes | Group coaching, mastermind, office hours |
+| `session_workshop` | Workshops | Yes | Workshops and webinars |
+| `session_peer_coaching` | Peer Coaching | Yes | Peer-to-peer coaching |
+| `session_review_board` | Review Board | Yes | Mock review board sessions |
+| `decision_toolkit_basic` | Basic Decision Toolkit | No | Access to basic decision tools |
+| `decision_toolkit_advanced` | Advanced Decision Toolkit | No | Access to advanced decision tools |
+| `programs_base` | Base Programs | No | Access to tier 1 programs |
+| `programs_pro` | Pro Programs | No | Access to tier 2 programs |
+| `programs_advanced` | Advanced Programs | No | Access to tier 3+ programs |
+| `courses` | Courses | No | Access to TalentLMS courses |
+| `credits` | Credits | No | Credit system access |
+| `skills_map` | Skills Map | No | Skills visualization feature |
+| `wheel_of_life` | Wheel of Life | No | Wheel of Life assessment |
+| `assessments` | Assessments | No | Capability assessments |
+
+**Consumable features** have a `limit_value` in plan_features — each use costs credits or counts against the limit.
+**Non-consumable features** are binary: you either have access or you don't.
+
+**Admin UI:** Features Management
+**Needed by:** Plan features, program plan features, session types, credit services, program modules
+
+### 2.2 Plans (`plans`)
+Subscription tiers that users are assigned to. Stored on `profiles.plan_id`.
+
+| Plan | Key | Tier | Credits | Purchasable | Notes |
+|------|-----|------|---------|-------------|-------|
+| Free | `free` | 0 | 20 | No | Default for new users |
+| Base | `base` | 1 | 150 | Yes | Entry paid tier |
+| Pro | `pro` | 2 | 250 | Yes | Mid tier |
+| Advanced | `advanced` | 3 | 500 | Yes | High tier |
+| Elite | `elite` | 4 | 750 | Yes | Top tier |
+| Programs | `programs` | 0 | 0 | No | Admin-assigned, program-only access |
+| Continuation | `continuation` | 0 | 0 | No | Admin-assigned, post-program access |
+
+- `is_purchasable = true` → shown in Stripe checkout (subscription page)
+- `is_purchasable = false` → admin-assigned only
+- `tier_level` → used by programs to gate access (`programs.min_plan_tier`)
+- `credit_allowance` → monthly credit budget for the user
+
+**Admin UI:** Plans Management (has `is_purchasable` toggle)
+**Needed by:** Plan features, plan prices, profiles, programs (min_plan_tier)
+
+### 2.3 Plan Features (`plan_features`)
+Map features to plans with optional limits. This defines what each plan tier can access.
+
+| Plan | Feature | Limit | Meaning |
+|------|---------|-------|---------|
+| Free | ai_coach | 20 | 20 AI coach uses/month |
+| Free | session_coaching | 1 | 1 coaching session/month |
+| Base | ai_coach | 50 | 50 AI coach uses/month |
+| Base | session_coaching | 3 | 3 coaching sessions/month |
+| Pro | ai_coach | 100 | 100 AI coach uses/month |
+| Pro | session_coaching | 5 | 5 coaching sessions/month |
+| ... | ... | ... | Higher tiers get more |
+
+- `limit_value = NULL` → unlimited access (non-consumable features)
+- `limit_value = 0` → feature disabled for this plan
+- `limit_value > 0` → monthly usage cap
+
+**Admin UI:** Plans Management → Edit Plan → Features tab
+**Depends on:** plans, features
+**Needed by:** Entitlement resolution (`useEntitlements` hook)
+
+### 2.4 Plan Prices (`plan_prices`)
+Link plans to Stripe for billing. Each purchasable plan needs at least one price.
+
+| Plan | Interval | Price | Stripe Price ID |
+|------|----------|-------|-----------------|
+| Base | monthly | 29.00 EUR | `price_xxx` (from Stripe) |
+| Pro | monthly | 49.00 EUR | `price_xxx` |
+| Advanced | monthly | 79.00 EUR | `price_xxx` |
+| Elite | monthly | 129.00 EUR | `price_xxx` |
+
+**External dependency:** Stripe products and prices must be created first in Stripe Dashboard, then IDs entered here.
+
+**Admin UI:** Plans Management → Edit Plan → Pricing tab
+**Depends on:** plans, Stripe (products + prices created in Stripe Dashboard)
+**Needed by:** Subscription checkout page (`Subscription.tsx` reads `stripe_price_id` from this table)
+
+---
+
+## Layer 3A — Session System (depends on features)
+
+### 3.1 Session Types (`session_types`)
+Define the kinds of sessions that can be scheduled.
+
+| Session Type | Duration | Max Participants | Feature Key | Cal.com Event Type |
+|-------------|----------|-----------------|-------------|-------------------|
+| Coaching | 60 min | 2 | `session_coaching` | Map in admin UI |
+| Group Coaching | 90 min | 12 | `session_group` | Map in admin UI |
+| Workshop | 120 min | 30 | `session_workshop` | Map in admin UI |
+| Mastermind | 90 min | 8 | `session_group` | Map in admin UI |
+| Review Board Mock | 60 min | 4 | `session_review_board` | Map in admin UI |
+| Peer Coaching | 45 min | 2 | `session_peer_coaching` | Map in admin UI |
+| Office Hours | 60 min | 10 | `session_group` | Map in admin UI |
+| Webinar | 60 min | 100 | `session_workshop` | Map in admin UI |
+
+- `feature_key` links to features table — user must have this feature via their plan to book
+- Each session type needs a corresponding Cal.com event type for scheduling to work
+
+**Admin UI:** Session Types Management
+**Depends on:** features (feature_key)
+**Needed by:** Session type roles, sessions, program modules (session-type modules), Cal.com mapping
+
+### 3.2 Session Type Roles (`session_type_roles`)
+Define participant roles for each session type.
+
+| Session Type | Role | Max | Required |
+|-------------|------|-----|----------|
+| Review Board Mock | presenter | 1 | Yes |
+| Review Board Mock | evaluator | 3 | Yes |
+| Review Board Mock | observer | unlimited | No |
+| Workshop | facilitator | 2 | Yes |
+| Workshop | participant | unlimited | No |
+| Mastermind | hot_seat | 1 | Yes |
+| Mastermind | member | unlimited | No |
+| Mastermind | moderator | 1 | No |
+| Peer Coaching | coach | 1 | Yes |
+| Peer Coaching | coachee | 1 | Yes |
+| Webinar | presenter | 3 | Yes |
+| Webinar | attendee | unlimited | No |
+
+**Admin UI:** Session Types Management → Edit → Roles tab
+**Depends on:** session_types
+**Needed by:** Session booking (role assignment during registration)
+
+### 3.3 Cal.com Event Type Mappings
+Link session types to Cal.com event types for scheduling.
+
+**Setup required in Cal.com first:**
+1. Create event types in Cal.com organization (`innotrue-gmbh.cal.com`)
+2. Note the event type IDs
+3. Map them in admin UI: Session Type → Cal.com Event Type ID
+
+**Environment variables needed:** `CALCOM_API_KEY`, `CALENDAR_HMAC_SECRET`
+
+**Admin UI:** Cal.com Mappings Management
+**Depends on:** session_types, Cal.com event types (created externally)
+**Needed by:** `calcom-create-booking` edge function (booking flow)
+
+---
+
+## Layer 3B — Credit System (depends on features, tracks)
+
+### 3.4 Credit Services (`credit_services`)
+Define what actions cost credits.
+
+| Service | Category | Cost | Feature | Track |
+|---------|----------|------|---------|-------|
+| AI Coach Query | ai | 1 | ai_coach | — |
+| AI Insight | ai | 1 | ai_insights | — |
+| AI Recommendation | ai | 1 | ai_recommendations | — |
+| Coaching Session | sessions | 10 | session_coaching | — |
+| Group Session | sessions | 5 | session_group | — |
+| Workshop | sessions | 3 | session_workshop | — |
+| Peer Coaching | sessions | 3 | session_peer_coaching | — |
+| Review Board Mock | sessions | 15 | session_review_board | — |
+| Program Enrollment (Base) | programs | 25 | programs_base | — |
+| Program Enrollment (Pro) | programs | 50 | programs_pro | — |
+| Program Enrollment (Advanced) | programs | 100 | programs_advanced | — |
+| Goal Creation | goals | 2 | — | — |
+| Skills Assessment | specialty | 5 | assessments | — |
+| Decision Analysis | specialty | 3 | decision_toolkit_basic | — |
+| Track-specific services | various | discounted | — | CTA/Leadership |
+
+Track-linked services can have different pricing for track members.
+
+**Admin UI:** Credit Services Management
+**Depends on:** features (feature_id), tracks (track_id)
+**Needed by:** Credit deduction when user performs an action
+
+### 3.5 Credit Packages (`credit_topup_packages`, `org_credit_packages`)
+
+**Individual packages:**
+
+| Package | Price | Credits | Validity |
+|---------|-------|---------|----------|
+| Starter | 50 EUR | 55,000 | 6 months |
+| Standard | 100 EUR | 120,000 | 12 months |
+| Premium | 200 EUR | 260,000 | 12 months |
+
+**Organization packages:**
+
+| Package | Price | Credits | Validity |
+|---------|-------|---------|----------|
+| Starter | 2,500 EUR | 3,000,000 | 12 months |
+| Growth | 5,000 EUR | 6,500,000 | 12 months |
+| Enterprise | 10,000 EUR | 14,000,000 | 12 months |
+
+**Organization platform tiers:**
+
+| Tier | Monthly | Annual | Features |
+|------|---------|--------|----------|
+| Essentials | 30 EUR | — | Basic org features |
+| Professional | 50 EUR | — | Full org features |
+
+**External dependency:** Stripe for payment processing
+**Admin UI:** Credit packages managed via admin, checkout via Stripe
+**Depends on:** Stripe (payment processing)
+
+---
+
+## Layer 3C — Notifications (depends on notification categories)
+
+### 3.6 Notification Categories (`notification_categories`)
+
+| Category | Key | Description |
+|----------|-----|-------------|
+| Programs | `programs` | Enrollment, module, completion notifications |
+| Sessions | `sessions` | Scheduling, reminders, cancellations |
+| Assignments | `assignments` | Due dates, grading, feedback |
+| Goals | `goals` | Reminders, milestones, comments |
+| Decisions | `decisions` | Decision reminders, outcomes |
+| Credits | `credits` | Low balance, purchases, expiry |
+| Groups | `groups` | Group activity, tasks, sessions |
+| System | `system` | Security, account, platform updates |
+
+**Admin UI:** Notifications Management
+**Needed by:** Notification types
+
+### 3.7 Notification Types (`notification_types`)
+34 types organized under the 8 categories. Each type has:
+- `key` — used in code to trigger notifications
+- `is_critical` — if true, cannot be disabled by user
+- `email_template_key` — links to HTML email template
+
+Examples:
+- `program_enrolled` (programs) → "You've been enrolled in {program}"
+- `session_reminder` (sessions) → "Your session starts in 24h"
+- `assignment_due_soon` (assignments) → "Assignment due in 48h"
+- `credits_low` (credits) → "Your credit balance is running low"
+- `security_alert` (system, critical) → "New login from unknown device"
+
+**Admin UI:** Notifications Management → Types tab
+**Depends on:** notification_categories
+**Needed by:** Edge functions that send notifications, user notification preferences
+
+### 3.8 Email Templates
+HTML email templates for each notification type. Created by migration `20260119014103`, not in seed.sql.
+
+Each template uses Handlebars-style variables (`{{user_name}}`, `{{program_name}}`, etc.) and is rendered by the email-sending edge functions.
+
+**External dependency:** Resend (email delivery)
+**Managed by:** Database migration (not admin UI currently)
+
+---
+
+## Layer 3D — Assessments (depends on assessment categories)
+
+### 3.9 Capability Assessments
+Self-assessment tools for users to evaluate their skills.
+
+**Structure:**
+```
+Assessment (e.g., "Architecture Self Knowledge Check")
+├── Domain 1: System Architecture (9 questions)
+├── Domain 2: Security & Identity (7 questions)
+├── Domain 3: Data Management (7 questions)
+├── Domain 4: Integration Patterns (6 questions)
+├── Domain 5: Governance & DevOps (5 questions)
+├── Domain 6: Solution Architecture (5 questions)
+└── Domain 7: Communication (10 questions)
+```
+
+Each question has a 5-point rating scale. Results are computed server-side by `compute-assessment-scores` edge function.
+
+**Admin UI:** Assessments Management → Create/Edit assessments, domains, questions
+**Depends on:** assessment_categories
+**Needed by:** Program modules (can link a module to an assessment via `capability_assessment_id`)
+
+---
+
+## Layer 4 — Programs & Program Plans (depends on everything above)
+
+### 4.1 Program Plans (`program_plans`)
+Define feature access tiers **within a program** (separate from subscription plans).
+
+Example program plans:
+| Program Plan | Tier | Credits | Purpose |
+|-------------|------|---------|---------|
+| Basic Access | 0 | 0 | Minimal in-program features |
+| Standard Access | 1 | 50 | Standard features + some AI |
+| Premium Access | 2 | 100 | Full features + coaching |
+
+**Admin UI:** Program Plans Management
+**Needed by:** Program plan features, programs (default_program_plan_id), program tier plans
+
+### 4.2 Program Plan Features (`program_plan_features`)
+Map features to program plans with limits — same pattern as plan_features but scoped to a program enrollment.
+
+| Program Plan | Feature | Limit |
+|-------------|---------|-------|
+| Basic Access | ai_coach | 5 |
+| Basic Access | session_coaching | 0 |
+| Standard Access | ai_coach | 20 |
+| Standard Access | session_coaching | 2 |
+| Premium Access | ai_coach | 50 |
+| Premium Access | session_coaching | 5 |
+
+**Admin UI:** Program Plans Management → Edit → Features tab
+**Depends on:** program_plans, features
+**Needed by:** Entitlement resolution (merged with subscription plan features — highest limit wins)
+
+### 4.3 Programs (`programs`)
+The main learning experiences users enroll in.
+
+| Field | Purpose | Example |
+|-------|---------|---------|
+| `slug` | URL-friendly ID | `cta-immersion-premium` |
+| `name` | Display name | CTA Immersion Premium |
+| `category` | Track category | `cta` |
+| `is_active` | Visible to users | true |
+| `credit_cost` | Credits to enroll | 100 |
+| `min_plan_tier` | Minimum subscription tier to access | 2 (Pro+) |
+| `default_program_plan_id` | Fallback program plan for enrollees | → program_plans.id |
+
+**Access gating chain:**
+1. User's subscription `plan.tier_level` must be >= `program.min_plan_tier`
+2. User pays `credit_cost` credits to enroll
+3. Once enrolled, features gated by program plan (from enrollment or default)
+
+**Admin UI:** Programs Management
+**Depends on:** program_plans (default_program_plan_id), tracks (category)
+**Needed by:** Program modules, program tier plans, client enrollments
+
+### 4.4 Program Tier Plans (`program_tier_plans`)
+Map tier names within a program to specific program plans.
+
+| Program | Tier Name | Program Plan | Credit Cost |
+|---------|-----------|-------------|-------------|
+| CTA Immersion | base | Basic Access | 50 |
+| CTA Immersion | pro | Standard Access | 75 |
+| CTA Immersion | premium | Premium Access | 100 |
+
+This allows the same program to offer different access levels at different prices.
+
+**Resolution order:** explicit enrollment plan → program_tier_plans mapping → `programs.default_program_plan_id` fallback
+
+**Admin UI:** Programs Management → Tier Plans tab
+**Depends on:** programs, program_plans
+
+### 4.5 Program Modules (`program_modules`)
+The individual learning units within a program.
+
+| Field | Purpose | Example |
+|-------|---------|---------|
+| `program_id` | Parent program | → CTA Immersion |
+| `title` | Module name | "Architecture Deep Dive" |
+| `module_type` | Type of content | `session` |
+| `order_index` | Sequence in program | 2 |
+| `estimated_minutes` | Duration estimate | 90 |
+| `feature_key` | Required feature (optional) | `session_coaching` |
+| `min_plan_tier` | Min tier for this module (optional) | 2 |
+| `capability_assessment_id` | Linked assessment (optional) | → assessment.id |
+
+**Module type determines behavior:**
+- `session` → links to session scheduling (Cal.com)
+- `assignment` → has submission + grading workflow
+- `reflection` → self-guided journaling
+- `resource` → static content (file/link)
+
+**Admin UI:** Programs Management → Edit Program → Modules tab
+**Depends on:** programs, module_types, features (feature_key), capability_assessments (optional)
+**Needed by:** Module progress tracking, enrollment flow
+
+---
+
+## Layer 5 — Users & Enrollment (depends on all above)
+
+### 5.1 Platform Terms (`platform_terms`)
+Legal terms users must accept before using the platform. The `PlatformTermsAcceptanceGate` blocks access until accepted.
+
+| Field | Purpose |
+|-------|---------|
+| `version` | Version string (e.g., "1") |
+| `content_html` | Full HTML of the terms |
+| `is_current` | Only one can be current |
+| `is_blocking_on_update` | If true, shows blocking modal when terms update |
+| `effective_from` | When these terms take effect |
+
+**Must exist before** any user can log in and access the dashboard.
+
+### 5.2 Users, Profiles, Roles
+Created via auth (signup/invite) or seeded for demo.
+
+**Profile fields that need configuration data:**
+- `plan_id` → must reference a valid plan
+- Role assignment → `user_roles` table (admin, client, coach, instructor)
+
+### 5.3 Client Enrollments (`client_enrollments`)
+Enroll a user in a program.
+
+| Field | Purpose |
+|-------|---------|
+| `client_user_id` | The enrolled user |
+| `program_id` | The program |
+| `program_plan_id` | Their access tier within the program (optional) |
+| `status` | active, completed, withdrawn, etc. |
+| `enrolled_at` | Enrollment date |
+
+**Depends on:** users (profiles), programs, program_plans (optional)
+
+### 5.4 Credit Balances (`user_credit_balances`)
+Each user has a credit balance initialized from their plan's `credit_allowance`.
+
+| Field | Purpose |
+|-------|---------|
+| `available_credits` | Current spendable balance |
+| `total_credits` | Total ever received |
+| `consumed_credits` | Total spent |
+
+**Replenished:** Monthly based on plan's credit_allowance
+**Topped up:** Via Stripe credit package purchase
+
+### 5.5 Coach Assignments
+- `program_coaches` — which coaches are assigned to which programs
+- `client_coaches` — which coach is assigned to which client
+
+---
+
+## Feature Area Details
+
+### Assignments
+
+Assignments are async tasks that clients complete and instructors grade. They live inside program modules (`module_type = 'assignment'`).
+
+**Tables:**
+
+| Table | Purpose |
+|-------|---------|
+| `module_assignment_types` | Reusable assignment templates with JSON structure defining form fields |
+| `module_assignment_configs` | Links assignment types to specific modules (many-to-many) |
+| `module_assignments` | Actual assignment instances per client's module_progress |
+| `module_assignment_attachments` | File uploads for submissions |
+
+**Assignment Type Structure:**
+The `structure` JSON field defines the form fields clients fill out. Admin creates these in the Assignment Types Management page.
+
+**Status Flow:**
+```
+draft → in_progress → submitted → reviewed
+```
+
+**Data Flow:**
+1. Admin creates **assignment types** with JSON structure (form field definitions)
+2. Admin links assignment types to specific **modules** via `module_assignment_configs`
+3. When client starts a module, system auto-creates `module_assignments` records
+4. Client fills out the form (responses stored as JSON), attaches files
+5. Client submits → status changes to `submitted`
+6. Instructor views pending assignments, scores them (`overall_score`, `overall_comments`)
+7. Client views feedback → status = `reviewed`
+
+**Optional assessment link:** Assignment types can link to a `capability_assessment` via `scoring_assessment_id` for automated scoring.
+
+**Storage bucket:** `module-assignment-attachments`
+
+**Admin UI:** Assignment Types Management, Module Assignment Config
+**Instructor UI:** Pending Assignments page
+**Client UI:** Assignments page (tabs: pending / submitted / reviewed)
+
+**Dependencies:**
+- Requires: module_types (`assignment`), program_modules, features (optional feature_key)
+- Optional: capability_assessments (for scoring)
+
+**Notifications:**
+- `notify-assignment-submitted` → alerts instructor
+- `notify-assignment-graded` → alerts client
+
+---
+
+### Assessments (Capability Assessments)
+
+Self-assessment tools where clients rate themselves across competency domains. Scoring is computed server-side to keep the scoring matrix secure.
+
+**Tables:**
+
+| Table | Purpose |
+|-------|---------|
+| `capability_assessments` | Assessment definitions (name, instructions, scale, mode) |
+| `capability_domains` | Competency areas within an assessment |
+| `capability_domain_questions` | Questions for each domain |
+| `assessment_dimensions` | Scoring dimensions (what gets scored) |
+| `assessment_option_scores` | Scoring matrix — maps answer options to dimension scores (server-side only) |
+| `assessment_interpretations` | Result text based on score ranges |
+| `assessment_responses` | User answers + computed scores |
+| `assessment_categories` | Top-level groupings |
+| `assessment_families` | Group related assessments |
+
+**Assessment Modes:**
+- `self` — client self-rates only
+- `evaluator` — instructor/coach rates the client
+- `both` — both self-rate and evaluator-rate, compare results
+
+**Pass/Fail:**
+- Optional: `pass_fail_enabled`, `pass_fail_mode` (overall / per_domain), `pass_fail_threshold`
+
+**Scoring Flow:**
+1. Admin creates assessment with domains, questions, dimensions
+2. Admin creates **scoring matrix** (`assessment_option_scores`) — maps each answer option to dimension scores
+3. Admin creates **interpretations** with score range conditions
+4. Client takes assessment, submits answers
+5. `compute-assessment-scores` edge function:
+   - Fetches scoring matrix (never exposed to frontend)
+   - Sums option scores per dimension
+   - Evaluates interpretations against score ranges
+   - Saves response with `dimension_scores` and `interpretations`
+6. Client sees interpretations (but never the raw scoring matrix)
+
+**Structure Example:**
+```
+Assessment: "Architecture Self Knowledge Check"
+├── Domain: System Architecture (9 questions, 5-point scale)
+├── Domain: Security & Identity (7 questions)
+├── Domain: Data Management (7 questions)
+├── Domain: Integration Patterns (6 questions)
+├── Domain: Governance & DevOps (5 questions)
+├── Domain: Solution Architecture (5 questions)
+└── Domain: Communication (10 questions)
+```
+
+**Admin UI:** Assessments Management → Create/edit assessments, domains, questions, scoring matrix, interpretations
+**Client UI:** Assessment embedded in module or standalone
+
+**Dependencies:**
+- Requires: assessment_categories
+- Used by: module_assignment_types (scoring_assessment_id), scenario_templates (capability_assessment_id), program_modules (capability_assessment_id)
+
+---
+
+### Teaching Scenarios
+
+Scenario-based learning where instructors create realistic situations and clients write responses. Scenarios have sections (context, task, reflection) and can be linked to capability assessments.
+
+**Tables:**
+
+| Table | Purpose |
+|-------|---------|
+| `scenario_categories` | Categorize scenarios (with color, display order) |
+| `scenario_templates` | Scenario definitions (title, description, locked/protected flags) |
+| `scenario_sections` | Ordered sections within a scenario (context, task, reflection, etc.) |
+| `scenario_assignments` | Assign scenarios to specific users/enrollments/modules |
+| Paragraph responses | Client text responses per section |
+
+**Status Flow:**
+```
+draft → submitted → in_review → evaluated
+```
+
+**Data Flow:**
+1. Admin creates **scenario categories** (e.g., "Leadership Challenges", "Technical Decision-Making")
+2. Instructor creates **scenario template** with sections:
+   - Each section has a title, instructions, and order
+   - Sections represent parts of the scenario (context/background, task, reflection prompts)
+3. Instructor optionally links a **capability assessment** for automated scoring
+4. Instructor **assigns** scenario to students (individually or via module link)
+5. Client opens scenario, reads sections, writes responses in each section
+6. Client submits → status = `submitted`
+7. Instructor reviews, adds feedback (`overall_notes`) → status = `evaluated`
+8. If linked to assessment, system may compute scores from responses
+
+**Template Locking:**
+- `is_locked` — prevents edits (used after scenario has active assignments)
+- `is_protected` — prevents deletion
+
+**Admin UI:** Scenario Templates Management, Scenario Categories Management
+**Instructor UI:** Scenario Assignments Management (assign to students), Scenario Evaluation Page (grade)
+**Client UI:** Scenarios page (active / completed tabs), Scenario Detail page (read & respond)
+
+**Sidebar nav:** Teaching → Scenarios (added in recent fix)
+
+**Dependencies:**
+- Requires: scenario_categories
+- Optional: capability_assessments (for linked scoring), program_modules (module_id on assignment)
+
+---
+
+### Sessions (Individual + Group)
+
+Sessions are live scheduled meetings — coaching calls, workshops, group sessions, etc. Integrated with Cal.com for booking.
+
+**Tables:**
+
+| Table | Purpose |
+|-------|---------|
+| `session_types` | Define session kinds (coaching, workshop, etc.) with feature_key |
+| `session_type_roles` | Participant roles per session type (presenter, evaluator, etc.) |
+| `sessions` | Individual session records |
+| `session_participants` | Who's attending + their role + status |
+| `group_sessions` | Group session records (with Cal.com integration fields) |
+| `group_session_participants` | Group session attendees |
+| `cohort_sessions` | Sessions for cohort-based delivery |
+| `module_sessions` | Link sessions to program modules |
+| `session_module_links` | Additional session-to-module mapping |
+
+**Individual vs Group Sessions:**
+
+| Aspect | Individual Sessions | Group Sessions |
+|--------|-------------------|---------------|
+| Table | `sessions` | `group_sessions` |
+| Participants | `session_participants` | `group_session_participants` |
+| Typical use | 1:1 coaching, peer coaching | Workshops, masterminds, webinars |
+| Max participants | Usually 2 | Up to 100 |
+| Recurring | No | Yes (`is_recurring`, `recurrence_pattern`) |
+| Cal.com fields | Via session_types mapping | Direct: `calcom_booking_id`, `calcom_event_type_id` |
+| Meeting link | `meeting_url` | `meeting_link` |
+
+**Session Type → Cal.com Mapping:**
+Each session type needs a corresponding Cal.com event type for booking to work.
+
+```
+Session Type (DB)          → Cal.com Event Type (external)
+coaching                   → "CTA Coaching" (event_type_id: xxx)
+group_coaching             → "Group Coaching" (event_type_id: xxx)
+workshop                   → "Workshop" (event_type_id: xxx)
+review_board_mock          → "Review Board Mock" (event_type_id: xxx)
+```
+
+Mapping stored in `calcom_event_type_mappings` table (configured via admin UI).
+
+**Session Lifecycle:**
+```
+draft → scheduled → confirmed (via Cal.com webhook) → completed
+                  → cancelled
+```
+
+**Booking Flow:**
+1. Admin creates session types with roles and feature_key
+2. Admin maps session types to Cal.com event types
+3. Coach/instructor creates session (individual or group) with date/time
+4. Client views available sessions
+5. For Cal.com-integrated sessions: client clicks book → Cal.com booking page
+6. Cal.com webhook fires → `calcom-webhook` edge function updates status
+7. Meeting link sent to participants
+8. Post-session: mark completed, optionally collect feedback
+
+**Role-Based Sessions:**
+Complex session types have defined roles:
+- **Review Board Mock**: presenter (1, required), evaluator (3, required), observer (unlimited)
+- **Workshop**: facilitator (2, required), participant (unlimited)
+- **Mastermind**: hot_seat (1, required), member (unlimited), moderator (1, optional)
+- **Peer Coaching**: coach (1, required), coachee (1, required)
+
+**Calendar Integrations:**
+- **Cal.com** — primary booking system (edge functions: `calcom-create-booking`, `calcom-webhook`, `calcom-get-booking-url`)
+- **Google Calendar** — OAuth sync for personal calendars
+- **Zoom / Microsoft Teams** — OAuth meeting creation (`oauth-create-meeting`)
+
+**Admin UI:** Session Types Management, Cal.com Mappings Management
+**Instructor UI:** Module Session Manager (create sessions for modules)
+**Client UI:** Module Session Display (view/register), Group Session Detail
+
+**Dependencies:**
+- Requires: features (feature_key), Cal.com (event types created externally)
+- Used by: program_modules (module_type = 'session'), module_sessions
+
+---
+
+### Resources
+
+Resources are learning materials (documents, videos, links, templates) managed in a library with visibility controls and optional credit costs.
+
+**Tables:**
+
+| Table | Purpose |
+|-------|---------|
+| `resource_library` | Main resource records with metadata |
+| `resource_categories` | Categorize resources |
+| `resource_collections` | Group related resources into collections |
+| `resource_collection_items` | Map resources to collections (ordered) |
+| `resource_library_programs` | Link resources to specific programs |
+| `resource_library_program_tiers` | Restrict resource access by subscription tier within program |
+| `resource_library_skills` | Tag resources with skills |
+| `module_client_content_resources` | Assign resources to modules (with section_type) |
+| `module_reflection_resources` | Reflection-specific resource assignments |
+| `resource_usage_tracking` | Track who accessed what and when |
+
+**Resource Types:**
+- `document` — PDF, Word, etc.
+- `link` — External URL
+- `video` — Video embed or file
+- `image` — Image file
+- `template` — Downloadable template
+- `cheatsheet` — Quick reference
+- `report` — Analysis or report
+
+**Visibility System:**
+| Visibility | Who Can Access |
+|-----------|---------------|
+| `private` | Only the creator |
+| `enrolled` | Users enrolled in linked programs |
+| `public` | All authenticated users |
+
+Enforced server-side by `can_access_resource()` RLS function.
+
+**Credit-Gated Resources:**
+Resources can optionally cost credits:
+- `is_consumable = true` → accessing deducts credits
+- `credit_cost` → number of credits per access
+- `feature_key` → user must have this feature via their plan
+
+**Module Assignment:**
+Resources are assigned to modules via `module_client_content_resources` with a `section_type`:
+- `context` — background material before the module
+- `during` — reference material during the module
+- `reflection` — post-module reflection resources
+
+**Data Flow:**
+1. Admin uploads resource or links external URL
+2. Sets resource_type, visibility, downloadable flag
+3. Optionally sets credit cost and feature_key
+4. Links to programs and tiers (access control)
+5. Tags with skills and categories
+6. Assigns to modules with section_type
+7. Client sees resource if visibility + program + tier + feature checks pass
+8. If consumable, system deducts credits on access
+9. Usage tracked in `resource_usage_tracking`
+
+**Storage bucket:** `resource-library`
+
+**Admin UI:** Resource Library Management (CRUD, visibility dropdown: Private/Enrolled/Public), Resource Categories Management, Resource Collections Management
+**Client UI:** My Resources page (filtered by enrollment + visibility)
+
+**Dependencies:**
+- Optional: features (feature_key), programs (resource_library_programs), plans (min_plan_tier)
+- Used by: program_modules (module_type = 'resource'), module_client_content_resources
+
+---
+
+## How Module Types Connect to Feature Areas
+
+When a program module is created, its `module_type` determines which feature system handles it:
+
+| Module Type | Feature Area | Key Tables | What Happens |
+|------------|-------------|-----------|--------------|
+| `session` | Sessions | `module_sessions`, `sessions` or `group_sessions` | Admin creates/links a session, client books via Cal.com |
+| `assignment` | Assignments | `module_assignment_configs`, `module_assignments` | System creates assignment instances, client submits, instructor grades |
+| `reflection` | Resources + Scenarios | `module_reflection_resources`, `module_client_content_resources` | Client accesses reflection resources and prompts |
+| `resource` | Resources | `module_client_content_resources` | Client views/downloads assigned resources |
+
+Additionally, **scenarios** can be linked to any module via `scenario_assignments.module_id`, and **assessments** can be linked via `program_modules.capability_assessment_id` or `module_assignment_types.scoring_assessment_id`.
+
+---
+
+## Storage Buckets Reference
+
+| Bucket | Feature Area | Purpose |
+|--------|-------------|---------|
+| `module-assignment-attachments` | Assignments | Client file uploads during submission |
+| `module-client-content` | Modules | Module-level content files |
+| `module-reflection-resources` | Reflections | Reflection resource files |
+| `coach-feedback-attachments` | Coaching | Coach feedback file uploads |
+| `resource-library` | Resources | Resource library file storage |
+| `goal-resources` | Goals | Goal-related file uploads |
+| `task-note-resources` | Tasks | Task note attachments |
+| `development-item-files` | Development | Development item uploads |
+| `program-logos` | Programs | Program and badge images |
+| `avatars` | Users | Profile pictures |
+| `email-assets` | Email | Email template assets |
+
+---
+
+## External Service Configuration Summary
+
+| Service | When Needed | What to Configure | Env Vars |
+|---------|-------------|-------------------|----------|
+| **Stripe** | Layer 2 (plan prices) + Layer 3B (credit packages) | Create products & prices in Stripe Dashboard, copy IDs to DB | `STRIPE_SECRET_KEY` |
+| **Cal.com** | Layer 3A (session scheduling) | Create event types in Cal.com org, map to session types in admin UI | `CALCOM_API_KEY`, `CALENDAR_HMAC_SECRET` |
+| **Resend** | Layer 3C (email notifications) | Already configured, single API key + domain | `RESEND_API_KEY` |
+| **Vertex AI** | AI features (credits system) | Already configured, GCP project + service account | `GCP_SERVICE_ACCOUNT_KEY`, `GCP_PROJECT_ID`, `GCP_LOCATION` |
+| **TalentLMS** | Layer 4 (course modules) | Setup courses, configure webhook for xAPI | `TALENTLMS_API_KEY`, `TALENTLMS_WEBHOOK_SECRET`, `TALENTLMS_DOMAIN` |
+| **Circle** | Community SSO | Setup community, configure headless auth | `CIRCLE_API_KEY`, `CIRCLE_COMMUNITY_ID`, `CIRCLE_COMMUNITY_DOMAIN`, `CIRCLE_HEADLESS_AUTH_TOKEN` |
+
+---
+
+## Key Dependency Chains (what breaks if something is missing)
+
+```
+Missing plans           → Users can't be assigned a tier → No feature access
+Missing features        → Plan features can't be mapped → Entitlements empty
+Missing plan_features   → Users have plans but no feature limits → Everything blocked
+Missing plan_prices     → Subscription checkout fails (no Stripe price to charge)
+Missing session_types   → Can't create sessions → Scheduling broken
+Missing Cal.com mapping → Session types exist but can't book → "No event type" error
+Missing credit_services → Actions don't know their credit cost → Deductions fail
+Missing program_plans   → Programs have no in-program feature gating
+Missing platform_terms  → ToS gate blocks ALL users from dashboard
+Missing assignment_types       → Assignment modules have no form structure → Clients can't submit
+Missing assignment_configs     → Assignment types not linked to modules → No assignments created
+Missing scenario_categories    → Can't create scenario templates
+Missing scenario_templates     → Instructors can't assign scenarios to students
+Missing scoring_matrix         → compute-assessment-scores returns empty results
+Missing resource_categories    → Resources have no categorization
+Missing module_sessions        → Session modules have no linked session → Nothing to book
+Missing module_resources       → Resource modules have no content to display
+```
+
+---
+
+## Entitlement Resolution (how it all comes together)
+
+The `useEntitlements` hook merges **5 sources** at runtime. For each feature, the **highest limit wins**:
+
+1. **Subscription plan features** — from `plan_features` via user's `profiles.plan_id`
+2. **Program plan features** — from `program_plan_features` via enrollment's `program_plan_id`
+3. **User add-ons** — manual feature grants (admin can give individual users extra access)
+4. **Track-specific allocations** — track membership can provide additional features
+5. **Org-sponsored features** — organization can sponsor features for their members
+
+Credits are **additive**: `plans.credit_allowance` + `program_plans.credit_allowance` + top-ups.
+
+---
+
+## Quick Reference: Admin Configuration Checklist
+
+Use this checklist when setting up a new environment or verifying configuration:
+
+- [ ] **System settings** — AI limits, platform name, support email, timezone
+- [ ] **Module types** — 4 types exist (session, assignment, reflection, resource)
+- [ ] **Tracks** — CTA and Leadership tracks created
+- [ ] **Features** — All 18+ features created with correct keys
+- [ ] **Plans** — 7 plans with correct tier levels and credit allowances
+- [ ] **Plan features** — Every plan has feature mappings with limits
+- [ ] **Plan prices** — Purchasable plans have Stripe price IDs (Stripe products created)
+- [ ] **Session types** — 8 types with feature_key links
+- [ ] **Session type roles** — Roles defined for complex session types
+- [ ] **Cal.com mappings** — Each session type mapped to a Cal.com event type
+- [ ] **Credit services** — 15 services with credit costs
+- [ ] **Credit packages** — Individual and org packages defined
+- [ ] **Notification categories** — 8 categories
+- [ ] **Notification types** — 34 types under categories
+- [ ] **Assessments** — At least one assessment with domains, questions, scoring matrix, and interpretations
+- [ ] **Wheel categories** — 10 categories
+- [ ] **Scenario categories** — Categories created for teaching scenarios
+- [ ] **Scenario templates** — At least one scenario with sections (for instructor use)
+- [ ] **Assignment types** — At least one assignment type with JSON structure defined
+- [ ] **Resource categories** — Categories for the resource library
+- [ ] **Program plans** — At least one program plan with features
+- [ ] **Programs** — Programs created with correct min_plan_tier and default_program_plan
+- [ ] **Program modules** — Modules linked to programs with correct types and feature keys
+- [ ] **Module assignment configs** — Assignment types linked to assignment-type modules
+- [ ] **Module sessions** — Sessions linked to session-type modules, Cal.com events mapped
+- [ ] **Module resources** — Resources assigned to resource-type modules with section_type
+- [ ] **Platform terms** — Current terms exist (is_current = true)
+- [ ] **Demo users** — Test users with correct roles and plan assignments
+- [ ] **Storage buckets** — All 15 buckets exist (including `module-assignment-attachments`)
