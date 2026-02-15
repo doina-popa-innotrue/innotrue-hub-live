@@ -1434,3 +1434,148 @@ All assessment data (capability, psychometric, self-assessment, scenario scores,
 - Goal suggestions based on lowest-scoring domains
 - Team composition insights for org admins
 - AI-powered development planning
+
+---
+
+## Part 11: Consolidated Recommendations & Priority Roadmap
+
+This section synthesizes all findings from Parts 1–10 into a single prioritized action plan.
+
+### 11.1 Critical Fixes (Must Fix — Blocking Users)
+
+| # | Issue | Source | Effort | Description |
+|---|-------|--------|--------|-------------|
+| C1 | Credits page FeatureGate blocks self-service | Part 8 (8.2B) | 1 hour | Free-tier users can't reach `/credits` to buy top-ups. Remove/split FeatureGate on Credits.tsx |
+| C2 | AuthContext role fallback — security risk | Part 7 (7.1), Part 1 (1.15) | 2 hours | `roles = ["client"]` fallback lets unregistered Google OAuth users bypass signup. Replace with registration redirect |
+| C3 | Credit loss on failed enrollment | Part 1 (1.1) | 1 day | Credits deducted before enrollment created — no refund on failure. Create atomic edge function |
+| C4 | Cal.com orphaned bookings on DB failure | Part 1 (1.2) | 4 hours | Return partial success + booking UID instead of 500, add idempotency key |
+
+### 11.2 High Priority (Fix Before Wider Pilot)
+
+| # | Issue | Source | Effort | Description |
+|---|-------|--------|--------|-------------|
+| H1 | Empty client dashboard — no onboarding | Part 8 (8.2A) | 1 day | New clients see empty sections with no guidance. Add welcome card + action checklist |
+| H2 | File upload missing size + MIME validation | Part 1 (1.3) | 1 day | 30+ upload components have no validation. Create shared utility |
+| H3 | AI functions accept unlimited input | Part 1 (1.4) | 4 hours | No input size limits before Vertex AI calls. Add truncation helpers |
+| H4 | Welcome email not auto-triggered | Part 7 (7.4) | 1 hour | Self-signup users never get welcome email. Call send-welcome-email from verify-signup |
+| H5 | Express interest — no status tracking | Part 8 (8.2C) | 4 hours | Client submits interest but can't check status. Add status view to dashboard |
+| H6 | Feature gate messaging for max-plan users | Part 8 (8.6) | 2 hours | User on highest plan sees "Upgrade" for unmapped features. Show admin contact instead |
+| H7 | N+1 query in assessment scoring | Part 1 (1.5) | 1 hour | 10 domains = 11 DB calls. Use Supabase nested select |
+| H8 | Assignment grading lacks status guard | Part 1 (1.6) | 1 hour | Can attempt to grade before submission. Add status check |
+
+### 11.3 Medium Priority (Improve Experience)
+
+| # | Issue | Source | Effort | Description |
+|---|-------|--------|--------|-------------|
+| M1 | No unified feedback inbox | Part 9 (9.7) | 1 week | 9 feedback mechanisms scattered across the app. Create MyFeedback.tsx |
+| M2 | Psychometric interest status tracking | Part 10 (10.2.3) | 4 hours | Same status-tracking gap as program interest |
+| M3 | Scenario evaluation has no rubrics | Part 9 (9.6.1) | 3 days | 100% manual scoring, inconsistent across evaluators. Add rubric text per question |
+| M4 | No assessment → goal connection | Part 9 (9.5.3) | 3 days | Low-scoring domains don't prompt goal creation. Add post-assessment "Create Goal" prompt |
+| M5 | No scenario re-submission | Part 9 (9.6.3) | 2 days | Client can't revise after feedback. Add instructor "Request Revision" button |
+| M6 | Credit balance race condition audit | Part 1 (1.9) | 4 hours | Verify `consume_credit_service` uses row-level locking |
+| M7 | Empty state components for all sections | Part 8 (8.6) | 1 day | Multiple sections render blank with no CTA |
+| M8 | Locked sidebar items confusing UX | Part 8 (8.6) | 4 hours | Group locked items under "Premium Features" sidebar section |
+| M9 | Notification sending is synchronous | Part 1 (1.8) | 1 day | Group sessions could timeout. Use email queue instead |
+| M10 | Dual plans admin UX confusion | Part 1 (1.12) | 2 hours | Two plan pages with no guidance. Add info banners |
+| M11 | Console statements in production | Part 1 (1.7) | 1 day | 164 files have console.log. Replace with Sentry or remove |
+| M12 | No resource ratings or feedback | Part 9 (9.8.3) | 3 days | No quality signal on resources. Add 1-5 star rating |
+
+### 11.4 Enhancement Roadmap (Post-Fixes)
+
+Organized by theme, drawing from Parts 3, 5, 6, 9, and 10.
+
+#### Phase 1 — Onboarding & UX Polish (2-3 weeks)
+- Client onboarding wizard with persistent checklist (Part 5)
+- Coach/instructor first-login guided flow (Part 5)
+- Organization onboarding wizard (Part 5)
+- Dark mode (Part 6, §6.7)
+- Cmd+K command palette (Part 6, §6.7)
+- Reusable EmptyState component across all sections (Part 8)
+
+#### Phase 2 — Assessment Intelligence (3-4 weeks)
+- AI-powered PDF interpretation for psychometric results (Part 10, §10.2.1)
+- Psychometric result visualization (bar/pie charts from extracted data) (Part 10, §10.2.2)
+- Assessment insights → goal recommendations (Part 9, §9.5.3)
+- Assessment reminders / scheduling (Part 9, §9.5.4)
+- Built-in Big Five / VIA assessments using assessment_definitions (Part 10, §10.2.4)
+- Cross-assessment correlation dashboard (Part 10, §10.2.5)
+
+#### Phase 3 — AI & Engagement (3-4 weeks)
+- AI-assisted scenario/assessment evaluation (Part 9, §9.5.1)
+- AI coaching copilot — session prep, progress summary, learning path (Part 3, §3.1)
+- AI resource recommendations based on assessments + goals (Part 9, §9.8.1)
+- Engagement streaks + XP system (Part 6, §6.4)
+- Activity feed + peer reactions (Part 6, §6.3)
+- Push notifications with deep links (Part 6, §6.8)
+
+#### Phase 4 — Peer & Social (2-3 weeks)
+- Scenario peer review (Part 9, §9.6.2)
+- Peer learning network with auto-matching (Part 3, §3.3)
+- Cohort chat / discussion threads (Part 6, §6.3)
+- Team psychometric view for org admins (Part 10, §10.2.6)
+
+#### Phase 5 — Self-Registration & Scale (2-3 weeks)
+- Re-enable self-signup with AuthContext fix (Part 7, §7.1)
+- Role selection during signup with admin approval for privileged roles (Part 7, §7.2)
+- Bulk user import via CSV (Part 7, §7.5)
+- Wheel of Life → signup pipeline fix (Part 7, §7.3)
+- Coach self-registration application form (Part 5)
+- Org self-service creation (Part 5)
+
+#### Phase 6 — Enterprise & Analytics (4-6 weeks)
+- Organization ROI dashboard (Part 3, §3.4)
+- Progress analytics with predictive insights (Part 3, §3.2)
+- Coach performance dashboard (Part 5)
+- Org SSO (SAML/OIDC) (Part 5)
+- White-label / custom branding per org (Part 3, §3.7)
+- Export & reporting (PDF assessments, CSV analytics) (Part 3, §3.10)
+
+#### Phase 7 — Strategic Differentiators (3+ months)
+- External psychometric provider APIs — VIA first (Part 10, §10.2.7)
+- Adaptive assessments using IRT (Part 10, §10.2.8)
+- Integrated video for sessions (Part 3, §3.8)
+- Marketplace for coaching content (Part 3, §3.11)
+- Micro-learning module type (Part 6, §6.2)
+- Slack/Teams integration (Part 6, §6.8)
+
+### 11.5 Dependency Map
+
+```
+C1 (Credits FeatureGate) ← no dependencies, standalone fix
+C2 (AuthContext fallback) ← must fix before: H5 (self-signup re-enable), Phase 5
+C3 (Enrollment atomicity) ← no dependencies
+C4 (Cal.com idempotency) ← no dependencies
+
+H1 (Onboarding card) ← no dependencies, enables Phase 1 onboarding
+H4 (Welcome email) ← no dependencies
+
+Phase 2 (Assessment Intelligence):
+  AI PDF interpretation → Result visualization → Cross-assessment dashboard
+  Built-in psychometric assessments → uses existing assessment_definitions + compute-assessment-scores
+  Assessment → Goal connection ← no dependencies
+
+Phase 3 (AI & Engagement):
+  AI evaluation → uses existing Vertex AI + credit system
+  Streaks/XP → extends existing badge system
+
+Phase 5 (Self-Registration):
+  C2 (AuthContext fix) → Re-enable self-signup → Role selection → Bulk import
+  Wheel → signup fix depends on: RLS fix for ac_signup_intents (RLS_FIX_PLAN.md critical #1)
+```
+
+### 11.6 Effort Summary
+
+| Category | Items | Total Effort (estimated) |
+|----------|-------|------------------------|
+| Critical fixes (C1-C4) | 4 | 2-3 days |
+| High priority (H1-H8) | 8 | 1-2 weeks |
+| Medium priority (M1-M12) | 12 | 3-4 weeks |
+| Phase 1 — Onboarding/UX | 6 items | 2-3 weeks |
+| Phase 2 — Assessment Intelligence | 6 items | 3-4 weeks |
+| Phase 3 — AI & Engagement | 6 items | 3-4 weeks |
+| Phase 4 — Peer & Social | 4 items | 2-3 weeks |
+| Phase 5 — Self-Registration | 6 items | 2-3 weeks |
+| Phase 6 — Enterprise & Analytics | 6 items | 4-6 weeks |
+| Phase 7 — Strategic | 6 items | 3+ months |
+
+**Recommended execution order:** C1-C4 → H1-H8 → Phase 1 → M1-M12 (interleaved) → Phase 2 → Phase 3 → remaining phases based on business priorities.

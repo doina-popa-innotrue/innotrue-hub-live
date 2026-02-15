@@ -54,12 +54,12 @@ Categories for the Wheel of Life self-assessment feature.
 **Needed by:** Wheel of Life assessment feature (client-facing)
 
 ### 1.5 Assessment Categories (`assessment_categories`)
-Top-level groupings for capability assessments.
+Top-level groupings shared across **all three assessment systems** (capability, self/public, psychometric).
 
-11 categories: capability, leadership, values, communication, technical, strategic, etc.
+6 categories: Personality, Aptitude, Career, Emotional Intelligence, Leadership, Other
 
 **Admin UI:** Assessments Management
-**Needed by:** Capability assessments (each assessment belongs to a category)
+**Needed by:** Capability assessments, assessment definitions (public/self), psychometric assessments
 
 ---
 
@@ -325,26 +325,92 @@ Each template uses Handlebars-style variables (`{{user_name}}`, `{{program_name}
 
 ## Layer 3D — Assessments (depends on assessment categories)
 
-### 3.9 Capability Assessments
-Self-assessment tools for users to evaluate their skills.
+The platform has **three distinct assessment systems** that share `assessment_categories` but serve different purposes.
+
+### 3.9 Capability Assessments (`capability_assessments`)
+Slider-based self/evaluator assessments where clients rate themselves (or are rated) across competency domains.
+
+**Tables:**
+
+| Table | Purpose |
+|-------|---------|
+| `capability_assessments` | Assessment definitions (name, instructions, scale, mode) |
+| `capability_domains` | Competency areas within an assessment |
+| `capability_domain_questions` | Questions per domain (rated on slider 1–N scale) |
+| `assessment_families` | Group related capability assessments together |
+| `capability_snapshots` | A completed assessment instance (scores, evaluator info) |
+| `snapshot_domain_ratings` | Per-domain scores within a snapshot |
+
+**Assessment Modes:** `self` (client only), `evaluator` (instructor/coach only), `both` (comparison)
+
+**Five access paths:**
+1. **Self-assessment** — client rates themselves via `CapabilityAssessments.tsx`
+2. **Module-linked** — triggered from `program_modules.capability_assessment_id` via `ModuleSelfAssessment.tsx`
+3. **Instructor/coach evaluation** — evaluator creates snapshot with `is_self_assessment=false`
+4. **Peer evaluation** — via `GroupPeerAssessmentsPanel.tsx` (configured in `group_peer_assessments`)
+5. **Public** — unauthenticated access is NOT supported for capability assessments (see 3.10 below)
+
+**Scoring:** Client-side domain averages from slider ratings — NO server-side scoring matrix.
+**Pass/fail:** Optional — `pass_fail_enabled`, `pass_fail_mode` (overall / per_domain), `pass_fail_threshold`
+**Visualization:** Radar charts + line evolution charts comparing snapshots over time
 
 **Structure:**
 ```
-Assessment (e.g., "Architecture Self Knowledge Check")
-├── Domain 1: System Architecture (9 questions)
+Assessment: "Architecture Self Knowledge Check"
+├── Domain 1: System Architecture (9 questions, 5-point slider)
 ├── Domain 2: Security & Identity (7 questions)
-├── Domain 3: Data Management (7 questions)
-├── Domain 4: Integration Patterns (6 questions)
-├── Domain 5: Governance & DevOps (5 questions)
-├── Domain 6: Solution Architecture (5 questions)
+├── ...
 └── Domain 7: Communication (10 questions)
 ```
 
-Each question has a 5-point rating scale. Results are computed server-side by `compute-assessment-scores` edge function.
+**Admin UI:** Assessments Management → Create/edit assessments, families, domains, questions
+**Depends on:** assessment_categories, assessment_families (optional)
+**Needed by:** Program modules (`capability_assessment_id`), scenario templates (`capability_assessment_id`), assignment types (`scoring_assessment_id`)
 
-**Admin UI:** Assessments Management → Create/Edit assessments, domains, questions
+### 3.10 Assessment Definitions — Public/Self-Assessments (`assessment_definitions`)
+Multiple-choice assessments with **server-side confidential scoring**. Used for public (unauthenticated) assessments and scored self-assessments.
+
+**Tables:**
+
+| Table | Purpose |
+|-------|---------|
+| `assessment_definitions` | Assessment meta (name, slug, description, is_active) |
+| `assessment_dimensions` | What gets scored (e.g., "Analytical Thinking", "Communication Style") |
+| `assessment_option_scores` | **Scoring matrix** — maps each answer option to dimension scores (CONFIDENTIAL, never exposed to frontend) |
+| `assessment_interpretations` | Result text based on score range conditions |
+| `assessment_responses` | User answers + computed `dimension_scores` + matched `interpretations` |
+
+**Scoring engine:** `compute-assessment-scores` edge function
+1. Client answers multiple-choice questions
+2. Server fetches `assessment_option_scores` (never exposed to frontend)
+3. Sums option scores by dimension
+4. Evaluates `assessment_interpretations` conditions against dimension totals
+5. Returns matched interpretation text — client never sees the scoring matrix
+
+**Public access:** Via `PublicAssessment.tsx` at `/public-assessment/:slug` — unauthenticated, email capture, PDF download
+
+**Admin UI:** Assessment Definitions Management → Create assessment, add dimensions, configure scoring matrix, write interpretations
 **Depends on:** assessment_categories
-**Needed by:** Program modules (can link a module to an assessment via `capability_assessment_id`)
+**Needed by:** Public assessment pages, module-linked self-assessments
+
+### 3.11 Psychometric Assessments (`psychometric_assessments`)
+**Document management catalog** — not a scored assessment engine. Clients browse external psychometric assessments, express interest, upload result PDFs, and share with coaches.
+
+**Tables:**
+
+| Table | Purpose |
+|-------|---------|
+| `psychometric_assessments` | Catalog entries (name, provider, category, cost, external_url) |
+| `assessment_interest_registrations` | Client interest → admin contacts → completed/declined |
+| `user_assessments` | Uploaded PDF results per client |
+| `user_assessment_shares` | Share uploaded PDFs with specific coaches/instructors |
+
+**Current limitations:** No in-app taking, no scoring engine, no visualization, no external API integration. See ISSUES_AND_IMPROVEMENTS.md Part 10 for enhancement roadmap.
+
+**Admin UI:** Assessments Management → Psychometric tab (CRUD catalog, manage interest registrations)
+**Client UI:** Explore Assessments (browse catalog, express interest), My Assessments (upload PDFs, share)
+**Depends on:** assessment_categories
+**Storage bucket:** `psychometric-assessments`
 
 ---
 
@@ -546,62 +612,37 @@ draft → in_progress → submitted → reviewed
 
 ---
 
-### Assessments (Capability Assessments)
+### Assessments — Three Separate Systems
 
-Self-assessment tools where clients rate themselves across competency domains. Scoring is computed server-side to keep the scoring matrix secure.
+The platform has **three distinct assessment systems** sharing `assessment_categories` but with different tables, scoring engines, and UIs. See Layer 3D above for table-level details.
 
-**Tables:**
+**System A: Capability Assessments** (`capability_assessments`)
+- Slider-based (1–N scale) per question, organized by competency domains
+- Scoring: client-side domain averages from slider ratings (no server-side matrix)
+- Modes: `self`, `evaluator`, `both` (comparison)
+- Visualization: radar charts + line evolution charts across snapshots
+- 5 access paths: self, module-linked, instructor evaluation, peer evaluation, (no public)
+- **Admin setup:** Create assessment → add domains → add questions per domain → optionally configure families, pass/fail
 
-| Table | Purpose |
-|-------|---------|
-| `capability_assessments` | Assessment definitions (name, instructions, scale, mode) |
-| `capability_domains` | Competency areas within an assessment |
-| `capability_domain_questions` | Questions for each domain |
-| `assessment_dimensions` | Scoring dimensions (what gets scored) |
-| `assessment_option_scores` | Scoring matrix — maps answer options to dimension scores (server-side only) |
-| `assessment_interpretations` | Result text based on score ranges |
-| `assessment_responses` | User answers + computed scores |
-| `assessment_categories` | Top-level groupings |
-| `assessment_families` | Group related assessments |
+**System B: Assessment Definitions / Public** (`assessment_definitions`)
+- Multiple-choice questions scored server-side via `compute-assessment-scores`
+- Scoring: confidential matrix (`assessment_option_scores` → `assessment_dimensions` → `assessment_interpretations`)
+- Client never sees scoring matrix — only interpretation text
+- Public access via `/public-assessment/:slug` (unauthenticated)
+- **Admin setup:** Create definition → add dimensions → add questions with options → configure scoring matrix per option → write interpretations with score conditions
 
-**Assessment Modes:**
-- `self` — client self-rates only
-- `evaluator` — instructor/coach rates the client
-- `both` — both self-rate and evaluator-rate, compare results
+**System C: Psychometric Assessments** (`psychometric_assessments`)
+- Document catalog only — external assessments, no in-app scoring
+- Clients browse catalog → express interest → admin contacts → client takes external assessment → uploads result PDF → shares with coach
+- **Admin setup:** Create catalog entries (name, provider, category, cost, external URL)
 
-**Pass/Fail:**
-- Optional: `pass_fail_enabled`, `pass_fail_mode` (overall / per_domain), `pass_fail_threshold`
-
-**Scoring Flow:**
-1. Admin creates assessment with domains, questions, dimensions
-2. Admin creates **scoring matrix** (`assessment_option_scores`) — maps each answer option to dimension scores
-3. Admin creates **interpretations** with score range conditions
-4. Client takes assessment, submits answers
-5. `compute-assessment-scores` edge function:
-   - Fetches scoring matrix (never exposed to frontend)
-   - Sums option scores per dimension
-   - Evaluates interpretations against score ranges
-   - Saves response with `dimension_scores` and `interpretations`
-6. Client sees interpretations (but never the raw scoring matrix)
-
-**Structure Example:**
-```
-Assessment: "Architecture Self Knowledge Check"
-├── Domain: System Architecture (9 questions, 5-point scale)
-├── Domain: Security & Identity (7 questions)
-├── Domain: Data Management (7 questions)
-├── Domain: Integration Patterns (6 questions)
-├── Domain: Governance & DevOps (5 questions)
-├── Domain: Solution Architecture (5 questions)
-└── Domain: Communication (10 questions)
-```
-
-**Admin UI:** Assessments Management → Create/edit assessments, domains, questions, scoring matrix, interpretations
-**Client UI:** Assessment embedded in module or standalone
-
-**Dependencies:**
-- Requires: assessment_categories
-- Used by: module_assignment_types (scoring_assessment_id), scenario_templates (capability_assessment_id), program_modules (capability_assessment_id)
+**Cross-system links:**
+- `assessment_categories` — shared across all three systems
+- `assessment_families` — capability assessments only
+- `program_modules.capability_assessment_id` → capability assessments
+- `module_assignment_types.scoring_assessment_id` → capability assessments
+- `scenario_templates.capability_assessment_id` → capability assessments
+- `psychometric_assessments.feature_key` → features table (plan gating)
 
 ---
 
@@ -866,7 +907,11 @@ Missing assignment_types       → Assignment modules have no form structure →
 Missing assignment_configs     → Assignment types not linked to modules → No assignments created
 Missing scenario_categories    → Can't create scenario templates
 Missing scenario_templates     → Instructors can't assign scenarios to students
-Missing scoring_matrix         → compute-assessment-scores returns empty results
+Missing scoring_matrix         → compute-assessment-scores returns empty results (assessment_definitions only)
+Missing capability_domains     → Capability assessment has no questions to rate → Empty form
+Missing assessment_dimensions  → Assessment definition has no scoring dimensions → No scores computed
+Missing assessment_families    → Capability assessments ungrouped (non-breaking, just UI organization)
+Missing psychometric catalog   → Clients see empty Explore Assessments page
 Missing resource_categories    → Resources have no categorization
 Missing module_sessions        → Session modules have no linked session → Nothing to book
 Missing module_resources       → Resource modules have no content to display
@@ -890,34 +935,167 @@ Credits are **additive**: `plans.credit_allowance` + `program_plans.credit_allow
 
 ## Quick Reference: Admin Configuration Checklist
 
-Use this checklist when setting up a new environment or verifying configuration:
+Use this checklist when setting up a new environment or verifying configuration.
 
+### Layer 1 — Foundations
 - [ ] **System settings** — AI limits, platform name, support email, timezone
 - [ ] **Module types** — 4 types exist (session, assignment, reflection, resource)
 - [ ] **Tracks** — CTA and Leadership tracks created
+- [ ] **Wheel categories** — 10 categories
+- [ ] **Assessment categories** — 6 categories (Personality, Aptitude, Career, EI, Leadership, Other)
+
+### Layer 2 — Plans & Features
 - [ ] **Features** — All 18+ features created with correct keys
 - [ ] **Plans** — 7 plans with correct tier levels and credit allowances
 - [ ] **Plan features** — Every plan has feature mappings with limits
 - [ ] **Plan prices** — Purchasable plans have Stripe price IDs (Stripe products created)
+
+### Layer 3A — Sessions
 - [ ] **Session types** — 8 types with feature_key links
-- [ ] **Session type roles** — Roles defined for complex session types
+- [ ] **Session type roles** — Roles defined for complex session types (review board, workshop, mastermind, peer coaching, webinar)
 - [ ] **Cal.com mappings** — Each session type mapped to a Cal.com event type
-- [ ] **Credit services** — 15 services with credit costs
-- [ ] **Credit packages** — Individual and org packages defined
+
+### Layer 3B — Credits
+- [ ] **Credit services** — 15 services with credit costs and feature links
+- [ ] **Credit packages** — Individual (3) and org (3) packages defined
+
+### Layer 3C — Notifications
 - [ ] **Notification categories** — 8 categories
-- [ ] **Notification types** — 34 types under categories
-- [ ] **Assessments** — At least one assessment with domains, questions, scoring matrix, and interpretations
-- [ ] **Wheel categories** — 10 categories
-- [ ] **Scenario categories** — Categories created for teaching scenarios
-- [ ] **Scenario templates** — At least one scenario with sections (for instructor use)
-- [ ] **Assignment types** — At least one assignment type with JSON structure defined
+- [ ] **Notification types** — 34 types under categories with email_template_key links
+
+### Layer 3D — Assessments (three systems)
+
+**Capability Assessments:**
+- [ ] **Assessment families** — Group related capability assessments (optional but recommended)
+- [ ] **Capability assessments** — At least one assessment with mode (self/evaluator/both), scale, pass/fail config
+- [ ] **Capability domains** — Competency areas per assessment with order_index
+- [ ] **Domain questions** — Questions per domain (slider-rated 1–N)
+- [ ] **Group peer assessments** — Configured per group if peer evaluation is used
+
+**Assessment Definitions (Public/Self):**
+- [ ] **Assessment definitions** — At least one definition with slug, description, is_active
+- [ ] **Assessment dimensions** — Scoring dimensions (what gets measured)
+- [ ] **Questions with options** — Multiple-choice questions with answer options
+- [ ] **Scoring matrix** — `assessment_option_scores` mapping each option to dimension scores (confidential)
+- [ ] **Interpretations** — `assessment_interpretations` with score range conditions and result text
+
+**Psychometric Assessments:**
+- [ ] **Psychometric catalog** — Entries with name, provider, category, cost, external_url
+- [ ] **Feature gating** — Optional feature_key per assessment for plan-based access
+
+### Layer 3E — Scenarios
+- [ ] **Scenario categories** — Categories with color and display order
+- [ ] **Scenario templates** — At least one template with sections and paragraphs
+- [ ] **Paragraph question links** — Link section paragraphs to capability assessment questions (for scoring)
+
+### Layer 3F — Resources & Feedback
 - [ ] **Resource categories** — Categories for the resource library
+- [ ] **Resource collections** — Optional grouped collections with ordered items
+- [ ] **Coach feedback templates** — Module feedback templates for structured coach feedback
+
+### Layer 4 — Programs
 - [ ] **Program plans** — At least one program plan with features
+- [ ] **Program plan features** — Feature mappings with limits for each program plan
 - [ ] **Programs** — Programs created with correct min_plan_tier and default_program_plan
+- [ ] **Program tier plans** — Map tier names to program plans per program (if multiple tiers offered)
 - [ ] **Program modules** — Modules linked to programs with correct types and feature keys
+
+### Layer 4 — Module Linking
+- [ ] **Assignment types** — At least one assignment type with JSON structure defined
 - [ ] **Module assignment configs** — Assignment types linked to assignment-type modules
 - [ ] **Module sessions** — Sessions linked to session-type modules, Cal.com events mapped
-- [ ] **Module resources** — Resources assigned to resource-type modules with section_type
+- [ ] **Module resources** — Resources assigned to resource-type modules with section_type (context/during/reflection)
+- [ ] **Module assessments** — `capability_assessment_id` set on modules that include assessments
+- [ ] **Scenario assignments** — Scenarios assigned to students/modules
+
+### Layer 5 — Platform & Users
 - [ ] **Platform terms** — Current terms exist (is_current = true)
 - [ ] **Demo users** — Test users with correct roles and plan assignments
-- [ ] **Storage buckets** — All 15 buckets exist (including `module-assignment-attachments`)
+- [ ] **Storage buckets** — All 15 buckets exist (including `module-assessment-attachments`)
+
+---
+
+## Data Population Plan — New Environment Setup Sequence
+
+Follow this exact order when populating a new environment from scratch. Each step depends on the previous ones.
+
+### Step 1: Run Seed File
+```bash
+# Handles Layers 1-3 automatically: system settings, module types, tracks, wheel categories,
+# assessment categories, features, plans, plan features, session types, session type roles,
+# credit services, credit packages, notification categories, notification types,
+# sample programs with modules, demo users
+supabase db reset    # runs all migrations + seed.sql
+```
+
+### Step 2: External Services (parallel with Step 3)
+- [ ] Create Stripe products + prices → copy price IDs into `plan_prices` table
+- [ ] Create Cal.com event types → map to session types via admin UI
+- [ ] Set all environment variables (see `docs/ENVIRONMENT_CONFIGURATION.md`)
+- [ ] Configure Resend SMTP in Supabase Dashboard (Authentication → Email → SMTP)
+- [ ] Configure Auth Email Hook → `send-auth-email` in Supabase Dashboard
+- [ ] Set `SEND_EMAIL_HOOK_SECRET` env var
+
+### Step 3: Assessment Configuration (parallel with Step 2)
+
+**Capability Assessments:**
+1. Create assessment families (optional grouping)
+2. Create capability assessments (name, mode, scale, pass/fail settings)
+3. Add domains per assessment (ordered competency areas)
+4. Add questions per domain (slider-rated)
+5. Configure group peer assessments if peer evaluation is used
+
+**Assessment Definitions (Public/Self):**
+1. Create assessment definitions (name, slug, is_active)
+2. Add dimensions (scoring categories)
+3. Add questions with multiple-choice options
+4. Configure scoring matrix: map each option to dimension scores
+5. Write interpretations with score range conditions
+
+**Psychometric Catalog:**
+1. Add psychometric assessment entries (name, provider, category, cost, URL)
+2. Optionally set feature_key for plan gating
+
+### Step 4: Scenario Configuration
+1. Create scenario categories
+2. Create scenario templates with sections and paragraphs
+3. Link paragraphs to capability assessment questions (for domain scoring reference)
+4. Set locking flags on finalized templates
+
+### Step 5: Resource Library
+1. Create resource categories
+2. Upload resources with visibility (private/enrolled/public) and optional credit cost
+3. Create resource collections and add items (ordered)
+4. Tag resources with skills
+
+### Step 6: Programs & Modules
+1. Create program plans with feature mappings
+2. Create programs with min_plan_tier, credit_cost, default_program_plan
+3. Create program tier plans (if multiple tiers)
+4. Add modules to programs:
+   - `session` modules → link to session types
+   - `assignment` modules → link to assignment types via module_assignment_configs
+   - `reflection` modules → assign reflection resources
+   - `resource` modules → assign resources with section_type
+5. Set `capability_assessment_id` on modules that include assessments
+6. Assign scenarios to modules/enrollments
+
+### Step 7: Coach Feedback Templates
+1. Create module feedback templates for structured coach feedback
+
+### Step 8: Platform Terms & Demo Users
+1. Create platform terms (is_current = true) — blocks all access if missing
+2. Create demo users with roles, plan assignments, enrollments
+3. Verify end-to-end: login → dashboard → program → module → assessment → session booking
+
+### Verification Checklist
+After population, verify each path works:
+- [ ] Client login → dashboard → browse programs → enroll → access modules
+- [ ] Client takes capability assessment (self-assessment mode)
+- [ ] Public assessment at `/public-assessment/:slug` → email capture → scoring → PDF
+- [ ] Instructor creates scenario assignment → client responds → instructor evaluates
+- [ ] Session booking via Cal.com integration
+- [ ] Credit deduction on AI use / session booking
+- [ ] Notification delivery (email + in-app)
+- [ ] Coach views assigned clients → provides module feedback
+- [ ] Org admin invites member → member accepts → org dashboard shows member
