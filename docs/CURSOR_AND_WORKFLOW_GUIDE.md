@@ -57,6 +57,16 @@ git checkout develop
 
 A git hook will warn you if you forget step 4.
 
+### One-Command Deploy (shortcut)
+
+```bash
+npm run deploy:all                # full pipeline with production confirmation prompt
+npm run deploy:all -- --dry-run   # preview what would deploy
+npm run deploy:all -- --skip-lovable  # skip Lovable sync
+```
+
+**WARNING:** This deploys to production. The script will ask you to confirm before pushing to main. It also checks that you're on develop, everything is committed, and everything is pushed before starting.
+
 ### If You Forget to Switch Back to Develop
 ```bash
 git stash && git checkout develop && git stash pop
