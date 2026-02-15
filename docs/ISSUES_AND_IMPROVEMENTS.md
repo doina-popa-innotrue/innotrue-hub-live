@@ -1416,7 +1416,7 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 
 | # | Issue | Source | Effort | Description |
 |---|-------|--------|--------|-------------|
-| C1 | Credits page FeatureGate blocks self-service | Part 8 (8.2B) | 1 hour | Free-tier users can't reach `/credits` to buy top-ups. Remove/split FeatureGate on Credits.tsx |
+| ~~C1~~ | ~~Credits page FeatureGate blocks self-service~~ — **RESOLVED 2026-02-15** | Part 8 (8.2B) | ~~1 hour~~ | Removed FeatureGate wrapper from Credits.tsx — credits is universal across all plans |
 | ~~C2~~ | ~~AuthContext role fallback~~ — **RESOLVED 2026-02-15** | Part 7 (7.1), Part 1 (1.15) | ~~2 hours~~ | Removed silent "client" fallback. Added `authError` state + error/no-roles UI in ProtectedRoute |
 | ~~C3~~ | ~~Credit loss on failed enrollment~~ — **RESOLVED 2026-02-15** | Part 1 (1.1) | ~~1 day~~ | Created atomic `enroll_with_credits` RPC. Also fixed M6 (`FOR UPDATE SKIP LOCKED`) |
 | C4 | Cal.com orphaned bookings on DB failure | Part 1 (1.2) | 4 hours | Return partial success + booking UID instead of 500, add idempotency key |
@@ -1428,11 +1428,11 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | H1 | Empty client dashboard — no onboarding | Part 8 (8.2A) | 1 day | New clients see empty sections with no guidance. Add welcome card + action checklist |
 | H2 | File upload validation inconsistent | Part 1 (1.3) | 4 hours | Client uploads validated but admin uploads and shared utility missing. Standardize |
 | H3 | AI functions accept unlimited input | Part 1 (1.4) | 4 hours | No input size limits before Vertex AI calls. Add truncation helpers |
-| H4 | Welcome email not auto-triggered | Part 7 (7.4) | 1 hour | Self-signup users never get welcome email. Call send-welcome-email from verify-signup |
+| ~~H4~~ | ~~Welcome email not auto-triggered~~ — **RESOLVED 2026-02-15** | Part 7 (7.4) | ~~1 hour~~ | verify-signup now triggers send-welcome-email (non-blocking, service role auth) |
 | H5 | Express interest — no status tracking | Part 8 (8.2C) | 4 hours | Client submits interest but can't check status. Add status view to dashboard |
 | H6 | Feature gate messaging for max-plan users | Part 8 (8.6) | 2 hours | User on highest plan sees "Upgrade" for unmapped features. Show admin contact instead |
-| H7 | N+1 query in assessment scoring | Part 1 (1.5) | 1 hour | 10 domains = 11 DB calls. Use Supabase nested select |
-| H8 | Assignment grading lacks status guard | Part 1 (1.6) | 1 hour | Can attempt to grade before submission. Add status check |
+| ~~H7~~ | ~~N+1 query in module progress~~ — **RESOLVED 2026-02-15** | Part 1 (1.5) | ~~1 hour~~ | Replaced per-module progress queries with single batched `.in()` query |
+| ~~H8~~ | ~~Assignment grading lacks status guard~~ — **RESOLVED 2026-02-15** | Part 1 (1.6) | ~~1 hour~~ | Added status guard: grading only allowed when assignment is "submitted" |
 | H9 | Edge function error handling inconsistent | Part 1 (1.11) | 1 day | Some return proper codes, others generic 500. Create shared error response utility |
 | H10 | Entitlement org deny override not supported | Part 1 (1.10) | 4 hours | Org sets limit=0 but user subscription overrides. Add explicit deny mechanism |
 
@@ -1445,7 +1445,7 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | M3 | Scenario evaluation has no rubrics | Part 9 (9.6.1) | 3 days | 100% manual scoring, inconsistent across evaluators. Add rubric text per question |
 | M4 | No assessment → goal connection | Part 9 (9.5.3) | 3 days | Low-scoring domains don't prompt goal creation. Add post-assessment "Create Goal" prompt |
 | M5 | No scenario re-submission | Part 9 (9.6.3) | 2 days | Client can't revise after feedback. Add instructor "Request Revision" button |
-| M6 | Credit balance race condition audit | Part 1 (1.9) | 4 hours | Verify `consume_credit_service` uses row-level locking |
+| ~~M6~~ | ~~Credit balance race condition~~ — **RESOLVED 2026-02-15** | Part 1 (1.9) | ~~4 hours~~ | Added `FOR UPDATE SKIP LOCKED` to `consume_credits_fifo` (fixed with C3) |
 | M7 | Empty state components for all sections | Part 8 (8.6) | 1 day | Multiple sections render blank with no CTA |
 | M8 | Locked sidebar items confusing UX | Part 8 (8.6) | 4 hours | Group locked items under "Premium Features" sidebar section |
 | M9 | Notification sending is synchronous | Part 1 (1.8) | 1 day | Group sessions could timeout. Use email queue instead |
