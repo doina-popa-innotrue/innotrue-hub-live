@@ -46,14 +46,10 @@ test.describe('Client enrollment and program access', () => {
     await openProgramBtn.scrollIntoViewIfNeeded();
     await openProgramBtn.click();
 
-    // Either ProgramPreviewDialog opens (View Details) or we navigate to /programs/:id (Continue Learning)
-    const urlMatchesProgram = await clientPage
-      .waitForURL(/\/programs\/[a-f0-9-]+/, { timeout: 10_000 })
-      .catch(() => false);
-
-    if (urlMatchesProgram) {
+    // Either we navigate to /programs/:id (Continue Learning) or a dialog opens (View Details)
+    try {
+      await clientPage.waitForURL(/\/programs\/[a-f0-9-]+/, { timeout: 10_000 });
       await expect(clientPage).not.toHaveURL(/404/);
-      // Program detail: heading or modules / content visible
       await expect(
         clientPage
           .getByRole('heading', { level: 1 })
@@ -61,9 +57,10 @@ test.describe('Client enrollment and program access', () => {
           .or(clientPage.getByText(/modules|curriculum|content/i).first()),
       ).toBeVisible({ timeout: 10_000 });
       return;
+    } catch {
+      // Navigation didn't happen: View Details likely opened a dialog
     }
 
-    // View Details opened a dialog; close or navigate from dialog if needed
     const dialog = clientPage.getByRole('dialog');
     if (await dialog.isVisible({ timeout: 3_000 }).catch(() => false)) {
       const goToProgram = clientPage.getByRole('button', { name: /continue learning|enroll|view program/i }).first();

@@ -3,7 +3,7 @@ import { buildOrganizationJsonLd, buildWebPageJsonLd } from "../seoUtils";
 
 describe("buildOrganizationJsonLd", () => {
   it("uses dynamic origin in url and logo", () => {
-    const origin = "https://app.innotrue.com";
+    const origin = "https://example.com";
     const json = buildOrganizationJsonLd(origin);
     expect(json.url).toBe(origin);
     expect(json.logo).toBe(`${origin}/pwa-512x512.png`);
@@ -26,8 +26,8 @@ describe("buildOrganizationJsonLd", () => {
 
 describe("buildWebPageJsonLd", () => {
   it("uses dynamic origin in isPartOf.url", () => {
-    const origin = "https://app.innotrue.com";
-    const json = buildWebPageJsonLd("Dashboard", "My dashboard", "https://app.innotrue.com/dashboard", origin);
+    const origin = "https://example.com";
+    const json = buildWebPageJsonLd("Dashboard", "My dashboard", "https://example.com/dashboard", origin);
     expect(json.isPartOf).toBeDefined();
     expect((json.isPartOf as { url: string }).url).toBe(origin);
   });
