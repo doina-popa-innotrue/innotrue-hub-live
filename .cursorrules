@@ -36,11 +36,19 @@ Stack: React 18 + Vite 5 + TypeScript + Supabase + Tailwind CSS + shadcn/ui.
 - `supabase/migrations/` — 393 database migrations
 
 ## Database
-- 369+ tables, 20+ enum types
+- 369+ tables, 20+ enum types, 393 migrations
 - Key enums: app_role, program_category, module_type, enrollment_status
 - Plans system: tier_level 0-4, credit allowances, feature limits
 - Dual credit system: individual (user_credit_balances) + org (org_credit_balances)
-- RLS policies on all public tables
+- RLS policies on all public tables (276 tables, all RLS enabled)
+- Two plan systems: Subscription plans (plans table) + Program plans (program_plans, per-enrollment)
+- `useEntitlements` merges 5 sources: subscription, program plan, add-ons, tracks, org-sponsored
+
+## Three Assessment Systems (share `assessment_categories`)
+- **Capability** (`capability_assessments`): Slider-based (1-N), client-side domain averages, radar/evolution charts. Modes: self, evaluator, both.
+- **Definitions** (`assessment_definitions`): Multiple-choice, server-side scoring via `compute-assessment-scores` (confidential matrix). Public access at `/public-assessment/:slug`.
+- **Psychometric** (`psychometric_assessments`): Document catalog/PDF upload only. No in-app scoring.
+- Cross-links: `program_modules.capability_assessment_id`, `scenario_templates.capability_assessment_id`, `module_assignment_types.scoring_assessment_id`
 
 ## Edge Functions
 - All edge functions are in Deno/TypeScript
@@ -60,6 +68,17 @@ Stack: React 18 + Vite 5 + TypeScript + Supabase + Tailwind CSS + shadcn/ui.
 - **Development:** `develop` branch → localhost
 - **Lovable Sandbox:** separate repo → Supabase `cezlnvdjildzxpyxyabb` (prototyping only)
 
+## Key Documentation
+- `docs/ISSUES_AND_IMPROVEMENTS.md` — 11-part platform analysis + 9-phase priority roadmap
+- `docs/DATA_CONFIGURATION_GUIDE.md` — Data model reference, 5-layer dependency chain, 3 assessment systems, data population plan
+- `docs/RLS_FIX_PLAN.md` — 30 RLS gaps (5 critical, 9 high, 16 medium)
+- `docs/ENVIRONMENT_CONFIGURATION.md` — 41 env vars with per-environment values
+- `docs/INTEGRATION_SETUP_GUIDE.md` — Cal.com, TalentLMS, Circle, Google Calendar setup
+- `docs/SUPABASE_OPS_QUICKSTART.md` — Edge function deploy, migration push, data/storage sync
+- `docs/LOVABLE_INTEGRATION.md` — Bidirectional Lovable ↔ live repo sync
+- `docs/TEST_PLAN.md` — Unit + E2E test plan
+- `docs/CURSOR_AND_WORKFLOW_GUIDE.md` — IDE setup, git deploy pipeline, testing
+
 ## Git Workflow
 - `main` → production (app.innotrue.com)
 - `preprod` → pre-production testing
@@ -77,10 +96,26 @@ Stack: React 18 + Vite 5 + TypeScript + Supabase + Tailwind CSS + shadcn/ui.
 - `npm run backup:storage` — Backup all storage buckets
 - `npm run verify` — Run lint + typecheck + tests + build
 
+## Module Types → Feature Areas
+- `session` → Sessions (module_sessions, Cal.com booking)
+- `assignment` → Assignments (module_assignment_configs → module_assignments, instructor grading)
+- `reflection` → Resources + Scenarios (module_reflection_resources)
+- `resource` → Resources (module_client_content_resources)
+- Scenarios linked via `scenario_assignments.module_id`
+- Assessments linked via `program_modules.capability_assessment_id`
+
+## Current Priority Bugs (from ISSUES_AND_IMPROVEMENTS.md Part 11)
+- C1: Credits page FeatureGate blocks free-tier users from buying credits
+- C2: AuthContext role fallback `roles = ["client"]` — security risk when Google OAuth re-enabled
+- C3: Credit loss on failed enrollment (not atomic)
+- C4: Cal.com orphaned bookings on DB failure (no idempotency)
+- Pilot: Self-registration disabled, Google sign-in hidden
+
 ## Code Style
-- TypeScript with 2-space indentation
+- TypeScript strict mode (all flags including strictNullChecks)
 - Functional React components with hooks
 - Tailwind CSS for styling (no CSS modules or styled-components)
 - shadcn/ui components for UI primitives
 - Zod schemas for validation
+- All pages lazy-loaded in App.tsx
 - Prefer existing patterns from the codebase over introducing new ones
