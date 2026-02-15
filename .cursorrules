@@ -65,6 +65,7 @@ Stack: React 18 + Vite 5 + TypeScript + Supabase + Tailwind CSS + shadcn/ui.
 - `preprod` → pre-production testing
 - `develop` → daily development
 - Feature branches: `feature/xyz` → PR to `develop`
+- **IMPORTANT:** Always work on `develop`. After deploying (develop → preprod → main → lovable), always `git checkout develop` at the end. Remind the user if they forget.
 
 ## npm Scripts (Supabase Ops & Lovable Sync)
 - `npm run deploy:functions -- [env] [--only fn1 fn2]` — Deploy edge functions
