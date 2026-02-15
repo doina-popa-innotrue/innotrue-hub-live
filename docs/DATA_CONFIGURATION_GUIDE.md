@@ -875,6 +875,10 @@ Additionally, **scenarios** can be linked to any module via `scenario_assignment
 | `program-logos` | Programs | Program and badge images |
 | `avatars` | Users | Profile pictures |
 | `email-assets` | Email | Email template assets |
+| `psychometric-assessments` | Psychometric | Client-uploaded PDF results |
+| `session-attachments` | Sessions | Session-related file uploads |
+| `scenario-attachments` | Scenarios | Scenario-related files |
+| `wheel-pdfs` | Wheel of Life | Generated Wheel PDF exports |
 
 ---
 
@@ -1099,3 +1103,152 @@ After population, verify each path works:
 - [ ] Notification delivery (email + in-app)
 - [ ] Coach views assigned clients → provides module feedback
 - [ ] Org admin invites member → member accepts → org dashboard shows member
+- [ ] Psychometric assessment: browse catalog → express interest → admin sees registration
+- [ ] Resource access: enrolled resource visible → public resource visible → private resource hidden
+- [ ] Wheel of Life: client accesses from dashboard → rates categories → sees radar chart
+
+---
+
+## Feature Area: Coaching & Staff Configuration
+
+### Coach Assignment Model
+
+Coaches and instructors require data configuration at multiple levels:
+
+**Tables:**
+
+| Table | Purpose |
+|-------|---------|
+| `user_roles` | Assigns `coach` or `instructor` role to a user |
+| `program_coaches` | Links coaches to programs (which programs they coach in) |
+| `client_coaches` | Links a specific coach to a specific client (direct assignment) |
+| `coach_instructor_requests` | Client requests for coach assignment (admin reviews) |
+
+**Configuration sequence:**
+1. Admin creates user with `coach` or `instructor` role
+2. Admin assigns coach to programs via `program_coaches`
+3. Admin assigns coach to specific clients via `client_coaches`
+4. OR: client requests coach via `RequestCoachInstructorDialog` → admin approves
+
+**What coaches need configured:**
+- Profile: bio, specialties, meeting preferences, calendar URL, avatar, timezone
+- Qualifications: which module types instructor can teach
+- Program assignments: which programs they coach in
+- Client assignments: which clients they're assigned to
+
+**Current gaps (documented in ISSUES_AND_IMPROVEMENTS.md Part 5):**
+- No coach verification workflow (no `verification_status` on profiles)
+- No native Cal.com availability management
+- No specialization tags for matching
+- No coach performance metrics/dashboard
+- All coaches must be admin-created (no self-registration application form)
+
+### Organization Configuration
+
+**Tables:**
+
+| Table | Purpose |
+|-------|---------|
+| `organizations` | Org record (name, slug, industry, size_range) |
+| `organization_members` | Links users to orgs with role (org_admin/org_manager/org_member) |
+| `org_invitations` | Pending email invitations (7-day expiry tokens) |
+| `org_credit_balances` | Organization credit pool |
+| `org_sponsored_enrollments` | Org pays for member enrollments |
+| `member_sharing_consent` | Granular privacy controls per member |
+
+**Configuration sequence:**
+1. Admin creates organization with name, slug, industry, size
+2. Org admin invited via `send-org-invite` → accepts at `/accept-invite?token=...`
+3. Org admin invites members with roles
+4. Org purchases credit packages and/or platform tier (Essentials/Professional)
+5. Org sponsors member enrollments (deducts from org credit balance)
+6. Members configure sharing consent (profile, enrollments, progress, assessments, goals)
+
+**Current gaps (documented in ISSUES_AND_IMPROVEMENTS.md Part 5):**
+- No org onboarding wizard
+- No org-level branding (logo, accent color)
+- No org SSO (SAML/OIDC)
+- No org data export (CSV/PDF)
+- No seat management warnings
+- No org welcome email
+- No trial/demo mode
+
+---
+
+## Feature Area: Integration-Specific Data
+
+### Partially Implemented Integrations
+
+These external services have varying levels of data integration. See `docs/INTEGRATION_SETUP_GUIDE.md` for full setup instructions.
+
+| Integration | Data Tables | Status | Config Required |
+|------------|-----------|--------|----------------|
+| **Circle** (Community) | `circle_community_sso` (implied by edge function) | SSO only — no content sync | `CIRCLE_API_KEY`, `CIRCLE_COMMUNITY_ID`, `CIRCLE_COMMUNITY_DOMAIN`, `CIRCLE_HEADLESS_AUTH_TOKEN` |
+| **TalentLMS** (Courses) | `talentlms_user_mappings` (implied), xAPI progress via webhook | SSO + progress sync — no course discovery in Hub | `TALENTLMS_API_KEY`, `TALENTLMS_WEBHOOK_SECRET`, `TALENTLMS_DOMAIN` |
+| **Lucid** | Admin maps user → Lucid URL | URL launcher only | Admin UI mapping |
+| **Google Drive** | Admin maps user → folder URL | URL launcher only | Admin UI mapping |
+| **Miro / Mural** | None | Sidebar placeholder only — no backend | N/A |
+
+**Key insight:** Circle and TalentLMS have env vars and edge functions but minimal data tables. Deepening these integrations (embedding community feed, showing course catalog) would require new tables and sync jobs.
+
+---
+
+## Feature Area: Feedback & Goal Tracking
+
+### 9 Feedback Mechanisms (Not Unified)
+
+The platform has 9 distinct feedback mechanisms stored across different tables:
+
+| Mechanism | Storage Table | Source → Target |
+|-----------|-------------|----------------|
+| Scenario evaluation | `paragraph_evaluations`, `scenario_assignments.overall_notes` | Instructor → Client |
+| Module feedback | `coach_module_feedback` (with templates + attachments) | Coach → Client |
+| Assignment grading | `module_assignments.overall_score/comments` | Instructor → Client |
+| Assessment interpretations | `assessment_responses.interpretations` | System → Client |
+| Decision AI insights | Via `decision-insights` edge function | AI → Client |
+| Reflection prompts | Via `generate-reflection-prompt` edge function | AI → Client |
+| Goal comments | `goal_comments` (if exists) | Coach → Client |
+| Session feedback | Unclear implementation | Post-session |
+| Coach general | Via module feedback templates | Coach → Client |
+
+**Current gap:** No unified feedback table or view. Client must navigate to each feature area to find feedback. See ISSUES_AND_IMPROVEMENTS.md Part 9 (§9.7) for unified feedback hub recommendation.
+
+### Goal System Data
+
+| Table | Purpose |
+|-------|---------|
+| `goals` | Client goals with category, status, target date |
+| `goal_milestones` | Sub-goals/milestones within a goal |
+| `goal_resources` | Files attached to goals |
+
+**Goal categories:** Uses `goal_category` enum. Goals are not feature-gated — available to all authenticated users.
+
+**Current gap:** Goals are not connected to assessment results. Low-scoring assessment domains don't prompt goal creation. See ISSUES_AND_IMPROVEMENTS.md Part 9 (§9.5.3).
+
+---
+
+## Future Data Tables (Roadmap)
+
+These tables will be needed as the enhancement roadmap (ISSUES_AND_IMPROVEMENTS.md Part 11) is implemented. Listed here for planning — none exist yet.
+
+| Roadmap Phase | Feature | New Table / Field | Purpose |
+|---------------|---------|-------------------|---------|
+| Phase 1 | Onboarding | `profiles.onboarding_completed` | Track whether client completed first-login checklist |
+| Phase 3 | Streaks/XP | `engagement_streaks` | Daily/weekly streak tracking per user |
+| Phase 3 | Streaks/XP | `user_xp` | XP points and level per user |
+| Phase 3 | Activity feed | `activity_feed_events` | Social feed events (completed module, set goal, etc.) |
+| Phase 3 | Smart notifications | `user_activity_patterns` | Per-user engagement timing data for ML-driven send times |
+| Phase 4 | Coach matching | `coach_specializations` | Specialization tags per coach |
+| Phase 4 | Coach matching | `matching_preferences` | Client preferences for coach specializations |
+| Phase 5 | Coach registration | `coach_applications` | Self-registration applications with admin review |
+| Phase 5 | Org self-service | `org_applications` | Self-service org creation with admin review |
+| Phase 5 | Access requests | `access_requests` | For roleless OAuth users requesting access |
+| Phase 5 | Coach verification | `profiles.verification_status` | Pending/verified/rejected verification state |
+| Phase 5 | Org trials | `organizations.trial_ends_at`, `.is_trial` | Trial period tracking |
+| Phase 6 | Org branding | `org_branding` | Logo, accent color, custom display name per org |
+| Phase 6 | Seat warnings | `organizations.max_sponsored_seats`, `.seat_warning_threshold` | Seat limit tracking + alert threshold |
+| Phase 7 | Flexible pacing | `client_enrollments.pacing_mode` | Self-paced vs cohort-paced toggle |
+| Phase 7 | Module ordering | `program_modules.is_sequential`, `module_progress.unlock_override` | Allow non-sequential module access |
+| Phase 9 | Micro-learning | `module_types` enum: `micro_learning` | New module type for 2-5 min content |
+| M12 | Resource ratings | `resource_ratings` | 1-5 star rating + review text per resource |
+| M4 | Assessment→Goal | `goals.assessment_snapshot_id` | Link goal to assessment result that prompted it |

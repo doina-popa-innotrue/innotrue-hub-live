@@ -1462,6 +1462,8 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | H6 | Feature gate messaging for max-plan users | Part 8 (8.6) | 2 hours | User on highest plan sees "Upgrade" for unmapped features. Show admin contact instead |
 | H7 | N+1 query in assessment scoring | Part 1 (1.5) | 1 hour | 10 domains = 11 DB calls. Use Supabase nested select |
 | H8 | Assignment grading lacks status guard | Part 1 (1.6) | 1 hour | Can attempt to grade before submission. Add status check |
+| H9 | Edge function error handling inconsistent | Part 1 (1.11) | 1 day | Some return proper codes, others generic 500. Create shared error response utility |
+| H10 | Entitlement org deny override not supported | Part 1 (1.10) | 4 hours | Org sets limit=0 but user subscription overrides. Add explicit deny mechanism |
 
 ### 11.3 Medium Priority (Improve Experience)
 
@@ -1479,18 +1481,24 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | M10 | Dual plans admin UX confusion | Part 1 (1.12) | 2 hours | Two plan pages with no guidance. Add info banners |
 | M11 | Console statements in production | Part 1 (1.7) | 1 day | 164 files have console.log. Replace with Sentry or remove |
 | M12 | No resource ratings or feedback | Part 9 (9.8.3) | 3 days | No quality signal on resources. Add 1-5 star rating |
+| M13 | No Zod form validation | Part 1 (1.13) | 1-2 weeks | Forms use manual validation. Adopt Zod starting with critical forms |
+| M14 | Loading/error states inconsistent | Part 1 (1.14) | 1 week | Mix of skeleton loaders and "Loading..." text. Standardize with shadcn/ui Skeleton |
+| M15 | Credit-gated resources have no preview | Part 9 (9.8.2) | 3 days | Users spend credits without knowing content. Add resource preview before deduction |
+| M16 | No assessment templates for common frameworks | Part 9 (9.5.2) | 1 week | Admins build every assessment from scratch. Create seed templates (Leadership, EI, etc.) |
 
 ### 11.4 Enhancement Roadmap (Post-Fixes)
 
-Organized by theme, drawing from Parts 3, 5, 6, 9, and 10.
+Organized by theme, drawing from Parts 2, 3, 5, 6, 9, and 10.
 
 #### Phase 1 — Onboarding & UX Polish (2-3 weeks)
 - Client onboarding wizard with persistent checklist (Part 5)
 - Coach/instructor first-login guided flow (Part 5)
 - Organization onboarding wizard (Part 5)
+- Enhanced welcome emails — platform overview, first steps, help resources (Part 5)
 - Dark mode (Part 6, §6.7)
 - Cmd+K command palette (Part 6, §6.7)
 - Reusable EmptyState component across all sections (Part 8)
+- Standardize skeleton loaders / loading states (Part 1, §1.14)
 
 #### Phase 2 — Assessment Intelligence (3-4 weeks)
 - AI-powered PDF interpretation for psychometric results (Part 10, §10.2.1)
@@ -1499,83 +1507,177 @@ Organized by theme, drawing from Parts 3, 5, 6, 9, and 10.
 - Assessment reminders / scheduling (Part 9, §9.5.4)
 - Built-in Big Five / VIA assessments using assessment_definitions (Part 10, §10.2.4)
 - Cross-assessment correlation dashboard (Part 10, §10.2.5)
+- Seed assessment templates for common frameworks — Leadership, Communication, PM, EI (Part 9, §9.5.2)
 
 #### Phase 3 — AI & Engagement (3-4 weeks)
 - AI-assisted scenario/assessment evaluation (Part 9, §9.5.1)
 - AI coaching copilot — session prep, progress summary, learning path (Part 3, §3.1)
 - AI resource recommendations based on assessments + goals (Part 9, §9.8.1)
+- AI-powered program recommendations based on assessment results + goals (Part 5)
 - Engagement streaks + XP system (Part 6, §6.4)
 - Activity feed + peer reactions (Part 6, §6.3)
 - Push notifications with deep links (Part 6, §6.8)
+- Smart notification timing — ML-driven send times based on user activity patterns (Part 3, §3.9)
 
 #### Phase 4 — Peer & Social (2-3 weeks)
 - Scenario peer review (Part 9, §9.6.2)
 - Peer learning network with auto-matching (Part 3, §3.3)
 - Cohort chat / discussion threads (Part 6, §6.3)
 - Team psychometric view for org admins (Part 10, §10.2.6)
+- Coach/client specialization matching algorithm (Part 5)
 
 #### Phase 5 — Self-Registration & Scale (2-3 weeks)
 - Re-enable self-signup with AuthContext fix (Part 7, §7.1)
 - Role selection during signup with admin approval for privileged roles (Part 7, §7.2)
 - Bulk user import via CSV (Part 7, §7.5)
 - Wheel of Life → signup pipeline fix (Part 7, §7.3)
-- Coach self-registration application form (Part 5)
-- Org self-service creation (Part 5)
+- Coach self-registration application form with verification workflow (Part 5)
+- Org self-service creation with trial/demo mode (Part 5)
+- Coach availability integration via Cal.com (Part 5)
 
 #### Phase 6 — Enterprise & Analytics (4-6 weeks)
 - Organization ROI dashboard (Part 3, §3.4)
 - Progress analytics with predictive insights (Part 3, §3.2)
-- Coach performance dashboard (Part 5)
+- Coach performance dashboard — session count, ratings, client progress, NPS (Part 5)
 - Org SSO (SAML/OIDC) (Part 5)
 - White-label / custom branding per org (Part 3, §3.7)
-- Export & reporting (PDF assessments, CSV analytics) (Part 3, §3.10)
+- Export & reporting — PDF assessments, CSV analytics, coaching journey summaries (Part 3, §3.10)
+- Org seat management warnings — low-seat-count notifications (Part 5)
+- Org welcome email on creation (Part 5)
+- Org health dashboard — engagement scores, completion heatmaps (Part 5)
 
-#### Phase 7 — Strategic Differentiators (3+ months)
+#### Phase 7 — Mobile & Modern UX (2-3 weeks)
+- Mobile-first PWA enhancements — bottom nav, swipeable cards, quick actions (Part 3, §3.6; Part 6, §6.1)
+- Voice input for reflections (Part 6, §6.5)
+- Flexible pacing — self-paced vs cohort-paced toggle per enrollment (Part 6, §6.6)
+- Choose-your-adventure module ordering within programs (Part 6, §6.6)
+
+#### Phase 8 — Integration Deepening (3-4 weeks)
+- Circle community: embed feed/discussions in Hub (Part 2)
+- TalentLMS: show courses in Hub, track progress visually (Part 2)
+- Slack/Teams integration — daily nudges, session reminders, goal check-ins (Part 6, §6.8)
+- Calendar UX: one-click "Add all sessions to my calendar" (Part 6, §6.8)
+
+#### Phase 9 — Strategic Differentiators (3+ months)
 - External psychometric provider APIs — VIA first (Part 10, §10.2.7)
 - Adaptive assessments using IRT (Part 10, §10.2.8)
-- Integrated video for sessions (Part 3, §3.8)
+- Integrated video for sessions with AI transcripts (Part 3, §3.8)
 - Marketplace for coaching content (Part 3, §3.11)
-- Micro-learning module type (Part 6, §6.2)
-- Slack/Teams integration (Part 6, §6.8)
+- Micro-learning module type — 2-5 min videos + spaced repetition (Part 6, §6.2)
+- Org program customization — org-specific program variants (Part 5)
 
 ### 11.5 Dependency Map
 
 ```
 C1 (Credits FeatureGate) ← no dependencies, standalone fix
-C2 (AuthContext fallback) ← must fix before: H5 (self-signup re-enable), Phase 5
+C2 (AuthContext fallback) ← must fix before: Phase 5 (self-signup re-enable)
 C3 (Enrollment atomicity) ← no dependencies
 C4 (Cal.com idempotency) ← no dependencies
 
 H1 (Onboarding card) ← no dependencies, enables Phase 1 onboarding
 H4 (Welcome email) ← no dependencies
+H9 (Error handling) ← no dependencies, improves all edge functions
+H10 (Org deny) ← no dependencies, fix before Phase 6 (enterprise)
+
+Phase 1 (Onboarding/UX):
+  Onboarding wizards → no dependencies
+  Dark mode → needs theme system (new)
+  EmptyState component → no dependencies
 
 Phase 2 (Assessment Intelligence):
   AI PDF interpretation → Result visualization → Cross-assessment dashboard
   Built-in psychometric assessments → uses existing assessment_definitions + compute-assessment-scores
   Assessment → Goal connection ← no dependencies
+  Seed templates → needs capability_assessments structure (exists)
 
 Phase 3 (AI & Engagement):
   AI evaluation → uses existing Vertex AI + credit system
+  Program recommendations → needs assessment data (Phase 2 helps but not required)
   Streaks/XP → extends existing badge system
+  Smart notifications → needs user activity history (exists)
+
+Phase 4 (Peer & Social):
+  Scenario peer review → needs scenario system (exists)
+  Coach matching → needs specialization tags (new table)
 
 Phase 5 (Self-Registration):
   C2 (AuthContext fix) → Re-enable self-signup → Role selection → Bulk import
   Wheel → signup fix depends on: RLS fix for ac_signup_intents (RLS_FIX_PLAN.md critical #1)
+  Coach application form → needs coach_applications table (new)
+  Org trial mode → needs trial tracking fields on organizations table
+
+Phase 6 (Enterprise):
+  ROI dashboard → needs assessment + progress data (mostly exists)
+  Org SSO → requires SAML/OIDC library integration
+  White-label → needs org branding fields (new)
+  H10 (Org deny) must be fixed first
+
+Phase 7 (Mobile):
+  PWA enhancements → needs service worker updates (exists)
+  Voice input → needs Web Speech API integration
+
+Phase 8 (Integrations):
+  Circle → needs Circle API key set (env var exists, not configured)
+  TalentLMS → needs course catalog sync (tables exist)
+  Slack/Teams → needs new OAuth integration
+
+Phase 9 (Strategic):
+  VIA API → needs API partnership
+  Adaptive assessments → needs IRT algorithm + calibrated question bank
+  Video → needs video provider (Daily.co/Twilio) integration
 ```
 
-### 11.6 Effort Summary
+### 11.6 Items NOT Included in Roadmap
+
+These were analyzed but intentionally excluded from the prioritized roadmap:
+
+| Item | Source | Reason |
+|------|--------|--------|
+| Lucid/Miro/Mural integration deepening | Part 2 | URL launchers sufficient — deepen only if users request |
+| Google Drive OAuth integration | Part 2 | URL mapping works for pilot |
+| Customizable dashboard drag-and-drop | Part 6, §6.7 | Nice-to-have, high effort, low impact vs other items |
+| Emoji reactions in feedback | Part 6, §6.7 | Cosmetic, low priority |
+| LinkedIn badge sharing improvements | Part 6, §6.8 | Already works, just needs prominence adjustment |
+| Manager visibility opt-in | Part 6, §6.8 | Subset of org consent system (already exists) |
+
+### 11.7 Effort Summary
 
 | Category | Items | Total Effort (estimated) |
 |----------|-------|------------------------|
 | Critical fixes (C1-C4) | 4 | 2-3 days |
-| High priority (H1-H8) | 8 | 1-2 weeks |
-| Medium priority (M1-M12) | 12 | 3-4 weeks |
-| Phase 1 — Onboarding/UX | 6 items | 2-3 weeks |
-| Phase 2 — Assessment Intelligence | 6 items | 3-4 weeks |
-| Phase 3 — AI & Engagement | 6 items | 3-4 weeks |
-| Phase 4 — Peer & Social | 4 items | 2-3 weeks |
-| Phase 5 — Self-Registration | 6 items | 2-3 weeks |
-| Phase 6 — Enterprise & Analytics | 6 items | 4-6 weeks |
-| Phase 7 — Strategic | 6 items | 3+ months |
+| High priority (H1-H10) | 10 | 2 weeks |
+| Medium priority (M1-M16) | 16 | 5-6 weeks |
+| Phase 1 — Onboarding/UX | 8 items | 2-3 weeks |
+| Phase 2 — Assessment Intelligence | 7 items | 3-4 weeks |
+| Phase 3 — AI & Engagement | 8 items | 3-4 weeks |
+| Phase 4 — Peer & Social | 5 items | 2-3 weeks |
+| Phase 5 — Self-Registration | 7 items | 2-3 weeks |
+| Phase 6 — Enterprise & Analytics | 9 items | 5-7 weeks |
+| Phase 7 — Mobile & Modern UX | 4 items | 2-3 weeks |
+| Phase 8 — Integration Deepening | 4 items | 3-4 weeks |
+| Phase 9 — Strategic | 6 items | 3+ months |
 
-**Recommended execution order:** C1-C4 → H1-H8 → Phase 1 → M1-M12 (interleaved) → Phase 2 → Phase 3 → remaining phases based on business priorities.
+**Recommended execution order:** C1-C4 → H1-H10 → Phase 1 → M1-M16 (interleaved) → Phase 2 → Phase 3 → remaining phases based on business priorities.
+
+### 11.8 New Data Tables Required by Roadmap
+
+Several roadmap items require new database tables or fields. These should be planned as migrations before feature development begins.
+
+| Phase | Feature | New Tables / Fields |
+|-------|---------|-------------------|
+| Phase 1 | Onboarding | `profiles.onboarding_completed` (boolean) |
+| Phase 3 | Streaks/XP | `engagement_streaks` (user, streak_type, current_count, longest_count, last_activity_date), `user_xp` (user, total_xp, level) |
+| Phase 3 | Activity feed | `activity_feed_events` (user_id, event_type, target_type, target_id, created_at) |
+| Phase 3 | Smart notifications | `user_activity_patterns` (user_id, day_of_week, hour, engagement_score) |
+| Phase 4 | Coach matching | `coach_specializations` (coach_id, specialization_key), `matching_preferences` (client_id, preferred_specializations) |
+| Phase 5 | Coach applications | `coach_applications` (user_id, specialties, certifications, bio, status, reviewed_by) |
+| Phase 5 | Org applications | `org_applications` (user_id, org_name, size, industry, status, reviewed_by) |
+| Phase 5 | Access requests | `access_requests` (user_id, requested_role, status, reviewed_by) — for roleless OAuth users |
+| Phase 5 | Coach verification | `profiles.verification_status` (pending/verified/rejected), `profiles.verified_at` |
+| Phase 5 | Org trial | `organizations.trial_ends_at`, `organizations.is_trial` |
+| Phase 6 | Org branding | `org_branding` (org_id, logo_url, accent_color, custom_name) |
+| Phase 6 | Seat warnings | `organizations.max_sponsored_seats`, `organizations.seat_warning_threshold` |
+| Phase 7 | Flexible pacing | `client_enrollments.pacing_mode` (self_paced/cohort_paced) |
+| Phase 7 | Module ordering | `program_modules.is_sequential` (boolean), `module_progress.unlock_override` |
+| Phase 9 | Micro-learning | New `micro_learning` value in `module_types` enum |
+| Phase 12 | Resource ratings | `resource_ratings` (user_id, resource_id, rating, review_text) |
