@@ -19,10 +19,12 @@ interface AuthContextType {
   userRoles: string[];
   organizationMembership: OrganizationMembership | null;
   loading: boolean;
+  authError: string | null;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   switchRole: (role: UserRoleType) => void;
+  clearAuthError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,7 +37,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [organizationMembership, setOrganizationMembership] =
     useState<OrganizationMembership | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const clearAuthError = useCallback(() => setAuthError(null), []);
 
   const safeLocalStorageGet = (key: string): string | null => {
     try {
@@ -98,7 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Helper to determine the role to use
-  const determineRole = (roles: string[], savedRole: string | null): UserRoleType => {
+  const determineRole = (roles: string[], savedRole: string | null): UserRoleType | null => {
+    if (roles.length === 0) return null;
     // If there's a saved role and it's valid for this user, use it
     if (savedRole && roles.includes(savedRole)) {
       return savedRole as UserRoleType;
@@ -106,11 +112,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Otherwise default to admin if available, then org_admin, then first role
     if (roles.includes("admin")) return "admin";
     if (roles.includes("org_admin")) return "org_admin";
-    return (roles[0] as UserRoleType) ?? "client";
+    return roles[0] as UserRoleType;
   };
 
   // Extracted helper to fetch roles and org membership - eliminates code duplication
   const fetchUserRolesAndMembership = async (userId: string) => {
+    // Clear any previous auth error on fresh fetch
+    setAuthError(null);
+
     // Fetch platform roles
     const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
 
@@ -131,9 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Default to 'client' when no roles are found (prevents login dead-ends)
-    if (roles.length === 0) roles = ["client"];
-
+    // No silent fallback — empty roles is a legitimate state handled by ProtectedRoute
     setUserRoles(roles);
 
     // Check for saved role preference
@@ -161,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Safety valve: never allow the app to be stuck in loading forever.
     const loadingFailSafe = setTimeout(() => {
       setLoading(false);
+      setAuthError("Authentication timed out. Please refresh the page or try again.");
     }, 15000);
 
     // Set up auth state listener FIRST
@@ -182,9 +190,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             );
           } catch (error) {
             console.error("Error fetching user roles:", error);
-            // Set default client role on error to prevent login dead-ends
-            setUserRoles(["client"]);
-            setUserRole("client");
+            setAuthError(
+              error instanceof Error
+                ? error.message
+                : "Failed to load user roles. Please try again.",
+            );
           } finally {
             setLoading(false);
           }
@@ -217,10 +227,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error("Error initializing session:", error);
-        // Set default client role on error if user exists to prevent login dead-ends
         if (sessionUser) {
-          setUserRoles(["client"]);
-          setUserRole("client");
+          setAuthError(
+            error instanceof Error
+              ? error.message
+              : "Failed to initialize session. Please try again.",
+          );
         }
       } finally {
         setLoading(false);
@@ -298,6 +310,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserRole(null);
       setUserRoles([]);
       setOrganizationMembership(null);
+      setAuthError(null);
       setUser(null);
       setSession(null);
       navigate("/auth");
@@ -353,10 +366,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userRoles,
         organizationMembership,
         loading,
+        authError,
         signIn,
         signUp,
         signOut,
         switchRole,
+        clearAuthError,
       }}
     >
       {children}

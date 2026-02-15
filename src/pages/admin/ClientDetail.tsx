@@ -380,55 +380,44 @@ export default function ClientDetail() {
       finalCreditCost = Math.round(originalCreditCost * (1 - validDiscount / 100));
     }
 
-    // Consume credits from user if cost > 0
-    if (finalCreditCost && finalCreditCost > 0) {
-      const { data: consumeResult, error: consumeError } = await supabase.rpc(
-        "consume_credits_fifo",
-        {
-          p_owner_type: "user",
-          p_owner_id: id,
-          p_amount: finalCreditCost,
-          p_feature_key: undefined,
-          p_description: `Enrolled in ${program?.name} (${selectedTier}) by admin`,
-          p_action_type: "program_enrollment",
-          p_action_reference_id: selectedProgram,
-        },
-      );
+    // Atomic enrollment + credit consumption (C3 fix: both succeed or both fail)
+    const { data: enrollResult, error: enrollError } = await supabase.rpc(
+      "enroll_with_credits",
+      {
+        p_client_user_id: id,
+        p_program_id: selectedProgram,
+        p_tier: selectedTier,
+        p_program_plan_id: finalProgramPlanId,
+        p_discount_percent: validDiscount,
+        p_original_credit_cost: originalCreditCost,
+        p_final_credit_cost: finalCreditCost,
+        p_description: `Enrolled in ${program?.name} (${selectedTier}) by admin`,
+      },
+    );
 
-      if (consumeError) {
-        console.error("Credit consumption error:", consumeError);
-        toast.error(`Failed to consume credits: ${consumeError.message}`);
-        return;
-      }
-
-      const result = consumeResult as { success?: boolean; error?: string } | null;
-      if (!result?.success) {
-        toast.error(result?.error || "Insufficient credits for this enrollment");
-        return;
-      }
+    if (enrollError) {
+      console.error("Enrollment error:", enrollError);
+      toast.error(`Failed to enroll: ${enrollError.message}`);
+      return;
     }
 
-    // Create the enrollment
-    const { error } = await supabase.from("client_enrollments").insert({
-      client_user_id: id,
-      program_id: selectedProgram,
-      status: "active",
-      tier: selectedTier,
-      program_plan_id: finalProgramPlanId,
-      discount_percent: validDiscount,
-      original_credit_cost: originalCreditCost,
-      final_credit_cost: finalCreditCost,
-    });
+    const result = enrollResult as {
+      success: boolean;
+      error?: string;
+      enrollment_id?: string;
+      credit_details?: Record<string, unknown>;
+    } | null;
 
-    if (error) {
-      toast.error("Failed to assign program");
-    } else {
-      const creditMsg = finalCreditCost ? ` (${finalCreditCost} credits consumed)` : "";
-      toast.success(`Program assigned!${creditMsg}`);
-      setOpen(false);
-      setAdminDiscountPercent("");
-      window.location.reload();
+    if (!result?.success) {
+      toast.error(result?.error || "Failed to enroll client");
+      return;
     }
+
+    const creditMsg = finalCreditCost ? ` (${finalCreditCost} credits consumed)` : "";
+    toast.success(`Program assigned!${creditMsg}`);
+    setOpen(false);
+    setAdminDiscountPercent("");
+    window.location.reload();
   }
 
   async function toggleUserStatus(active: boolean) {
