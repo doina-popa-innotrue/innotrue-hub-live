@@ -347,6 +347,199 @@ The scripts automatically save and restore your current `supabase link` project.
 
 ---
 
+## Backup & Restore
+
+What's covered by Supabase backups and how to recover each component.
+
+### What Supabase Backs Up
+
+| Component | Backed Up? | Method | Retention |
+|-----------|-----------|--------|-----------|
+| **Database** (tables, functions, RLS, triggers) | ✅ Yes | PITR (Point-in-Time Recovery) | Up to 7 days (Pro plan) |
+| **Edge Functions** | ❌ No | Git repo is the source of truth | N/A |
+| **Storage Buckets** (files) | ❌ No | Use `npm run backup:storage` | 5 local backups |
+| **Auth Users** | ✅ Yes | Part of database PITR | Same as DB |
+| **Secrets / Env Vars** | ❌ No | Stored in Supabase Dashboard only | N/A |
+
+### How to Back Up (Step by Step)
+
+#### 1. Database — Automatic (PITR)
+
+The database is backed up continuously by Supabase (Pro plan). No manual action needed.
+
+- **Verify it's enabled:** Supabase Dashboard → Project → Database → Backups
+- Covers: all tables, rows, functions, triggers, RLS policies, auth users, enums, extensions
+- Retention: up to 7 days of point-in-time recovery
+- You can restore to any second within the retention window
+
+#### 2. Storage Buckets — Manual (Local Backup)
+
+Storage files are **not** backed up by Supabase. Run the backup script regularly.
+
+```bash
+# Back up production (recommended: before every deploy)
+npm run backup:storage
+
+# Back up preprod
+npm run backup:storage -- preprod
+
+# Back up sandbox
+npm run backup:storage -- sandbox
+
+# Back up all three environments at once
+npm run backup:storage -- all
+```
+
+- Files are saved to `backups/storage/<env>-<ref>/<date>/<bucket>/`
+- Keeps the 5 most recent backups per environment (older ones auto-deleted)
+- Downloads all 15 buckets (empty buckets are skipped)
+- A `_backup_metadata.json` file is created in each backup with timestamp and stats
+
+#### 3. Edge Functions — Git (Automatic)
+
+Edge functions live in `supabase/functions/` and are versioned by git. Every commit is a backup.
+
+```bash
+# View the full history of edge function changes
+git log --oneline -- supabase/functions/
+```
+
+No extra backup step needed — just commit your code before deploying.
+
+#### 4. Frontend Code — Git (Automatic)
+
+Same as edge functions — the frontend is versioned by git and deployed via Cloudflare Pages. Every pushed commit is a restorable snapshot.
+
+#### 5. Secrets / Env Vars — Manual Record
+
+Supabase does not back up secrets. You must maintain your own secure record.
+
+```bash
+# List secret names (values are NOT shown) to verify what's set
+supabase secrets list --project-ref qfdztdgublwlmewobxmx   # prod
+supabase secrets list --project-ref jtzcrirqflfnagceendt   # preprod
+supabase secrets list --project-ref cezlnvdjildzxpyxyabb   # sandbox
+```
+
+Store actual secret values in a password manager (e.g., 1Password) or encrypted notes. If lost, you'll need to regenerate from each service provider (Stripe, Cal.com, Resend, GCP, etc.).
+
+#### 6. Config Data — Export to JSON
+
+Export configuration tables as a local JSON snapshot:
+
+```bash
+# Export prod config tables as JSON files (no import, just backup)
+npm run sync:data -- --from prod --export-only
+
+# Export specific tables only
+npm run sync:data -- --from prod --export-only --tables plans features programs
+```
+
+Exports are saved to `tmp/data-sync/` as JSON files.
+
+#### Recommended Backup Routine
+
+| When | What to do |
+|------|-----------|
+| **Before every deploy** | `npm run backup:storage` |
+| **Weekly** | `npm run backup:storage -- all` + `npm run sync:data -- --from prod --export-only` |
+| **After changing secrets** | Update your password manager with the new values |
+| **Always** | Commit code before deploying (git = your function + frontend backup) |
+
+---
+
+### Restoring the Database (PITR)
+
+Use Point-in-Time Recovery when a bad migration, accidental data deletion, or corruption occurs.
+
+1. Go to **Supabase Dashboard → Project → Database → Backups → Point in Time**
+2. Select the target date/time (before the incident)
+3. Click **Restore** — this creates a **new project** with the database state at that point
+4. Verify the restored project's data is correct
+5. Options:
+   - **Swap project refs** — update your environment config to point to the restored project
+   - **Migrate data forward** — export specific tables from the restored project and import into the current one
+   - **Full replace** — delete the broken project and rename the restored one (requires updating all env vars, secrets, and DNS)
+
+> ⚠️ PITR restores the **entire database** — you cannot selectively restore a single table. For selective recovery, export the needed tables from the restored project using `pg_dump` or the data sync script.
+
+> ⚠️ PITR does NOT restore edge functions, storage files, or secrets. Those must be redeployed separately.
+
+### Restoring Edge Functions
+
+Edge functions are stored in git (`supabase/functions/`). To roll back:
+
+```bash
+# 1. Find the last known good commit
+git log --oneline -- supabase/functions/
+
+# 2. Check out the function(s) from that commit
+git checkout <commit-hash> -- supabase/functions/<function-name>/
+
+# 3. Redeploy to the affected environment
+npm run deploy:functions -- prod --only <function-name>
+
+# Or to roll back ALL functions to a specific commit:
+git checkout <commit-hash> -- supabase/functions/
+npm run deploy:functions -- prod
+```
+
+### Restoring Storage Files
+
+Storage buckets are NOT included in Supabase backups or PITR. Use local backups:
+
+```bash
+# 1. Take regular backups (recommend: before each deploy)
+npm run backup:storage              # backs up prod
+npm run backup:storage -- preprod
+
+# 2. To restore, copy files back from the backup directory
+#    Backups are saved to: backups/storage/<env>-<ref>/<date>/
+#    Use the storage sync script or upload manually via Dashboard
+
+# 3. To restore from another environment (if files still exist there)
+npm run sync:storage -- --from preprod --to prod --buckets <bucket-name>
+```
+
+### Restoring Secrets / Env Vars
+
+Secrets are not backed up anywhere. Keep a secure record of all secrets outside Supabase (e.g., 1Password, encrypted notes). If lost, you'll need to regenerate them from each service (Stripe, Cal.com, Resend, etc.).
+
+To list current secrets (names only, not values):
+
+```bash
+supabase secrets list --project-ref <ref>
+```
+
+### Restoring the Frontend
+
+The frontend is a git-deployed Cloudflare Pages site. To roll back:
+
+```bash
+# 1. Revert to a previous commit
+git revert <bad-commit>   # or git checkout <good-commit>
+
+# 2. Push to the appropriate branch
+git push origin main       # Cloudflare auto-deploys from main
+```
+
+Alternatively, use the Cloudflare Pages dashboard to roll back to a previous deployment.
+
+### Quick Recovery Checklist
+
+If something goes wrong after a deploy:
+
+| What broke | Recovery action |
+|-----------|----------------|
+| Bad migration corrupted data | PITR restore via Supabase Dashboard |
+| Bad migration broke schema | Write a corrective migration, push it |
+| Edge function broken | `git checkout` + `npm run deploy:functions` |
+| Storage files deleted | Restore from local backup or sync from another env |
+| Frontend broken | `git revert` or Cloudflare Pages rollback |
+| Secrets lost | Regenerate from each service provider |
+
+---
+
 ## Critical Rules
 
 1. **NEVER sync user data** — the data sync script blocks user tables automatically
