@@ -1004,3 +1004,433 @@ For each major dashboard section (enrollments, goals, decisions, tasks, groups, 
 | 8 | Empty state components for all sections | LOW | 1 day | Create reusable EmptyState component |
 | 9 | No role selection in self-signup | LOW (pilot) | 1 week | Role selection page + admin approval |
 | 10 | No bulk user import | LOW (pilot) | 3 days | CSV upload in admin panel |
+
+---
+
+## Part 9: Capability Assessments, Scenarios, Feedback & Resources — Deep Analysis
+
+### 9.1 Capability Assessment Access Modes
+
+The system supports **three assessment modes** (`capability_assessments.assessment_mode`):
+
+| Mode | Who Assesses | How It Works | Status |
+|------|-------------|-------------|--------|
+| `self` | Client assesses themselves | Slider rating (1–rating_scale) per question, domain notes | **WORKING** |
+| `evaluator` | Instructor/coach assesses the client | Same form, but `is_self_assessment=false`, `evaluator_id` set | **WORKING** |
+| `both` | Client + instructor/coach + peers | Separate snapshots, comparison via CapabilityEvolutionChart | **WORKING** |
+
+**All five access paths:**
+
+| Path | Entry Point | Flow | Status |
+|------|------------|------|--------|
+| **Public (web)** | `/public-assessment/:slug` via `PublicAssessment.tsx` | Unauthenticated, email capture, PDF download, scoring via `compute-assessment-scores` | **WORKING** — separate `assessment_definitions` table |
+| **Self-assessment (client)** | `/capabilities/:id` via `CapabilityAssessments.tsx` | Client rates themselves, auto-save drafts, creates `capability_snapshots` | **WORKING** |
+| **Module-linked** | Module detail via `ModuleSelfAssessment.tsx` | `program_modules.capability_assessment_id` triggers in-context assessment | **WORKING** — shows "Self ✓" / "Evaluator ✓" badges |
+| **Instructor/coach evaluation** | Instructor creates snapshot with `is_self_assessment=false` | Same form, evaluator_id recorded, shared via snapshot sharing | **WORKING** |
+| **Peer evaluation** | Group panel via `GroupPeerAssessmentsPanel.tsx` | Configured per group in `group_peer_assessments`, peer selects group member | **WORKING** |
+
+### 9.2 Assessment Architecture — Three Separate Systems
+
+The platform has **three distinct assessment systems** that share some infrastructure but serve different purposes:
+
+| System | Table | Scoring | Visualization | Client Action |
+|--------|-------|---------|---------------|---------------|
+| **Capability Assessments** | `capability_assessments` | Domain averages from slider ratings (stored in `capability_snapshots`) | Radar + line evolution charts | Rate self / be evaluated / peer review |
+| **Self-Assessments (Public)** | `assessment_definitions` | Server-side dimension scoring via `compute-assessment-scores` (option → dimension → interpretation) | Dimension bars + interpretation text | Answer multiple-choice questions, get scored |
+| **Psychometric Assessments** | `psychometric_assessments` | None (document upload only) | None | Upload PDF, share with coach |
+
+**Important distinction:**
+- `assessment_categories` is shared across all three systems (Personality, Aptitude, Career, Emotional Intelligence, Leadership, Other)
+- `assessment_families` is used only by capability assessments
+- `assessment_dimensions`, `assessment_option_scores`, `assessment_interpretations` belong to the `assessment_definitions` system (public/self-assessments)
+- `capability_domains`, `capability_domain_questions` belong to the `capability_assessments` system
+
+### 9.3 Scoring Architecture — Two Different Engines
+
+**Engine A: Capability Assessment Scoring (client-side aggregation)**
+```
+capability_snapshots → snapshot_domain_ratings → domain averages
+```
+- Client or evaluator fills slider ratings per question
+- Domain averages calculated from question ratings
+- Pass/fail: configurable threshold (overall or per-domain)
+- Comparison: radar/line charts across snapshots (self vs evaluator vs peer, over time)
+- **No server-side scoring matrix** — ratings are direct (1-N scale)
+
+**Engine B: Assessment Definition Scoring (server-side `compute-assessment-scores`)**
+```
+assessment_definitions → questions → options → option_scores → dimension_scores → interpretations
+```
+- Client answers multiple-choice questions
+- Server fetches `assessment_option_scores` (never exposed to frontend)
+- Sums option scores by dimension
+- Evaluates `assessment_interpretations` conditions against dimension scores
+- Returns matched interpretation text to client
+- **Scoring matrix is confidential** — protects assessment integrity
+
+### 9.4 What's Working Well
+
+1. **Auto-save drafts** — capability assessments save every 3 seconds, clients can resume later
+2. **Multi-evaluator comparison** — radar chart overlays self vs instructor vs peer ratings
+3. **Evolution tracking** — line chart shows domain score changes over time across all snapshots
+4. **Pass/fail flexibility** — configurable per assessment: overall threshold OR all-domains-must-pass
+5. **IP protection for scenarios** — watermarking, context menu disabled, text un-selectable
+6. **Module integration** — assessments render inline in module detail with completion badges
+7. **9 resource sources unified** — MyResources.tsx consolidates goals, tasks, reflections, assignments, coach feedback, module content, personalized resources, and shared library
+
+### 9.5 Capability Assessment Issues
+
+#### 9.5.1 No AI-Assisted Evaluation
+**Problem:** All evaluator feedback is manual. Instructors write free-text feedback and assign numeric scores with no AI support.
+**Impact:** Evaluation is time-consuming (especially for scenarios with many sections). Quality varies by evaluator.
+**Recommendation:**
+```
+Add AI-assisted evaluation to scenario evaluation and capability assessment review:
+
+1. In ScenarioEvaluationPage.tsx, add an "AI Suggest" button next to each paragraph feedback field:
+   - Send client response + question context + domain rubric to Vertex AI
+   - AI returns: suggested score, feedback draft, strength/weakness highlights
+   - Instructor reviews/edits AI suggestions before saving
+
+2. In capability assessment evaluator view, add "AI Compare":
+   - Compare client self-rating vs evaluator rating
+   - AI generates gap analysis: "Client rated themselves 8/10 on Leadership but evaluator gave 5/10 — significant self-perception gap in [specific questions]"
+
+3. Use existing Vertex AI infrastructure (ai-config.ts)
+4. Gate behind AI credit system (existing credit deduction)
+```
+
+#### 9.5.2 No Assessment Templates for Common Frameworks
+**Problem:** Admins must build every assessment from scratch. No pre-built templates for common competency frameworks.
+**Impact:** Setting up a new assessment with domains + questions + scoring takes hours.
+**Recommendation:** Create seed assessment templates for common frameworks:
+- Leadership Competencies (6 domains, 30 questions)
+- Communication Skills (4 domains, 20 questions)
+- Project Management (5 domains, 25 questions)
+- Emotional Intelligence (4 domains, 20 questions)
+
+#### 9.5.3 Assessment Insights Not Connected to Goals
+**Problem:** Assessment results show strengths and weaknesses, but there's no automatic connection to the goals system.
+**Impact:** Client takes assessment → sees low score in "Communication" → must manually create a goal. No prompt.
+**Recommendation:**
+```
+After assessment completion (capability or self-assessment), show a "Create Goals" prompt:
+
+1. In CapabilityAssessmentDetail.tsx, after viewing results:
+   - Identify lowest-scoring domains (below pass threshold or bottom quartile)
+   - Show: "You scored 3.2/5 in Communication. Would you like to set a goal to improve?"
+   - Button: "Create Goal" → pre-fills goal with domain name, current score, target score
+   - Links goal to assessment via goal.assessment_snapshot_id (new field)
+
+2. For public assessments (assessment_definitions), after compute-assessment-scores:
+   - Show: "Based on your results, here are suggested development areas:"
+   - List dimensions with low scores + interpretation text
+   - If user signs up, carry these into their goal recommendations
+```
+
+#### 9.5.4 No Assessment Reminders or Scheduling
+**Problem:** No way to schedule recurring assessments (e.g., "retake this assessment every 90 days").
+**Impact:** Evolution charts are powerful but depend on clients remembering to retake.
+**Recommendation:** Add assessment cadence configuration: admin sets "recommended retake interval" per assessment. System sends notification when interval expires.
+
+### 9.6 Scenario System Issues
+
+#### 9.6.1 Scenario Evaluation is Not Linked to Auto-Scoring
+**Problem:** Scenarios link to `capability_assessments` to define domains and questions, but evaluation is 100% manual. The instructor assigns numeric scores per question — there's no auto-computation from assessment scoring rules.
+**Impact:** Scoring is inconsistent across evaluators. Same response could get different scores from different instructors.
+**Recommendation:**
+```
+Add scoring rubrics to scenario paragraphs:
+
+1. In admin ScenarioTemplateEditor, for each paragraph's linked questions:
+   - Allow admin to define scoring rubric: "Score 5 if response mentions X AND demonstrates Y"
+   - Store rubric in paragraph_question_links.rubric_text (new field)
+
+2. In ScenarioEvaluationPage, display rubric alongside each question score input:
+   - Instructor sees: "Communication (0-5): [rubric: 'Score 5 if candidate demonstrates active listening AND provides structured feedback']"
+   - Helps standardize scoring across evaluators
+
+3. Future: AI auto-suggests scores based on rubric matching (see 9.5.1)
+```
+
+#### 9.6.2 No Scenario Peer Review
+**Problem:** Scenarios are only evaluated by instructors. No mechanism for peer feedback on scenario responses.
+**Impact:** Misses the learning opportunity of peer-to-peer feedback, which is valuable in group cohorts.
+**Recommendation:**
+```
+Add peer review to scenarios:
+
+1. New assignment mode: "peer_review" on scenario_assignments
+2. After client submits, randomly assign 2-3 peers from same group/cohort
+3. Peers see responses (read-only) and provide feedback (not scores) per paragraph
+4. Client sees peer feedback alongside instructor evaluation
+5. Peer feedback is unscored (qualitative only) — only instructor scores count
+```
+
+#### 9.6.3 No Scenario Re-Submission
+**Problem:** Once submitted, scenarios are read-only. Client cannot revise and re-submit after receiving feedback.
+**Impact:** Learning loop is broken — client reads feedback but can't demonstrate improvement.
+**Recommendation:** Add "Request Revision" button for instructor, which reopens the scenario for client editing. Track revision count.
+
+### 9.7 Feedback System Issues
+
+The platform has **9 distinct feedback mechanisms** (not unified):
+
+| Mechanism | Source → Target | Storage | Status |
+|-----------|----------------|---------|--------|
+| Scenario evaluation | Instructor → Client (per paragraph + overall) | `paragraph_evaluations`, `scenario_assignments.overall_notes` | **WORKING** |
+| Module feedback | Coach/Instructor → Client (per module) | `coach_module_feedback` with templates + attachments | **WORKING** |
+| Assignment grading | Instructor → Client (per assignment) | `module_assignments.overall_score/comments` | **WORKING** |
+| Assessment interpretations | System → Client (scored) | `assessment_responses.interpretations` | **WORKING** |
+| Coach general feedback | Coach → Client | Via module feedback templates | **WORKING** |
+| Decision AI insights | AI → Client | `decision-insights` edge function | **WORKING** (AI-gated) |
+| Reflection prompts | AI → Client | `generate-reflection-prompt` edge function | **EXISTS** (unclear trigger) |
+| Goal feedback | Coach → Client | Unclear storage | **UNCLEAR** |
+| Session feedback | Post-session | Unclear implementation | **UNCLEAR** |
+
+**Key issue:** No unified feedback inbox. Client must navigate to each feature (assignments, scenarios, modules, goals) to find feedback. No "You have 3 new feedback items" notification aggregation.
+
+**Recommendation:**
+```
+Create a unified feedback hub:
+
+1. Create src/pages/client/MyFeedback.tsx:
+   - Aggregate all feedback across scenarios, modules, assignments, assessments
+   - Show chronologically: "Feb 15 — Module 3 feedback from Coach Emily" / "Feb 14 — Scenario evaluation from Instructor John"
+   - Mark read/unread
+   - Link to source context (jump to specific scenario/module/assignment)
+
+2. Add feedback count badge to sidebar nav item
+3. Add "Recent Feedback" widget to ClientDashboard.tsx
+```
+
+### 9.8 Resource System Issues
+
+#### 9.8.1 No Resource Recommendations
+**Problem:** Clients see a flat list of all resources they can access. No "Recommended for you" based on assessment results, goals, or current module.
+**Impact:** Resource library becomes overwhelming as it grows. Clients don't discover relevant resources.
+**Recommendation:** Add AI-powered resource recommendations based on assessment scores, current module context, and goal alignment.
+
+#### 9.8.2 Credit-Gated Resources UX
+**Problem:** Resources with `is_consumable=true` deduct credits on access. But there's no clear preview of what the resource contains before spending credits.
+**Impact:** Users may spend credits on resources that aren't useful to them.
+**Recommendation:** Add a resource preview (first page of PDF, video thumbnail, or AI-generated summary) visible before credit deduction.
+
+#### 9.8.3 No Resource Ratings or Feedback
+**Problem:** No way for clients to rate or review resources they've accessed.
+**Impact:** Admin has no signal on resource quality. Popular/useful resources look the same as poor ones.
+**Recommendation:** Add simple 1-5 star rating + optional short review per resource. Show average rating in resource listings.
+
+---
+
+## Part 10: Psychometric Assessments — Current State & Recommendations
+
+### 10.1 Current Implementation
+
+Psychometric assessments are a **completely separate system** from capability assessments. They function as a **document management catalog** — not as scored or analyzed assessments.
+
+**What exists:**
+
+| Feature | Implementation |
+|---------|---------------|
+| Assessment catalog | `psychometric_assessments` table — name, provider, category, cost, external URL |
+| Client browsing | `ExploreAssessments.tsx` — filter by category, search, express interest |
+| Interest registration | `assessment_interest_registrations` — pending → contacted → completed/declined |
+| Admin management | `AssessmentsManagement.tsx` — CRUD on catalog, manage interest registrations |
+| PDF upload | `MyAssessments.tsx` — clients upload result PDFs to `psychometric-assessments` storage bucket |
+| Sharing | `user_assessment_shares` — share uploaded PDFs with coaches/instructors |
+| Categories | 6 categories: Personality, Aptitude, Career, Emotional Intelligence, Leadership, Other |
+| Plan gating | `feature_key` on each assessment — can restrict by subscription plan |
+
+**What does NOT exist:**
+
+| Missing Feature | Impact |
+|----------------|--------|
+| **No in-app psychometric assessment taking** | Clients must go to external site, take assessment, download PDF, upload to platform |
+| **No scoring engine** | No analysis of uploaded PDFs — they're just documents |
+| **No visualization** | Unlike capability assessments (radar charts, evolution), psychometrics have zero visualization |
+| **No external API integration** | No connection to DISC, MBTI, Hogan, CliftonStrengths, or any provider API |
+| **No comparison** | Can't compare psychometric results over time or against benchmarks |
+| **No AI interpretation** | No AI-powered analysis of uploaded assessment results |
+| **No cross-assessment correlation** | No link between psychometric results and capability assessment results |
+| **No team/group psychometric view** | Org admins can't see team psychometric profiles (e.g., DISC team wheel) |
+| **No client status tracking** | Client registers interest but has no way to check status (same issue as program interest, Part 8) |
+
+### 10.2 Recommended Enhancements (Prioritized)
+
+#### Tier 1 — Quick Wins (1-2 weeks each)
+
+**10.2.1 AI-Powered PDF Interpretation**
+Parse uploaded psychometric PDFs using AI (Vertex AI) and extract structured data.
+```
+When client uploads a psychometric PDF:
+
+1. Send PDF text to Vertex AI with prompt:
+   "Extract the assessment type, dimension scores, and key findings from this psychometric report"
+2. Store extracted data in user_assessments.extracted_data (new JSON field)
+3. Display extracted dimensions as bar charts in MyAssessments
+4. Show AI-generated summary: "Your DISC profile indicates..."
+5. Gate behind AI credits (existing credit system)
+```
+
+**10.2.2 Psychometric Result Visualization**
+Add basic visualization for uploaded/extracted psychometric results.
+```
+Create src/components/assessments/PsychometricResultsChart.tsx:
+
+1. Based on extracted_data from PDF parsing, render:
+   - Bar chart for dimension scores (e.g., DISC: D=65, I=42, S=78, C=55)
+   - Pie chart for type distributions
+   - Narrative summary card
+
+2. For assessments without extracted data: show "Upload your results to get visualizations"
+3. Reuse existing Recharts library (already used for capability charts)
+```
+
+**10.2.3 Interest Registration Status Tracking**
+Same fix as program interest (Part 8, Journey C) — add client-facing status view.
+
+#### Tier 2 — Medium Effort (2-4 weeks each)
+
+**10.2.4 Built-In Psychometric Assessments**
+Build self-service psychometric instruments directly in the platform.
+```
+Extend the assessment_definitions system to support psychometric-style assessments:
+
+1. Add assessment_type field to assessment_definitions: 'self_assessment' | 'psychometric'
+2. Psychometric assessments use:
+   - Forced-choice questions (pick A or B, not rate 1-5)
+   - Dimension scoring via option_scores (already exists)
+   - Profile-based interpretations (already exists via assessment_interpretations)
+
+3. Create psychometric-specific question types:
+   - Likert scale (Strongly Disagree → Strongly Agree)
+   - Forced choice (A vs B)
+   - Ranking (order items 1-N)
+   - Situational judgment (scenario → best/worst response)
+
+4. Build well-known free framework clones:
+   - Big Five (OCEAN) — public domain, 50 questions
+   - VIA Character Strengths — Creative Commons, 120 questions
+   - Emotional Intelligence (basic) — 30 questions
+   - Leadership Style — 40 questions
+
+5. These use compute-assessment-scores for server-side scoring
+6. Results show dimension charts + interpretation text
+```
+
+**10.2.5 Cross-Assessment Correlation Dashboard**
+Connect psychometric results with capability assessment results.
+```
+Create src/pages/client/AssessmentInsights.tsx:
+
+1. Aggregate all assessment data:
+   - Capability snapshots (domain scores)
+   - Psychometric results (extracted dimensions)
+   - Self-assessment responses (dimension scores)
+
+2. Show correlation matrix:
+   - "Your DISC 'Dominance' score correlates with high ratings in 'Leadership' capability domain"
+   - "Your low 'Emotional Intelligence' psychometric score aligns with improvement area in 'Communication' capability domain"
+
+3. AI-powered insight generation:
+   - Send all assessment data to Vertex AI
+   - Generate: "Based on your combined assessment profile, your key development areas are..."
+   - Suggest specific programs/modules/goals
+
+4. Update recommendations engine to use psychometric data
+```
+
+**10.2.6 Team Psychometric View (for Org Admins)**
+Let org admins see team psychometric profiles for team-building.
+```
+Create src/pages/org-admin/TeamPsychometrics.tsx:
+
+1. Aggregate consented member psychometric data (respects sharing_consent)
+2. Visualize team composition:
+   - DISC team wheel (how many D/I/S/C types)
+   - Strengths distribution (most/least common strengths)
+   - Development area heatmap
+
+3. Show team balance recommendations:
+   - "Your team is heavy on 'Influence' types but lacks 'Conscientiousness' — consider this in hiring"
+   - "3 team members share the development area 'Strategic Thinking' — consider a group workshop"
+
+4. Export team profile as PDF for stakeholders
+```
+
+#### Tier 3 — Strategic (1-3 months)
+
+**10.2.7 External Psychometric Provider APIs**
+Integrate directly with psychometric assessment providers.
+
+| Provider | Integration Type | Cost | Effort |
+|----------|-----------------|------|--------|
+| **DISC (TTI Success)** | REST API — send email invite, receive scores | Per-assessment license | 2-3 weeks |
+| **CliftonStrengths (Gallup)** | No public API — PDF upload only | $24.99/assessment | N/A |
+| **Hogan** | Enterprise API — requires partnership | Negotiated | 1-2 months |
+| **VIA Character Strengths** | Free API available | Free | 1-2 weeks |
+| **16Personalities (MBTI-like)** | No public API — scraping not recommended | Free for users | N/A |
+
+**Recommended first integration:** VIA Character Strengths (free, API available, widely respected).
+
+**10.2.8 Adaptive Psychometric Assessments**
+Build assessments that adapt question difficulty based on responses (Item Response Theory).
+```
+This is advanced but differentiating:
+
+1. Use IRT (Item Response Theory) to build adaptive assessments
+2. Each question has calibrated difficulty and discrimination parameters
+3. After each response, system selects the next optimal question
+4. Converges to accurate score in fewer questions (30 instead of 100)
+5. Better user experience (shorter, more engaging) + more accurate results
+
+Implementation: Edge function running IRT algorithm, question bank with calibrated parameters.
+This is a competitive differentiator — most coaching platforms don't offer adaptive assessments.
+```
+
+### 10.3 Psychometric Assessment Priority Matrix
+
+| # | Enhancement | Effort | Impact | Dependencies |
+|---|------------|--------|--------|-------------|
+| 1 | Interest status tracking for clients | 4 hours | MEDIUM | None |
+| 2 | AI PDF interpretation | 1 week | HIGH | Vertex AI (already configured) |
+| 3 | Basic result visualization (bar/pie charts) | 3 days | MEDIUM | Extracted data from #2 |
+| 4 | Built-in Big Five / VIA assessments | 2-3 weeks | HIGH | Extend assessment_definitions |
+| 5 | Cross-assessment correlation dashboard | 2 weeks | HIGH | Data from #2 and #4 |
+| 6 | Team psychometric view for orgs | 2 weeks | MEDIUM | Member consent + data from #2 |
+| 7 | VIA Character Strengths API integration | 1-2 weeks | MEDIUM | API partnership |
+| 8 | Adaptive assessments (IRT) | 2-3 months | HIGH (differentiator) | Research + calibration |
+
+### 10.4 Combined Assessment System Vision
+
+The long-term goal should be a **unified assessment intelligence layer**:
+
+```
+┌─────────────────────────────────────────────────┐
+│              Assessment Intelligence             │
+│                                                   │
+│  Capability ──┐                                   │
+│  Assessments  │                                   │
+│               ├─→ Unified Profile ──→ AI Insights │
+│  Psychometric │      │                            │
+│  Assessments  │      ├─→ Goal Recommendations     │
+│               │      ├─→ Program Matching          │
+│  Self-        │      ├─→ Coach Matching            │
+│  Assessments ─┘      ├─→ Team Composition          │
+│                      └─→ Evolution Tracking        │
+│                                                   │
+│  Scenario ──→ Scores feed into capability profile │
+│  Evaluations                                      │
+│                                                   │
+│  Assignment ──→ Scores feed into capability       │
+│  Grading        profile (via scoring_assessment)  │
+└─────────────────────────────────────────────────┘
+```
+
+All assessment data (capability, psychometric, self-assessment, scenario scores, assignment scores) should feed into a **single client intelligence profile** that drives:
+- Personalized program recommendations
+- Coach/instructor matching based on development areas
+- Goal suggestions based on lowest-scoring domains
+- Team composition insights for org admins
+- AI-powered development planning
