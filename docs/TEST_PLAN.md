@@ -85,8 +85,28 @@ I want to expand test coverage for this project. Follow existing patterns from s
 Start with Priority 1 unit tests. After each file, run the tests to verify they pass before moving to the next one.
 ```
 
+## E2E Setup (one-time)
+
+Before running E2E tests, install Playwright browsers (~200-300MB download):
+
+```bash
+npx playwright install
+```
+
+To run E2E tests, you need the dev server running in a separate terminal:
+
+```bash
+# Terminal 1 — dev server
+npm run dev
+
+# Terminal 2 — run E2E tests
+npx playwright test                          # all E2E tests
+npx playwright test e2e/tests/auth/          # specific folder
+npx playwright test e2e/tests/auth/password-reset.spec.ts  # specific test
+```
+
 ## Tips
-- Use **Composer** (Cmd+I) for this task — it creates/edits multiple files
+- Use **Agent mode** in Cursor sidebar chat for this task — it creates/edits multiple files
 - If the response is too long, say "continue with the next test file"
 - After it writes each test, ask it to run `npm run test` to verify
 - For E2E tests, you'll need test users in preprod — Cursor can help create them via SQL

@@ -14,7 +14,7 @@ export function formatCredits(credits: number): string {
  * Format price from cents to a currency string.
  */
 export function formatPriceFromCents(cents: number, currency: string = "EUR"): string {
-  return new Intl.NumberFormat("en-EU", {
+  return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency: currency.toUpperCase(),
   }).format(cents / 100);

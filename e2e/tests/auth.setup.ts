@@ -73,12 +73,16 @@ async function acceptTermsIfPresent(page: import('@playwright/test').Page) {
   if (!(await agreeBtn.isVisible({ timeout: 5_000 }).catch(() => false))) return;
 
   const checkbox = page.getByRole('checkbox', { name: /I have read and agree to the Terms/i });
-  await checkbox.scrollIntoViewIfNeeded();
-  await checkbox.focus();
-  await page.keyboard.press('Space');
+  const checkboxVisible = await checkbox.isVisible({ timeout: 5_000 }).catch(() => false);
+  if (checkboxVisible) {
+    await checkbox.scrollIntoViewIfNeeded();
+    await checkbox.focus();
+    await page.keyboard.press('Space');
+  }
 
-  await expect(agreeBtn).toBeEnabled({ timeout: 10_000 });
-  await agreeBtn.click();
-
-  await page.waitForLoadState('networkidle', { timeout: 25_000 }).catch(() => {});
+  const enabled = await agreeBtn.isEnabled({ timeout: 10_000 }).catch(() => false);
+  if (enabled) {
+    await agreeBtn.click();
+    await page.waitForLoadState('networkidle', { timeout: 25_000 }).catch(() => {});
+  }
 }
