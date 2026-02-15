@@ -6,20 +6,11 @@
 
 ### Critical — Fix before pilot users encounter them
 
-#### 1.1 Credit Loss on Failed Enrollment
-**File:** `src/hooks/useProgramEnrollment.ts` (lines 179-233)
-**Problem:** Credits are deducted BEFORE enrollment is created. If enrollment fails, credits are lost with no refund. The code has a comment acknowledging this.
-**Impact:** Users lose credits on any enrollment failure (DB error, network timeout).
-**Fix:** Create an edge function that atomically deducts credits + creates enrollment in a single DB transaction with rollback.
-
-**Cursor prompt:**
-```
-In src/hooks/useProgramEnrollment.ts, the enrollment flow deducts credits before creating the enrollment. If enrollment fails, credits are lost. Fix this by:
-1. Create a new edge function supabase/functions/enroll-in-program/index.ts
-2. The function should: validate credits → start DB transaction → deduct credits → create enrollment → commit (or rollback on failure)
-3. Update useProgramEnrollment.ts to call this edge function instead of doing credits + enrollment separately
-4. Follow existing edge function patterns (auth check, CORS, error handling)
-```
+#### 1.1 Credit Loss on Failed Enrollment — RESOLVED (2026-02-15)
+**File:** `src/pages/admin/ClientDetail.tsx` (was lines 384-431)
+**Problem:** Credits were deducted BEFORE enrollment was created. If enrollment failed, credits were lost with no refund.
+**Resolution:** Created `enroll_with_credits` PL/pgSQL RPC that wraps credit consumption + enrollment insert in a single DB transaction with automatic rollback. ClientDetail.tsx now calls one atomic RPC instead of two separate operations. Also fixed M6 (credit batch race condition) by adding `FOR UPDATE SKIP LOCKED` to `consume_credits_fifo`.
+**Migration:** `20260215190459_54d8beb9-850f-4f5f-b328-89926cb764b3.sql`
 
 #### 1.2 Cal.com Booking Creates Orphaned Bookings on DB Failure
 **File:** `supabase/functions/calcom-create-booking/index.ts` (lines 219-257)
@@ -149,14 +140,9 @@ In supabase/functions/calcom-create-booking/index.ts and other edge functions th
 4. This pattern should apply to: calcom-create-booking, notify-assignment-submitted, notify-assignment-graded, decision-reminders, subscription-reminders
 ```
 
-#### 1.9 Credit Balance Race Condition
+#### 1.9 Credit Balance Race Condition — RESOLVED (2026-02-15)
 **Problem:** Concurrent requests could both pass balance check and deduct, going negative.
-**Action:** Audit the `consume_credit_service` RPC to verify it uses `SELECT ... FOR UPDATE`.
-
-**Cursor prompt:**
-```
-Check the consume_credit_service RPC function in supabase/migrations/ for row-level locking. Search for the function definition and verify it uses SELECT ... FOR UPDATE or SERIALIZABLE isolation on user_credit_balances before deducting. If it doesn't, create a migration to fix it.
-```
+**Resolution:** Added `FOR UPDATE SKIP LOCKED` to both credit_batches SELECT loops in `consume_credits_fifo`. This was fixed as part of the C3/M6 migration (`20260215190459_54d8beb9-850f-4f5f-b328-89926cb764b3.sql`).
 
 #### 1.10 Entitlement Edge Case (org deny override)
 **Problem:** Org sets feature limit=0 (disable), but user's subscription gives limit=100 → merged result is 100. Org intent bypassed.
@@ -226,9 +212,9 @@ Use shadcn/ui Alert component with variant="default".
 **Problem:** Mix of skeleton loaders and inline "Loading..." text.
 **Action:** Standardize with shadcn/ui Skeleton. Good task for Cursor.
 
-#### 1.15 AuthContext Role Fallback Bug
-**Problem:** `if (roles.length === 0) roles = ["client"]` in AuthContext.tsx line 135. Must fix before re-enabling Google OAuth.
-**Action:** Replace with error redirect.
+#### 1.15 AuthContext Role Fallback Bug — RESOLVED (2026-02-15)
+**Problem:** `if (roles.length === 0) roles = ["client"]` in AuthContext.tsx line 135. Silently assigned client role on fetch failure.
+**Resolution:** Removed all 4 silent "client" fallbacks. Added `authError` state to AuthContext. ProtectedRoute now shows "Unable to Load Your Account" error card (with retry/sign-out) on fetch failure, and "Account Not Configured" for users with genuinely zero roles.
 
 ---
 
@@ -638,26 +624,11 @@ There are **3 ways to create accounts** in the system:
 
 ### Critical Issues for Re-enabling Self-Signup
 
-#### 7.1 AuthContext Role Fallback — SECURITY RISK
-**File:** `src/contexts/AuthContext.tsx` (line 135)
-**Problem:** `if (roles.length === 0) roles = ["client"]` — any Google OAuth user with no roles gets auto-assigned `client`. When Google OAuth is re-enabled, unregistered Google users bypass the signup flow entirely and get client access.
-**Fix:** Instead of defaulting to `client`, redirect to a "complete registration" page or block access until admin approves.
-
-**Cursor prompt:**
-```
-In src/contexts/AuthContext.tsx, line 135 has a dangerous fallback: if a user has no roles, they default to "client". This is a security risk when Google OAuth is re-enabled because unregistered users bypass signup.
-
-Fix this by:
-1. Remove the `roles = ["client"]` fallback
-2. If roles.length === 0 after fetching from user_roles:
-   - Set a new state: `needsRegistration = true`
-   - In the auth flow, redirect users with no roles to a new page `/complete-registration`
-3. Create src/pages/CompleteRegistration.tsx that:
-   - Shows "Your account needs to be set up by an administrator"
-   - Has a "Request Access" button that inserts into a new `access_requests` table
-   - Shows a "Back to Login" button
-4. Add route in App.tsx for /complete-registration (public, requires auth but no role)
-```
+#### 7.1 AuthContext Role Fallback — RESOLVED (2026-02-15)
+**File:** `src/contexts/AuthContext.tsx`
+**Problem:** `if (roles.length === 0) roles = ["client"]` — any user with no roles got auto-assigned `client`.
+**Resolution:** Removed all silent "client" fallbacks. Added `authError` state to AuthContext. ProtectedRoute shows error card on fetch failure, "Account Not Configured" card for users with zero roles. This unblocks safe re-enabling of Google OAuth (Phase 5).
+> **Note:** The `/complete-registration` page and `access_requests` table from the original Cursor prompt are still needed for Phase 5 (self-signup re-enable) but are separate work items.
 
 #### 7.2 No Role Selection During Signup
 **Problem:** Self-signup always assigns `client`. There's no way for coaches, instructors, or org admins to self-register.
@@ -1446,8 +1417,8 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | # | Issue | Source | Effort | Description |
 |---|-------|--------|--------|-------------|
 | C1 | Credits page FeatureGate blocks self-service | Part 8 (8.2B) | 1 hour | Free-tier users can't reach `/credits` to buy top-ups. Remove/split FeatureGate on Credits.tsx |
-| C2 | AuthContext role fallback — security risk | Part 7 (7.1), Part 1 (1.15) | 2 hours | `roles = ["client"]` fallback lets unregistered Google OAuth users bypass signup. Replace with registration redirect |
-| C3 | Credit loss on failed enrollment | Part 1 (1.1) | 1 day | Credits deducted before enrollment created — no refund on failure. Create atomic edge function |
+| ~~C2~~ | ~~AuthContext role fallback~~ — **RESOLVED 2026-02-15** | Part 7 (7.1), Part 1 (1.15) | ~~2 hours~~ | Removed silent "client" fallback. Added `authError` state + error/no-roles UI in ProtectedRoute |
+| ~~C3~~ | ~~Credit loss on failed enrollment~~ — **RESOLVED 2026-02-15** | Part 1 (1.1) | ~~1 day~~ | Created atomic `enroll_with_credits` RPC. Also fixed M6 (`FOR UPDATE SKIP LOCKED`) |
 | C4 | Cal.com orphaned bookings on DB failure | Part 1 (1.2) | 4 hours | Return partial success + booking UID instead of 500, add idempotency key |
 
 ### 11.2 High Priority (Fix Before Wider Pilot)
