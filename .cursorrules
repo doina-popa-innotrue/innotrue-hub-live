@@ -18,10 +18,10 @@ Stack: React 18 + Vite 5 + TypeScript + Supabase + Tailwind CSS + shadcn/ui.
 - Use `@/` path alias for imports (maps to `src/`)
 - UI components use shadcn/ui from `@/components/ui/`
 - Data fetching uses TanStack React Query hooks in `src/hooks/`
-- Forms use React Hook Form + Zod validation
+- Forms: mostly manual state; React Hook Form + Zod used in a few forms (convention available but not widespread)
 - State management: React Query for server state, React Context for auth
-- All pages are lazy-loaded in `src/App.tsx`
-- 5 user roles: admin, client, coach, instructor, org_admin
+- 160 pages lazy-loaded in `src/App.tsx` (3 critical-path pages eagerly loaded: Index, Auth, NotFound)
+- 4 app_role values: admin, client, coach, instructor (org_admin is a separate org_role enum)
 
 ## File Structure
 - `src/pages/` — Page components (lazy-loaded)
@@ -31,12 +31,12 @@ Stack: React 18 + Vite 5 + TypeScript + Supabase + Tailwind CSS + shadcn/ui.
 - `src/contexts/` — React contexts (AuthContext, ThemeContext)
 - `src/lib/` — Utility functions and helpers
 - `src/integrations/supabase/` — Supabase client, types, generated types
-- `supabase/functions/` — 63 Deno edge functions
+- `supabase/functions/` — 61 Deno edge functions
 - `supabase/functions/_shared/` — Shared edge function utilities (CORS, AI config, email utils)
-- `supabase/migrations/` — 393 database migrations
+- `supabase/migrations/` — 402 database migrations
 
 ## Database
-- 369+ tables, 20+ enum types, 393 migrations
+- 369+ tables, 25 enum types, 402 migrations
 - Key enums: app_role, program_category, module_type, enrollment_status
 - Plans system: tier_level 0-4, credit allowances, feature limits
 - Dual credit system: individual (user_credit_balances) + org (org_credit_balances)
@@ -58,7 +58,7 @@ Stack: React 18 + Vite 5 + TypeScript + Supabase + Tailwind CSS + shadcn/ui.
 - All have `verify_jwt = false` in config.toml (custom auth checks inside)
 
 ## Testing
-- Unit tests: Vitest (210 tests in `src/lib/__tests__/`)
+- Unit tests: Vitest (279 tests in 16 files under `src/lib/__tests__/`)
 - E2E tests: Playwright
 - CI: GitHub Actions (lint, typecheck, test, build)
 
@@ -101,6 +101,7 @@ Stack: React 18 + Vite 5 + TypeScript + Supabase + Tailwind CSS + shadcn/ui.
 - `assignment` → Assignments (module_assignment_configs → module_assignments, instructor grading)
 - `reflection` → Resources + Scenarios (module_reflection_resources)
 - `resource` → Resources (module_client_content_resources)
+- `content` → Generic content modules
 - Scenarios linked via `scenario_assignments.module_id`
 - Assessments linked via `program_modules.capability_assessment_id`
 

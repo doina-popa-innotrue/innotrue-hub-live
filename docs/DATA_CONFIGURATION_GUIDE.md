@@ -297,7 +297,7 @@ Track-linked services can have different pricing for track members.
 **Needed by:** Notification types
 
 ### 3.7 Notification Types (`notification_types`)
-34 types organized under the 8 categories. Each type has:
+31 types organized under the 8 categories. Each type has:
 - `key` — used in code to trigger notifications
 - `is_critical` — if true, cannot be disabled by user
 - `email_template_key` — links to HTML email template
@@ -582,7 +582,7 @@ The `structure` JSON field defines the form fields clients fill out. Admin creat
 
 **Status Flow:**
 ```
-draft → in_progress → submitted → reviewed
+draft → submitted → reviewed → completed
 ```
 
 **Data Flow:**
@@ -677,9 +677,8 @@ draft → submitted → in_review → evaluated
 7. Instructor reviews, adds feedback (`overall_notes`) → status = `evaluated`
 8. If linked to assessment, system may compute scores from responses
 
-**Template Locking:**
-- `is_locked` — prevents edits (used after scenario has active assignments)
-- `is_protected` — prevents deletion
+**Template Protection:**
+- `is_protected` — prevents deletion (defaults to true)
 
 **Admin UI:** Scenario Templates Management, Scenario Categories Management
 **Instructor UI:** Scenario Assignments Management (assign to students), Scenario Evaluation Page (grade)
@@ -738,8 +737,9 @@ Mapping stored in `calcom_event_type_mappings` table (configured via admin UI).
 
 **Session Lifecycle:**
 ```
-draft → scheduled → confirmed (via Cal.com webhook) → completed
-                  → cancelled
+draft → scheduled → requested → confirmed (via Cal.com webhook) → in_progress → completed
+                              → cancelled
+                              → rescheduled
 ```
 
 **Booking Flow:**
@@ -855,6 +855,7 @@ When a program module is created, its `module_type` determines which feature sys
 | `assignment` | Assignments | `module_assignment_configs`, `module_assignments` | System creates assignment instances, client submits, instructor grades |
 | `reflection` | Resources + Scenarios | `module_reflection_resources`, `module_client_content_resources` | Client accesses reflection resources and prompts |
 | `resource` | Resources | `module_client_content_resources` | Client views/downloads assigned resources |
+| `content` | Generic Content | `module_client_content_resources` | Generic content modules |
 
 Additionally, **scenarios** can be linked to any module via `scenario_assignments.module_id`, and **assessments** can be linked via `program_modules.capability_assessment_id` or `module_assignment_types.scoring_assessment_id`.
 
@@ -943,13 +944,13 @@ Use this checklist when setting up a new environment or verifying configuration.
 
 ### Layer 1 — Foundations
 - [ ] **System settings** — AI limits, platform name, support email, timezone
-- [ ] **Module types** — 4 types exist (session, assignment, reflection, resource)
+- [ ] **Module types** — 5 types exist (session, assignment, reflection, resource, content)
 - [ ] **Tracks** — CTA and Leadership tracks created
 - [ ] **Wheel categories** — 10 categories
 - [ ] **Assessment categories** — 6 categories (Personality, Aptitude, Career, EI, Leadership, Other)
 
 ### Layer 2 — Plans & Features
-- [ ] **Features** — All 18+ features created with correct keys
+- [ ] **Features** — All 34 features created with correct keys
 - [ ] **Plans** — 7 plans with correct tier levels and credit allowances
 - [ ] **Plan features** — Every plan has feature mappings with limits
 - [ ] **Plan prices** — Purchasable plans have Stripe price IDs (Stripe products created)
@@ -960,12 +961,12 @@ Use this checklist when setting up a new environment or verifying configuration.
 - [ ] **Cal.com mappings** — Each session type mapped to a Cal.com event type
 
 ### Layer 3B — Credits
-- [ ] **Credit services** — 15 services with credit costs and feature links
+- [ ] **Credit services** — 14 services with credit costs and feature links
 - [ ] **Credit packages** — Individual (3) and org (3) packages defined
 
 ### Layer 3C — Notifications
 - [ ] **Notification categories** — 8 categories
-- [ ] **Notification types** — 34 types under categories with email_template_key links
+- [ ] **Notification types** — 31 types under categories with email_template_key links
 
 ### Layer 3D — Assessments (three systems)
 
@@ -1207,7 +1208,7 @@ The platform has 9 distinct feedback mechanisms stored across different tables:
 | Assessment interpretations | `assessment_responses.interpretations` | System → Client |
 | Decision AI insights | Via `decision-insights` edge function | AI → Client |
 | Reflection prompts | Via `generate-reflection-prompt` edge function | AI → Client |
-| Goal comments | `goal_comments` (if exists) | Coach → Client |
+| Goal comments | `goal_comments` | Coach → Client |
 | Session feedback | Unclear implementation | Post-session |
 | Coach general | Via module feedback templates | Coach → Client |
 

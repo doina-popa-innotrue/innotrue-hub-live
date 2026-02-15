@@ -41,10 +41,10 @@ Fix by:
 
 ### High — Fix soon
 
-#### 1.3 File Upload Missing Size + MIME Validation
-**Files:** 30+ upload components across the codebase
-**Problem:** Only `AccountSettings.tsx` validates file size (5MB). No MIME type validation anywhere. Users could upload multi-GB files or malicious file types.
-**Fix:** Create shared utility, apply to all upload components.
+#### 1.3 File Upload Validation Inconsistent Across Components
+**Files:** Multiple upload components across the codebase
+**Problem:** Client-facing uploads have proper validation (AccountSettings: 5MB image types, TaskNotes: 10MB type whitelist, GoalResources: 10MB type whitelist, ProgramBadgeManager: 2MB images, ExternalCourseForm: 5MB type whitelist), but admin-only interfaces (ResourceLibraryManagement, ModuleClientContentManager) lack pre-upload validation. No shared utility exists — each component implements its own checks.
+**Fix:** Create shared utility, apply consistently across all upload components.
 
 **Cursor prompt:**
 ```
@@ -121,7 +121,7 @@ In src/components/modules/InstructorAssignmentScoring.tsx, add a guard that chec
 ### Medium — Improve over time
 
 #### 1.7 Console Statements in Production (164 files)
-**Problem:** 164 files have console.log/error/warn. Leaks internal data to browser DevTools.
+**Problem:** ~26 files have console.log/warn/debug (~54 statements). Leaks internal data to browser DevTools.
 
 **Cursor prompt:**
 ```
@@ -469,7 +469,7 @@ For features you decide to build, use Cursor Agent to prototype quickly:
 - Admin creates client → welcome email → password setup → login
 - Client dashboard: enrolled programs, upcoming sessions, reflections, assignments, coaches, groups
 - Explore Programs page for browsing available programs
-- Full notification system (34 types, email + in-app)
+- Full notification system (31 types, email + in-app)
 - Profile + public profile settings with granular visibility
 - Track selection (CTA/Leadership)
 
@@ -1074,7 +1074,7 @@ assessment_definitions → questions → options → option_scores → dimension
 2. **Multi-evaluator comparison** — radar chart overlays self vs instructor vs peer ratings
 3. **Evolution tracking** — line chart shows domain score changes over time across all snapshots
 4. **Pass/fail flexibility** — configurable per assessment: overall threshold OR all-domains-must-pass
-5. **IP protection for scenarios** — watermarking, context menu disabled, text un-selectable
+5. **IP protection for scenarios** — context menu disabled, text un-selectable (UI-level only, no watermarking)
 6. **Module integration** — assessments render inline in module detail with completion badges
 7. **9 resource sources unified** — MyResources.tsx consolidates goals, tasks, reflections, assignments, coach feedback, module content, personalized resources, and shared library
 
@@ -1185,7 +1185,7 @@ The platform has **9 distinct feedback mechanisms** (not unified):
 | Coach general feedback | Coach → Client | Via module feedback templates | **WORKING** |
 | Decision AI insights | AI → Client | `decision-insights` edge function | **WORKING** (AI-gated) |
 | Reflection prompts | AI → Client | `generate-reflection-prompt` edge function | **EXISTS** (unclear trigger) |
-| Goal feedback | Coach → Client | Unclear storage | **UNCLEAR** |
+| Goal feedback | Coach → Client | `goal_comments` table | **WORKING** |
 | Session feedback | Post-session | Unclear implementation | **UNCLEAR** |
 
 **Key issue:** No unified feedback inbox. Client must navigate to each feature (assignments, scenarios, modules, goals) to find feedback. No "You have 3 new feedback items" notification aggregation.
@@ -1455,7 +1455,7 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | # | Issue | Source | Effort | Description |
 |---|-------|--------|--------|-------------|
 | H1 | Empty client dashboard — no onboarding | Part 8 (8.2A) | 1 day | New clients see empty sections with no guidance. Add welcome card + action checklist |
-| H2 | File upload missing size + MIME validation | Part 1 (1.3) | 1 day | 30+ upload components have no validation. Create shared utility |
+| H2 | File upload validation inconsistent | Part 1 (1.3) | 4 hours | Client uploads validated but admin uploads and shared utility missing. Standardize |
 | H3 | AI functions accept unlimited input | Part 1 (1.4) | 4 hours | No input size limits before Vertex AI calls. Add truncation helpers |
 | H4 | Welcome email not auto-triggered | Part 7 (7.4) | 1 hour | Self-signup users never get welcome email. Call send-welcome-email from verify-signup |
 | H5 | Express interest — no status tracking | Part 8 (8.2C) | 4 hours | Client submits interest but can't check status. Add status view to dashboard |
@@ -1479,7 +1479,7 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | M8 | Locked sidebar items confusing UX | Part 8 (8.6) | 4 hours | Group locked items under "Premium Features" sidebar section |
 | M9 | Notification sending is synchronous | Part 1 (1.8) | 1 day | Group sessions could timeout. Use email queue instead |
 | M10 | Dual plans admin UX confusion | Part 1 (1.12) | 2 hours | Two plan pages with no guidance. Add info banners |
-| M11 | Console statements in production | Part 1 (1.7) | 1 day | 164 files have console.log. Replace with Sentry or remove |
+| M11 | Console statements in production | Part 1 (1.7) | 4 hours | ~26 files have console.log (~54 statements). Replace with Sentry or remove |
 | M12 | No resource ratings or feedback | Part 9 (9.8.3) | 3 days | No quality signal on resources. Add 1-5 star rating |
 | M13 | No Zod form validation | Part 1 (1.13) | 1-2 weeks | Forms use manual validation. Adopt Zod starting with critical forms |
 | M14 | Loading/error states inconsistent | Part 1 (1.14) | 1 week | Mix of skeleton loaders and "Loading..." text. Standardize with shadcn/ui Skeleton |
