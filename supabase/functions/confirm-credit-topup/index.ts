@@ -54,14 +54,11 @@ serve(async (req) => {
     logStep("Session retrieved", { status: session.status, paymentStatus: session.payment_status });
 
     if (session.payment_status !== 'paid') {
-      return new Response(JSON.stringify({ 
-        success: false, 
+      return successResponse.ok({
+        success: false,
         error: 'Payment not completed',
-        status: session.payment_status 
-      }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-        status: 200,
-      });
+        status: session.payment_status
+      }, cors);
     }
 
     // Check metadata
@@ -95,15 +92,12 @@ serve(async (req) => {
         .eq('user_id', user.id)
         .single();
 
-      return new Response(JSON.stringify({ 
-        success: true, 
+      return successResponse.ok({
+        success: true,
         alreadyProcessed: true,
         creditsAdded: existingPurchase.credits_purchased,
         currentBalance: balance?.available_credits || 0,
-      }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-        status: 200,
-      });
+      }, cors);
     }
 
     // Find pending purchase by session ID
@@ -143,15 +137,12 @@ serve(async (req) => {
             .eq('user_id', user.id)
             .single();
 
-          return new Response(JSON.stringify({ 
-            success: true, 
+          return successResponse.ok({
+            success: true,
             alreadyProcessed: true,
             creditsAdded: recheckPurchase.credits_purchased,
             currentBalance: balance?.available_credits || 0,
-          }), {
-            headers: { ...cors, "Content-Type": "application/json" },
-            status: 200,
-          });
+          }, cors);
         }
         throw updateError;
       }
@@ -181,14 +172,11 @@ serve(async (req) => {
 
       logStep("Credits added successfully via grant_credit_batch", { batchId });
 
-      return new Response(JSON.stringify({ 
-        success: true, 
+      return successResponse.ok({
+        success: true,
         creditsAdded: pendingPurchase.credits_purchased,
         batchId,
-      }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-        status: 200,
-      });
+      }, cors);
     } else {
       // No pending purchase found - create one and add credits
       logStep("No pending purchase found, creating new record");
@@ -240,21 +228,15 @@ serve(async (req) => {
 
       logStep("Credits added successfully via grant_credit_batch", { batchId });
 
-      return new Response(JSON.stringify({ 
-        success: true, 
+      return successResponse.ok({
+        success: true,
         creditsAdded: creditValue,
         batchId,
-      }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-        status: 200,
-      });
+      }, cors);
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...cors, "Content-Type": "application/json" },
-      status: 500,
-    });
+    return errorResponse.serverError("confirm-credit-topup", error, cors);
   }
 });

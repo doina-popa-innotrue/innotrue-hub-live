@@ -15,10 +15,7 @@ serve(async (req) => {
     // Get auth header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
-        { status: 401, headers: { ...cors, "Content-Type": "application/json" } }
-      );
+      return errorResponse.unauthorized("Missing authorization header", cors);
     }
 
     // Create authenticated client
@@ -31,10 +28,7 @@ serve(async (req) => {
     // Verify user is authenticated
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...cors, "Content-Type": "application/json" } }
-      );
+      return errorResponse.unauthorized("Unauthorized", cors);
     }
 
     // Verify user has admin role (server-side check)
@@ -45,18 +39,12 @@ serve(async (req) => {
 
     if (rolesError) {
       console.error("Error fetching user roles:", rolesError);
-      return new Response(
-        JSON.stringify({ error: "Failed to verify permissions" }),
-        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
-      );
+      return errorResponse.serverErrorWithMessage("Failed to verify permissions", cors);
     }
 
     const isAdmin = userRoles?.some((r) => r.role === "admin");
     if (!isAdmin) {
-      return new Response(
-        JSON.stringify({ error: "Forbidden: Admin access required" }),
-        { status: 403, headers: { ...cors, "Content-Type": "application/json" } }
-      );
+      return errorResponse.forbidden("Forbidden: Admin access required", cors);
     }
 
     // Parse request body for export type
@@ -217,16 +205,9 @@ serve(async (req) => {
         },
       });
     } else {
-      return new Response(
-        JSON.stringify({ error: "Invalid export type. Use 'feature-assignments' or 'credit-config'" }),
-        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
-      );
+      return errorResponse.badRequest("Invalid export type. Use 'feature-assignments' or 'credit-config'", cors);
     }
   } catch (error) {
-    console.error("Export error:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
-    );
+    return errorResponse.serverError("export-feature-config", error, cors);
   }
 });

@@ -47,19 +47,13 @@ serve(async (req) => {
     const { analyticsData, focusArea } = await req.json();
 
     if (!analyticsData) {
-      return new Response(JSON.stringify({ error: "Analytics data required" }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.badRequest("Analytics data required", cors);
     }
 
     // Guard against oversized payloads being sent to AI
     const analyticsJson = JSON.stringify(analyticsData);
     if (analyticsJson.length > 50_000) {
-      return new Response(JSON.stringify({ error: "Analytics data too large. Please narrow your date range or filters." }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.badRequest("Analytics data too large. Please narrow your date range or filters.", cors);
     }
 
     const { getAIApiKey, AI_ENDPOINT, AI_MODEL } = await import('../_shared/ai-config.ts');
@@ -67,10 +61,7 @@ serve(async (req) => {
     try {
       aiApiKey = getAIApiKey();
     } catch {
-      return new Response(JSON.stringify({ error: "AI service not configured" }), {
-        status: 500,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.serverErrorWithMessage("AI service not configured", cors);
     }
 
     // Build a focused prompt based on what the admin wants to analyze
@@ -151,10 +142,7 @@ Please provide actionable insights based on this data.`;
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-          status: 429,
-          headers: { ...cors, "Content-Type": "application/json" },
-        });
+        return errorResponse.rateLimit("Rate limit exceeded. Please try again later.", cors);
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "AI credits exhausted. Please top up your workspace." }), {
@@ -164,33 +152,18 @@ Please provide actionable insights based on this data.`;
       }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "Failed to generate insights" }), {
-        status: 500,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.serverErrorWithMessage("Failed to generate insights", cors);
     }
 
     const aiResponse = await response.json();
     const insights = aiResponse.choices?.[0]?.message?.content;
 
     if (!insights) {
-      return new Response(JSON.stringify({ error: "No insights generated" }), {
-        status: 500,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.serverErrorWithMessage("No insights generated", cors);
     }
 
-    return new Response(JSON.stringify({ insights }), {
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return successResponse.ok({ insights }, cors);
   } catch (error) {
-    console.error("Analytics insights error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      {
-        status: 500,
-        headers: { ...cors, "Content-Type": "application/json" },
-      }
-    );
+    return errorResponse.serverError("analytics-ai-insights", error, cors);
   }
 });

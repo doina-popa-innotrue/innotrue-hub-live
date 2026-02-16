@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
 import { getStagingRecipient, getStagingSubject } from "../_shared/email-utils.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -71,11 +72,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Validate request is from Supabase Auth using Standard Webhooks HMAC verification
     const hookSecret = Deno.env.get('SEND_EMAIL_HOOK_SECRET');
     if (!hookSecret) {
-      console.error('SEND_EMAIL_HOOK_SECRET not set');
-      return new Response(
-        JSON.stringify({ error: 'Server misconfiguration' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.serverError("send-auth-email", "SEND_EMAIL_HOOK_SECRET not set");
     }
 
     const payload = await req.text();
@@ -90,10 +87,7 @@ const handler = async (req: Request): Promise<Response> => {
       email_data = verified.email_data;
     } catch (err) {
       console.error('Webhook verification failed:', err);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.unauthorized("Unauthorized");
     }
 
     const { email_action_type, token_hash, redirect_to } = email_data;
@@ -170,19 +164,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email sent successfully:", emailResponse);
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return successResponse.ok({ success: true });
   } catch (error: any) {
-    console.error("Error in send-auth-email function:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return errorResponse.serverError("send-auth-email", error);
   }
 };
 

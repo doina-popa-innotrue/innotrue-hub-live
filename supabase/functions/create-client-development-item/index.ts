@@ -63,10 +63,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "No authorization header" }), {
-        status: 401,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.unauthorized("No authorization header", cors);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -80,10 +77,7 @@ serve(async (req) => {
     const { data: userData } = await userClient.auth.getUser();
     const callingUser = userData.user;
     if (!callingUser) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.unauthorized("Unauthorized", cors);
     }
 
     const body = (await req.json()) as Partial<CreateClientDevelopmentItemRequest>;
@@ -92,18 +86,12 @@ serve(async (req) => {
     const moduleProgressId = typeof body.moduleProgressId === "string" ? body.moduleProgressId : "";
 
     if (!isUuid(forUserId) || !isUuid(moduleProgressId)) {
-      return new Response(JSON.stringify({ error: "Invalid request" }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.badRequest("Invalid request", cors);
     }
 
     const itemType = body.itemType;
     if (!itemType || !["reflection", "note", "resource", "action_item"].includes(itemType)) {
-      return new Response(JSON.stringify({ error: "Invalid itemType" }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.badRequest("Invalid itemType", cors);
     }
 
     const title = normalizeText(body.title, 200);
@@ -119,18 +107,12 @@ serve(async (req) => {
 
     if (rolesError) {
       console.error("role lookup error", rolesError);
-      return new Response(JSON.stringify({ error: "Access denied" }), {
-        status: 403,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.forbidden("Access denied", cors);
     }
 
     const hasTeachingRole = roles?.some((r) => r.role === "instructor" || r.role === "coach" || r.role === "admin");
     if (!hasTeachingRole) {
-      return new Response(JSON.stringify({ error: "Access denied" }), {
-        status: 403,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.forbidden("Access denied", cors);
     }
 
     const admin = createClient(supabaseUrl, supabaseServiceKey, {
@@ -146,10 +128,7 @@ serve(async (req) => {
 
     if (mpError || !mp) {
       console.error("module_progress lookup error", mpError);
-      return new Response(JSON.stringify({ error: "Invalid moduleProgressId" }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.badRequest("Invalid moduleProgressId", cors);
     }
 
     const enrollment = (mp as any).client_enrollments;
@@ -157,10 +136,7 @@ serve(async (req) => {
     const programId = enrollment?.program_id as string | undefined;
 
     if (!clientUserId || clientUserId !== forUserId) {
-      return new Response(JSON.stringify({ error: "Client mismatch" }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.badRequest("Client mismatch", cors);
     }
 
     // Verify instructor/coach assignment to module or program
@@ -202,10 +178,7 @@ serve(async (req) => {
       roles?.some((r) => r.role === "admin");
 
     if (!isAssigned) {
-      return new Response(JSON.stringify({ error: "Not assigned to this client/module" }), {
-        status: 403,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.forbidden("Not assigned to this client/module", cors);
     }
 
     // Parse file/library resource fields
@@ -254,10 +227,7 @@ serve(async (req) => {
 
     if (itemError || !item) {
       console.error("development_items insert error", itemError);
-      return new Response(JSON.stringify({ error: "Failed to create item" }), {
-        status: 500,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.serverErrorWithMessage("Failed to create item", cors);
     }
 
     // Link to snapshot
@@ -316,15 +286,8 @@ serve(async (req) => {
       if (error) console.error("milestone link error", error);
     }
 
-    return new Response(JSON.stringify({ item }), {
-      status: 200,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return successResponse.ok({ item }, cors);
   } catch (e) {
-    console.error("create-client-development-item error", e);
-    return new Response(JSON.stringify({ error: "Server error" }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return errorResponse.serverError("create-client-development-item", e, cors);
   }
 });

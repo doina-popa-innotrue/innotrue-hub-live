@@ -29,26 +29,17 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Validate required fields
     if (!moduleProgressId || !assignmentId || !assignmentTypeName) {
-      return new Response(JSON.stringify({ error: "moduleProgressId, assignmentId, and assignmentTypeName are required" }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.badRequest("moduleProgressId, assignmentId, and assignmentTypeName are required", cors);
     }
 
     // Validate UUID formats
     if (!isValidUUID(moduleProgressId) || !isValidUUID(assignmentId)) {
-      return new Response(JSON.stringify({ error: "Invalid ID format" }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.badRequest("Invalid ID format", cors);
     }
 
     // Validate assignmentTypeName length
     if (typeof assignmentTypeName !== "string" || assignmentTypeName.length > 500) {
-      return new Response(JSON.stringify({ error: "Invalid assignment type name" }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.badRequest("Invalid assignment type name", cors);
     }
 
     // HTML-escape helper to prevent XSS in email templates
@@ -70,10 +61,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (progressError || !moduleProgress) {
       console.error("Error fetching module progress:", progressError);
-      return new Response(JSON.stringify({ error: "Module progress not found" }), {
-        status: 404,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.notFound("Module progress not found", cors);
     }
 
     // Get enrollment details separately
@@ -163,9 +151,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (recipientIds.size === 0) {
       console.log("No instructors or coaches to notify");
-      return new Response(JSON.stringify({ message: "No recipients found" }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return successResponse.ok({ message: "No recipients found" }, cors);
     }
 
     // Get recipient emails
@@ -181,9 +167,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (recipientEmails.length === 0 || !resendApiKey) {
       console.log("No emails to send or Resend not configured");
-      return new Response(JSON.stringify({ message: "No emails sent" }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return successResponse.ok({ message: "No emails sent" }, cors);
     }
 
     // Fetch email template from database
@@ -276,27 +260,17 @@ const handler = async (req: Request): Promise<Response> => {
     if (!emailResponse.ok) {
       const errorText = await emailResponse.text();
       console.error("Resend API error:", errorText);
-      return new Response(JSON.stringify({ error: "Failed to send email" }), {
-        status: 500,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.serverErrorWithMessage("Failed to send email", cors);
     }
 
     console.log(`Notification sent to ${recipientEmails.length} recipients`);
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        recipientCount: recipientEmails.length 
-      }),
-      { headers: { ...cors, "Content-Type": "application/json" } }
-    );
+    return successResponse.ok({
+      success: true,
+      recipientCount: recipientEmails.length
+    }, cors);
   } catch (error) {
-    console.error("Error in notify-assignment-submitted:", error);
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return errorResponse.serverError("notify-assignment-submitted", error, cors);
   }
 };
 

@@ -108,10 +108,7 @@ const handler = async (req: Request): Promise<Response> => {
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
       console.error("RESEND_API_KEY not configured");
-      return new Response(
-        JSON.stringify({ error: "Email service not configured" }),
-        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
-      );
+      return errorResponse.serverErrorWithMessage("Email service not configured", cors);
     }
 
     const resend = new Resend(resendApiKey);
@@ -119,51 +116,33 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Validate required fields
     if (!email || !name || !ratings) {
-      return new Response(
-        JSON.stringify({ error: "Email, name, and ratings are required" }),
-        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
-      );
+      return errorResponse.badRequest("Email, name, and ratings are required", cors);
     }
 
     // Validate email format
     if (!isValidEmail(email)) {
-      return new Response(
-        JSON.stringify({ error: "Please enter a valid email address" }),
-        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
-      );
+      return errorResponse.badRequest("Please enter a valid email address", cors);
     }
 
     // Validate name
     const validatedName = validateName(name);
     if (!validatedName) {
-      return new Response(
-        JSON.stringify({ error: "Please enter a valid name" }),
-        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
-      );
+      return errorResponse.badRequest("Please enter a valid name", cors);
     }
 
     // Validate ratings: must be an object with numeric values between 0-10
     if (typeof ratings !== "object" || Array.isArray(ratings)) {
-      return new Response(
-        JSON.stringify({ error: "Ratings must be an object" }),
-        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
-      );
+      return errorResponse.badRequest("Ratings must be an object", cors);
     }
     for (const [key, value] of Object.entries(ratings)) {
       if (typeof value !== "number" || value < 0 || value > 10 || !isFinite(value)) {
-        return new Response(
-          JSON.stringify({ error: `Invalid rating value for ${key}: must be a number between 0 and 10` }),
-          { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
-        );
+        return errorResponse.badRequest(`Invalid rating value for ${key}: must be a number between 0 and 10`, cors);
       }
     }
 
     // Validate notes length if provided
     if (notes && (typeof notes !== "string" || notes.length > 5000)) {
-      return new Response(
-        JSON.stringify({ error: "Notes must be a string of at most 5,000 characters" }),
-        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
-      );
+      return errorResponse.badRequest("Notes must be a string of at most 5,000 characters", cors);
     }
 
     // HTML-escape helper to prevent XSS in email templates
@@ -274,16 +253,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Wheel PDF email sent successfully:", emailResponse);
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json", ...cors },
-    });
+    return successResponse.ok({ success: true }, cors);
   } catch (error: any) {
-    console.error("Error in send-wheel-pdf function:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json", ...cors } }
-    );
+    return errorResponse.serverError("send-wheel-pdf", error, cors);
   }
 };
 

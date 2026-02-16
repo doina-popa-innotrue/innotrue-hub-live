@@ -31,9 +31,7 @@ serve(async (req) => {
     if (fetchError) throw fetchError;
 
     if (!pendingEmails || pendingEmails.length === 0) {
-      return new Response(JSON.stringify({ message: 'No pending emails' }), {
-        headers: { ...cors, 'Content-Type': 'application/json' },
-      });
+      return successResponse.ok({ message: 'No pending emails' }, cors);
     }
 
     let sent = 0;
@@ -155,23 +153,15 @@ serve(async (req) => {
       }
     }
 
-    return new Response(
-      JSON.stringify({ 
-        message: 'Email queue processed',
-        sent,
-        failed,
-        skipped,
-        total: pendingEmails.length,
-      }),
-      { headers: { ...cors, 'Content-Type': 'application/json' } }
-    );
+    return successResponse.ok({
+      message: 'Email queue processed',
+      sent,
+      failed,
+      skipped,
+      total: pendingEmails.length,
+    }, cors);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error processing email queue:', error);
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse.serverError("process-email-queue", error, cors);
   }
 });
 

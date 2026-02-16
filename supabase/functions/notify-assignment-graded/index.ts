@@ -29,26 +29,17 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Validate required fields
     if (!assignmentId || !moduleProgressId || !assignmentTypeName) {
-      return new Response(JSON.stringify({ error: "assignmentId, moduleProgressId, and assignmentTypeName are required" }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.badRequest("assignmentId, moduleProgressId, and assignmentTypeName are required", cors);
     }
 
     // Validate UUID formats
     if (!isValidUUID(assignmentId) || !isValidUUID(moduleProgressId)) {
-      return new Response(JSON.stringify({ error: "Invalid ID format" }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.badRequest("Invalid ID format", cors);
     }
 
     // Validate assignmentTypeName length
     if (typeof assignmentTypeName !== "string" || assignmentTypeName.length > 500) {
-      return new Response(JSON.stringify({ error: "Invalid assignment type name" }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.badRequest("Invalid assignment type name", cors);
     }
 
     // HTML-escape helper to prevent XSS in email templates
@@ -68,10 +59,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (assignmentError || !assignment) {
       console.error("Error fetching assignment:", assignmentError);
-      return new Response(JSON.stringify({ error: "Assignment not found" }), {
-        status: 404,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.notFound("Assignment not found", cors);
     }
 
     // Get module progress details
@@ -83,10 +71,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (progressError || !moduleProgress) {
       console.error("Error fetching module progress:", progressError);
-      return new Response(JSON.stringify({ error: "Module progress not found" }), {
-        status: 404,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.notFound("Module progress not found", cors);
     }
 
     // Get enrollment details
@@ -98,9 +83,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!enrollment?.client_user_id) {
       console.log("No client user found for enrollment");
-      return new Response(JSON.stringify({ message: "No client user found" }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return successResponse.ok({ message: "No client user found" }, cors);
     }
 
     const clientUserId = enrollment.client_user_id;
@@ -110,16 +93,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!userStatus.canReceiveEmails) {
       console.log(`Client ${clientUserId} is ${userStatus.reason}, skipping notification`);
-      return new Response(JSON.stringify({ message: `Client is ${userStatus.reason}`, skipped: true }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return successResponse.ok({ message: `Client is ${userStatus.reason}`, skipped: true }, cors);
     }
 
     if (!userStatus.email) {
       console.log("No email found for client");
-      return new Response(JSON.stringify({ message: "No client email found" }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return successResponse.ok({ message: "No client email found" }, cors);
     }
 
     const clientEmail = userStatus.email;
@@ -164,16 +143,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!shouldNotify) {
       console.log("Client has disabled assignment_graded notifications");
-      return new Response(JSON.stringify({ message: "Notifications disabled by user" }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return successResponse.ok({ message: "Notifications disabled by user" }, cors);
     }
 
     if (!resendApiKey) {
       console.log("Resend not configured, skipping email");
-      return new Response(JSON.stringify({ message: "Email service not configured" }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return successResponse.ok({ message: "Email service not configured" }, cors);
     }
 
     // Fetch email template from database
@@ -269,27 +244,17 @@ const handler = async (req: Request): Promise<Response> => {
     if (!emailResponse.ok) {
       const errorText = await emailResponse.text();
       console.error("Resend API error:", errorText);
-      return new Response(JSON.stringify({ error: "Failed to send email" }), {
-        status: 500,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return errorResponse.serverErrorWithMessage("Failed to send email", cors);
     }
 
     console.log(`Graded notification sent to ${clientEmail}`);
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        recipient: clientEmail 
-      }),
-      { headers: { ...cors, "Content-Type": "application/json" } }
-    );
+    return successResponse.ok({
+      success: true,
+      recipient: clientEmail
+    }, cors);
   } catch (error) {
-    console.error("Error in notify-assignment-graded:", error);
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    return errorResponse.serverError("notify-assignment-graded", error, cors);
   }
 };
 
