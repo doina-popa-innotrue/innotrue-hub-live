@@ -1,5 +1,19 @@
 # Completed Work — Detailed History
 
+## H6, H9, M14, H10 — Feature Improvements (2026-02-16)
+
+**H6 — Feature gate messaging for max-plan users:**
+Added `useIsMaxPlan` hook and `isMaxPlanTier()` utility in `planUtils.ts`. When user is on the highest purchasable plan, `FeatureGate` and `CapabilityGate` show "Feature Not Available — Contact your administrator" instead of "Upgrade Plan". 8 unit tests.
+
+**H9 — Edge function error handling standardization:**
+Created shared `supabase/functions/_shared/error-response.ts` with typed helpers: `errorResponse.badRequest()`, `.unauthorized()`, `.forbidden()`, `.notFound()`, `.rateLimit()`, `.serverError()`, `.serverErrorWithMessage()` and `successResponse.ok()`, `.created()`, `.noContent()`. Migrated 5 high-impact functions (create-checkout, generate-reflection-prompt, check-ai-usage, course-recommendations, decision-insights) from generic 500s to proper status codes. Also upgraded from wildcard CORS to origin-aware `getCorsHeaders`.
+
+**M14 — Inconsistent loading/error states:**
+Created reusable `PageLoadingState` component (4 variants: centered, card, skeleton, inline) and `ErrorState` component (card/inline with retry). Migrated 5 pages: ClientDashboard, Academy, Community, Goals, ProgramDetail.
+
+**H10 — Entitlement org deny override:**
+Added `is_restrictive` boolean column to `plan_features` (migration `20260216200000`). Updated `useEntitlements` merge logic: deny entries (`isDenied=true`) override ALL grants from any source. Updated `fetchOrgSponsoredFeatures` and `checkFeatureAccessAsync` to respect deny. Added admin UI toggle (Deny checkbox + Ban icon) in Features Management > Plan Configuration. Full documentation in `docs/ENTITLEMENTS_AND_FEATURE_ACCESS.md`.
+
 ## Lovable Removal (2026-02-09)
 Removed all Lovable dependencies, replaced OAuth with Supabase built-in, updated all domain refs, moved assets from /lovable-uploads/ to /assets/, swapped AI gateway to Vertex AI, updated edge functions CORS.
 

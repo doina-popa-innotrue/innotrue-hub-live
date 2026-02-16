@@ -107,45 +107,13 @@ In supabase/functions/calcom-create-booking/index.ts and other edge functions th
 **Problem:** Concurrent requests could both pass balance check and deduct, going negative.
 **Resolution:** Added `FOR UPDATE SKIP LOCKED` to both credit_batches SELECT loops in `consume_credits_fifo`. This was fixed as part of the C3/M6 migration (`20260215190459_54d8beb9-850f-4f5f-b328-89926cb764b3.sql`).
 
-#### 1.10 Entitlement Edge Case (org deny override)
+#### 1.10 Entitlement Edge Case (org deny override) — ✅ RESOLVED 2026-02-16
 **Problem:** Org sets feature limit=0 (disable), but user's subscription gives limit=100 → merged result is 100. Org intent bypassed.
+**Resolution:** Added `is_restrictive` boolean column to `plan_features` table. When `is_restrictive=true`, the feature is explicitly DENIED, overriding all grants from any source (subscription, add-on, track, program plan). Updated `useEntitlements` merge logic to check for deny before processing grants. Added admin UI toggle (Deny checkbox with Ban icon) in Features Management > Plan Configuration. See `docs/ENTITLEMENTS_AND_FEATURE_ACCESS.md` for full documentation.
 
-**Cursor prompt:**
-```
-In src/hooks/useEntitlements.ts, the current logic takes Math.max of all limits. This means a limit=0 from one source can be overridden by a higher limit from another source.
-
-Add support for explicit deny: if any source sets limit=0 AND has a flag like "is_restrictive: true" or "override: deny", that takes precedence over other sources. Check how org-sponsored features are structured and add a deny mechanism.
-```
-
-#### 1.11 Edge Function Error Handling Inconsistent
+#### 1.11 Edge Function Error Handling Inconsistent — ✅ RESOLVED 2026-02-16
 **Problem:** Some functions return proper 400/500 codes, others return generic 500 for everything.
-
-**Cursor prompt:**
-```
-Create a shared error response utility in supabase/functions/_shared/error-response.ts:
-
-export function createErrorResponse(status: number, message: string, details?: unknown) {
-  return new Response(JSON.stringify({ error: message, details }), {
-    status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
-  });
-}
-
-export function createValidationError(message: string) {
-  return createErrorResponse(400, message);
-}
-
-export function createAuthError(message?: string) {
-  return createErrorResponse(401, message || "Unauthorized");
-}
-
-export function createServerError(message: string, error?: unknown) {
-  console.error(message, error);
-  return createErrorResponse(500, message);
-}
-
-Then update edge functions to use these instead of inline Response construction. Start with the most-used ones: calcom-create-booking, send-auth-email, create-checkout.
-```
+**Resolution:** Created shared `supabase/functions/_shared/error-response.ts` with typed `errorResponse` (badRequest/unauthorized/forbidden/notFound/rateLimit/serverError) and `successResponse` (ok/created/noContent) helpers. Migrated 5 high-impact functions: create-checkout, generate-reflection-prompt, check-ai-usage, course-recommendations, decision-insights. Also upgraded them from wildcard CORS to origin-aware `getCorsHeaders`. Remaining 56 functions can be incrementally migrated.
 
 #### 1.12 Dual Plans Admin UX Confusion
 **Problem:** Two separate admin pages for subscription plans vs program plans with no guidance.
@@ -171,9 +139,9 @@ Use shadcn/ui Alert component with variant="default".
 **Problem:** Forms use manual validation. Inconsistent error messages.
 **Action:** Adopt Zod starting with critical forms. Good task for Cursor.
 
-#### 1.14 Loading/Error States Inconsistent
+#### 1.14 Loading/Error States Inconsistent — ✅ RESOLVED 2026-02-16
 **Problem:** Mix of skeleton loaders and inline "Loading..." text.
-**Action:** Standardize with shadcn/ui Skeleton. Good task for Cursor.
+**Resolution:** Created reusable `PageLoadingState` component (4 variants: centered, card, skeleton, inline) and `ErrorState` component (card/inline variants with retry support). Migrated 5 worst pages: ClientDashboard, Academy, Community, Goals, ProgramDetail. Remaining pages can be incrementally migrated.
 
 #### 1.15 AuthContext Role Fallback Bug — RESOLVED (2026-02-15)
 **Problem:** `if (roles.length === 0) roles = ["client"]` in AuthContext.tsx line 135. Silently assigned client role on fetch failure.
@@ -862,20 +830,9 @@ Login → /org-admin → OrgAdminDashboard.tsx
 
 ### 8.6 Cross-Role Issues
 
-#### Feature Gate Confusion
-**Problem:** When a feature is disabled, `FeatureGate` shows "This feature is not available on your current plan" with an "Upgrade Plan" button. But sometimes the user IS on the right plan — the feature just isn't mapped to their plan in `plan_features`.
-
-**Impact:** User clicks upgrade → sees they're already on the highest plan → confused.
-
-**Fix:**
-```
-In src/components/FeatureGate.tsx, improve the blocked state message:
-
-1. Check if user is already on the highest purchasable plan
-2. If yes: show "This feature requires additional configuration. Contact your administrator."
-3. If no: show current "Upgrade Plan" message
-4. Add a "Learn More" link to a help page explaining the feature system
-```
+#### Feature Gate Confusion — ✅ RESOLVED 2026-02-16
+**Problem:** When a feature is disabled, `FeatureGate` shows "Upgrade Plan" button. But sometimes the user IS on the highest plan — nothing to upgrade to.
+**Resolution:** Added `useIsMaxPlan` hook (backed by `isMaxPlanTier` utility in `planUtils.ts`). When user is on the highest purchasable plan, FeatureGate and CapabilityGate now show "Feature Not Available — Contact your administrator" instead of "Upgrade Plan". Users on lower plans still see the upgrade button. See `docs/ENTITLEMENTS_AND_FEATURE_ACCESS.md`.
 
 #### Locked Sidebar Items — Confusing UX
 **Problem:** Sidebar shows locked items with a lock icon and tooltip. Users see features they can't access, creating frustration.
@@ -933,7 +890,7 @@ For each major dashboard section (enrollments, goals, decisions, tasks, groups, 
 | 3 | Empty client dashboard — no onboarding | HIGH | 1 day | Add first-login welcome card with action checklist |
 | 4 | Express interest — no status tracking | MEDIUM | 4 hours | Add status view to dashboard |
 | 5 | Welcome email not auto-triggered | MEDIUM | 1 hour | Call send-welcome-email from verify-signup |
-| 6 | Feature gate messaging for max-plan users | MEDIUM | 2 hours | Improve FeatureGate blocked state |
+| 6 | Feature gate messaging for max-plan users | MEDIUM | 2 hours | ✅ RESOLVED — useIsMaxPlan + "Contact administrator" |
 | 7 | Locked sidebar items confusing | LOW | 4 hours | Group under "Premium Features" section |
 | 8 | Empty state components for all sections | LOW | 1 day | Create reusable EmptyState component |
 | 9 | No role selection in self-signup | LOW (pilot) | 1 week | Role selection page + admin approval |
@@ -1393,11 +1350,11 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | ~~H3~~ | ~~AI functions accept unlimited input~~ — **RESOLVED 2026-02-16** | Part 1 (1.4) | ~~4 hours~~ | Created `ai-input-limits.ts` with truncation helpers. Applied to 3 AI edge functions. |
 | ~~H4~~ | ~~Welcome email not auto-triggered~~ — **RESOLVED 2026-02-15** | Part 7 (7.4) | ~~1 hour~~ | verify-signup now triggers send-welcome-email (non-blocking, service role auth) |
 | ~~H5~~ | ~~Express interest — no status tracking~~ — **RESOLVED 2026-02-16** | Part 8 (8.2C) | ~~4 hours~~ | Added "My Interest Registrations" section to ClientDashboard with color-coded status badges (pending/contacted/enrolled/declined). Fetches both program_interest_registrations and ac_interest_registrations. |
-| H6 | Feature gate messaging for max-plan users | Part 8 (8.6) | 2 hours | User on highest plan sees "Upgrade" for unmapped features. Show admin contact instead |
+| H6 | Feature gate messaging for max-plan users | Part 8 (8.6) | 2 hours | ✅ RESOLVED 2026-02-16 — useIsMaxPlan hook, "Contact administrator" messaging |
 | ~~H7~~ | ~~N+1 query in module progress~~ — **RESOLVED 2026-02-15** | Part 1 (1.5) | ~~1 hour~~ | Replaced per-module progress queries with single batched `.in()` query |
 | ~~H8~~ | ~~Assignment grading lacks status guard~~ — **RESOLVED 2026-02-15** | Part 1 (1.6) | ~~1 hour~~ | Added status guard: grading only allowed when assignment is "submitted" |
-| H9 | Edge function error handling inconsistent | Part 1 (1.11) | 1 day | Some return proper codes, others generic 500. Create shared error response utility |
-| H10 | Entitlement org deny override not supported | Part 1 (1.10) | 4 hours | Org sets limit=0 but user subscription overrides. Add explicit deny mechanism |
+| H9 | Edge function error handling inconsistent | Part 1 (1.11) | 1 day | ✅ RESOLVED 2026-02-16 — Shared error-response.ts, 5 functions migrated |
+| H10 | Entitlement org deny override not supported | Part 1 (1.10) | 4 hours | ✅ RESOLVED 2026-02-16 — is_restrictive flag, deny override in useEntitlements |
 
 ### 11.3 Medium Priority (Improve Experience)
 
@@ -1416,7 +1373,7 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | M11 | Console statements in production | Part 1 (1.7) | 4 hours | ~26 files have console.log (~54 statements). Replace with Sentry or remove |
 | M12 | No resource ratings or feedback | Part 9 (9.8.3) | 3 days | No quality signal on resources. Add 1-5 star rating |
 | M13 | No Zod form validation | Part 1 (1.13) | 1-2 weeks | Forms use manual validation. Adopt Zod starting with critical forms |
-| M14 | Loading/error states inconsistent | Part 1 (1.14) | 1 week | Mix of skeleton loaders and "Loading..." text. Standardize with shadcn/ui Skeleton |
+| M14 | Loading/error states inconsistent | Part 1 (1.14) | 1 week | ✅ RESOLVED 2026-02-16 — PageLoadingState + ErrorState components, 5 pages migrated |
 | M15 | Credit-gated resources have no preview | Part 9 (9.8.2) | 3 days | Users spend credits without knowing content. Add resource preview before deduction |
 | M16 | No assessment templates for common frameworks | Part 9 (9.5.2) | 1 week | Admins build every assessment from scratch. Create seed templates (Leadership, EI, etc.) |
 

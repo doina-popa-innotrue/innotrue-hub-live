@@ -34,6 +34,7 @@
 | `docs/LOVABLE_INTEGRATION.md` | Bidirectional Lovable ↔ live repo sync |
 | `docs/TEST_PLAN.md` | Unit + E2E test plan |
 | `docs/CURSOR_AND_WORKFLOW_GUIDE.md` | Cursor IDE setup, git deploy pipeline, responsive testing |
+| `docs/ENTITLEMENTS_AND_FEATURE_ACCESS.md` | **Entitlements system** — 5 access sources, deny override, plan tiers, FeatureGate/CapabilityGate, admin config |
 
 ## Key Source Files
 - Supabase client: `src/integrations/supabase/client.ts`
