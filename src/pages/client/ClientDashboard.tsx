@@ -6,7 +6,18 @@ import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Clock, AlertCircle, Calendar, Award, UsersRound } from "lucide-react";
+import {
+  BookOpen,
+  Clock,
+  AlertCircle,
+  Calendar,
+  Award,
+  UsersRound,
+  CheckCircle,
+  MessageSquare,
+  XCircle,
+  Hourglass,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, isAfter, isBefore, addDays, addWeeks, addMonths } from "date-fns";
 import { ContinuationBanner } from "@/components/dashboard/ContinuationBanner";
@@ -69,6 +80,19 @@ interface Registration {
   status: string;
   enrollment_timeframe: string;
   created_at: string;
+  programs: {
+    id: string;
+    name: string;
+  };
+}
+
+interface ProgramInterest {
+  id: string;
+  status: string;
+  enrollment_timeframe: string;
+  preferred_tier: string | null;
+  created_at: string;
+  updated_at: string;
   programs: {
     id: string;
     name: string;
@@ -174,6 +198,7 @@ export default function ClientDashboard() {
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [programInterests, setProgramInterests] = useState<ProgramInterest[]>([]);
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[]>([]);
   const [groups, setGroups] = useState<GroupMembership[]>([]);
   const [skillsSummary, setSkillsSummary] = useState<SkillsSummary>({ total: 0, acquired: 0 });
@@ -328,6 +353,27 @@ export default function ClientDashboard() {
         .eq("user_id", user.id)
         .eq("status", "pending");
       setRegistrations((registrationsData as Registration[]) || []);
+
+      // Fetch program interest registrations (all statuses for status tracking)
+      const { data: programInterestData } = await supabase
+        .from("program_interest_registrations")
+        .select(
+          `
+          id,
+          status,
+          enrollment_timeframe,
+          preferred_tier,
+          created_at,
+          updated_at,
+          programs:program_id (
+            id,
+            name
+          )
+        `,
+        )
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      setProgramInterests((programInterestData as ProgramInterest[]) || []);
 
       // Fetch group memberships - separate queries to avoid TypeScript issues
       const memberRecordsResult = await supabase
@@ -770,27 +816,88 @@ export default function ClientDashboard() {
       {/* Section 8: My Groups */}
       {hasFeature("groups") && groups.length > 0 && <MyGroupsSection groups={groups} />}
 
-      {/* Section 9: Pending Registrations */}
-      {registrations.length > 0 && (
+      {/* Section 9: Interest Registrations (Programs + Assessments) */}
+      {(programInterests.length > 0 || registrations.length > 0) && (
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Pending Registrations
+              <Hourglass className="h-5 w-5" />
+              My Interest Registrations
             </h2>
           </div>
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {programInterests.map((interest) => {
+              const statusConfig = {
+                pending: {
+                  icon: Clock,
+                  label: "Pending",
+                  variant: "secondary" as const,
+                  className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+                },
+                contacted: {
+                  icon: MessageSquare,
+                  label: "Contacted",
+                  variant: "secondary" as const,
+                  className: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+                },
+                enrolled: {
+                  icon: CheckCircle,
+                  label: "Enrolled",
+                  variant: "secondary" as const,
+                  className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+                },
+                declined: {
+                  icon: XCircle,
+                  label: "Declined",
+                  variant: "secondary" as const,
+                  className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+                },
+              };
+              const config = statusConfig[interest.status as keyof typeof statusConfig] || statusConfig.pending;
+              const StatusIcon = config.icon;
+              return (
+                <Card key={interest.id} className="hover:shadow-sm transition-shadow">
+                  <CardContent className="pt-5 pb-4">
+                    <div className="flex items-start gap-3">
+                      <StatusIcon className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{interest.programs.name}</p>
+                        {interest.preferred_tier && (
+                          <p className="text-xs text-muted-foreground mt-0.5 capitalize">
+                            Tier: {interest.preferred_tier}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Registered {format(new Date(interest.created_at), "MMM d, yyyy")}
+                        </p>
+                        {interest.status !== "pending" && interest.updated_at !== interest.created_at && (
+                          <p className="text-xs text-muted-foreground">
+                            Updated {format(new Date(interest.updated_at), "MMM d, yyyy")}
+                          </p>
+                        )}
+                        <Badge variant={config.variant} className={`text-xs mt-2 ${config.className}`}>
+                          {config.label}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
             {registrations.map((registration) => (
-              <Card key={registration.id}>
-                <CardContent className="pt-6">
+              <Card key={registration.id} className="hover:shadow-sm transition-shadow">
+                <CardContent className="pt-5 pb-4">
                   <div className="flex items-start gap-3">
-                    <AlertCircle className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                    <Clock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{registration.programs.name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Registered {new Date(registration.created_at).toLocaleDateString()}
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Assessment interest
                       </p>
-                      <Badge variant="secondary" className="text-xs mt-2">
+                      <p className="text-xs text-muted-foreground">
+                        Registered {format(new Date(registration.created_at), "MMM d, yyyy")}
+                      </p>
+                      <Badge variant="secondary" className="text-xs mt-2 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
                         Pending
                       </Badge>
                     </div>
