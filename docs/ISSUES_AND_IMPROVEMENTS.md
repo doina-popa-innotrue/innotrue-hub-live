@@ -25,45 +25,15 @@
 
 ### High — Fix soon
 
-#### 1.3 File Upload Validation Inconsistent Across Components
-**Files:** Multiple upload components across the codebase
-**Problem:** Client-facing uploads have proper validation (AccountSettings: 5MB image types, TaskNotes: 10MB type whitelist, GoalResources: 10MB type whitelist, ProgramBadgeManager: 2MB images, ExternalCourseForm: 5MB type whitelist), but admin-only interfaces (ResourceLibraryManagement, ModuleClientContentManager) lack pre-upload validation. No shared utility exists — each component implements its own checks.
-**Fix:** Create shared utility, apply consistently across all upload components.
+#### 1.3 File Upload Validation — ✅ RESOLVED 2026-02-16
+**Files:** All 13 upload interfaces across admin, client, coach, and instructor areas
+**Problem:** Inconsistent upload validation — some interfaces had manual checks, others had none.
+**Resolution:** Created `src/lib/fileValidation.ts` with bucket-specific MIME type and size presets (15 buckets). Applied `validateFile()` and `acceptStringForBucket()` to all 13 upload interfaces, replacing inline checks with centralized validation. Includes filename sanitization, format-friendly error messages, and consistent `accept` attributes on file inputs.
 
-**Cursor prompt:**
-```
-Create a shared file upload validation utility and apply it across the codebase:
-
-1. Create src/lib/uploadValidation.ts with:
-   - validateFileUpload(file: File, options: { maxSizeMB?: number, allowedTypes?: string[] }): { valid: boolean, error?: string }
-   - Default maxSizeMB: 10
-   - Default allowedTypes: ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'video/mp4', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-   - UPLOAD_LIMITS constant with per-context limits (avatar: 5MB images only, assignment: 25MB any doc, resource: 50MB any)
-
-2. Find all file upload handlers in the codebase (search for "upload", "file", ".put(" in src/) and add validation before the upload call
-
-3. Show toast.error with the validation message on failure
-
-4. Write a unit test in src/lib/__tests__/uploadValidation.test.ts
-```
-
-#### 1.4 AI Prompt Functions Accept Unlimited Input
-**File:** `supabase/functions/generate-reflection-prompt/index.ts` and similar AI functions
+#### 1.4 AI Prompt Functions Accept Unlimited Input — ✅ RESOLVED 2026-02-16
+**File:** `supabase/functions/generate-reflection-prompt/index.ts`, `course-recommendations/index.ts`, `decision-insights/index.ts`
 **Problem:** No input size limits before sending to Vertex AI. Cost spikes, timeouts possible.
-**Fix:** Truncate input arrays and string lengths.
-
-**Cursor prompt:**
-```
-In all AI-related edge functions (generate-reflection-prompt, generate-ai-recommendations, generate-ai-insights, course-recommendations, decision-insights), add input size limits:
-
-1. Truncate any user-provided arrays to max 10 items
-2. Truncate any user-provided strings to max 500 characters
-3. Truncate the assembled prompt to max 4000 characters before sending to Vertex AI
-4. Add a shared helper in supabase/functions/_shared/ai-input-limits.ts:
-   - truncateArray(arr, maxItems)
-   - truncateString(str, maxLength)
-   - truncatePrompt(prompt, maxChars)
-```
+**Resolution:** Created `supabase/functions/_shared/ai-input-limits.ts` with `truncateArray()`, `truncateString()`, `truncateJson()`, `truncateObjectStrings()`, and `enforcePromptLimit()` helpers. Applied to all 3 unbounded AI functions: arrays capped at 20 items, strings at 500 chars, total prompts at 8K chars with truncation warning logging. `analytics-ai-insights` already had a 50K check.
 
 #### 1.5 N+1 Query in Assessment Scoring
 **File:** `src/components/modules/InstructorAssignmentScoring.tsx` (lines 123-134)
@@ -1419,10 +1389,10 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | # | Issue | Source | Effort | Description |
 |---|-------|--------|--------|-------------|
 | ~~H1~~ | ~~Empty client dashboard — no onboarding~~ — **RESOLVED 2026-02-16** | Part 8 (8.2A) | ~~1 day~~ | Added OnboardingWelcomeCard with 4-step checklist (profile, Wheel of Life, goals, programs). Auto-hides when complete or dismissed. |
-| H2 | File upload validation inconsistent | Part 1 (1.3) | 4 hours | Client uploads validated but admin uploads and shared utility missing. Standardize |
-| H3 | AI functions accept unlimited input | Part 1 (1.4) | 4 hours | No input size limits before Vertex AI calls. Add truncation helpers |
+| ~~H2~~ | ~~File upload validation inconsistent~~ — **RESOLVED 2026-02-16** | Part 1 (1.3) | ~~4 hours~~ | Created shared `fileValidation.ts` with bucket-specific presets. Applied to all 13 upload interfaces. |
+| ~~H3~~ | ~~AI functions accept unlimited input~~ — **RESOLVED 2026-02-16** | Part 1 (1.4) | ~~4 hours~~ | Created `ai-input-limits.ts` with truncation helpers. Applied to 3 AI edge functions. |
 | ~~H4~~ | ~~Welcome email not auto-triggered~~ — **RESOLVED 2026-02-15** | Part 7 (7.4) | ~~1 hour~~ | verify-signup now triggers send-welcome-email (non-blocking, service role auth) |
-| H5 | Express interest — no status tracking | Part 8 (8.2C) | 4 hours | Client submits interest but can't check status. Add status view to dashboard |
+| ~~H5~~ | ~~Express interest — no status tracking~~ — **RESOLVED 2026-02-16** | Part 8 (8.2C) | ~~4 hours~~ | Added "My Interest Registrations" section to ClientDashboard with color-coded status badges (pending/contacted/enrolled/declined). Fetches both program_interest_registrations and ac_interest_registrations. |
 | H6 | Feature gate messaging for max-plan users | Part 8 (8.6) | 2 hours | User on highest plan sees "Upgrade" for unmapped features. Show admin contact instead |
 | ~~H7~~ | ~~N+1 query in module progress~~ — **RESOLVED 2026-02-15** | Part 1 (1.5) | ~~1 hour~~ | Replaced per-module progress queries with single batched `.in()` query |
 | ~~H8~~ | ~~Assignment grading lacks status guard~~ — **RESOLVED 2026-02-15** | Part 1 (1.6) | ~~1 hour~~ | Added status guard: grading only allowed when assignment is "submitted" |
