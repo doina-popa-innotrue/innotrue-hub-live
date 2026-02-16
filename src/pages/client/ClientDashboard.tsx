@@ -25,6 +25,7 @@ import { WeeklyReflectionCard } from "@/components/dashboard/WeeklyReflectionCar
 import { JourneyProgressWidget } from "@/components/dashboard/JourneyProgressWidget";
 import { RecentGradedAssignmentsWidget } from "@/components/dashboard/RecentGradedAssignmentsWidget";
 import { RecentNotificationsWidget } from "@/components/dashboard/RecentNotificationsWidget";
+import { RecentFeedbackWidget } from "@/components/dashboard/RecentFeedbackWidget";
 import { LowBalanceAlert } from "@/components/credits/LowBalanceAlert";
 import { AnnouncementsWidget } from "@/components/dashboard/AnnouncementsWidget";
 import { DevelopmentHubWidget } from "@/components/dashboard/DevelopmentHubWidget";
@@ -637,6 +638,9 @@ export default function ClientDashboard() {
 
       {/* Section 2: Recent Notifications */}
       <RecentNotificationsWidget />
+
+      {/* Section 2b: Recent Feedback */}
+      <RecentFeedbackWidget />
 
       {/* Section 3: Announcements */}
       <AnnouncementsWidget />

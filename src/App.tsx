@@ -167,6 +167,7 @@ const Community = lazy(() => import("./pages/client/Community"));
 const Academy = lazy(() => import("./pages/client/Academy"));
 const Groups = lazy(() => import("./pages/client/Groups"));
 const GroupDetail = lazy(() => import("./pages/client/GroupDetail"));
+const MyFeedback = lazy(() => import("./pages/client/MyFeedback"));
 const GroupNoteDetail = lazy(() => import("./pages/client/GroupNoteDetail"));
 const GroupSessionDetail = lazy(() => import("./pages/client/GroupSessionDetail"));
 const GroupCheckInDetail = lazy(() => import("./pages/client/GroupCheckInDetail"));
@@ -1536,6 +1537,16 @@ const App = () => (
                       <ProtectedRoute requireRole="client">
                         <DashboardLayout>
                           <Groups />
+                        </DashboardLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/feedback"
+                    element={
+                      <ProtectedRoute requireRole="client">
+                        <DashboardLayout>
+                          <MyFeedback />
                         </DashboardLayout>
                       </ProtectedRoute>
                     }

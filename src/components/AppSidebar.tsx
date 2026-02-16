@@ -210,6 +210,13 @@ export function AppSidebar() {
       featureKey: null, // Always visible
     },
     {
+      title: "My Feedback",
+      url: "/feedback",
+      icon: MessageSquare,
+      tourId: "client-feedback",
+      featureKey: null, // Always visible
+    },
+    {
       title: "Guided Paths",
       url: "/guided-paths",
       icon: Map,
