@@ -1,9 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 // Rate limit configuration
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
@@ -61,9 +58,11 @@ function validateEventProperties(properties: unknown): Record<string, unknown> {
 }
 
 Deno.serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -78,7 +77,7 @@ Deno.serve(async (req) => {
     if (!type || !payload) {
       return new Response(
         JSON.stringify({ error: "Missing type or payload" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -92,14 +91,14 @@ Deno.serve(async (req) => {
       if (!session_id || typeof session_id !== "string") {
         return new Response(
           JSON.stringify({ error: "Invalid session_id" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
 
       if (!event_name || typeof event_name !== "string") {
         return new Response(
           JSON.stringify({ error: "Invalid event_name" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
 
@@ -116,7 +115,7 @@ Deno.serve(async (req) => {
           console.log(`Blocking analytics event for excluded user ${user_id}`);
           return new Response(
             JSON.stringify({ success: true, blocked: true }),
-            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
           );
         }
       }
@@ -127,7 +126,7 @@ Deno.serve(async (req) => {
         console.warn(`Rate limit exceeded for session ${session_id}`);
         return new Response(
           JSON.stringify({ error: "Rate limit exceeded" }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 429, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
 
@@ -147,14 +146,14 @@ Deno.serve(async (req) => {
         console.error("Failed to insert analytics event:", error);
         return new Response(
           JSON.stringify({ error: "Failed to record event" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
 
       console.log(`Analytics event recorded: ${event_name} for session ${session_id}`);
       return new Response(
         JSON.stringify({ success: true }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
 
     } else if (type === "cookie_consent") {
@@ -164,7 +163,7 @@ Deno.serve(async (req) => {
       if (!session_id || typeof session_id !== "string") {
         return new Response(
           JSON.stringify({ error: "Invalid session_id" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
 
@@ -174,7 +173,7 @@ Deno.serve(async (req) => {
         console.warn(`Consent rate limit exceeded for session ${session_id}`);
         return new Response(
           JSON.stringify({ error: "Rate limit exceeded" }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 429, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
 
@@ -193,20 +192,20 @@ Deno.serve(async (req) => {
         console.error("Failed to insert cookie consent:", error);
         return new Response(
           JSON.stringify({ error: "Failed to record consent" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
 
       console.log(`Cookie consent recorded for session ${session_id}`);
       return new Response(
         JSON.stringify({ success: true }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
 
     } else {
       return new Response(
         JSON.stringify({ error: "Invalid type" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -214,7 +213,7 @@ Deno.serve(async (req) => {
     console.error("Error in track-analytics:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 });

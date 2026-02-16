@@ -1,15 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -18,7 +17,7 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "Missing authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -34,7 +33,7 @@ serve(async (req) => {
     if (userError || !user) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -48,7 +47,7 @@ serve(async (req) => {
       console.error("Error fetching user roles:", rolesError);
       return new Response(
         JSON.stringify({ error: "Failed to verify permissions" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -56,7 +55,7 @@ serve(async (req) => {
     if (!isAdmin) {
       return new Response(
         JSON.stringify({ error: "Forbidden: Admin access required" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -142,7 +141,7 @@ serve(async (req) => {
 
       return new Response(JSON.stringify(exportData, null, 2), {
         headers: {
-          ...corsHeaders,
+          ...cors,
           "Content-Type": "application/json",
           "Content-Disposition": `attachment; filename="feature-assignments-${new Date().toISOString().split("T")[0]}.json"`,
         },
@@ -212,7 +211,7 @@ serve(async (req) => {
 
       return new Response(JSON.stringify(exportData, null, 2), {
         headers: {
-          ...corsHeaders,
+          ...cors,
           "Content-Type": "application/json",
           "Content-Disposition": `attachment; filename="credit-config-${new Date().toISOString().split("T")[0]}.json"`,
         },
@@ -220,14 +219,14 @@ serve(async (req) => {
     } else {
       return new Response(
         JSON.stringify({ error: "Invalid export type. Use 'feature-assignments' or 'credit-config'" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
   } catch (error) {
     console.error("Export error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 });

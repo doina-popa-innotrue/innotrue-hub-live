@@ -2,13 +2,10 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkUserEmailStatus, isAdminNotificationType, ADMIN_NOTIFICATION_TYPES, getStagingRecipients, getStagingSubject } from "../_shared/email-utils.ts";
 import { isValidEmail } from "../_shared/validation.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 // CORS headers - allow calls from web app
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
 interface NotificationRequest {
   email?: string;
   userId?: string;
@@ -159,8 +156,10 @@ function getDefaultTemplate(): { subject: string; html: string } {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -175,7 +174,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error('Missing Authorization header');
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Missing authorization' }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 401, headers: { "Content-Type": "application/json", ...cors } }
       );
     }
     
@@ -200,7 +199,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error('Invalid authorization token');
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Invalid token' }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 401, headers: { "Content-Type": "application/json", ...cors } }
       );
     }
     
@@ -222,7 +221,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (email && !isValidEmail(email)) {
       return new Response(
         JSON.stringify({ error: "Invalid email format" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...cors } }
       );
     }
 
@@ -230,7 +229,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!email && !userId) {
       return new Response(
         JSON.stringify({ error: "Either email or userId is required" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...cors } }
       );
     }
 
@@ -252,7 +251,7 @@ const handler = async (req: Request): Promise<Response> => {
         console.error('Error fetching user email:', userError);
         return new Response(
           JSON.stringify({ error: 'User email not found' }),
-          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          { status: 400, headers: { "Content-Type": "application/json", ...cors } }
         );
       }
       recipientEmail = user.email;
@@ -277,7 +276,7 @@ const handler = async (req: Request): Promise<Response> => {
         console.log(`Skipping notification to ${recipientEmail}: ${reason}`);
         return new Response(
           JSON.stringify({ skipped: true, reason }),
-          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          { status: 200, headers: { "Content-Type": "application/json", ...cors } }
         );
       }
     }
@@ -447,7 +446,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('Resend API key not configured, skipping email send');
       return new Response(
         JSON.stringify({ warning: 'Email service not configured' }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 200, headers: { "Content-Type": "application/json", ...cors } }
       );
     }
 
@@ -470,7 +469,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Resend API error:", errorText);
       return new Response(
         JSON.stringify({ error: "Failed to send email", details: errorText }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 500, headers: { "Content-Type": "application/json", ...cors } }
       );
     }
 
@@ -483,13 +482,13 @@ const handler = async (req: Request): Promise<Response> => {
         recipients: recipients.length,
         messageId: result.id 
       }),
-      { headers: { "Content-Type": "application/json", ...corsHeaders } }
+      { headers: { "Content-Type": "application/json", ...cors } }
     );
   } catch (error) {
     console.error("Error in send-notification-email:", error);
     return new Response(
       JSON.stringify({ error: (error as Error).message }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      { status: 500, headers: { "Content-Type": "application/json", ...cors } }
     );
   }
 };

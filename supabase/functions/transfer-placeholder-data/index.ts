@@ -1,10 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 interface TransferRequest {
   placeholderUserId: string;
@@ -13,8 +10,10 @@ interface TransferRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -23,7 +22,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "Authorization required" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -39,7 +38,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (userError || !callerUser) {
       return new Response(
         JSON.stringify({ error: "Invalid authentication" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -53,7 +52,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!isAdmin) {
       return new Response(
         JSON.stringify({ error: "Admin access required" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -63,14 +62,14 @@ const handler = async (req: Request): Promise<Response> => {
     if (!placeholderUserId || !targetUserId) {
       return new Response(
         JSON.stringify({ error: "Both placeholderUserId and targetUserId are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
     if (placeholderUserId === targetUserId) {
       return new Response(
         JSON.stringify({ error: "Source and target user cannot be the same" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -91,7 +90,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (placeholderError || !placeholderProfile) {
       return new Response(
         JSON.stringify({ error: "Placeholder user not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 404, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -105,7 +104,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (targetError || !targetProfile) {
       return new Response(
         JSON.stringify({ error: "Target user not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 404, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -254,14 +253,14 @@ const handler = async (req: Request): Promise<Response> => {
         message: "Data transferred successfully",
         transferred: transferResults
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Error in transfer-placeholder-data function:", errorMessage);
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 };

@@ -1,27 +1,25 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
-import { 
-  OAuthProvider, 
+import { errorResponse, successResponse } from '../_shared/error-response.ts';
+import {
+  OAuthProvider,
   getConfiguredProviders,
-  isProviderConfigured 
+  isProviderConfigured
 } from '../_shared/oauth-providers.ts';
 
 serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
+  const cors = getCorsHeaders(req);
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
     // Verify auth
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.unauthorized('Unauthorized', cors);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -33,10 +31,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.unauthorized('Unauthorized', cors);
     }
 
     // Get user's connected OAuth providers
@@ -47,10 +42,7 @@ serve(async (req) => {
 
     if (fetchError) {
       console.error('Failed to fetch connections:', fetchError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch connections' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.serverErrorWithMessage('Failed to fetch connections', cors);
     }
 
     // Get list of available (configured) providers
@@ -80,20 +72,13 @@ serve(async (req) => {
       };
     });
 
-    return new Response(
-      JSON.stringify({
-        providers: providerStatus,
-        connectedProviders,
-        availableProviders,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return successResponse.ok({
+      providers: providerStatus,
+      connectedProviders,
+      availableProviders,
+    }, cors);
 
   } catch (error) {
-    console.error('OAuth status error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse.serverError('oauth-status', error, cors);
   }
 });

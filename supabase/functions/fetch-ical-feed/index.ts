@@ -1,10 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+// getCorsHeaders(req) from _shared/cors.ts handles origin + standard headers
 
 interface ICalEvent {
   uid: string;
@@ -100,8 +99,10 @@ function parseICalFeed(icalData: string): ICalEvent[] {
 }
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: cors });
   }
 
   try {
@@ -112,7 +113,7 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -125,7 +126,7 @@ serve(async (req) => {
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -149,7 +150,7 @@ serve(async (req) => {
             error: `Failed to fetch URL: HTTP ${testResponse.status}`,
             errorType: 'fetch_failed'
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } }
         );
       }
       
@@ -166,7 +167,7 @@ serve(async (req) => {
             error: 'This URL returns a web page, not an iCal feed. Please use the "Secret address in iCal format" from your calendar settings.',
             errorType: 'html_response'
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } }
         );
       }
       
@@ -178,7 +179,7 @@ serve(async (req) => {
             error: 'This URL does not return a valid iCal feed. The response should start with BEGIN:VCALENDAR.',
             errorType: 'invalid_format'
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } }
         );
       }
       
@@ -194,7 +195,7 @@ serve(async (req) => {
             ? `Found ${testEvents.length} events in the calendar feed.`
             : 'Valid iCal feed, but no events found in the current period.'
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
     
@@ -210,7 +211,7 @@ serve(async (req) => {
       console.error('Calendar fetch error:', calError);
       return new Response(
         JSON.stringify({ error: 'Calendar not found or access denied' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 404, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -228,7 +229,7 @@ serve(async (req) => {
       console.error(`Failed to fetch iCal feed: ${icalResponse.status}`);
       return new Response(
         JSON.stringify({ error: `Failed to fetch calendar feed: ${icalResponse.status}` }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 502, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
     
@@ -244,7 +245,7 @@ serve(async (req) => {
           error: 'Calendar URL returns a web page instead of iCal data. Please update with the correct iCal feed URL.',
           errorType: 'html_response'
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
     
@@ -256,7 +257,7 @@ serve(async (req) => {
           error: 'Invalid calendar format. Please check the URL is a valid iCal feed.',
           errorType: 'invalid_format'
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
     
@@ -292,14 +293,14 @@ serve(async (req) => {
         },
         events: filteredEvents,
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } }
     );
   } catch (error: unknown) {
     console.error('Error in fetch-ical-feed:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } }
     );
   }
 });

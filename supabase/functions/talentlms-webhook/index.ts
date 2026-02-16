@@ -1,10 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-experience-api-version',
-};
+// Webhook: TalentLMS sends xAPI statements with x-experience-api-version header
+// getCorsHeaders(req) from _shared/cors.ts handles origin + standard headers
 
 // xAPI Statement structure
 interface XAPIStatement {
@@ -66,9 +66,11 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -91,7 +93,7 @@ serve(async (req) => {
         console.error('Invalid base64 in authorization header');
         return new Response(
           JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } }
         );
       }
       
@@ -100,7 +102,7 @@ serve(async (req) => {
         console.error('Invalid credentials format');
         return new Response(
           JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } }
         );
       }
       
@@ -118,14 +120,14 @@ serve(async (req) => {
           console.error('Invalid xAPI key');
           return new Response(
             JSON.stringify({ error: 'Unauthorized' }),
-            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } }
           );
         }
         if (!timingSafeEqual(secret, expectedSecret)) {
           console.error('Invalid xAPI secret');
           return new Response(
             JSON.stringify({ error: 'Unauthorized' }),
-            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } }
           );
         }
         isAuthenticated = true;
@@ -141,7 +143,7 @@ serve(async (req) => {
         console.error('Invalid webhook secret');
         return new Response(
           JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } }
         );
       }
       isAuthenticated = true;
@@ -151,7 +153,7 @@ serve(async (req) => {
     if (webhookSecret && !isAuthenticated) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -317,7 +319,7 @@ serve(async (req) => {
       JSON.stringify(results.map(r => r.statementId || 'processed')),
       { 
         status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...cors, 'Content-Type': 'application/json' } 
       }
     );
 
@@ -325,7 +327,7 @@ serve(async (req) => {
     console.error('Error processing xAPI statement:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Internal error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } }
     );
   }
 });

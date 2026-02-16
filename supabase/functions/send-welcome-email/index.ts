@@ -2,11 +2,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { getStagingRecipient, getStagingSubject } from "../_shared/email-utils.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 interface WelcomeEmailRequest {
   userId: string;
@@ -58,9 +55,11 @@ const defaultTemplate = {
 };
 
 const handler = async (req: Request): Promise<Response> => {
+  const cors = getCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -69,7 +68,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "No authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -91,7 +90,7 @@ const handler = async (req: Request): Promise<Response> => {
       if (!callingUser) {
         return new Response(
           JSON.stringify({ error: "Unauthorized" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 401, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
 
@@ -105,7 +104,7 @@ const handler = async (req: Request): Promise<Response> => {
       if (!isAdmin) {
         return new Response(
           JSON.stringify({ error: "Only admins can send welcome emails" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 403, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
     }
@@ -115,7 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!userId) {
       return new Response(
         JSON.stringify({ error: "userId is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -128,7 +127,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Error fetching user:", userError);
       return new Response(
         JSON.stringify({ error: "User not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 404, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -143,7 +142,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (profile?.is_disabled) {
       return new Response(
         JSON.stringify({ error: "Cannot send welcome email to a disabled user. Enable the user first." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -171,7 +170,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Error generating reset link:", resetError);
       return new Response(
         JSON.stringify({ error: "Failed to generate password setup link" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -198,13 +197,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     return new Response(
       JSON.stringify({ success: true, message: "Welcome email sent successfully" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
     console.error("Error in send-welcome-email function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 };

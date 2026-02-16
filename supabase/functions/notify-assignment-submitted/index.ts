@@ -2,11 +2,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { getStagingRecipients, getStagingSubject } from "../_shared/email-utils.ts";
 import { isValidUUID } from "../_shared/validation.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 interface NotificationRequest {
   moduleProgressId: string;
@@ -15,8 +12,10 @@ interface NotificationRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -32,7 +31,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!moduleProgressId || !assignmentId || !assignmentTypeName) {
       return new Response(JSON.stringify({ error: "moduleProgressId, assignmentId, and assignmentTypeName are required" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -40,7 +39,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!isValidUUID(moduleProgressId) || !isValidUUID(assignmentId)) {
       return new Response(JSON.stringify({ error: "Invalid ID format" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -48,7 +47,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (typeof assignmentTypeName !== "string" || assignmentTypeName.length > 500) {
       return new Response(JSON.stringify({ error: "Invalid assignment type name" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -73,7 +72,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Error fetching module progress:", progressError);
       return new Response(JSON.stringify({ error: "Module progress not found" }), {
         status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -165,7 +164,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (recipientIds.size === 0) {
       console.log("No instructors or coaches to notify");
       return new Response(JSON.stringify({ message: "No recipients found" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -183,7 +182,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (recipientEmails.length === 0 || !resendApiKey) {
       console.log("No emails to send or Resend not configured");
       return new Response(JSON.stringify({ message: "No emails sent" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -279,7 +278,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Resend API error:", errorText);
       return new Response(JSON.stringify({ error: "Failed to send email" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -290,13 +289,13 @@ const handler = async (req: Request): Promise<Response> => {
         success: true, 
         recipientCount: recipientEmails.length 
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...cors, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error in notify-assignment-submitted:", error);
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 };

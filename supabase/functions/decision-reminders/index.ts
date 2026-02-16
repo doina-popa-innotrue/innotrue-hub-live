@@ -1,14 +1,13 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkUserEmailStatus, getStagingRecipient, getStagingSubject } from "../_shared/email-utils.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 Deno.serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -22,7 +21,7 @@ Deno.serve(async (req) => {
       console.error('Unauthorized: Invalid or missing authorization token');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -62,7 +61,7 @@ Deno.serve(async (req) => {
     if (!reminders || reminders.length === 0) {
       return new Response(
         JSON.stringify({ message: 'No pending reminders', count: 0 }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -197,7 +196,7 @@ Deno.serve(async (req) => {
         details: { emailsSent, skipped, errors },
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...cors, 'Content-Type': 'application/json' },
         status: 200,
       }
     );
@@ -207,7 +206,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ error: errorMessage }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...cors, 'Content-Type': 'application/json' },
         status: 500,
       }
     );

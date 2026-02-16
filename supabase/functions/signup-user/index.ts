@@ -3,13 +3,10 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { getStagingRecipient, getStagingSubject } from "../_shared/email-utils.ts";
 import { isValidEmail, validatePassword, validateName } from "../_shared/validation.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 interface SignupRequest {
   email: string;
@@ -47,11 +44,13 @@ const defaultTemplate = {
 };
 
 const handler = async (req: Request): Promise<Response> => {
+  const cors = getCorsHeaders(req);
+
   const startTime = Date.now();
   const MIN_RESPONSE_TIME = 500; // Minimum response time to prevent timing attacks
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -89,7 +88,7 @@ const handler = async (req: Request): Promise<Response> => {
       
       return new Response(
         JSON.stringify({ error: "Too many signup attempts. Please try again later." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 429, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -105,7 +104,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
       return new Response(
         JSON.stringify({ error: "Email, password, and name are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -117,7 +116,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
       return new Response(
         JSON.stringify({ error: "Please enter a valid email address" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -130,7 +129,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
       return new Response(
         JSON.stringify({ error: passwordError }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -143,7 +142,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
       return new Response(
         JSON.stringify({ error: "Please enter a valid name (max 200 characters)" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -160,7 +159,7 @@ const handler = async (req: Request): Promise<Response> => {
       
       return new Response(
         JSON.stringify({ error: "A user with this email already exists" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -183,7 +182,7 @@ const handler = async (req: Request): Promise<Response> => {
       
       return new Response(
         JSON.stringify({ error: createError.message }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -225,7 +224,7 @@ const handler = async (req: Request): Promise<Response> => {
       
       return new Response(
         JSON.stringify({ error: "Failed to create verification request" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -286,7 +285,7 @@ const handler = async (req: Request): Promise<Response> => {
       
       return new Response(
         JSON.stringify({ error: "Failed to send verification email" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -300,7 +299,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     return new Response(
       JSON.stringify({ success: true, message: "Verification email sent" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
     console.error("Error in signup-user function:", error);
@@ -313,7 +312,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 };

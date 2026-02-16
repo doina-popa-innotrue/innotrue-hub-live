@@ -3,11 +3,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { getStagingRecipient, getStagingSubject } from "../_shared/email-utils.ts";
 import { isValidEmail, validateName } from "../_shared/validation.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 interface WheelPdfRequest {
   email: string;
@@ -101,8 +98,10 @@ const defaultTemplate = {
 };
 
 const handler = async (req: Request): Promise<Response> => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -111,7 +110,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("RESEND_API_KEY not configured");
       return new Response(
         JSON.stringify({ error: "Email service not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -122,7 +121,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!email || !name || !ratings) {
       return new Response(
         JSON.stringify({ error: "Email, name, and ratings are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -130,7 +129,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!isValidEmail(email)) {
       return new Response(
         JSON.stringify({ error: "Please enter a valid email address" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -139,7 +138,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!validatedName) {
       return new Response(
         JSON.stringify({ error: "Please enter a valid name" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -147,14 +146,14 @@ const handler = async (req: Request): Promise<Response> => {
     if (typeof ratings !== "object" || Array.isArray(ratings)) {
       return new Response(
         JSON.stringify({ error: "Ratings must be an object" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
     for (const [key, value] of Object.entries(ratings)) {
       if (typeof value !== "number" || value < 0 || value > 10 || !isFinite(value)) {
         return new Response(
           JSON.stringify({ error: `Invalid rating value for ${key}: must be a number between 0 and 10` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
     }
@@ -163,7 +162,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (notes && (typeof notes !== "string" || notes.length > 5000)) {
       return new Response(
         JSON.stringify({ error: "Notes must be a string of at most 5,000 characters" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -277,13 +276,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...cors },
     });
   } catch (error: any) {
     console.error("Error in send-wheel-pdf function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      { status: 500, headers: { "Content-Type": "application/json", ...cors } }
     );
   }
 };

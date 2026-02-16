@@ -1,26 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-// Origin-aware CORS for financial operations
-function getCorsHeaders(request: Request): Record<string, string> {
-  const origin = request.headers.get('origin');
-  const allowedOrigins = [
-    'https://app.innotrue.com',
-    Deno.env.get('SITE_URL'),
-  ].filter(Boolean);
-  
-  let allowedOrigin = 'https://app.innotrue.com';
-  if (origin && allowedOrigins.includes(origin)) {
-    allowedOrigin = origin;
-  }
-  
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-}
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -28,10 +10,10 @@ const logStep = (step: string, details?: unknown) => {
 };
 
 serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
-  
+  const cors = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   const supabaseClient = createClient(
@@ -224,16 +206,10 @@ serve(async (req) => {
         onConflict: 'organization_id',
       });
 
-    return new Response(JSON.stringify({ url: session.url }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    return successResponse.ok({ url: session.url }, cors);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    return errorResponse.serverErrorWithMessage(errorMessage, cors);
   }
 });

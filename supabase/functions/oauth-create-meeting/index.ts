@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { errorResponse, successResponse } from '../_shared/error-response.ts';
 import { decryptToken } from '../_shared/oauth-crypto.ts';
 import { OAuthProvider, refreshAccessToken } from '../_shared/oauth-providers.ts';
 
@@ -20,20 +21,17 @@ interface MeetingResponse {
 }
 
 serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
+  const cors = getCorsHeaders(req);
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
     // Verify auth
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.unauthorized('Unauthorized', cors);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -45,10 +43,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.unauthorized('Unauthorized', cors);
     }
 
     const body: MeetingRequest = await req.json();
@@ -56,10 +51,7 @@ serve(async (req) => {
 
     // Validate provider
     if (!provider || !['zoom', 'google', 'microsoft'].includes(provider)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid provider' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.badRequest('Invalid provider', cors);
     }
 
     // Get user's OAuth token for this provider
@@ -71,10 +63,7 @@ serve(async (req) => {
       .single();
 
     if (tokenError || !tokenRecord) {
-      return new Response(
-        JSON.stringify({ error: `Not connected to ${provider}`, code: 'NOT_CONNECTED' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.badRequest(`Not connected to ${provider}`, cors);
     }
 
     // Decrypt access token
@@ -83,27 +72,21 @@ serve(async (req) => {
     // Check if token is expired and refresh if needed
     if (tokenRecord.token_expires_at && new Date(tokenRecord.token_expires_at) < new Date()) {
       if (!tokenRecord.refresh_token_encrypted) {
-        return new Response(
-          JSON.stringify({ error: 'Token expired and no refresh token available', code: 'TOKEN_EXPIRED' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return errorResponse.badRequest('Token expired and no refresh token available', cors);
       }
 
       const refreshToken = await decryptToken(tokenRecord.refresh_token_encrypted);
       const newTokens = await refreshAccessToken(provider, refreshToken);
 
       if (!newTokens) {
-        return new Response(
-          JSON.stringify({ error: 'Failed to refresh token, please reconnect', code: 'REFRESH_FAILED' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return errorResponse.badRequest('Failed to refresh token, please reconnect', cors);
       }
 
       // Update stored tokens
       const { encryptToken } = await import('../_shared/oauth-crypto.ts');
       const newAccessTokenEncrypted = await encryptToken(newTokens.access_token);
-      const newRefreshTokenEncrypted = newTokens.refresh_token 
-        ? await encryptToken(newTokens.refresh_token) 
+      const newRefreshTokenEncrypted = newTokens.refresh_token
+        ? await encryptToken(newTokens.refresh_token)
         : tokenRecord.refresh_token_encrypted;
 
       await supabase
@@ -111,8 +94,8 @@ serve(async (req) => {
         .update({
           access_token_encrypted: newAccessTokenEncrypted,
           refresh_token_encrypted: newRefreshTokenEncrypted,
-          token_expires_at: newTokens.expires_in 
-            ? new Date(Date.now() + newTokens.expires_in * 1000).toISOString() 
+          token_expires_at: newTokens.expires_in
+            ? new Date(Date.now() + newTokens.expires_in * 1000).toISOString()
             : tokenRecord.token_expires_at,
           updated_at: new Date().toISOString(),
         })
@@ -131,25 +114,15 @@ serve(async (req) => {
     } else if (provider === 'microsoft') {
       meetingResult = await createMicrosoftMeeting(accessToken, topic, startTime, duration, timezone);
     } else {
-      return new Response(
-        JSON.stringify({ error: 'Provider not supported for meeting creation' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.badRequest('Provider not supported for meeting creation', cors);
     }
 
     console.log(`Created ${provider} meeting for user ${user.id}: ${meetingResult.meetingId}`);
 
-    return new Response(
-      JSON.stringify(meetingResult),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return successResponse.ok(meetingResult, cors);
 
   } catch (error) {
-    console.error('Create meeting error:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse.serverError('oauth-create-meeting', error, cors);
   }
 });
 

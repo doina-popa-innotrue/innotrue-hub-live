@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { isValidEmail, validatePassword, validateName, isValidUUID, isValidEnum } from "../_shared/validation.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 interface CreateUserRequest {
   email: string;
@@ -18,8 +15,10 @@ interface CreateUserRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -28,7 +27,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "Authorization required" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -44,7 +43,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (userError || !callerUser) {
       return new Response(
         JSON.stringify({ error: "Invalid authentication" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -58,7 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!isAdmin) {
       return new Response(
         JSON.stringify({ error: "Admin access required" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -68,7 +67,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!email || !password || !name) {
       return new Response(
         JSON.stringify({ error: "Email, password, and name are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -76,7 +75,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!isValidEmail(email)) {
       return new Response(
         JSON.stringify({ error: "Please enter a valid email address" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -86,7 +85,7 @@ const handler = async (req: Request): Promise<Response> => {
       if (passwordError) {
         return new Response(
           JSON.stringify({ error: passwordError }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
     }
@@ -96,7 +95,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!validatedName) {
       return new Response(
         JSON.stringify({ error: "Please enter a valid name (max 200 characters)" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -104,7 +103,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (plan_id && !isValidUUID(plan_id)) {
       return new Response(
         JSON.stringify({ error: "Invalid plan ID format" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -115,7 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
       if (invalidRole) {
         return new Response(
           JSON.stringify({ error: `Invalid role: ${invalidRole}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
     }
@@ -124,7 +123,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (realEmail && !isValidEmail(realEmail)) {
       return new Response(
         JSON.stringify({ error: "Please enter a valid real email address" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -142,7 +141,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (existingUser) {
       return new Response(
         JSON.stringify({ error: "A user with this email already exists" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -158,7 +157,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Error creating user:", createError);
       return new Response(
         JSON.stringify({ error: createError.message }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -208,13 +207,13 @@ const handler = async (req: Request): Promise<Response> => {
           isPlaceholder: isPlaceholder || false
         }
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
     console.error("Error in create-admin-user function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 };

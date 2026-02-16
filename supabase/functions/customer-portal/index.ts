@@ -1,26 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-// Origin-aware CORS for financial operations
-function getCorsHeaders(request: Request): Record<string, string> {
-  const origin = request.headers.get('origin');
-  const allowedOrigins = [
-    'https://app.innotrue.com',
-    Deno.env.get('SITE_URL'),
-  ].filter(Boolean);
-  
-  let allowedOrigin = 'https://app.innotrue.com';
-  if (origin && allowedOrigins.includes(origin)) {
-    allowedOrigin = origin;
-  }
-  
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-}
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -28,10 +10,10 @@ const logStep = (step: string, details?: unknown) => {
 };
 
 serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
-  
+  const cors = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -60,11 +42,11 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    
+
     if (customers.data.length === 0) {
       throw new Error("No Stripe customer found for this user. Please complete a purchase first.");
     }
-    
+
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
@@ -75,16 +57,10 @@ serve(async (req) => {
     });
     logStep("Customer portal session created", { sessionId: portalSession.id, url: portalSession.url });
 
-    return new Response(JSON.stringify({ url: portalSession.url }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    return successResponse.ok({ url: portalSession.url }, cors);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR in customer-portal", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    return errorResponse.serverErrorWithMessage(errorMessage, cors);
   }
 });

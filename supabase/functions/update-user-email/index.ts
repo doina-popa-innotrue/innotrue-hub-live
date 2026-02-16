@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { isValidEmail, isValidUUID, validatePassword } from "../_shared/validation.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 // Minimum response time to prevent timing attacks
 const MIN_RESPONSE_TIME = 300;
@@ -19,10 +16,12 @@ async function delayResponse(startTime: number): Promise<void> {
 }
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   const startTime = Date.now();
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -47,7 +46,7 @@ serve(async (req) => {
         JSON.stringify({ error: 'Unauthorized' }),
         {
           status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...cors, 'Content-Type': 'application/json' },
         }
       );
     }
@@ -61,7 +60,7 @@ serve(async (req) => {
         JSON.stringify({ error: 'Unauthorized' }),
         {
           status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...cors, 'Content-Type': 'application/json' },
         }
       );
     }
@@ -76,7 +75,7 @@ serve(async (req) => {
       await delayResponse(startTime);
       return new Response(
         JSON.stringify({ error: "Invalid user ID format" }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -85,7 +84,7 @@ serve(async (req) => {
       await delayResponse(startTime);
       return new Response(
         JSON.stringify({ error: "Please enter a valid email address" }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -96,7 +95,7 @@ serve(async (req) => {
         await delayResponse(startTime);
         return new Response(
           JSON.stringify({ error: passwordError }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } }
         );
       }
     }
@@ -128,7 +127,7 @@ serve(async (req) => {
         JSON.stringify({ error: 'Not authorized to update other users' }),
         {
           status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...cors, 'Content-Type': 'application/json' },
         }
       );
     }
@@ -152,7 +151,7 @@ serve(async (req) => {
         JSON.stringify({ error: 'No updates provided' }),
         {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...cors, 'Content-Type': 'application/json' },
         }
       );
     }
@@ -173,7 +172,7 @@ serve(async (req) => {
         JSON.stringify({ error: errorMessage }),
         {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...cors, 'Content-Type': 'application/json' },
         }
       );
     }
@@ -259,7 +258,7 @@ serve(async (req) => {
       JSON.stringify({ success: true, user: data.user }),
       {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...cors, 'Content-Type': 'application/json' },
       }
     );
   } catch (error: any) {
@@ -269,7 +268,7 @@ serve(async (req) => {
       JSON.stringify({ error: error.message ?? 'Unexpected error' }),
       {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...cors, 'Content-Type': 'application/json' },
       }
     );
   }

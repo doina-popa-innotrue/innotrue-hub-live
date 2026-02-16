@@ -1,9 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 interface PublicProfileSnapshot {
   generated_at: string;
@@ -33,8 +30,10 @@ interface PublicProfileSnapshot {
 }
 
 Deno.serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -65,7 +64,7 @@ Deno.serve(async (req) => {
       if (!isAdmin) {
         return new Response(
           JSON.stringify({ error: "Unauthorized" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 403, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
     }
@@ -74,7 +73,7 @@ Deno.serve(async (req) => {
     if (!profileUserId) {
       return new Response(
         JSON.stringify({ error: "No user ID provided" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -108,7 +107,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, action: "unpublished" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -122,14 +121,14 @@ Deno.serve(async (req) => {
     if (settingsError || !settings) {
       return new Response(
         JSON.stringify({ error: "Profile settings not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 404, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
     if (!settings.custom_slug) {
       return new Response(
         JSON.stringify({ error: "Custom slug is required to publish profile" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -273,7 +272,7 @@ Deno.serve(async (req) => {
       console.error("Upload error:", uploadError);
       return new Response(
         JSON.stringify({ error: "Failed to upload snapshot", details: uploadError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -303,14 +302,14 @@ Deno.serve(async (req) => {
         snapshot_url: snapshotUrl,
         generated_at: snapshot.generated_at,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...cors, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("Error generating public profile:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error", details: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 });

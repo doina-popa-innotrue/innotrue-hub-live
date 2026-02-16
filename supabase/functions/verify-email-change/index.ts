@@ -1,10 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 interface VerifyRequest {
   token: string;
@@ -20,6 +17,8 @@ async function hashToken(token: string): Promise<string> {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const cors = getCorsHeaders(req);
+
   // Minimum response time to prevent timing attacks
   const minResponseTime = 500;
   const startTime = Date.now();
@@ -33,7 +32,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -44,7 +43,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!token) {
       return delayResponse(new Response(
         JSON.stringify({ error: "Verification token is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       ));
     }
 
@@ -89,7 +88,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Email change request not found");
       return delayResponse(new Response(
         JSON.stringify({ error: "Invalid or expired verification token" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       ));
     }
 
@@ -97,7 +96,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (request.verified_at) {
       return delayResponse(new Response(
         JSON.stringify({ error: "This email change has already been verified" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       ));
     }
 
@@ -111,7 +110,7 @@ const handler = async (req: Request): Promise<Response> => {
       
       return delayResponse(new Response(
         JSON.stringify({ error: "Verification token has expired. Please request a new email change." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       ));
     }
 
@@ -125,7 +124,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Error updating auth email:", updateAuthError);
       return delayResponse(new Response(
         JSON.stringify({ error: "Failed to update email. Please try again." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
       ));
     }
 
@@ -157,7 +156,7 @@ const handler = async (req: Request): Promise<Response> => {
         message: "Email updated successfully. Please log in with your new email address.",
         new_email: request.new_email
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
     ));
 
   } catch (error: unknown) {
@@ -165,7 +164,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.error("Error in verify-email-change:", errorMessage);
     return delayResponse(new Response(
       JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     ));
   }
 };

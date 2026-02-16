@@ -1,10 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 // Input validation
 function validateInviteToken(token: unknown): string | null {
@@ -23,8 +20,10 @@ function validateInviteToken(token: unknown): string | null {
 }
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -51,13 +50,7 @@ serve(async (req) => {
     const link_existing_account = typeof body?.link_existing_account === 'boolean' ? body.link_existing_account : false;
 
     if (!invite_token) {
-      return new Response(
-        JSON.stringify({ error: "Invalid invite_token format" }),
-        { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400 
-        }
-      );
+      return errorResponse.badRequest("Invalid invite_token format", cors);
     }
 
     // Get the invite
@@ -104,14 +97,11 @@ serve(async (req) => {
         .update({ accepted_at: new Date().toISOString() })
         .eq('id', invite.id);
 
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: "You are already a member of this organization",
-          organization: invite.organizations
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return successResponse.ok({
+        success: true,
+        message: "You are already a member of this organization",
+        organization: invite.organizations
+      }, cors);
     }
 
     // Add user to organization
@@ -160,25 +150,16 @@ serve(async (req) => {
 
     console.log(`User ${userData.user.email} joined organization ${invite.organizations?.name}${link_existing_account ? ' (linked existing account)' : ''}`);
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: `You have joined ${invite.organizations?.name || 'the organization'}`,
-        organization: invite.organizations,
-        linked_existing_account: link_existing_account,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return successResponse.ok({
+      success: true,
+      message: `You have joined ${invite.organizations?.name || 'the organization'}`,
+      organization: invite.organizations,
+      linked_existing_account: link_existing_account,
+    }, cors);
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Error in accept-org-invite:", errorMessage);
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400 
-      }
-    );
+    return errorResponse.badRequest(errorMessage, cors);
   }
 });

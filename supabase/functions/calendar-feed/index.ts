@@ -1,10 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
@@ -105,9 +102,11 @@ function createEvent(params: EventParams): string {
 }
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -136,7 +135,7 @@ serve(async (req) => {
         console.log('Calendar token expired');
         return new Response('Token expired. Please regenerate your calendar URL.', { 
           status: 401, 
-          headers: corsHeaders 
+          headers: cors 
         });
       }
 
@@ -144,7 +143,7 @@ serve(async (req) => {
       const isValid = await verifyHmacSignature(paramUserId, paramTimestamp, paramSignature, hmacSecret);
       if (!isValid) {
         console.log('Invalid HMAC signature');
-        return new Response('Invalid token signature', { status: 401, headers: corsHeaders });
+        return new Response('Invalid token signature', { status: 401, headers: cors });
       }
 
       // Fetch profile by user ID
@@ -156,7 +155,7 @@ serve(async (req) => {
 
       if (error || !data) {
         console.log('User not found:', error?.message);
-        return new Response('Invalid token', { status: 401, headers: corsHeaders });
+        return new Response('Invalid token', { status: 401, headers: cors });
       }
       profile = data;
     }
@@ -171,15 +170,15 @@ serve(async (req) => {
         .single();
 
       if (error || !data) {
-        return new Response('Invalid token', { status: 401, headers: corsHeaders });
+        return new Response('Invalid token', { status: 401, headers: cors });
       }
       profile = data;
     } else {
-      return new Response('Missing authentication parameters', { status: 400, headers: corsHeaders });
+      return new Response('Missing authentication parameters', { status: 400, headers: cors });
     }
 
     if (!profile.calendar_sync_enabled) {
-      return new Response('Calendar sync is disabled', { status: 403, headers: corsHeaders });
+      return new Response('Calendar sync is disabled', { status: 403, headers: cors });
     }
 
     const currentUserId = profile.id;
@@ -306,13 +305,13 @@ serve(async (req) => {
 
     return new Response(ical, {
       headers: {
-        ...corsHeaders,
+        ...cors,
         'Content-Type': 'text/calendar; charset=utf-8',
         'Content-Disposition': 'attachment; filename="innotruehub.ics"',
       },
     });
   } catch (error) {
     console.error('Calendar feed error:', error);
-    return new Response('Internal server error', { status: 500, headers: corsHeaders });
+    return new Response('Internal server error', { status: 500, headers: cors });
   }
 });

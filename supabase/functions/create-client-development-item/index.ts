@@ -1,10 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 type ItemType = "reflection" | "note" | "resource" | "action_item";
 type ResourceMode = "url" | "file" | "library";
@@ -57,8 +54,10 @@ function normalizeUrl(v: unknown, max: number): string | null {
 }
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -66,7 +65,7 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "No authorization header" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -83,7 +82,7 @@ serve(async (req) => {
     if (!callingUser) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -95,7 +94,7 @@ serve(async (req) => {
     if (!isUuid(forUserId) || !isUuid(moduleProgressId)) {
       return new Response(JSON.stringify({ error: "Invalid request" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -103,7 +102,7 @@ serve(async (req) => {
     if (!itemType || !["reflection", "note", "resource", "action_item"].includes(itemType)) {
       return new Response(JSON.stringify({ error: "Invalid itemType" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -122,7 +121,7 @@ serve(async (req) => {
       console.error("role lookup error", rolesError);
       return new Response(JSON.stringify({ error: "Access denied" }), {
         status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -130,7 +129,7 @@ serve(async (req) => {
     if (!hasTeachingRole) {
       return new Response(JSON.stringify({ error: "Access denied" }), {
         status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -149,7 +148,7 @@ serve(async (req) => {
       console.error("module_progress lookup error", mpError);
       return new Response(JSON.stringify({ error: "Invalid moduleProgressId" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -160,7 +159,7 @@ serve(async (req) => {
     if (!clientUserId || clientUserId !== forUserId) {
       return new Response(JSON.stringify({ error: "Client mismatch" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -205,7 +204,7 @@ serve(async (req) => {
     if (!isAssigned) {
       return new Response(JSON.stringify({ error: "Not assigned to this client/module" }), {
         status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -257,7 +256,7 @@ serve(async (req) => {
       console.error("development_items insert error", itemError);
       return new Response(JSON.stringify({ error: "Failed to create item" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -319,13 +318,13 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ item }), {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("create-client-development-item error", e);
     return new Response(JSON.stringify({ error: "Server error" }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });

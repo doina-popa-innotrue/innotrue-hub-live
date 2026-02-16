@@ -1,12 +1,11 @@
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { createHmac } from "node:crypto";
 import { cancelCalcomBooking } from "../_shared/calcom-utils.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-cal-signature-256",
-};
+// Webhook-specific: Cal.com sends x-cal-signature-256 header for signature verification
+// getCorsHeaders(req) from _shared/cors.ts handles origin + standard headers
 
 interface CalcomBookingPayload {
   triggerEvent: string;
@@ -468,9 +467,11 @@ async function notifyGroupSessionParticipants(
 }
 
 Deno.serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: cors });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -499,7 +500,7 @@ Deno.serve(async (req) => {
       
       return new Response(
         JSON.stringify({ error: "Invalid signature" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -1112,7 +1113,7 @@ Deno.serve(async (req) => {
       }),
       { 
         status: 200, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        headers: { ...cors, "Content-Type": "application/json" } 
       }
     );
   } catch (error) {
@@ -1133,7 +1134,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: "Internal server error" }),
       { 
         status: 500, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        headers: { ...cors, "Content-Type": "application/json" } 
       }
     );
   }

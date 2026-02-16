@@ -1,13 +1,14 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 import { isValidUUID } from "../_shared/validation.ts";
 
 serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
+  const cors = getCorsHeaders(req);
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -21,33 +22,21 @@ serve(async (req) => {
 
     // --- Validation ---
     if (!assessment_id || !isValidUUID(assessment_id)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid assessment_id" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse.badRequest("Invalid assessment_id", cors);
     }
 
     if (!answers || typeof answers !== "object" || Object.keys(answers).length === 0) {
-      return new Response(
-        JSON.stringify({ error: "Answers are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse.badRequest("Answers are required", cors);
     }
 
     if (!email || typeof email !== "string") {
-      return new Response(
-        JSON.stringify({ error: "Email is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse.badRequest("Email is required", cors);
     }
 
     // Validate all answer values are UUIDs
     for (const [questionId, optionId] of Object.entries(answers)) {
       if (!isValidUUID(questionId) || !isValidUUID(optionId as string)) {
-        return new Response(
-          JSON.stringify({ error: "Invalid answer format" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return errorResponse.badRequest("Invalid answer format", cors);
       }
     }
 
@@ -61,10 +50,7 @@ serve(async (req) => {
       .single();
 
     if (assessmentError || !assessment) {
-      return new Response(
-        JSON.stringify({ error: "Assessment not found or not available" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse.notFound("Assessment not found or not available", cors);
     }
 
     // --- Fetch questions to validate answers ---
@@ -74,19 +60,13 @@ serve(async (req) => {
       .eq("assessment_id", assessment_id);
 
     if (!questions || questions.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "Assessment has no questions" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse.badRequest("Assessment has no questions", cors);
     }
 
     const questionIds = new Set(questions.map((q: { id: string }) => q.id));
     for (const questionId of Object.keys(answers)) {
       if (!questionIds.has(questionId)) {
-        return new Response(
-          JSON.stringify({ error: "Answer references unknown question" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return errorResponse.badRequest("Answer references unknown question", cors);
       }
     }
 
@@ -105,10 +85,7 @@ serve(async (req) => {
       .order("order_index");
 
     if (!dimensions || dimensions.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "Assessment has no dimensions" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse.badRequest("Assessment has no dimensions", cors);
     }
 
     // --- Compute scores ---
@@ -175,32 +152,22 @@ serve(async (req) => {
 
     if (insertError) {
       console.error("Error saving assessment response:", insertError);
-      return new Response(
-        JSON.stringify({ error: "Failed to save response" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse.serverErrorWithMessage("Failed to save response", cors);
     }
 
     // --- Return results (scores + interpretations, NOT the scoring matrix) ---
-    return new Response(
-      JSON.stringify({
-        dimension_scores: scores,
-        dimensions: dimensions.map((d: { id: string; name: string; description: string | null }) => ({
-          name: d.name,
-          description: d.description,
-        })),
-        interpretations: matched.map((i) => ({
-          name: i.name,
-          interpretation_text: i.interpretation_text,
-        })),
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return successResponse.ok({
+      dimension_scores: scores,
+      dimensions: dimensions.map((d: { id: string; name: string; description: string | null }) => ({
+        name: d.name,
+        description: d.description,
+      })),
+      interpretations: matched.map((i) => ({
+        name: i.name,
+        interpretation_text: i.interpretation_text,
+      })),
+    }, cors);
   } catch (error: unknown) {
-    console.error("Error in compute-assessment-scores:", error);
-    return new Response(
-      JSON.stringify({ error: "Unexpected error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return errorResponse.serverError("compute-assessment-scores", error, cors);
   }
 });

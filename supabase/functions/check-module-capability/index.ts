@@ -1,37 +1,32 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 Deno.serve(async (req: Request) => {
-  const corsHeaders = getCorsHeaders(req);
+  const cors = getCorsHeaders(req);
 
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: cors });
   }
 
   try {
     // Validate request method
     if (req.method !== "POST") {
-      return new Response(
-        JSON.stringify({ error: "Method not allowed" }),
-        { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse.badRequest("Method not allowed", cors);
     }
 
     // Parse request body
     const { moduleType, moduleId } = await req.json();
 
     if (!moduleType && !moduleId) {
-      return new Response(
-        JSON.stringify({ error: "Either moduleType or moduleId is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse.badRequest("Either moduleType or moduleId is required", cors);
     }
 
     // Create Supabase client with service role for database access
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     let resolvedModuleType = moduleType;
@@ -46,20 +41,14 @@ Deno.serve(async (req: Request) => {
 
       if (moduleError) {
         console.error("Error fetching module:", moduleError);
-        return new Response(
-          JSON.stringify({ hasMapping: false, error: "Module not found" }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return successResponse.ok({ hasMapping: false, error: "Module not found" }, cors);
       }
 
       resolvedModuleType = moduleData?.module_type;
     }
 
     if (!resolvedModuleType) {
-      return new Response(
-        JSON.stringify({ hasMapping: false }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return successResponse.ok({ hasMapping: false }, cors);
     }
 
     // Use the secure RPC function to check capability
@@ -69,27 +58,16 @@ Deno.serve(async (req: Request) => {
 
     if (error) {
       console.error("Error checking session capability:", error);
-      return new Response(
-        JSON.stringify({ hasMapping: false, error: error.message }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return successResponse.ok({ hasMapping: false, error: error.message }, cors);
     }
 
     console.log(`Module capability check for ${resolvedModuleType}: hasMapping=${!!data}`);
 
-    return new Response(
-      JSON.stringify({ 
-        hasMapping: !!data,
-        moduleType: resolvedModuleType,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return successResponse.ok({
+      hasMapping: !!data,
+      moduleType: resolvedModuleType,
+    }, cors);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error in check-module-capability:", errorMessage);
-    return new Response(
-      JSON.stringify({ error: errorMessage, hasMapping: false }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return errorResponse.serverError("check-module-capability", error, cors);
   }
 });

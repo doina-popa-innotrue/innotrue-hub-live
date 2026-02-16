@@ -1,14 +1,18 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 // Restrict CORS to your app's origin for security
-const corsHeaders = {
+const cors = {
   'Access-Control-Allow-Origin': Deno.env.get('SUPABASE_URL') ?? '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 Deno.serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -291,7 +295,7 @@ Deno.serve(async (req) => {
         message: 'Demo data seeded successfully',
         note: 'Demo users created using configured secrets. Emails are unique per execution.'
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...cors, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     console.error('Error:', error);
@@ -299,7 +303,7 @@ Deno.serve(async (req) => {
     const status = errorMessage === 'Unauthorized' || errorMessage.includes('Unauthorized') ? 403 : 500;
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status }
+      { headers: { ...cors, 'Content-Type': 'application/json' }, status }
     )
   }
 })

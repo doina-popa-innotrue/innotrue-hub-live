@@ -1,23 +1,21 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { errorResponse, successResponse } from '../_shared/error-response.ts';
 import { OAuthProvider } from '../_shared/oauth-providers.ts';
 
 serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
+  const cors = getCorsHeaders(req);
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
     // Verify auth
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.unauthorized('Unauthorized', cors);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -29,20 +27,14 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.unauthorized('Unauthorized', cors);
     }
 
     const { provider } = await req.json();
 
     // Validate provider
     if (!provider || !['zoom', 'google', 'microsoft'].includes(provider)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid provider' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.badRequest('Invalid provider', cors);
     }
 
     // Delete the OAuth token record
@@ -54,24 +46,14 @@ serve(async (req) => {
 
     if (deleteError) {
       console.error('Failed to disconnect:', deleteError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to disconnect provider' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.serverErrorWithMessage('Failed to disconnect provider', cors);
     }
 
     console.log(`Disconnected ${provider} for user ${user.id}`);
 
-    return new Response(
-      JSON.stringify({ success: true, provider }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return successResponse.ok({ success: true, provider }, cors);
 
   } catch (error) {
-    console.error('OAuth disconnect error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse.serverError('oauth-disconnect', error, cors);
   }
 });

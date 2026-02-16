@@ -1,11 +1,7 @@
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { cancelCalcomBooking } from "../_shared/calcom-utils.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 interface CreateBookingRequest {
   eventTypeId: number;
@@ -43,9 +39,11 @@ interface CalcomBookingResponse {
 }
 
 Deno.serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: cors });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -57,7 +55,7 @@ Deno.serve(async (req) => {
     console.error("CALCOM_API_KEY not configured");
     return new Response(
       JSON.stringify({ error: "Cal.com API key not configured" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 
@@ -67,7 +65,7 @@ Deno.serve(async (req) => {
   if (!authHeader) {
     return new Response(
       JSON.stringify({ error: "Missing authorization header" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 401, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 
@@ -81,7 +79,7 @@ Deno.serve(async (req) => {
     console.error("Failed to get calling user:", userError);
     return new Response(
       JSON.stringify({ error: "Unauthorized" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 401, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 
@@ -98,7 +96,7 @@ Deno.serve(async (req) => {
     console.error("Role lookup error:", rolesError);
     return new Response(
       JSON.stringify({ error: "Failed to verify permissions" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 
@@ -110,7 +108,7 @@ Deno.serve(async (req) => {
     console.error("Access denied - user lacks required role:", callingUserId);
     return new Response(
       JSON.stringify({ error: "Access denied: Admin, instructor, or coach role required" }),
-      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 403, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 
@@ -170,7 +168,7 @@ Deno.serve(async (req) => {
       console.error("No valid attendees found");
       return new Response(
         JSON.stringify({ error: "No valid attendees found for booking" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
     
@@ -207,7 +205,7 @@ Deno.serve(async (req) => {
           error: "Failed to create Cal.com booking", 
           details: responseText 
         }),
-        { status: calcomResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: calcomResponse.status, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -264,7 +262,7 @@ Deno.serve(async (req) => {
           booking_uid: booking.uid,
           booking_cancelled: cancelResult.success,
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -302,13 +300,13 @@ Deno.serve(async (req) => {
         start_time: booking.startTime,
         end_time: booking.endTime,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error creating Cal.com booking:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 });

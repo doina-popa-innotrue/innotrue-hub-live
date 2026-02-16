@@ -1,10 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 interface GetBookingUrlRequest {
   eventTypeId: number;
@@ -29,9 +25,11 @@ interface CalcomEventTypeResponse {
 }
 
 Deno.serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: cors });
   }
 
   const calcomApiKey = Deno.env.get("CALCOM_API_KEY");
@@ -40,7 +38,7 @@ Deno.serve(async (req) => {
     console.error("CALCOM_API_KEY not configured");
     return new Response(
       JSON.stringify({ error: "Cal.com API key not configured" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 
@@ -52,7 +50,7 @@ Deno.serve(async (req) => {
     if (!body.eventTypeId) {
       return new Response(
         JSON.stringify({ error: "eventTypeId is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -84,7 +82,7 @@ Deno.serve(async (req) => {
             message: `Cal.com event type ${body.eventTypeId} was not found. Please verify the event type ID in Cal.com Mappings.`,
             eventTypeId: body.eventTypeId,
           }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
       
@@ -95,7 +93,7 @@ Deno.serve(async (req) => {
           message: "Failed to fetch Cal.com event type",
           details: responseText 
         }),
-        { status: calcomResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: calcomResponse.status, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -131,13 +129,13 @@ Deno.serve(async (req) => {
         teamId: eventType.teamId || null,
         schedulingType: eventType.schedulingType || null,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error fetching Cal.com event type:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 });

@@ -3,11 +3,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { getStagingRecipient, getStagingSubject } from "../_shared/email-utils.ts";
 import { isValidEmail } from "../_shared/validation.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 interface InviteRequest {
   organization_id: string;
@@ -49,8 +46,10 @@ const defaultTemplate = {
 };
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   // Minimum response time to prevent timing attacks
@@ -252,7 +251,7 @@ serve(async (req) => {
         emailError: emailError || undefined,
         warning: emailError ? "Invitation was created but the email could not be sent. Please share the invitation link manually." : undefined
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...cors, "Content-Type": "application/json" } }
     );
 
     return delayResponse(response);
@@ -264,7 +263,7 @@ serve(async (req) => {
     const response = new Response(
       JSON.stringify({ error: errorMessage }),
       { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
         status: 400 
       }
     );

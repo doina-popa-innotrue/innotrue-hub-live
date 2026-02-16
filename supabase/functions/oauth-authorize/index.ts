@@ -1,38 +1,33 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
-import { 
-  OAuthProvider, 
-  buildAuthUrl, 
+import { errorResponse, successResponse } from '../_shared/error-response.ts';
+import {
+  OAuthProvider,
+  buildAuthUrl,
   isProviderConfigured,
-  getConfiguredProviders 
+  getConfiguredProviders
 } from '../_shared/oauth-providers.ts';
 import { isEncryptionConfigured } from '../_shared/oauth-crypto.ts';
 
 serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
+  const cors = getCorsHeaders(req);
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
     // Check encryption is configured
     if (!isEncryptionConfigured()) {
       console.error('OAUTH_ENCRYPTION_KEY not configured');
-      return new Response(
-        JSON.stringify({ error: 'OAuth not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.serverErrorWithMessage('OAuth not configured', cors);
     }
 
     // Verify auth
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.unauthorized('Unauthorized', cors);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -44,31 +39,19 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.unauthorized('Unauthorized', cors);
     }
 
     const { provider, returnUrl } = await req.json();
 
     // Validate provider
     if (!provider || !['zoom', 'google', 'microsoft'].includes(provider)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid provider', validProviders: ['zoom', 'google', 'microsoft'] }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.badRequest('Invalid provider', cors);
     }
 
     // Check if provider is configured
     if (!isProviderConfigured(provider as OAuthProvider)) {
-      return new Response(
-        JSON.stringify({ 
-          error: `${provider} OAuth not configured`,
-          configuredProviders: getConfiguredProviders()
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.badRequest(`${provider} OAuth not configured`, cors);
     }
 
     // Build redirect URI (callback function URL)
@@ -87,24 +70,14 @@ serve(async (req) => {
     const authUrl = buildAuthUrl(provider as OAuthProvider, redirectUri, state);
 
     if (!authUrl) {
-      return new Response(
-        JSON.stringify({ error: 'Failed to build authorization URL' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse.serverErrorWithMessage('Failed to build authorization URL', cors);
     }
 
     console.log(`Generated OAuth URL for ${provider}, user: ${user.id}`);
 
-    return new Response(
-      JSON.stringify({ authUrl, provider }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return successResponse.ok({ authUrl, provider }, cors);
 
   } catch (error) {
-    console.error('OAuth authorize error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse.serverError('oauth-authorize', error, cors);
   }
 });
