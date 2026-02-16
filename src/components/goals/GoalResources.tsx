@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
+import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
 import {
   Plus,
   Trash2,
@@ -105,24 +107,9 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
-    if (!validTypes.includes(file.type)) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload an image (JPG, PNG, GIF, WEBP) or PDF file",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload a file smaller than 10MB",
-        variant: "destructive",
-      });
+    const validation = validateFile(file, "goal-resources");
+    if (!validation.valid) {
+      sonnerToast.error(validation.error);
       return;
     }
 
@@ -470,7 +457,7 @@ export default function GoalResources({ goalId }: GoalResourcesProps) {
                   <Input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={acceptStringForBucket("goal-resources")}
                     onChange={handleFileSelect}
                     className="cursor-pointer"
                   />

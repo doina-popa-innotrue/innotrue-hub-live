@@ -41,6 +41,8 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
+import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
 import { useAssessmentFeatureAccess } from "@/hooks/useAssessmentFeatureAccess";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -306,6 +308,11 @@ export default function MyAssessments() {
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!selectedFile) throw new Error("No file selected");
+
+      const validation = validateFile(selectedFile, "psychometric-assessments");
+      if (!validation.valid) {
+        throw new Error(validation.error);
+      }
 
       const {
         data: { user },
@@ -576,7 +583,7 @@ export default function MyAssessments() {
                 <Input
                   id="file"
                   type="file"
-                  accept=".pdf"
+                  accept={acceptStringForBucket("psychometric-assessments")}
                   onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                 />
               </div>

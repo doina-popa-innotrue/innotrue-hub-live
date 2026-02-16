@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Breadcrumb,
@@ -167,13 +168,9 @@ export default function ProgramsList() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file");
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image must be less than 2MB");
+    const validation = validateFile(file, "program-logos");
+    if (!validation.valid) {
+      toast.error(validation.error);
       return;
     }
 
@@ -451,7 +448,7 @@ export default function ProgramsList() {
                       <input
                         ref={logoInputRef}
                         type="file"
-                        accept="image/*"
+                        accept={acceptStringForBucket("program-logos")}
                         className="hidden"
                         onChange={handleLogoSelect}
                       />

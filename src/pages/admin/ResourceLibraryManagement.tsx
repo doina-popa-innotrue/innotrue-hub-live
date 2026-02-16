@@ -62,6 +62,7 @@ import { ResourceSkillsManager } from "@/components/admin/ResourceSkillsManager"
 import { ResourceReferencesDialog } from "@/components/admin/ResourceReferencesDialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
 
 interface Resource {
   id: string;
@@ -249,6 +250,11 @@ export default function ResourceLibraryManagement() {
       let mime_type: string | null = null;
 
       if (data.file) {
+        const validation = validateFile(data.file, "resource-library");
+        if (!validation.valid) {
+          toast.error(validation.error);
+          return;
+        }
         setUploading(true);
         const fileExt = data.file.name.split(".").pop();
         const fileName = `${data.canonical_id}-${Date.now()}.${fileExt}`;
@@ -345,6 +351,11 @@ export default function ResourceLibraryManagement() {
       };
 
       if (data.file) {
+        const validation = validateFile(data.file, "resource-library");
+        if (!validation.valid) {
+          toast.error(validation.error);
+          return;
+        }
         setUploading(true);
         const fileExt = data.file.name.split(".").pop();
         const fileName = `${data.canonical_id}-${Date.now()}.${fileExt}`;
@@ -718,6 +729,7 @@ export default function ResourceLibraryManagement() {
                   <Input
                     id="file"
                     type="file"
+                    accept={acceptStringForBucket("resource-library")}
                     onChange={(e) =>
                       setFormData({ ...formData, file: e.target.files?.[0] || null })
                     }

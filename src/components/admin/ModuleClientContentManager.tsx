@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { ResourcePickerDialog } from "@/components/modules/ResourcePickerDialog";
 import { ScenarioPickerDialog } from "@/components/modules/ScenarioPickerDialog";
+import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
 
 interface Attachment {
   id?: string;
@@ -282,7 +283,16 @@ export default function ModuleClientContentManager({
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files) return;
-    const newAttachments: Attachment[] = Array.from(files).map((file) => ({
+    const validFiles: File[] = [];
+    for (const file of Array.from(files)) {
+      const validation = validateFile(file, "module-client-content");
+      if (!validation.valid) {
+        toast.error(validation.error);
+        continue;
+      }
+      validFiles.push(file);
+    }
+    const newAttachments: Attachment[] = validFiles.map((file) => ({
       title: file.name,
       attachment_type: file.type.startsWith("image/") ? "image" : "file",
       file,
@@ -461,6 +471,7 @@ export default function ModuleClientContentManager({
                     ref={fileInputRef}
                     type="file"
                     multiple
+                    accept={acceptStringForBucket("module-client-content")}
                     className="hidden"
                     onChange={handleFileSelect}
                   />

@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,14 +82,9 @@ export default function EmailAssetsManagement() {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      // Validate file type
-      if (!selectedFile.type.startsWith("image/")) {
-        toast.error("Please select an image file");
-        return;
-      }
-      // Validate file size (max 2MB)
-      if (selectedFile.size > 2 * 1024 * 1024) {
-        toast.error("File size must be under 2MB");
+      const validation = validateFile(selectedFile, "email-assets");
+      if (!validation.valid) {
+        toast.error(validation.error);
         return;
       }
       setFile(selectedFile);
@@ -253,7 +249,7 @@ export default function EmailAssetsManagement() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="file">Image File</Label>
-                <Input id="file" type="file" accept="image/*" onChange={handleFileChange} />
+                <Input id="file" type="file" accept={acceptStringForBucket("email-assets")} onChange={handleFileChange} />
                 {previewUrl && (
                   <div className="mt-2 border rounded-lg p-2 bg-muted">
                     <img src={previewUrl} alt="Preview" className="max-h-32 mx-auto" />

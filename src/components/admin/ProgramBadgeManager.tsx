@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
 
 interface ProgramBadge {
   id: string;
@@ -263,13 +264,9 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
     const file = e.target.files?.[0];
     if (!file || !badge) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file");
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image must be less than 2MB");
+    const validation = validateFile(file, "program-logos");
+    if (!validation.valid) {
+      toast.error(validation.error);
       return;
     }
 
@@ -414,7 +411,7 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept={acceptStringForBucket("program-logos")}
                 onChange={handleImageUpload}
                 className="hidden"
               />

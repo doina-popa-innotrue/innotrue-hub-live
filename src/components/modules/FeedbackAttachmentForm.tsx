@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
 import { Loader2, Upload, Link, Image, FileText } from "lucide-react";
 
 interface FeedbackAttachmentFormProps {
@@ -44,8 +45,14 @@ export default function FeedbackAttachmentForm({
       let fileSize: number | null = null;
       let mimeType: string | null = null;
 
-      // Upload file if present
+      // Validate and upload file if present
       if (file && (type === "file" || type === "image")) {
+        const validation = validateFile(file, "coach-feedback-attachments");
+        if (!validation.valid) {
+          toast.error(validation.error);
+          return;
+        }
+
         const fileExt = file.name.split(".").pop();
         const fileName = `${feedbackId}/${Date.now()}.${fileExt}`;
 
@@ -151,7 +158,7 @@ export default function FeedbackAttachmentForm({
           <Label>File *</Label>
           <Input
             type="file"
-            accept={type === "image" ? "image/*" : "*/*"}
+            accept={acceptStringForBucket("coach-feedback-attachments")}
             onChange={(e) => setFile(e.target.files?.[0] || null)}
             required
           />

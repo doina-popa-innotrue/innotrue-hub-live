@@ -85,6 +85,7 @@ import ModuleClientContentManager from "@/components/admin/ModuleClientContentMa
 import ProgramBadgeManager from "@/components/admin/ProgramBadgeManager";
 import { ProgramCohortsManager } from "@/components/admin/ProgramCohortsManager";
 import { ProgramPlanConfig } from "@/components/admin/ProgramPlanConfig";
+import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
 
 interface SortableModuleProps {
   module: any;
@@ -940,15 +941,9 @@ export default function ProgramDetail() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file");
-      return;
-    }
-
-    // Validate file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image must be less than 2MB");
+    const validation = validateFile(file, "program-logos");
+    if (!validation.valid) {
+      toast.error(validation.error);
       return;
     }
 
@@ -1115,7 +1110,7 @@ export default function ProgramDetail() {
             <input
               ref={logoInputRef}
               type="file"
-              accept="image/*"
+              accept={acceptStringForBucket("program-logos")}
               className="hidden"
               onChange={handleLogoUpload}
             />

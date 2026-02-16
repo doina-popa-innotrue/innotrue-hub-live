@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
+import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
 import { Loader2, Upload, Link as LinkIcon, Image as ImageIcon } from "lucide-react";
 
 interface ReflectionResourceFormProps {
@@ -48,6 +49,12 @@ export default function ReflectionResourceForm({
 
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile) {
+      const validation = validateFile(droppedFile, "module-reflection-resources");
+      if (!validation.valid) {
+        toast.error(validation.error);
+        return;
+      }
+
       // Auto-detect resource type based on file
       if (droppedFile.type.startsWith("image/")) {
         setResourceType("image");
@@ -76,8 +83,14 @@ export default function ReflectionResourceForm({
       let mimeType: string | null = null;
       let finalUrl = url;
 
-      // Handle file upload
+      // Validate and upload file
       if ((resourceType === "file" || resourceType === "image") && file) {
+        const validation = validateFile(file, "module-reflection-resources");
+        if (!validation.valid) {
+          toast.error(validation.error);
+          return;
+        }
+
         const fileExt = file.name.split(".").pop();
         const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
@@ -217,7 +230,7 @@ export default function ReflectionResourceForm({
             <Input
               id="file"
               type="file"
-              accept={resourceType === "image" ? "image/*" : "*"}
+              accept={acceptStringForBucket("module-reflection-resources")}
               onChange={(e) => setFile(e.target.files?.[0] || null)}
               className="max-w-xs mx-auto cursor-pointer"
               required={!file}

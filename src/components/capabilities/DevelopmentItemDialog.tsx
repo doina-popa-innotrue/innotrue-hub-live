@@ -15,6 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
+import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
 import {
   BookOpen,
   FileText,
@@ -197,35 +199,9 @@ export function DevelopmentItemDialog({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    const validTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ];
-
-    if (!validTypes.includes(file.type) && !file.type.startsWith("text/")) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload an image, PDF, or document file",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload a file smaller than 10MB",
-        variant: "destructive",
-      });
+    const validation = validateFile(file, "development-item-files");
+    if (!validation.valid) {
+      sonnerToast.error(validation.error);
       return;
     }
 
@@ -732,7 +708,7 @@ export function DevelopmentItemDialog({
                     type="file"
                     className="hidden"
                     onChange={handleFileSelect}
-                    accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
+                    accept={acceptStringForBucket("development-item-files")}
                   />
                   {selectedFile ? (
                     <div className="flex items-center gap-2 p-3 border rounded-lg bg-background">

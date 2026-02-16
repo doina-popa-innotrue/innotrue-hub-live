@@ -36,6 +36,8 @@ import { DataExportSection } from "@/components/gdpr/DataExportSection";
 import { PrivacyPolicyLink, TermsOfServiceLink } from "@/components/gdpr/PrivacyLinks";
 import { AnalyticsOptOut } from "@/components/privacy/AnalyticsOptOut";
 import { usePageView } from "@/hooks/useAnalytics";
+import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
+import { toast as sonnerToast } from "sonner";
 
 import {
   AlertDialog,
@@ -326,23 +328,9 @@ export default function AccountSettings() {
 
       const file = event.target.files[0];
 
-      const validImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-      if (!validImageTypes.includes(file.type)) {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload a valid image file (JPEG, PNG, GIF, or WebP)",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const maxSize = 5 * 1024 * 1024;
-      if (file.size > maxSize) {
-        toast({
-          title: "File too large",
-          description: "Please upload an image smaller than 5MB",
-          variant: "destructive",
-        });
+      const validation = validateFile(file, "avatars");
+      if (!validation.valid) {
+        sonnerToast.error(validation.error);
         return;
       }
 
@@ -1005,7 +993,7 @@ export default function AccountSettings() {
               <Input
                 id="avatar-upload"
                 type="file"
-                accept="image/*"
+                accept={acceptStringForBucket("avatars")}
                 onChange={uploadAvatar}
                 disabled={uploading}
                 className="hidden"
