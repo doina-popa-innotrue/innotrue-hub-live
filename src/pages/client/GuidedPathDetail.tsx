@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Breadcrumb,
@@ -384,12 +385,7 @@ export default function GuidedPathDetail() {
 
   if (!template) {
     return (
-      <div className="text-center py-12">
-        <Map className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Template Not Found</h2>
-        <p className="text-muted-foreground mb-4">The requested guided path could not be found</p>
-        <Button onClick={() => navigate("/guided-paths")}>Back to Guided Paths</Button>
-      </div>
+      <ErrorState title="Not Found" description="The requested guided path could not be found." />
     );
   }
 

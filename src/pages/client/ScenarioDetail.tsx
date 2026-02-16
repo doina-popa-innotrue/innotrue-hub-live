@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -194,15 +195,7 @@ function ScenarioDetailContent() {
   if (!assignment) {
     return (
       <div className="container py-6">
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">Assignment Not Found</h3>
-            <Button variant="link" onClick={() => navigate("/scenarios")}>
-              Back to Scenarios
-            </Button>
-          </CardContent>
-        </Card>
+        <ErrorState title="Not Found" description="The requested scenario assignment could not be found." />
       </div>
     );
   }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { ErrorState } from "@/components/ui/error-state";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -208,21 +209,13 @@ export default function InstructorModuleDetail() {
   }, [user, moduleId, programId, desiredEnrollmentId, desiredClientName]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <PageLoadingState />;
   }
 
   if (!module) {
     return (
       <div className="container mx-auto py-8">
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">Module not found</p>
-          </CardContent>
-        </Card>
+        <ErrorState title="Not Found" description="The requested module could not be found." />
       </div>
     );
   }

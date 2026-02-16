@@ -377,7 +377,7 @@ export default function ProgramsList() {
     return cat?.name || key;
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <PageLoadingState />;
 
   return (
     <div>

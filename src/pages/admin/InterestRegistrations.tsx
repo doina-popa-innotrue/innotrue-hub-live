@@ -301,7 +301,7 @@ export default function InterestRegistrations() {
     (reg) => statusFilter === "all" || reg.status === statusFilter,
   );
 
-  if (loading) return <div className="flex items-center justify-center h-96">Loading...</div>;
+  if (loading) return <PageLoadingState />;
 
   return (
     <div className="space-y-6">

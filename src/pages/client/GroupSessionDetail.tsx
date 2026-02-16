@@ -13,6 +13,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Calendar,
@@ -203,14 +204,7 @@ export default function GroupSessionDetail() {
   if (!session) {
     return (
       <div className="container mx-auto py-6">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Session not found</p>
-            <Button asChild className="mt-4">
-              <Link to={`/groups/${groupId}`}>Back to Group</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <ErrorState title="Not Found" description="The requested session could not be found." />
       </div>
     );
   }

@@ -591,7 +591,7 @@ export default function ClientDetail() {
     setEnrollments(enrollmentData || []);
   }
 
-  if (!client) return <div>Loading...</div>;
+  if (!client) return <PageLoadingState />;
 
   return (
     <div>

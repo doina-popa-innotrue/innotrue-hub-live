@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -694,9 +695,7 @@ export default function ExplorePrograms() {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-muted-foreground">Loading programs...</div>
-        </div>
+        <PageLoadingState message="Loading programs..." />
       </div>
     );
   }

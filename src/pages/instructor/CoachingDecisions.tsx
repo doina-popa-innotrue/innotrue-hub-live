@@ -100,7 +100,7 @@ export default function CoachingDecisions() {
   }
 
   if (loading) {
-    return <div className="p-6">Loading shared decisions...</div>;
+    return <PageLoadingState message="Loading shared decisions..." />;
   }
 
   return (

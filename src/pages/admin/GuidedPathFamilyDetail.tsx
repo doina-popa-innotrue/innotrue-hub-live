@@ -320,11 +320,11 @@ export default function GuidedPathFamilyDetail() {
   }
 
   if (familyLoading) {
-    return <div className="p-8">Loading...</div>;
+    return <PageLoadingState />;
   }
 
   if (!family) {
-    return <div className="p-8">Family not found</div>;
+    return <ErrorState title="Not Found" description="Family not found" />;
   }
 
   return (

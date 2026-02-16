@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Camera, History, Share2, FileEdit, Trash2, User, UserCheck } from "lucide-react";
+import { ErrorState } from "@/components/ui/error-state";
 import { format } from "date-fns";
 import { CapabilitySnapshotForm } from "@/components/capabilities/CapabilitySnapshotForm";
 import { CapabilityEvolutionChart } from "@/components/capabilities/CapabilityEvolutionChart";
@@ -273,12 +274,7 @@ export default function CapabilityAssessmentDetail() {
 
   if (!assessment) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">Assessment not found</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate("/capabilities")}>
-          Back to Assessments
-        </Button>
-      </div>
+      <ErrorState title="Not Found" description="The requested assessment could not be found." />
     );
   }
 

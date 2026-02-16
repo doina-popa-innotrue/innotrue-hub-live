@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { ErrorState } from "@/components/ui/error-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -450,21 +451,13 @@ export default function StudentDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <PageLoadingState />;
   }
 
   if (!studentInfo) {
     return (
       <div className="container mx-auto py-8">
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">Client enrollment not found</p>
-          </CardContent>
-        </Card>
+        <ErrorState title="Not Found" description="The requested client enrollment could not be found." />
       </div>
     );
   }

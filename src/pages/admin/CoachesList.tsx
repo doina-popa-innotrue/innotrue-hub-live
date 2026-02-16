@@ -105,7 +105,7 @@ export default function CoachesList() {
     fetchCoaches();
   }, []);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <PageLoadingState />;
 
   return (
     <div>

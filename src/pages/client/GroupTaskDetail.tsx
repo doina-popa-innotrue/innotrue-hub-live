@@ -13,6 +13,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
 import { CheckSquare, Calendar, User, ArrowLeft, CheckCircle, Circle, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -103,14 +104,7 @@ export default function GroupTaskDetail() {
   if (!task) {
     return (
       <div className="container mx-auto py-6">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Task not found</p>
-            <Button asChild className="mt-4">
-              <Link to={`/groups/${groupId}`}>Back to Group</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <ErrorState title="Not Found" description="The requested task could not be found." />
       </div>
     );
   }

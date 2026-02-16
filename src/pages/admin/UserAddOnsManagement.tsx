@@ -221,7 +221,7 @@ export default function UserAddOnsManagement() {
   };
 
   if (isLoading) {
-    return <div className="p-6">Loading...</div>;
+    return <PageLoadingState />;
   }
 
   return (

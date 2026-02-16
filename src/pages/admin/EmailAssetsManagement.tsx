@@ -214,7 +214,7 @@ export default function EmailAssetsManagement() {
   }
 
   if (loading) {
-    return <div className="p-8">Loading...</div>;
+    return <PageLoadingState />;
   }
 
   const systemLogo = assets.find((a) => a.is_system_logo);

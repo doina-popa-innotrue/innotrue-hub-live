@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -934,31 +936,16 @@ export default function AccountSettings() {
   };
 
   if (authLoading || loading) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 space-y-4">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="text-muted-foreground">Loading account settings...</p>
-      </div>
-    );
+    return <PageLoadingState message="Loading account settings..." />;
   }
 
   if (loadError) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 space-y-4">
-        <p className="text-destructive">Error: {loadError}</p>
-        <Button onClick={() => window.location.reload()}>Retry</Button>
-      </div>
-    );
+    return <ErrorState description={loadError} onRetry={() => window.location.reload()} />;
   }
 
   if (!user) {
     // ProtectedRoute should handle redirect, but keep showing loader as fallback
-    return (
-      <div className="flex flex-col items-center justify-center p-8 space-y-4">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="text-muted-foreground">Checking authentication...</p>
-      </div>
-    );
+    return <PageLoadingState message="Checking authentication..." />;
   }
 
   return (

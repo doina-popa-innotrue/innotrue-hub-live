@@ -243,7 +243,7 @@ export default function Tasks() {
   };
 
   if (loading) {
-    return <div className="p-6">Loading tasks...</div>;
+    return <PageLoadingState message="Loading tasks..." />;
   }
 
   return (

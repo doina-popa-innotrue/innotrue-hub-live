@@ -25,6 +25,8 @@ import {
   RotateCcw,
   PlayCircle,
 } from "lucide-react";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 import { useTalentLmsSSO } from "@/hooks/useTalentLmsSSO";
 import { useTalentLmsProgress } from "@/hooks/useTalentLmsProgress";
 import { awardSkillsForModuleCompletion } from "@/hooks/useSkillsAcquisition";
@@ -452,13 +454,13 @@ export default function ModuleDetail() {
   if (loading)
     return (
       <SessionMismatchGuard>
-        <div className="p-6">Loading...</div>
+        <PageLoadingState message="Loading module..." />
       </SessionMismatchGuard>
     );
   if (!module)
     return (
       <SessionMismatchGuard>
-        <div className="p-6">Module not found</div>
+        <ErrorState title="Not Found" description="The requested module could not be found." />
       </SessionMismatchGuard>
     );
 

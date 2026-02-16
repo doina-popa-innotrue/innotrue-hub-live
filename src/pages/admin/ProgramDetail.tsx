@@ -1061,7 +1061,7 @@ export default function ProgramDetail() {
     }
   }
 
-  if (!program) return <div>Loading...</div>;
+  if (!program) return <PageLoadingState />;
 
   return (
     <div className="p-4 sm:p-8">

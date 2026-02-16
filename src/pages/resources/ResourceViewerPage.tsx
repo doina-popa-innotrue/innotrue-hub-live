@@ -16,6 +16,8 @@ import {
   Lock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 interface Resource {
   id: string;
@@ -146,19 +148,12 @@ export default function ResourceViewerPage() {
 
   const renderContent = () => {
     if (loading) {
-      return (
-        <div className="flex items-center justify-center h-[70vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      );
+      return <PageLoadingState />;
     }
 
     if (error || !resource) {
       return (
-        <div className="flex flex-col items-center justify-center h-[70vh] text-muted-foreground">
-          <p className="mb-4">{error || "Resource not found"}</p>
-          <Button onClick={() => navigate(-1)}>Go Back</Button>
-        </div>
+        <ErrorState title="Not Found" description={error || "The requested resource could not be found."} />
       );
     }
 

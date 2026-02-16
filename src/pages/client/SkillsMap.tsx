@@ -267,11 +267,7 @@ export default function SkillsMap() {
     totalPossibleSkills > 0 ? Math.round((acquiredSkills.length / totalPossibleSkills) * 100) : 0;
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
+    return <PageLoadingState />;
   }
 
   return (

@@ -41,6 +41,8 @@ import {
   Lightbulb,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 type Dimension = {
   id: string;
@@ -513,21 +515,12 @@ export default function AssessmentBuilderDetail() {
   };
 
   if (assessmentLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <PageLoadingState />;
   }
 
   if (!assessment) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">Assessment not found</p>
-        <Button variant="link" onClick={() => navigate("/admin/assessment-builder")}>
-          Go back
-        </Button>
-      </div>
+      <ErrorState title="Not Found" description="The requested assessment could not be found." />
     );
   }
 

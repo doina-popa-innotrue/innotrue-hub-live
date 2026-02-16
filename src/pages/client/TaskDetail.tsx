@@ -301,11 +301,11 @@ export default function TaskDetail() {
   }
 
   if (loading) {
-    return <div className="p-6">Loading task...</div>;
+    return <PageLoadingState message="Loading task..." />;
   }
 
   if (!task) {
-    return <div className="p-6">Task not found</div>;
+    return <ErrorState title="Not Found" description="Task not found" />;
   }
 
   return (

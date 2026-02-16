@@ -1,4 +1,4 @@
-# InnoTrue Hub App — AI Context
+# InnoTrue Hub App — AI Agent Instructions
 
 ## Project Overview
 InnoTrue Hub is a multi-tenant coaching and learning management SaaS platform.
@@ -14,109 +14,253 @@ Stack: React 18 + Vite 5 + TypeScript + Supabase + Tailwind CSS + shadcn/ui.
 - **Payments:** Stripe (credit system with individual + org balances)
 - **Community:** Circle SSO (fully built, active on prod)
 
-## Key Conventions
-- Use `@/` path alias for imports (maps to `src/`)
-- UI components use shadcn/ui from `@/components/ui/`
-- Data fetching uses TanStack React Query hooks in `src/hooks/`
-- Forms: mostly manual state; React Hook Form + Zod used in a few forms (convention available but not widespread)
-- State management: React Query for server state, React Context for auth
-- 160 pages lazy-loaded in `src/App.tsx` (3 critical-path pages eagerly loaded: Index, Auth, NotFound)
-- 4 app_role values: admin, client, coach, instructor (org_admin is a separate org_role enum)
+---
 
-## File Structure
-- `src/pages/` — Page components (lazy-loaded)
-- `src/components/` — Shared UI components
-- `src/components/ui/` — shadcn/ui primitives (do not modify directly)
-- `src/hooks/` — 65 custom React hooks (data fetching, business logic)
-- `src/contexts/` — React contexts (AuthContext, ThemeContext)
-- `src/lib/` — Utility functions and helpers
-- `src/integrations/supabase/` — Supabase client, types, generated types
-- `supabase/functions/` — 61 Deno edge functions
-- `supabase/functions/_shared/` — Shared edge function utilities (CORS, AI config, email utils)
-- `supabase/migrations/` — 402 database migrations
+## Critical Rules
 
-## Database
-- 369+ tables, 25 enum types, 402 migrations
-- Key enums: app_role, program_category, module_type, enrollment_status
-- Plans system: tier_level 0-4, credit allowances, feature limits
-- Dual credit system: individual (user_credit_balances) + org (org_credit_balances)
-- RLS policies on all public tables (276 tables, all RLS enabled)
-- Two plan systems: Subscription plans (plans table) + Program plans (program_plans, per-enrollment)
-- `useEntitlements` merges 5 sources: subscription, program plan, add-ons, tracks, org-sponsored
+### Working Directory
+ALWAYS work in this repo (`innotrue-hub-live`). NEVER work in the Backups folder.
 
-## Three Assessment Systems (share `assessment_categories`)
-- **Capability** (`capability_assessments`): Slider-based (1-N), client-side domain averages, radar/evolution charts. Modes: self, evaluator, both.
-- **Definitions** (`assessment_definitions`): Multiple-choice, server-side scoring via `compute-assessment-scores` (confidential matrix). Public access at `/public-assessment/:slug`.
-- **Psychometric** (`psychometric_assessments`): Document catalog/PDF upload only. No in-app scoring.
-- Cross-links: `program_modules.capability_assessment_id`, `scenario_templates.capability_assessment_id`, `module_assignment_types.scoring_assessment_id`
+### Verification
+Run `npm run verify` before committing (lint + typecheck + tests + build).
 
-## Edge Functions
-- All edge functions are in Deno/TypeScript
-- CORS config in `_shared/cors.ts`
-- AI config in `_shared/ai-config.ts`
-- Email helpers in `_shared/email-utils.ts` (staging override support)
-- All have `verify_jwt = false` in config.toml (custom auth checks inside)
+### npm Install
+Use `--legacy-peer-deps` flag (react-day-picker peer dep conflict).
 
-## Testing
-- Unit tests: Vitest (279 tests in 16 files under `src/lib/__tests__/`)
-- E2E tests: Playwright
-- CI: GitHub Actions (lint, typecheck, test, build)
+### Deploy Pipeline
+`develop` → `preprod` → `main` → `npm run update:lovable`
+Edge functions deployed separately via `npm run deploy:functions`.
 
-## Environments
-- **Production:** `main` branch → `app.innotrue.com` → Supabase `qfdztdgublwlmewobxmx`
-- **Pre-production:** `preprod` branch → Cloudflare preview → Supabase `jtzcrirqflfnagceendt`
-- **Development:** `develop` branch → localhost
-- **Lovable Sandbox:** separate repo → Supabase `cezlnvdjildzxpyxyabb` (prototyping only)
-
-## Key Documentation
-- `docs/ISSUES_AND_IMPROVEMENTS.md` — 11-part platform analysis + 9-phase priority roadmap
-- `docs/DATA_CONFIGURATION_GUIDE.md` — Data model reference, 5-layer dependency chain, 3 assessment systems, data population plan
-- `docs/RLS_FIX_PLAN.md` — 30 RLS gaps (5 critical, 9 high, 16 medium)
-- `docs/ENVIRONMENT_CONFIGURATION.md` — 41 env vars with per-environment values
-- `docs/INTEGRATION_SETUP_GUIDE.md` — Cal.com, TalentLMS, Circle, Google Calendar setup
-- `docs/SUPABASE_OPS_QUICKSTART.md` — Edge function deploy, migration push, data/storage sync
-- `docs/LOVABLE_INTEGRATION.md` — Bidirectional Lovable ↔ live repo sync
-- `docs/TEST_PLAN.md` — Unit + E2E test plan
-- `docs/CURSOR_AND_WORKFLOW_GUIDE.md` — IDE setup, git deploy pipeline, testing
-
-## Git Workflow
+### Git Workflow
 - `main` → production (app.innotrue.com)
 - `preprod` → pre-production testing
 - `develop` → daily development
 - Feature branches: `feature/xyz` → PR to `develop`
-- **IMPORTANT:** Always work on `develop`. After deploying (develop → preprod → main → lovable), always `git checkout develop` at the end. Remind the user if they forget.
+- **IMPORTANT:** Always work on `develop`. After deploying, always `git checkout develop`.
+- **NEVER merge lovable into main.** Lovable is a one-way push target. Use `npm run update:lovable` to push live code to Lovable. Never `git merge lovable/main` into any live branch.
 
-## npm Scripts (Supabase Ops & Lovable Sync)
-- `npm run deploy:functions -- [env] [--only fn1 fn2]` — Deploy edge functions
-- `npm run push:migrations -- [env|all] [--dry-run]` — Push DB migrations
-- `npm run sync:data -- --from [env] --to [env]` — Sync config tables
-- `npm run sync:storage -- --from [env] --to [env]` — Sync storage buckets
-- `npm run update:lovable [-- --source preprod]` — Push live code to Lovable sandbox
-- `npm run sync:lovable` — Import Lovable changes into live repo
-- `npm run backup:storage` — Backup all storage buckets
-- `npm run verify` — Run lint + typecheck + tests + build
+### Documentation
+- Keep MEMORY.md updated when resolving issues from the roadmap
+- See `docs/ISSUES_AND_IMPROVEMENTS.md` for the full platform analysis + priority roadmap
 
-## Module Types → Feature Areas
-- `session` → Sessions (module_sessions, Cal.com booking)
-- `assignment` → Assignments (module_assignment_configs → module_assignments, instructor grading)
-- `reflection` → Resources + Scenarios (module_reflection_resources)
-- `resource` → Resources (module_client_content_resources)
-- `content` → Generic content modules
-- Scenarios linked via `scenario_assignments.module_id`
-- Assessments linked via `program_modules.capability_assessment_id`
+---
 
-## Current Priority Bugs (from ISSUES_AND_IMPROVEMENTS.md Part 11)
-- C1: Credits page FeatureGate blocks free-tier users from buying credits
-- C2: AuthContext role fallback `roles = ["client"]` — security risk when Google OAuth re-enabled
-- C3: Credit loss on failed enrollment (not atomic)
-- C4: Cal.com orphaned bookings on DB failure (no idempotency)
-- Pilot: Self-registration disabled, Google sign-in hidden
+## Edge Function Patterns (MANDATORY)
 
-## Code Style
-- TypeScript strict mode (all flags including strictNullChecks)
+All 61 edge functions in `supabase/functions/` follow these standardized patterns. **New edge functions MUST follow them too.**
+
+### 1. CORS — Use `getCorsHeaders(req)` from shared utility
+
+```typescript
+import { getCorsHeaders } from "../_shared/cors.ts";
+
+Deno.serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: cors });
+  }
+  // ...
+});
+```
+
+**Rules:**
+- NEVER define inline CORS headers (`const corsHeaders = { "Access-Control-Allow-Origin": "*" ... }`)
+- NEVER use wildcard `"*"` for `Access-Control-Allow-Origin`
+- ALWAYS call `getCorsHeaders(req)` at the top of the handler to get origin-aware headers
+- Store the result in a variable named `cors` (not `corsHeaders`)
+- The shared utility in `_shared/cors.ts` handles origin allowlisting, localhost dev, and Supabase internal calls
+
+### 2. Error/Success Responses — Use shared `errorResponse` / `successResponse`
+
+```typescript
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
+
+// Error responses:
+return errorResponse.badRequest("Missing required field: email", cors);     // 400
+return errorResponse.unauthorized("Invalid token", cors);                    // 401
+return errorResponse.forbidden("Admin access required", cors);               // 403
+return errorResponse.notFound("User not found", cors);                       // 404
+return errorResponse.rateLimit("Too many requests", cors);                   // 429
+return errorResponse.serverError("FunctionName", error, cors);               // 500 (logs real error, returns safe message)
+return errorResponse.serverErrorWithMessage(error.message, cors);            // 500 (exposes message to client)
+
+// Success responses:
+return successResponse.ok({ data: result }, cors);                           // 200
+return successResponse.created({ id: newId }, cors);                         // 201
+return successResponse.noContent(cors);                                       // 204
+```
+
+**Rules:**
+- NEVER construct `new Response(JSON.stringify({ error: ... }), { status: 4xx/5xx, headers: ... })` manually — use the shared helpers
+- For 500 errors with sensitive details, use `serverError(label, error, cors)` which logs the real error but returns a generic message to the client
+- Only use `serverErrorWithMessage` when the error message is safe for the client (e.g., DB constraint names, validation messages)
+- All response helpers accept `cors` as the last parameter
+
+### 3. Edge Function Boilerplate
+
+Every new edge function should follow this structure:
+
+```typescript
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+// OR: Deno.serve(async (req) => { ... });  — both patterns are used
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
+
+serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: cors });
+  }
+
+  try {
+    // Auth check
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return errorResponse.unauthorized("No authorization header", cors);
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    // ... business logic ...
+
+    return successResponse.ok({ result }, cors);
+  } catch (error) {
+    console.error("Error in function-name:", error);
+    return errorResponse.serverError("function-name", error, cors);
+  }
+});
+```
+
+### 4. AI Edge Functions — Use shared AI config and input limits
+
+```typescript
+import { aiChatCompletion, AI_MODEL } from "../_shared/ai-config.ts";
+import { truncateString, truncateArray, enforcePromptLimit } from "../_shared/ai-input-limits.ts";
+```
+
+**Rules:**
+- NEVER hardcode AI provider URLs or API keys — use `_shared/ai-config.ts`
+- ALWAYS truncate user-provided text before embedding in prompts — use `_shared/ai-input-limits.ts`
+- Use `aiChatCompletion()` for chat completions (handles Vertex AI OAuth2 automatically)
+- Guard against oversized payloads: check `JSON.stringify(data).length` before sending to AI
+
+### 5. Edge Function Config
+- All functions have `verify_jwt = false` in `supabase/config.toml` — authentication is handled inside each function
+- `send-auth-email` is special: uses Standard Webhooks HMAC verification (not Bearer token)
+
+---
+
+## Frontend Patterns
+
+### Imports
+Use `@/` path alias for all imports (maps to `src/`).
+
+### UI Components
+- Use shadcn/ui from `@/components/ui/` — do NOT modify these directly
+- Custom components go in `@/components/`
+
+### Data Fetching
+- Use TanStack React Query hooks in `src/hooks/`
+- 65+ custom hooks — check if one already exists before creating a new one
+- Server state: React Query. Auth state: React Context (`AuthContext`).
+
+### Routing
+- 160 pages lazy-loaded in `src/App.tsx`
+- 3 critical-path pages eagerly loaded: Index, Auth, NotFound
+- New pages MUST be lazy-loaded
+
+### Entitlements & Feature Gating
+- `useEntitlements()` merges 5 access sources: subscription plan, program plan, add-ons, tracks, org-sponsored
+- Highest access level wins (except org deny override)
+- `<FeatureGate>` and `<CapabilityGate>` wrap features that require specific plan tiers
+- When user is on the highest purchasable plan, show "Contact your administrator" instead of "Upgrade Plan"
+- Use `useIsMaxPlan()` hook to detect max-plan users
+
+### Roles
+- 4 `app_role` values: `admin`, `client`, `coach`, `instructor`
+- `org_admin` and `org_manager` are separate org-level roles (in `organization_members.role`)
+
+### Code Style
+- TypeScript strict mode (all flags including `strictNullChecks`)
 - Functional React components with hooks
 - Tailwind CSS for styling (no CSS modules or styled-components)
-- shadcn/ui components for UI primitives
-- Zod schemas for validation
-- All pages lazy-loaded in App.tsx
+- Zod schemas for validation where used
 - Prefer existing patterns from the codebase over introducing new ones
+
+---
+
+## File Structure
+- `src/pages/` — Page components (lazy-loaded)
+- `src/components/` — Shared UI components
+- `src/components/ui/` — shadcn/ui primitives (do not modify)
+- `src/hooks/` — Custom React hooks (data fetching, business logic)
+- `src/contexts/` — React contexts (AuthContext, ThemeContext)
+- `src/lib/` — Utility functions and helpers
+- `src/lib/__tests__/` — Unit tests (Vitest, 279 tests in 16 files)
+- `src/integrations/supabase/` — Supabase client, types, generated types
+- `supabase/functions/` — 61 Deno edge functions
+- `supabase/functions/_shared/` — Shared edge function utilities:
+  - `cors.ts` — Origin-aware CORS headers (`getCorsHeaders(req)`)
+  - `error-response.ts` — Typed error/success response helpers
+  - `ai-config.ts` — AI provider config, Vertex AI OAuth2, `aiChatCompletion()`
+  - `ai-input-limits.ts` — Prompt truncation helpers
+  - `email-utils.ts` — Email sending helpers (staging override support)
+  - `calcom-utils.ts` — Cal.com API helpers (booking cancellation)
+- `supabase/migrations/` — 402+ database migrations
+
+---
+
+## Database
+- 369+ tables, 25 enum types, 402+ migrations
+- RLS policies on ALL public tables (276 tables, all RLS enabled)
+- Two plan systems: Subscription plans (`plans` table, tier_level 0-4) + Program plans (`program_plans`, per-enrollment)
+- Dual credit system: individual (`user_credit_balances`) + org (`org_credit_balances`)
+- `useEntitlements` hook merges subscription + program plan + add-ons + tracks + org-sponsored access
+
+## Three Assessment Systems
+| System | Table | Scoring |
+|--------|-------|---------|
+| Capability | `capability_assessments` | Client-side domain averages (slider 1-N) |
+| Definitions | `assessment_definitions` | Server-side via `compute-assessment-scores` edge function |
+| Psychometric | `psychometric_assessments` | None (document catalog/PDF upload) |
+
+---
+
+## Testing
+- Unit tests: Vitest (`src/lib/__tests__/`)
+- E2E tests: Playwright
+- CI: GitHub Actions (lint, typecheck, test, build)
+- Run `npm run verify` to execute the full check suite locally
+
+## Environments
+| Env | Branch | Supabase | Frontend |
+|-----|--------|----------|----------|
+| Development | `develop` | local/dev | `localhost:8080` |
+| Pre-production | `preprod` | `jtzcrirqflfnagceendt` | Cloudflare preview |
+| Production | `main` | `qfdztdgublwlmewobxmx` | `app.innotrue.com` |
+| Lovable Sandbox | lovable remote | `cezlnvdjildzxpyxyabb` | Lovable preview |
+
+## npm Scripts
+```
+npm run verify              # lint + typecheck + tests + build
+npm run deploy:functions    # edge functions (--only fn1, -- preprod)
+npm run push:migrations     # DB migrations (-- preprod, -- all)
+npm run sync:data           # config tables (--from prod --to preprod)
+npm run sync:storage        # storage buckets
+npm run update:lovable      # push live code to Lovable (one-way)
+npm run sync:lovable        # import Lovable changes into live repo
+```
+
+## Key Documentation
+- `MEMORY.md` — Project memory, resolved issues, current state
+- `completed-work.md` — Detailed work history
+- `docs/ISSUES_AND_IMPROVEMENTS.md` — 11-part platform analysis + 9-phase roadmap
+- `docs/DATA_CONFIGURATION_GUIDE.md` — Data model reference
+- `docs/ENVIRONMENT_CONFIGURATION.md` — 41 env vars with per-environment values
+- `docs/ENTITLEMENTS_AND_FEATURE_ACCESS.md` — Entitlements system documentation

@@ -288,11 +288,7 @@ export default function WheelOfLife() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-muted-foreground">Loading...</div>
-      </div>
-    );
+    return <PageLoadingState />;
   }
 
   const latestSnapshot = snapshots[0];

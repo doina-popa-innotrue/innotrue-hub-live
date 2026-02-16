@@ -178,7 +178,7 @@ export default function TalentLmsUsers() {
   const mappedUserIds = new Set(mappings.map((m) => m.user_id));
   const unmappedProfiles = allProfiles.filter((p) => !mappedUserIds.has(p.id));
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <PageLoadingState />;
 
   return (
     <div className="space-y-6">

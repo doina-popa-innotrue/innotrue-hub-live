@@ -163,13 +163,7 @@ export default function InstructorGroups() {
   };
 
   if (isLoading) {
-    return (
-      <div className="container mx-auto py-8">
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </div>
-    );
+    return <PageLoadingState />;
   }
 
   return (

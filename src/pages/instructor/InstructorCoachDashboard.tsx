@@ -505,11 +505,7 @@ export default function InstructorCoachDashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <PageLoadingState />;
   }
 
   const totalPrograms = programAssignments.length;

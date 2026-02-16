@@ -220,7 +220,7 @@ export default function GuidedPathFamilies() {
   }
 
   if (isLoading) {
-    return <div className="p-8">Loading...</div>;
+    return <PageLoadingState />;
   }
 
   return (

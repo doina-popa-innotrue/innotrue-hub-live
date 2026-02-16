@@ -193,11 +193,7 @@ export default function GoalDetail() {
   };
 
   if (loading || !goal) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-muted-foreground">Loading goal...</div>
-      </div>
-    );
+    return <PageLoadingState message="Loading goal..." />;
   }
 
   return (

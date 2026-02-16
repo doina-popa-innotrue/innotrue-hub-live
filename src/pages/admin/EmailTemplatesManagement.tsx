@@ -183,7 +183,7 @@ export default function EmailTemplatesManagement() {
   }
 
   if (loading) {
-    return <div className="p-8">Loading...</div>;
+    return <PageLoadingState />;
   }
 
   return (

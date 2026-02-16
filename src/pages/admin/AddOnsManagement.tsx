@@ -257,7 +257,7 @@ export default function AddOnsManagement() {
   };
 
   if (addOnsLoading) {
-    return <div className="p-6">Loading...</div>;
+    return <PageLoadingState />;
   }
 
   return (

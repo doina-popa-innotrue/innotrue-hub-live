@@ -94,7 +94,7 @@ export default function CoachingTasks() {
   };
 
   if (loading) {
-    return <div className="p-6">Loading shared tasks...</div>;
+    return <PageLoadingState message="Loading shared tasks..." />;
   }
 
   return (

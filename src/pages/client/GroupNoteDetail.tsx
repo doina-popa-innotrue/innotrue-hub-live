@@ -13,6 +13,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
 import { FileText, User, Calendar, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
@@ -82,14 +83,7 @@ export default function GroupNoteDetail() {
   if (!note) {
     return (
       <div className="container mx-auto py-6">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Note not found</p>
-            <Button asChild className="mt-4">
-              <Link to={`/groups/${groupId}`}>Back to Group</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <ErrorState title="Not Found" description="The requested note could not be found." />
       </div>
     );
   }

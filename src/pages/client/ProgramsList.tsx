@@ -204,11 +204,7 @@ export default function ClientProgramsList() {
       : 0;
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-muted-foreground">Loading your programs...</div>
-      </div>
-    );
+    return <PageLoadingState message="Loading your programs..." />;
   }
 
   return (

@@ -277,11 +277,7 @@ export default function Auth() {
 
   // Show loading while checking auth state or determining role
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
-      </div>
-    );
+    return <PageLoadingState />;
   }
 
   // If in reset mode but no recovery session yet, show loading (with timeout fallback)

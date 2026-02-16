@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { Link } from "react-router-dom";
 import jsPDF from "jspdf";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 const emailSchema = z.string().email("Please enter a valid email address");
 
@@ -236,30 +238,13 @@ export default function PublicAssessment() {
   };
 
   if (assessmentLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <PageLoadingState />;
   }
 
   if (!assessment) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4">
-        <Card className="max-w-md">
-          <CardContent className="py-8 text-center">
-            <h2 className="text-xl font-semibold mb-2">Assessment Not Found</h2>
-            <p className="text-muted-foreground mb-4">
-              This assessment doesn't exist or is not currently available.
-            </p>
-            <Link to="/">
-              <Button>
-                <Home className="h-4 w-4 mr-2" />
-                Go Home
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <ErrorState title="Not Found" description="This assessment doesn't exist or is not currently available." />
       </div>
     );
   }

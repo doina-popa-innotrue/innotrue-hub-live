@@ -79,7 +79,7 @@ export default function DecisionFollowUps() {
   const completedReminders = reminders?.filter((r) => r.is_completed) || [];
 
   if (isLoading) {
-    return <div className="p-6">Loading reminders...</div>;
+    return <PageLoadingState message="Loading reminders..." />;
   }
 
   return (

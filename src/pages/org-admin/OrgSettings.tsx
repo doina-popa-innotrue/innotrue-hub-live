@@ -132,11 +132,7 @@ export default function OrgSettings() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-muted-foreground">Loading settings...</div>
-      </div>
-    );
+    return <PageLoadingState message="Loading settings..." />;
   }
 
   return (

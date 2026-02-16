@@ -166,7 +166,7 @@ export default function CoachingDecisionDetail() {
   }
 
   if (!decision) {
-    return <div className="p-6">Decision not found</div>;
+    return <ErrorState title="Not Found" description="Decision not found" />;
   }
 
   return (

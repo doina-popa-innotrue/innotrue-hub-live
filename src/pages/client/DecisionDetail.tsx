@@ -209,7 +209,7 @@ export default function DecisionDetail() {
   }
 
   if (loading) {
-    return <div className="p-6">Loading decision...</div>;
+    return <PageLoadingState message="Loading decision..." />;
   }
 
   return (

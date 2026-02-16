@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdminLoadingState } from "@/components/admin";
+import { ErrorState } from "@/components/ui/error-state";
 import { useAuth } from "@/contexts/AuthContext";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
@@ -68,16 +69,7 @@ export default function ScenarioTemplateDetail() {
 
   if (!template) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">Template not found</p>
-        <Button
-          variant="outline"
-          className="mt-4"
-          onClick={() => navigate("/admin/scenario-templates")}
-        >
-          Back to Templates
-        </Button>
-      </div>
+      <ErrorState title="Not Found" description="The requested template could not be found." />
     );
   }
 
@@ -488,7 +480,7 @@ function LinkQuestionPanel({
   const existingQuestionIds = new Set(existingLinks.map((l) => l.question_id));
 
   if (isLoading) {
-    return <div className="text-sm text-muted-foreground">Loading questions...</div>;
+    return <PageLoadingState message="Loading questions..." />;
   }
 
   return (

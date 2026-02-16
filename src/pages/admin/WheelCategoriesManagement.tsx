@@ -128,11 +128,7 @@ export default function WheelCategoriesManagement() {
   const legacyCategories = categories?.filter((c) => c.is_legacy) || [];
 
   if (isLoading) {
-    return (
-      <div className="container mx-auto py-8 px-4 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <PageLoadingState />;
   }
 
   return (

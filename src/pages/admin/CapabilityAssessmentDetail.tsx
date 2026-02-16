@@ -47,6 +47,8 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { CapabilitySnapshotView } from "@/components/capabilities/CapabilitySnapshotView";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 import {
   Select,
   SelectContent,
@@ -542,21 +544,12 @@ export default function CapabilityAssessmentDetail() {
   };
 
   if (assessmentLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <PageLoadingState />;
   }
 
   if (!assessment) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-xl font-semibold">Assessment not found</h2>
-        <Button variant="link" onClick={() => navigate("/admin/capability-assessments")}>
-          Back to Assessments
-        </Button>
-      </div>
+      <ErrorState title="Not Found" description="The requested assessment could not be found." />
     );
   }
 

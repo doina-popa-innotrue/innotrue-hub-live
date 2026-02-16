@@ -125,11 +125,7 @@ export default function SharedGoals() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-muted-foreground">Loading shared goals...</div>
-      </div>
-    );
+    return <PageLoadingState message="Loading shared goals..." />;
   }
 
   return (

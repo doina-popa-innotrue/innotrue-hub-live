@@ -13,6 +13,8 @@ import {
   Award,
   Sparkles,
 } from "lucide-react";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 // Types for the static snapshot
 interface PublicProfileSnapshot {
@@ -84,24 +86,13 @@ export default function PublicProfile() {
   });
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <PageLoadingState />;
   }
 
   if (error || !snapshot) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Profile Not Found</CardTitle>
-            <CardDescription>
-              This public profile doesn't exist or is not publicly visible.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <ErrorState title="Not Found" description="This public profile doesn't exist or is not publicly visible." />
       </div>
     );
   }

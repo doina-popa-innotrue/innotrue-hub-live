@@ -44,6 +44,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
 import { useToast } from "@/hooks/use-toast";
 import {
   Users,
@@ -587,14 +588,7 @@ export default function AdminGroupDetail() {
   if (!group) {
     return (
       <div className="container mx-auto py-6">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Group not found</p>
-            <Button asChild className="mt-4">
-              <Link to="/admin/groups">Back to Groups</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <ErrorState title="Not Found" description="The requested group could not be found." />
       </div>
     );
   }
