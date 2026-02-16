@@ -656,14 +656,14 @@ export default function ClientStaffNotes({
               <div className="space-y-2">
                 <Label>Sentiment</Label>
                 <Select
-                  value={form.sentiment}
-                  onValueChange={(v) => setForm({ ...form, sentiment: v })}
+                  value={form.sentiment || "__none__"}
+                  onValueChange={(v) => setForm({ ...form, sentiment: v === "__none__" ? "" : v })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Optional" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="__none__">None</SelectItem>
                     {SENTIMENTS.map((s) => (
                       <SelectItem key={s.value} value={s.value}>
                         <div className="flex items-center gap-2">

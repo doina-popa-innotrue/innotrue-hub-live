@@ -399,14 +399,14 @@ export default function AssessmentBuilder() {
               <div>
                 <Label htmlFor="category_id">Category</Label>
                 <Select
-                  value={formData.category_id}
-                  onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                  value={formData.category_id || "__none__"}
+                  onValueChange={(value) => setFormData({ ...formData, category_id: value === "__none__" ? "" : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No category</SelectItem>
+                    <SelectItem value="__none__">No category</SelectItem>
                     {categories?.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}
@@ -418,14 +418,14 @@ export default function AssessmentBuilder() {
               <div>
                 <Label htmlFor="feature_key">Feature Gate (Optional)</Label>
                 <Select
-                  value={formData.feature_key}
-                  onValueChange={(value) => setFormData({ ...formData, feature_key: value })}
+                  value={formData.feature_key || "__none__"}
+                  onValueChange={(value) => setFormData({ ...formData, feature_key: value === "__none__" ? "" : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="No feature gate" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No feature gate</SelectItem>
+                    <SelectItem value="__none__">No feature gate</SelectItem>
                     {features?.map((feature) => (
                       <SelectItem key={feature.id} value={feature.key}>
                         {feature.name}

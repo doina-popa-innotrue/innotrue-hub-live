@@ -618,22 +618,23 @@ function AssignScenarioDialog() {
               <div>
                 <Label>Enrollment (optional)</Label>
                 <Select
-                  value={formData.enrollment_id}
-                  onValueChange={(value) =>
+                  value={formData.enrollment_id || "__none__"}
+                  onValueChange={(value) => {
+                    const enrollmentId = value === "__none__" ? "" : value;
                     setFormData((prev) => ({
                       ...prev,
-                      enrollment_id: value,
+                      enrollment_id: enrollmentId,
                       user_id:
-                        enrollments?.find((e) => e.id === value)?.client_user_id ?? prev.user_id,
+                        enrollments?.find((e) => e.id === enrollmentId)?.client_user_id ?? prev.user_id,
                       module_id: "", // Reset module when enrollment changes
-                    }))
-                  }
+                    }));
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select enrollment context..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No specific enrollment</SelectItem>
+                    <SelectItem value="__none__">No specific enrollment</SelectItem>
                     {enrollments?.map((enrollment) => (
                       <SelectItem key={enrollment.id} value={enrollment.id}>
                         {enrollment.profiles?.name || "Unknown"} —{" "}
@@ -649,16 +650,16 @@ function AssignScenarioDialog() {
                 <div>
                   <Label>Module (optional)</Label>
                   <Select
-                    value={formData.module_id}
+                    value={formData.module_id || "__none__"}
                     onValueChange={(value) =>
-                      setFormData((prev) => ({ ...prev, module_id: value }))
+                      setFormData((prev) => ({ ...prev, module_id: value === "__none__" ? "" : value }))
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select module..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No specific module</SelectItem>
+                      <SelectItem value="__none__">No specific module</SelectItem>
                       {modules.map((module) => (
                         <SelectItem key={module.id} value={module.id}>
                           {module.order_index + 1}. {module.title}

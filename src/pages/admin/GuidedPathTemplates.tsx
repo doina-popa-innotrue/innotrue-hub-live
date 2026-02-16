@@ -412,14 +412,14 @@ export default function GuidedPathTemplates() {
             <div className="space-y-2">
               <Label htmlFor="program">Linked Program (optional)</Label>
               <Select
-                value={formData.program_id}
-                onValueChange={(value) => setFormData({ ...formData, program_id: value })}
+                value={formData.program_id || "__none__"}
+                onValueChange={(value) => setFormData({ ...formData, program_id: value === "__none__" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a program or leave as General" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">General (Available to all)</SelectItem>
+                  <SelectItem value="__none__">General (Available to all)</SelectItem>
                   {programs.map((program) => (
                     <SelectItem key={program.id} value={program.id}>
                       {program.name}
@@ -432,14 +432,14 @@ export default function GuidedPathTemplates() {
             <div className="space-y-2">
               <Label htmlFor="family">Template Family (optional)</Label>
               <Select
-                value={formData.family_id}
-                onValueChange={(value) => setFormData({ ...formData, family_id: value })}
+                value={formData.family_id || "__none__"}
+                onValueChange={(value) => setFormData({ ...formData, family_id: value === "__none__" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a family or leave standalone" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Standalone (no family)</SelectItem>
+                  <SelectItem value="__none__">Standalone (no family)</SelectItem>
                   {families.map((family) => (
                     <SelectItem key={family.id} value={family.id}>
                       {family.name}
