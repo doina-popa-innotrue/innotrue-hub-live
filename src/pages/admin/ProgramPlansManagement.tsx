@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Lock,
   Coins,
+  Info,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -38,6 +39,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface ProgramPlan {
@@ -379,6 +381,20 @@ export default function ProgramPlansManagement() {
           New Program Plan
         </Button>
       </div>
+
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Program plans</strong> define which features are available to users enrolled in
+          specific programs. They are assigned automatically based on enrollment.
+          For <strong>standalone subscriptions</strong> with Stripe billing (e.g. Pro, Premium),
+          use{" "}
+          <a href="/admin/plans" className="underline font-medium">
+            Plans Management
+          </a>{" "}
+          instead.
+        </AlertDescription>
+      </Alert>
 
       <Tabs defaultValue="plans" className="space-y-4">
         <TabsList>

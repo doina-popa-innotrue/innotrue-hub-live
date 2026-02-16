@@ -1367,9 +1367,9 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | M5 | No scenario re-submission | Part 9 (9.6.3) | 2 days | Client can't revise after feedback. Add instructor "Request Revision" button |
 | ~~M6~~ | ~~Credit balance race condition~~ — **RESOLVED 2026-02-15** | Part 1 (1.9) | ~~4 hours~~ | Added `FOR UPDATE SKIP LOCKED` to `consume_credits_fifo` (fixed with C3) |
 | M7 | Empty state components for all sections | Part 8 (8.6) | 1 day | Multiple sections render blank with no CTA |
-| M8 | Locked sidebar items confusing UX | Part 8 (8.6) | 4 hours | Group locked items under "Premium Features" sidebar section |
+| ~~M8~~ | ~~Locked sidebar items confusing UX~~ — **RESOLVED (already implemented)** | Part 8 (8.6) | ~~4 hours~~ | Lock icon + tooltip + toast with plan name already in place. Items stay in natural position. |
 | M9 | Notification sending is synchronous | Part 1 (1.8) | 1 day | Group sessions could timeout. Use email queue instead |
-| M10 | Dual plans admin UX confusion | Part 1 (1.12) | 2 hours | Two plan pages with no guidance. Add info banners |
+| ~~M10~~ | ~~Dual plans admin UX confusion~~ — **RESOLVED 2026-02-17** | Part 1 (1.12) | ~~2 hours~~ | Added info banners to both plan pages with cross-links explaining when to use each |
 | M11 | Console statements in production | Part 1 (1.7) | 4 hours | ~26 files have console.log (~54 statements). Replace with Sentry or remove |
 | M12 | No resource ratings or feedback | Part 9 (9.8.3) | 3 days | No quality signal on resources. Add 1-5 star rating |
 | M13 | No Zod form validation | Part 1 (1.13) | 1-2 weeks | Forms use manual validation. Adopt Zod starting with critical forms |

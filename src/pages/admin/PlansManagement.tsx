@@ -14,7 +14,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Euro, Copy, DollarSign, Settings } from "lucide-react";
+import { Plus, Edit, Trash2, Euro, Copy, DollarSign, Settings, Info } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useAdminCRUD } from "@/hooks/useAdminCRUD";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AdminPageHeader,
   AdminLoadingState,
@@ -434,6 +435,20 @@ export default function PlansManagement() {
           </Button>
         }
       />
+
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Subscription plans</strong> control what users can purchase or be assigned directly
+          (e.g. Pro, Premium). They integrate with Stripe for billing.
+          For feature access tied to <strong>program enrollments</strong> (e.g. CTA vs. standard
+          programs), use{" "}
+          <a href="/admin/program-plans" className="underline font-medium">
+            Program Plans
+          </a>{" "}
+          instead.
+        </AlertDescription>
+      </Alert>
 
       {isLoading ? (
         <AdminLoadingState />
