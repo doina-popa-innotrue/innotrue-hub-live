@@ -7,6 +7,7 @@ import { Users, ExternalLink, AlertCircle, Clock, CheckCircle } from "lucide-rea
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FeatureGate } from "@/components/FeatureGate";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 export default function Community() {
   const [circleConnection, setCircleConnection] = useState<any>(null);
@@ -104,7 +105,7 @@ export default function Community() {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <PageLoadingState message="Loading community..." />;
   }
 
   return (

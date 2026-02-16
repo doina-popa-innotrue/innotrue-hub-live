@@ -54,3 +54,19 @@ export function resolveFallbackPlan<T extends PlanLike>(
 export function getPlanTierLevel(plan: { tier_level: number }): number {
   return plan.tier_level;
 }
+
+/**
+ * Check if a user's tier level is at or above the highest purchasable plan tier.
+ * Returns true when the user is on the max plan (no upgrade possible).
+ * Returns true if no purchasable plans exist (safe default — nothing to upgrade to).
+ */
+export function isMaxPlanTier(
+  userTier: number | null,
+  plans: { tier_level: number; is_purchasable?: boolean }[],
+): boolean {
+  if (userTier === null) return false;
+  const purchasable = filterPurchasablePlans(plans);
+  if (purchasable.length === 0) return true;
+  const maxTier = Math.max(...purchasable.map((p) => p.tier_level));
+  return userTier >= maxTier;
+}

@@ -44,6 +44,8 @@ import { PlanLockOverlay } from "@/components/programs/PlanLockOverlay";
 import { PlanLockBadge } from "@/components/programs/PlanLockBadge";
 import { TierUpgradeDialog } from "@/components/programs/TierUpgradeDialog";
 import { useQuery } from "@tanstack/react-query";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 interface ModuleLink {
   name: string;
@@ -406,8 +408,8 @@ export default function ProgramDetail() {
       .filter((m): m is Module => m !== undefined && m.progress?.status !== "completed");
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (!program) return <div>Program not found</div>;
+  if (loading) return <PageLoadingState message="Loading program..." />;
+  if (!program) return <ErrorState title="Program not found" description="The program you're looking for doesn't exist or has been removed." />;
 
   // Show lock overlay if enrollment is paused
   if (enrollment?.status === "paused") {

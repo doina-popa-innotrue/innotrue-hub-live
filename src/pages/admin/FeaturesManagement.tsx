@@ -18,6 +18,7 @@ import {
   Lock,
   Info,
   Download,
+  Ban,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -86,6 +87,7 @@ interface PlanFeature {
   feature_id: string;
   enabled: boolean;
   limit_value: number | null;
+  is_restrictive: boolean;
   plans: { name: string };
   features: { name: string; key: string };
 }
@@ -250,11 +252,13 @@ export default function FeaturesManagement() {
       featureId,
       enabled,
       limitValue,
+      isRestrictive,
     }: {
       planId: string;
       featureId: string;
       enabled: boolean;
       limitValue?: number | null;
+      isRestrictive?: boolean;
     }) => {
       const { data: existing } = await supabase
         .from("plan_features")
@@ -263,18 +267,23 @@ export default function FeaturesManagement() {
         .eq("feature_id", featureId)
         .single();
 
+      const payload = {
+        enabled,
+        limit_value: limitValue,
+        ...(isRestrictive !== undefined && { is_restrictive: isRestrictive }),
+      };
+
       if (existing) {
         const { error } = await supabase
           .from("plan_features")
-          .update({ enabled, limit_value: limitValue })
+          .update(payload)
           .eq("id", existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("plan_features").insert({
           plan_id: planId,
           feature_id: featureId,
-          enabled,
-          limit_value: limitValue,
+          ...payload,
         });
         if (error) throw error;
       }
@@ -690,6 +699,11 @@ export default function FeaturesManagement() {
                   <strong>System</strong> features are required for core functionality or menu
                   visibility.
                 </span>
+                <span className="block mt-1 text-xs">
+                  <Ban className="h-3 w-3 inline mr-1 text-destructive" />
+                  <strong>Deny</strong> explicitly blocks a feature, overriding all other grants
+                  (subscription, add-on, track). Use for org-sponsored plans.
+                </span>
               </CardDescription>
             </CardHeader>
             <CardContent className="max-h-[60vh] overflow-auto">
@@ -759,11 +773,13 @@ export default function FeaturesManagement() {
                             {plans?.map((plan) => {
                               const status = getPlanFeatureStatus(plan.id, feature.id);
                               const isEnabled = status?.enabled ?? false;
+                              const isRestrictive = status?.is_restrictive ?? false;
                               return (
-                                <td key={plan.id} className="p-4 align-middle text-center">
+                                <td key={plan.id} className={`p-4 align-middle text-center ${isRestrictive ? "bg-destructive/5" : ""}`}>
                                   <div className="flex flex-col items-center space-y-2">
                                     <Switch
                                       checked={isEnabled}
+                                      disabled={isRestrictive}
                                       onCheckedChange={(enabled) =>
                                         togglePlanFeatureMutation.mutate({
                                           planId: plan.id,
@@ -773,7 +789,7 @@ export default function FeaturesManagement() {
                                         })
                                       }
                                     />
-                                    {isEnabled && feature.is_consumable && (
+                                    {isEnabled && feature.is_consumable && !isRestrictive && (
                                       <Input
                                         type="number"
                                         className="w-20 h-8 text-center"
@@ -791,6 +807,34 @@ export default function FeaturesManagement() {
                                         placeholder="∞"
                                       />
                                     )}
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className="flex items-center gap-1">
+                                            <Checkbox
+                                              checked={isRestrictive}
+                                              onCheckedChange={(checked) =>
+                                                togglePlanFeatureMutation.mutate({
+                                                  planId: plan.id,
+                                                  featureId: feature.id,
+                                                  enabled: checked ? false : isEnabled,
+                                                  limitValue: status?.limit_value,
+                                                  isRestrictive: checked === true,
+                                                })
+                                              }
+                                            />
+                                            <Ban className={`h-3 w-3 ${isRestrictive ? "text-destructive" : "text-muted-foreground/40"}`} />
+                                          </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom" className="max-w-xs">
+                                          <p className="font-medium">Deny Override</p>
+                                          <p className="text-xs mt-1">
+                                            When checked, this feature is explicitly DENIED for this plan,
+                                            overriding any grants from subscriptions, add-ons, or tracks.
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
                                   </div>
                                 </td>
                               );

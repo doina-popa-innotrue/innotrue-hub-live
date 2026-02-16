@@ -35,6 +35,7 @@ import { OnboardingWelcomeCard } from "@/components/dashboard/OnboardingWelcomeC
 import { hasTierAccess } from "@/lib/tierUtils";
 import { useEntitlements } from "@/hooks/useEntitlements";
 import { usePageView } from "@/hooks/useAnalytics";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface Enrollment {
   id: string;
@@ -611,7 +612,7 @@ export default function ClientDashboard() {
   }, [user]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <PageLoadingState message="Loading dashboard..." />;
   }
 
   const skillsProgress =

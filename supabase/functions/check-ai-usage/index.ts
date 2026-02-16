@@ -2,11 +2,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { getStagingRecipient, getStagingSubject } from "../_shared/email-utils.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 // Default template as fallback
 const defaultTemplate = {
@@ -32,8 +29,10 @@ const defaultTemplate = {
 };
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -130,21 +129,15 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({
+    return successResponse.ok({
       totalUsed,
       monthlyLimit,
       usagePercent: Math.round(usagePercent * 10) / 10,
       isOverLimit,
       remaining: Math.max(0, monthlyLimit - totalUsed),
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    }, cors);
 
   } catch (error) {
-    console.error('Error in check-ai-usage:', error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return errorResponse.serverError("CHECK-AI-USAGE", error, cors);
   }
 });

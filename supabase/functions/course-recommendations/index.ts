@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { truncateArray, truncateString, truncateJson, enforcePromptLimit } from "../_shared/ai-input-limits.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 // Per-user rate limiting (in-memory, per instance)
 const userRateLimits = new Map<string, { count: number; resetTime: number }>();
@@ -58,8 +55,10 @@ async function checkPlatformAILimit(supabaseAdmin: any): Promise<{ allowed: bool
 }
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -77,22 +76,16 @@ serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse.unauthorized("Unauthorized", cors);
     }
 
     if (!checkUserRateLimit(user.id)) {
-      return new Response(JSON.stringify({ error: "Too many requests. Please try again in a minute." }), {
-        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse.rateLimit("Too many requests. Please try again in a minute.", cors);
     }
 
     const limitCheck = await checkPlatformAILimit(supabaseAdmin);
     if (!limitCheck.allowed) {
-      return new Response(JSON.stringify({ error: limitCheck.message }), {
-        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse.rateLimit(limitCheck.message, cors);
     }
 
     const { data: providerSetting } = await supabaseAdmin
@@ -199,14 +192,13 @@ serve(async (req) => {
     });
 
     if (!aiResponse.ok) {
-      if (aiResponse.status === 429) return new Response(JSON.stringify({ error: "Rate limits exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (aiResponse.status === 429) return errorResponse.rateLimit("AI rate limit exceeded", cors);
       throw new Error("AI gateway error");
     }
 
     const aiData = await aiResponse.json();
-    return new Response(JSON.stringify({ recommendations: aiData.choices[0]?.message?.content || "" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return successResponse.ok({ recommendations: aiData.choices[0]?.message?.content || "" }, cors);
   } catch (error) {
-    console.error("Error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return errorResponse.serverError("COURSE-RECOMMENDATIONS", error, cors);
   }
 });

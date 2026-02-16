@@ -6,6 +6,7 @@ interface Plan {
   id: string;
   name: string;
   tier_level: number;
+  is_purchasable: boolean;
 }
 
 interface PlanAccessState {
@@ -42,7 +43,7 @@ export function usePlanAccess() {
         // Fetch all plans
         const { data: plansData } = await supabase
           .from("plans")
-          .select("id, name, tier_level")
+          .select("id, name, tier_level, is_purchasable")
           .eq("is_active", true)
           .order("tier_level");
 

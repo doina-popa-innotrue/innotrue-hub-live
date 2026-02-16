@@ -8568,6 +8568,7 @@ export type Database = {
           enabled: boolean;
           feature_id: string;
           id: string;
+          is_restrictive: boolean;
           limit_value: number | null;
           plan_id: string;
         };
@@ -8576,6 +8577,7 @@ export type Database = {
           enabled?: boolean;
           feature_id: string;
           id?: string;
+          is_restrictive?: boolean;
           limit_value?: number | null;
           plan_id: string;
         };
@@ -8584,6 +8586,7 @@ export type Database = {
           enabled?: boolean;
           feature_id?: string;
           id?: string;
+          is_restrictive?: boolean;
           limit_value?: number | null;
           plan_id?: string;
         };

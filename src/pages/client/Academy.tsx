@@ -7,6 +7,7 @@ import { GraduationCap, ExternalLink, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useTalentLmsSSO } from "@/hooks/useTalentLmsSSO";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 export default function Academy() {
   const [talentLmsConnection, setTalentLmsConnection] = useState<any>(null);
@@ -41,7 +42,7 @@ export default function Academy() {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <PageLoadingState message="Loading academy..." />;
   }
 
   return (

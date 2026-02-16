@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { useDecisionFeatureAccess } from "@/hooks/useDecisionFeatureAccess";
 import { DecisionCapability, getFeatureKeyForCapability } from "@/lib/decisionFeatureConfig";
+import { useIsMaxPlan } from "@/hooks/useIsMaxPlan";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Lock, Zap } from "lucide-react";
@@ -27,6 +28,7 @@ export function CapabilityGate({
   hideWhenLocked = false,
 }: CapabilityGateProps) {
   const { hasCapability, isLoading } = useDecisionFeatureAccess();
+  const { isMaxPlan } = useIsMaxPlan();
   const navigate = useNavigate();
 
   if (isLoading) {
@@ -53,10 +55,16 @@ export function CapabilityGate({
     return (
       <Alert>
         <Lock className="h-4 w-4" />
-        <AlertTitle>{tierName} Feature</AlertTitle>
+        <AlertTitle>
+          {isMaxPlan ? "Feature Not Available" : `${tierName} Feature`}
+        </AlertTitle>
         <AlertDescription className="mt-2 space-y-4">
-          <p>This feature requires the {tierName} Decision Toolkit.</p>
-          {showUpgrade && (
+          <p>
+            {isMaxPlan
+              ? `This feature requires the ${tierName} Decision Toolkit. Contact your administrator for assistance.`
+              : `This feature requires the ${tierName} Decision Toolkit.`}
+          </p>
+          {showUpgrade && !isMaxPlan && (
             <Button onClick={() => navigate("/subscription")} size="sm">
               <Zap className="mr-2 h-4 w-4" />
               Upgrade Plan

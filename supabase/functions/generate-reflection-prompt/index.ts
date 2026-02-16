@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { truncateArray, truncateString, enforcePromptLimit } from "../_shared/ai-input-limits.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 interface UserContext {
   recentModuleCompletions: Array<{ title: string; completed_at: string }>;
@@ -17,9 +14,11 @@ interface UserContext {
 }
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -30,10 +29,7 @@ serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return errorResponse.unauthorized("Missing authorization header", cors);
     }
 
     // Create Supabase client
@@ -44,10 +40,7 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
 
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return errorResponse.unauthorized("Invalid token", cors);
     }
 
     const { periodType = 'weekly', forceGenerate = false } = await req.json().catch(() => ({}));
@@ -82,9 +75,7 @@ serve(async (req) => {
 
       if (existingPrompt) {
         console.log('Returning existing prompt for period:', periodStartStr);
-        return new Response(JSON.stringify({ prompt: existingPrompt, isNew: false }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return successResponse.ok({ prompt: existingPrompt, isNew: false }, cors);
       }
     }
 
@@ -268,16 +259,9 @@ ${context.recentReflections.map(r => `- "${r.content}"`).join('\n') || 'No recen
       throw insertError;
     }
 
-    return new Response(JSON.stringify({ prompt: newPrompt, isNew: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return successResponse.ok({ prompt: newPrompt, isNew: true }, cors);
 
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error in generate-reflection-prompt:', error);
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return errorResponse.serverError("GENERATE-REFLECTION-PROMPT", error, cors);
   }
 });

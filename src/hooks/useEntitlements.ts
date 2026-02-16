@@ -11,6 +11,8 @@ export interface FeatureEntitlement {
   enabled: boolean;
   limit: number | null;
   source: AccessSource;
+  /** When true, this feature is explicitly denied (e.g., by org policy). Overrides all grants. */
+  isDenied?: boolean;
 }
 
 export interface EntitlementsData {
@@ -90,10 +92,23 @@ export function useEntitlements(): UseEntitlementsResult {
       mergeFeatures(orgSponsoredFeatures);
 
       // Resolve final entitlements (highest limit, prioritized source)
+      // Deny entries (isDenied=true) override ALL grants for that feature.
       const finalFeatures: Record<string, FeatureEntitlement> = {};
       const featuresByPrefix: Record<string, Set<string>> = {};
 
       for (const [key, entitlementList] of Object.entries(entitlements)) {
+        // Check for explicit deny — if ANY source denies, the feature is blocked
+        const denied = entitlementList.find((e) => e.isDenied);
+        if (denied) {
+          finalFeatures[key] = {
+            enabled: false,
+            limit: 0,
+            source: denied.source,
+            isDenied: true,
+          };
+          continue;
+        }
+
         const enabled = entitlementList.filter((e) => e.enabled);
         if (enabled.length === 0) continue;
 
@@ -470,25 +485,36 @@ async function fetchOrgSponsoredFeatures(
     if (!highestPlanId) return features;
 
     // Fetch features for the highest tier plan
+    // Include restrictive entries (is_restrictive=true) which explicitly deny features
     const { data: planFeatures } = await supabase
       .from("plan_features")
       .select(
         `
         enabled,
         limit_value,
+        is_restrictive,
         features!inner (key)
       `,
       )
-      .eq("plan_id", highestPlanId)
-      .eq("enabled", true);
+      .eq("plan_id", highestPlanId);
 
     planFeatures?.forEach((pf: any) => {
       if (pf.features?.key) {
-        features[pf.features.key] = {
-          enabled: true,
-          limit: pf.limit_value,
-          source: "org_sponsored",
-        };
+        if (pf.is_restrictive) {
+          // Explicit deny — overrides all other sources
+          features[pf.features.key] = {
+            enabled: false,
+            limit: 0,
+            source: "org_sponsored",
+            isDenied: true,
+          };
+        } else if (pf.enabled) {
+          features[pf.features.key] = {
+            enabled: true,
+            limit: pf.limit_value,
+            source: "org_sponsored",
+          };
+        }
       }
     });
   } catch (error) {
@@ -518,6 +544,20 @@ export async function checkFeatureAccessAsync(
       fetchTrackFeatures(userId),
       fetchOrgSponsoredFeatures(userId),
     ]);
+
+    // Check for explicit deny from any source
+    const allSources = [
+      subscriptionFeatures,
+      programPlanFeatures,
+      orgSponsoredFeatures,
+      addOnFeatures,
+      trackFeatures,
+    ];
+    for (const source of allSources) {
+      if (source[featureKey]?.isDenied) {
+        return { hasAccess: false, limit: 0, source: source[featureKey].source };
+      }
+    }
 
     const allFeatures = {
       ...programPlanFeatures,

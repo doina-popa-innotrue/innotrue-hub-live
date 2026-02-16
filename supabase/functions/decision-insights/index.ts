@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { truncateArray, truncateString, truncateObjectStrings, enforcePromptLimit } from "../_shared/ai-input-limits.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 async function checkPlatformAILimit(supabaseAdmin: any): Promise<{ allowed: boolean; message?: string }> {
   const now = new Date();
@@ -34,8 +31,10 @@ async function checkPlatformAILimit(supabaseAdmin: any): Promise<{ allowed: bool
 }
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   try {
@@ -52,19 +51,13 @@ serve(async (req) => {
 
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return errorResponse.unauthorized("Unauthorized", cors);
     }
 
     // Check platform-wide AI limit
     const limitCheck = await checkPlatformAILimit(supabaseAdmin);
     if (!limitCheck.allowed) {
-      return new Response(JSON.stringify({ error: limitCheck.message }), {
-        status: 429,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return errorResponse.rateLimit(limitCheck.message, cors);
     }
 
     // Fetch user's profile data including values, motivators, desired role, future vision, and constraints
@@ -95,18 +88,13 @@ serve(async (req) => {
 
     if (decisionsError) {
       console.error('Error fetching decisions:', decisionsError);
-      return new Response(JSON.stringify({ error: 'Failed to fetch decisions' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return errorResponse.serverErrorWithMessage('Failed to fetch decisions', cors);
     }
 
     if (!decisions || decisions.length === 0) {
-      return new Response(JSON.stringify({
+      return successResponse.ok({
         insights: 'Not enough decision data yet. Start by documenting a few decisions to see personalized insights!'
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      }, cors);
     }
 
     // Truncate decisions array and nested data for AI input safety
@@ -215,24 +203,15 @@ Format the response as structured markdown with clear sections.`;
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
       console.error('AI gateway error:', aiResponse.status, errorText);
-      return new Response(JSON.stringify({ error: 'AI analysis failed' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return errorResponse.serverErrorWithMessage('AI analysis failed', cors);
     }
 
     const aiData = await aiResponse.json();
     const insights = aiData.choices[0].message.content;
 
-    return new Response(JSON.stringify({ insights }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return successResponse.ok({ insights }, cors);
 
   } catch (error) {
-    console.error('Error in decision-insights function:', error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return errorResponse.serverError("DECISION-INSIGHTS", error, cors);
   }
 });

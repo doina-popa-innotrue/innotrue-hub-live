@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { FeatureGate } from "@/components/FeatureGate";
 import { usePageView } from "@/hooks/useAnalytics";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 function GoalsFallback() {
   const navigate = useNavigate();
@@ -222,11 +223,7 @@ export default function Goals() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-muted-foreground">Loading goals...</div>
-      </div>
-    );
+    return <PageLoadingState message="Loading goals..." />;
   }
 
   return (
