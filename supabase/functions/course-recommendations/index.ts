@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { truncateArray, truncateString, truncateJson, enforcePromptLimit } from "../_shared/ai-input-limits.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -162,9 +163,14 @@ serve(async (req) => {
     }));
 
     const cataloguePrograms = {
-      currentlyEnrolled: enrolledPrograms.map((p: { name: string; description: string; category: string }) => ({ name: p.name, description: p.description, category: p.category })),
-      availableToEnroll: notEnrolledPrograms.map((p: { name: string; description: string; category: string }) => ({ name: p.name, description: p.description, category: p.category }))
+      currentlyEnrolled: truncateArray(enrolledPrograms.map((p: { name: string; description: string; category: string }) => ({ name: p.name, description: truncateString(p.description, 200), category: p.category })), 30),
+      availableToEnroll: truncateArray(notEnrolledPrograms.map((p: { name: string; description: string; category: string }) => ({ name: p.name, description: truncateString(p.description, 200), category: p.category })), 30)
     };
+
+    // Apply truncation safety to assembled data
+    const safeCompletedPrograms = truncateArray(completedProgramsData, 20);
+    const safeAcquiredSkills = truncateArray(acquiredSkills, 50);
+    const safeExternalCourses = truncateArray(externalCoursesData, 20);
 
     const { getAIApiKey, AI_ENDPOINT, AI_MODEL } = await import('../_shared/ai-config.ts');
     const aiApiKey = getAIApiKey();
@@ -173,6 +179,13 @@ serve(async (req) => {
       ? `For external courses, ONLY suggest from these providers: ${allowedProviders.join(', ')}.`
       : 'You may suggest external courses from any reputable provider.';
 
+    const rawUserMessage = `Recommend 5 courses. Platform catalogue: ${truncateJson(cataloguePrograms)}. History: ${truncateJson(safeCompletedPrograms)}. Skills: ${truncateJson(safeAcquiredSkills)}. External: ${truncateJson(safeExternalCourses)}. Interests: ${truncateJson(userInterests?.interests || [])}. Values: ${truncateJson(userInterests?.values || [])}. Role: ${truncateString(userProfile?.desired_target_role, 200) || 'Not specified'}. ${providerInstruction}`;
+
+    const { prompt: userMessage, wasTruncated } = enforcePromptLimit(rawUserMessage);
+    if (wasTruncated) {
+      console.warn('course-recommendations: user message was truncated to fit AI input limits');
+    }
+
     const aiResponse = await fetch(AI_ENDPOINT, {
       method: "POST",
       headers: { Authorization: `Bearer ${aiApiKey}`, "Content-Type": "application/json" },
@@ -180,7 +193,7 @@ serve(async (req) => {
         model: AI_MODEL,
         messages: [
           { role: "system", content: `You are a learning advisor. Prioritize platform programs first.` },
-          { role: "user", content: `Recommend 5 courses. Platform catalogue: ${JSON.stringify(cataloguePrograms)}. History: ${JSON.stringify(completedProgramsData)}. Skills: ${JSON.stringify(acquiredSkills)}. External: ${JSON.stringify(externalCoursesData)}. Interests: ${JSON.stringify(userInterests?.interests || [])}. Values: ${JSON.stringify(userInterests?.values || [])}. Role: ${userProfile?.desired_target_role || 'Not specified'}. ${providerInstruction}` }
+          { role: "user", content: userMessage }
         ]
       }),
     });

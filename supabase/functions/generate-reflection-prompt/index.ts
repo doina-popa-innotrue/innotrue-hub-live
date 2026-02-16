@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { truncateArray, truncateString, enforcePromptLimit } from "../_shared/ai-input-limits.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -155,32 +156,32 @@ serve(async (req) => {
       .gte('target_date', now.toISOString())
       .limit(5);
 
-    // Build context for AI
+    // Build context for AI (with truncation safety)
     const context: UserContext = {
-      recentModuleCompletions: (moduleCompletions || []).map(m => ({
-        title: (m.program_modules as any)?.title || 'Unknown module',
+      recentModuleCompletions: truncateArray((moduleCompletions || []).map(m => ({
+        title: truncateString((m.program_modules as any)?.title || 'Unknown module', 200),
         completed_at: m.completed_at || '',
-      })),
-      recentMilestones: (milestoneCompletions || []).map(m => ({
-        title: m.title,
+      })), 10),
+      recentMilestones: truncateArray((milestoneCompletions || []).map(m => ({
+        title: truncateString(m.title, 200),
         completed_at: m.completed_at || '',
-      })),
-      activeGoals: (activeGoals || []).map(g => ({
-        title: g.title,
+      })), 10),
+      activeGoals: truncateArray((activeGoals || []).map(g => ({
+        title: truncateString(g.title, 200),
         progress: g.progress_percentage || 0,
-      })),
-      recentReflections: (recentReflections || []).map(r => ({
-        content: r.content?.substring(0, 200) || '',
+      })), 10),
+      recentReflections: truncateArray((recentReflections || []).map(r => ({
+        content: truncateString(r.content, 200),
         created_at: r.created_at,
-      })),
-      wheelDomains: (wheelScores || []).map(w => ({
+      })), 5),
+      wheelDomains: truncateArray((wheelScores || []).map(w => ({
         name: w.domain,
         score: w.score,
-      })),
-      upcomingDeadlines: (upcomingDeadlines || []).map(d => ({
-        title: d.title,
+      })), 10),
+      upcomingDeadlines: truncateArray((upcomingDeadlines || []).map(d => ({
+        title: truncateString(d.title, 200),
         due_date: d.target_date || '',
-      })),
+      })), 10),
     };
 
     console.log('Context gathered:', JSON.stringify(context, null, 2));
@@ -200,7 +201,7 @@ Guidelines:
 
 Respond with ONLY the prompt text, nothing else.`;
 
-    const userMessage = `Generate a ${periodType} reflection prompt for this user.
+    const rawUserMessage = `Generate a ${periodType} reflection prompt for this user.
 
 Recent Activity:
 - Completed modules: ${context.recentModuleCompletions.map(m => m.title).join(', ') || 'None recently'}
@@ -211,6 +212,11 @@ Recent Activity:
 
 Recent reflection themes (avoid repeating):
 ${context.recentReflections.map(r => `- "${r.content}"`).join('\n') || 'No recent reflections'}`;
+
+    const { prompt: userMessage, wasTruncated } = enforcePromptLimit(rawUserMessage);
+    if (wasTruncated) {
+      console.warn('generate-reflection-prompt: user message was truncated to fit AI input limits');
+    }
 
     console.log('Calling AI for prompt generation...');
 

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { truncateArray, truncateString, truncateObjectStrings, enforcePromptLimit } from "../_shared/ai-input-limits.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -101,16 +102,29 @@ serve(async (req) => {
     }
 
     if (!decisions || decisions.length === 0) {
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         insights: 'Not enough decision data yet. Start by documenting a few decisions to see personalized insights!'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    // Truncate decisions array and nested data for AI input safety
+    const safeDecisions = truncateArray(decisions, 20).map(d => ({
+      ...d,
+      description: truncateString(d.description, 500),
+      context: truncateString(d.context, 500),
+      decision_values: truncateArray(d.decision_values || [], 10),
+      decision_options: truncateArray(d.decision_options || [], 10),
+      decision_reflections: truncateArray(d.decision_reflections || [], 10).map((r: any) => ({
+        ...r,
+        content: truncateString(r.content, 500),
+      })),
+    }));
+
     // Prepare decision summary for AI analysis
-    const decisionSummary = decisions.map(d => ({
-      title: d.title,
+    const decisionSummary = safeDecisions.map(d => ({
+      title: truncateString(d.title, 200),
       status: d.status,
       importance: d.importance,
       urgency: d.urgency,
@@ -132,15 +146,15 @@ serve(async (req) => {
       { name: "Crossroads Model", description: "Compare different paths and their implications side-by-side" },
     ];
 
-    // Build user context from profile and interests
+    // Build user context from profile and interests (with truncation safety)
     const userContext = {
-      values: userInterests?.values || [],
-      personalMotivators: userInterests?.drives || [],
-      interests: userInterests?.interests || [],
-      preferredCategories: userInterests?.preferred_categories || [],
-      desiredTargetRole: userProfile?.desired_target_role || null,
-      futureVision: userProfile?.future_vision || null,
-      constraints: userProfile?.constraints || null,
+      values: truncateArray(userInterests?.values || [], 20),
+      personalMotivators: truncateArray(userInterests?.drives || [], 20),
+      interests: truncateArray(userInterests?.interests || [], 20),
+      preferredCategories: truncateArray(userInterests?.preferred_categories || [], 20),
+      desiredTargetRole: truncateString(userProfile?.desired_target_role, 500) || null,
+      futureVision: truncateString(userProfile?.future_vision, 500) || null,
+      constraints: truncateString(userProfile?.constraints, 500) || null,
     };
 
     const prompt = `Analyze these decision-making patterns and provide personalized insights based on the user's profile:
@@ -175,6 +189,11 @@ Format the response as structured markdown with clear sections.`;
     const { getAIApiKey, AI_ENDPOINT, AI_MODEL } = await import('../_shared/ai-config.ts');
     const aiApiKey = getAIApiKey();
 
+    const { prompt: safePrompt, wasTruncated } = enforcePromptLimit(prompt);
+    if (wasTruncated) {
+      console.warn('decision-insights: prompt was truncated to fit AI input limits');
+    }
+
     const aiResponse = await fetch(AI_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -184,11 +203,11 @@ Format the response as structured markdown with clear sections.`;
       body: JSON.stringify({
         model: AI_MODEL,
         messages: [
-          { 
-            role: 'system', 
-            content: 'You are an expert decision-making coach analyzing patterns to provide actionable insights.' 
+          {
+            role: 'system',
+            content: 'You are an expert decision-making coach analyzing patterns to provide actionable insights.'
           },
-          { role: 'user', content: prompt }
+          { role: 'user', content: safePrompt }
         ],
       }),
     });
