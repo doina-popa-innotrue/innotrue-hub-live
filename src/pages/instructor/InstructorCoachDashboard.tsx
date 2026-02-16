@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { PendingAssignmentsWidget } from "@/components/instructor/PendingAssignmentsWidget";
 import { format } from "date-fns";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface ProgramAssignment {
   id: string;
@@ -615,7 +616,12 @@ export default function InstructorCoachDashboard() {
           </CardHeader>
           <CardContent>
             {upcomingSessions.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">No upcoming sessions</p>
+              <EmptyState
+                variant="inline"
+                icon={Calendar}
+                title="No upcoming sessions"
+                description="Group sessions you facilitate will appear here"
+              />
             ) : (
               <div className="space-y-3">
                 {upcomingSessions.slice(0, 3).map((session) => (
@@ -656,7 +662,12 @@ export default function InstructorCoachDashboard() {
           </CardHeader>
           <CardContent>
             {sharedGoals.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">No shared goals</p>
+              <EmptyState
+                variant="inline"
+                icon={Target}
+                title="No shared goals yet"
+                description="Goals shared by your clients will appear here"
+              />
             ) : (
               <div className="space-y-3">
                 {sharedGoals.slice(0, 3).map((goal) => (
@@ -694,7 +705,12 @@ export default function InstructorCoachDashboard() {
           </CardHeader>
           <CardContent>
             {sharedDecisions.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">No shared decisions</p>
+              <EmptyState
+                variant="inline"
+                icon={Brain}
+                title="No shared decisions yet"
+                description="Decisions shared by your clients will appear here"
+              />
             ) : (
               <div className="space-y-3">
                 {sharedDecisions.slice(0, 3).map((decision) => (
@@ -739,7 +755,12 @@ export default function InstructorCoachDashboard() {
           </CardHeader>
           <CardContent>
             {sharedTasks.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">No shared tasks</p>
+              <EmptyState
+                variant="inline"
+                icon={CheckSquare}
+                title="No shared tasks yet"
+                description="Tasks shared by your clients will appear here"
+              />
             ) : (
               <div className="space-y-3">
                 {sharedTasks.slice(0, 3).map((task) => (

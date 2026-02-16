@@ -282,6 +282,106 @@ function SectionCard({
 }
 
 // ============================================================================
+// Linked Question Row (with rubric editing)
+// ============================================================================
+
+function LinkedQuestionRow({
+  link,
+  paragraphId,
+  sectionId,
+  isLocked,
+  onSaveRubric,
+}: {
+  link: ParagraphQuestionLink;
+  paragraphId: string;
+  sectionId: string;
+  isLocked: boolean;
+  onSaveRubric: (rubricText: string) => void;
+}) {
+  const [showRubric, setShowRubric] = useState(false);
+  const [rubricText, setRubricText] = useState(link.rubric_text || "");
+
+  const hasRubric = !!link.rubric_text;
+
+  return (
+    <div className="bg-background rounded px-2 py-1.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="flex-1">
+          <span className="text-muted-foreground">
+            [{link.capability_domain_questions?.capability_domains?.name}]
+          </span>{" "}
+          {link.capability_domain_questions?.question_text}
+        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          {!isLocked && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => setShowRubric(!showRubric)}
+            >
+              <FileText className="h-3 w-3 mr-1" />
+              {hasRubric ? "Edit Rubric" : "Add Rubric"}
+            </Button>
+          )}
+          {hasRubric && !showRubric && (
+            <Badge variant="outline" className="text-[10px] h-5">
+              Rubric
+            </Badge>
+          )}
+          {!isLocked && (
+            <UnlinkQuestionButton
+              linkId={link.id}
+              paragraphId={paragraphId}
+              sectionId={sectionId}
+            />
+          )}
+        </div>
+      </div>
+      {hasRubric && !showRubric && (
+        <p className="text-[11px] text-muted-foreground italic mt-1 pl-1">
+          {link.rubric_text}
+        </p>
+      )}
+      {showRubric && !isLocked && (
+        <div className="mt-2 space-y-2">
+          <Textarea
+            value={rubricText}
+            onChange={(e) => setRubricText(e.target.value)}
+            placeholder='e.g. "Score 5 if candidate demonstrates active listening AND provides structured feedback"'
+            className="text-xs min-h-[60px]"
+            rows={2}
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 text-xs"
+              onClick={() => {
+                setRubricText(link.rubric_text || "");
+                setShowRubric(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="h-6 text-xs"
+              onClick={() => {
+                onSaveRubric(rubricText);
+                setShowRubric(false);
+              }}
+            >
+              Save Rubric
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // Paragraph Item Component
 // ============================================================================
 
@@ -323,6 +423,7 @@ function ParagraphItem({
   };
 
   const linkedQuestions = paragraph.paragraph_question_links || [];
+  const { updateLinkMutation } = useQuestionLinkMutations(paragraph.id, sectionId);
 
   return (
     <div className="border rounded-lg p-3 bg-muted/30">
@@ -377,26 +478,21 @@ function ParagraphItem({
             {linkedQuestions.length > 0 && !isEditing && (
               <div className="mt-2 pt-2 border-t">
                 <p className="text-xs font-medium text-muted-foreground mb-1">Linked Questions:</p>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {linkedQuestions.map((link) => (
-                    <div
+                    <LinkedQuestionRow
                       key={link.id}
-                      className="flex items-center justify-between text-xs bg-background rounded px-2 py-1"
-                    >
-                      <span>
-                        <span className="text-muted-foreground">
-                          [{link.capability_domain_questions?.capability_domains?.name}]
-                        </span>{" "}
-                        {link.capability_domain_questions?.question_text}
-                      </span>
-                      {!isLocked && (
-                        <UnlinkQuestionButton
-                          linkId={link.id}
-                          paragraphId={paragraph.id}
-                          sectionId={sectionId}
-                        />
-                      )}
-                    </div>
+                      link={link}
+                      paragraphId={paragraph.id}
+                      sectionId={sectionId}
+                      isLocked={isLocked}
+                      onSaveRubric={(rubricText) =>
+                        updateLinkMutation.mutate({
+                          linkId: link.id,
+                          rubric_text: rubricText || null,
+                        })
+                      }
+                    />
                   ))}
                 </div>
               </div>

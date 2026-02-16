@@ -86,7 +86,7 @@ export function DevelopmentHubWidget({ goals, decisions, tasks }: DevelopmentHub
                 </p>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No active goals</p>
+              <p className="text-sm text-muted-foreground">No active goals — set one to start tracking your progress</p>
             )}
             <Button variant="ghost" size="sm" className="w-full mt-3 text-xs">
               View All <ChevronRight className="h-3 w-3 ml-1" />
@@ -119,7 +119,7 @@ export function DevelopmentHubWidget({ goals, decisions, tasks }: DevelopmentHub
                 )}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No active decisions</p>
+              <p className="text-sm text-muted-foreground">No active decisions — capture important choices to track</p>
             )}
             <Button variant="ghost" size="sm" className="w-full mt-3 text-xs">
               View All <ChevronRight className="h-3 w-3 ml-1" />
@@ -148,7 +148,7 @@ export function DevelopmentHubWidget({ goals, decisions, tasks }: DevelopmentHub
                 {urgentTasks > 0 && <p className="text-xs text-warning">{urgentTasks} urgent</p>}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No upcoming tasks</p>
+              <p className="text-sm text-muted-foreground">No upcoming tasks — add tasks to stay on track</p>
             )}
             <Button variant="ghost" size="sm" className="w-full mt-3 text-xs">
               View All <ChevronRight className="h-3 w-3 ml-1" />

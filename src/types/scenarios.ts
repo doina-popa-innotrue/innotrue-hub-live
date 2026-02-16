@@ -60,6 +60,7 @@ export interface ParagraphQuestionLink {
   paragraph_id: string;
   question_id: string;
   weight: number;
+  rubric_text?: string | null;
   created_at: string;
   // Joined data
   capability_domain_questions?: {

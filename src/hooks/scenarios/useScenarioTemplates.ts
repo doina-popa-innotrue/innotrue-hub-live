@@ -400,5 +400,23 @@ export function useQuestionLinkMutations(paragraphId: string, sectionId: string)
     },
   });
 
-  return { addLinkMutation, removeLinkMutation };
+  const updateLinkMutation = useMutation({
+    mutationFn: async ({ linkId, rubric_text }: { linkId: string; rubric_text: string | null }) => {
+      const { error } = await supabase
+        .from("paragraph_question_links")
+        .update({ rubric_text })
+        .eq("id", linkId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["section-paragraphs", sectionId] });
+      toast({ description: "Rubric saved" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  return { addLinkMutation, removeLinkMutation, updateLinkMutation };
 }

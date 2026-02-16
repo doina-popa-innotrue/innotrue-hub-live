@@ -37,6 +37,7 @@ import { hasTierAccess } from "@/lib/tierUtils";
 import { useEntitlements } from "@/hooks/useEntitlements";
 import { usePageView } from "@/hooks/useAnalytics";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface Enrollment {
   id: string;
@@ -727,11 +728,13 @@ export default function ClientDashboard() {
             </Button>
           </div>
           {enrollments.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-muted-foreground text-center">No active programs</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={BookOpen}
+              title="No active programs yet"
+              description="Browse available programs to get started"
+              actionLabel="Explore Programs"
+              actionHref="/programs/explore"
+            />
           ) : (
             <div className="space-y-3">
               {enrollments.slice(0, 2).map((enrollment) => (
@@ -776,11 +779,13 @@ export default function ClientDashboard() {
             </Button>
           </div>
           {upcomingSessions.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-muted-foreground text-center">No upcoming sessions</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Calendar}
+              title="No upcoming sessions"
+              description="Check your calendar for scheduling options"
+              actionLabel="View Calendar"
+              actionHref="/calendar"
+            />
           ) : (
             <div className="space-y-3">
               {upcomingSessions.slice(0, 3).map((session) => (

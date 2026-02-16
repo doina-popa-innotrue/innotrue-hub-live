@@ -430,6 +430,11 @@ function ParagraphEvaluationItem({
                     [{link.capability_domain_questions?.capability_domains?.name}]
                   </p>
                   <p className="text-sm">{link.capability_domain_questions?.question_text}</p>
+                  {link.rubric_text && (
+                    <p className="text-xs text-muted-foreground italic mt-0.5">
+                      Rubric: {link.rubric_text}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: ratingScale + 1 }, (_, i) => i).map((score) => (
