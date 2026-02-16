@@ -14,8 +14,10 @@ interface OrgSeatData {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   // SECURITY: Validate service role key - this function should only be called by cron/internal
@@ -27,7 +29,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.error("Unauthorized: Missing or invalid service role key");
     return new Response(
       JSON.stringify({ error: "Unauthorized - service role key required" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 401, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 
@@ -169,7 +171,7 @@ const handler = async (req: Request): Promise<Response> => {
       }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...cors },
       }
     );
   } catch (error: any) {
@@ -178,7 +180,7 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ error: error.message }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...cors },
       }
     );
   }
