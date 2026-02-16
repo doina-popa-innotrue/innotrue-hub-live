@@ -50,6 +50,27 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // Clean up stale service workers from previous app versions (e.g. old Lovable SW).
+      // If a SW exists but isn't the VitePWA-generated one, unregister it and reload once.
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          var reloaded = false;
+          registrations.forEach(function(reg) {
+            // VitePWA registers at scope "/". If there's an SW with a different scope,
+            // or if the SW script URL doesn't match our expected pattern, remove it.
+            if (reg.active && reg.active.scriptURL && !reg.active.scriptURL.includes('/sw.js')) {
+              reg.unregister().then(function() {
+                if (!reloaded) {
+                  reloaded = true;
+                  location.reload();
+                }
+              });
+            }
+          });
+        });
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
