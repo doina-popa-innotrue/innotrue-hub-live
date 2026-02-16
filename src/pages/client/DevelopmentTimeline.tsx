@@ -40,6 +40,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface Goal {
   id: string;

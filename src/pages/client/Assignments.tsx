@@ -33,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface Assignment {
   id: string;

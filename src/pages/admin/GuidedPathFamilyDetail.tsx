@@ -54,6 +54,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { BackButton } from "@/components/navigation/BackButton";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 interface SurveyQuestion {
   id: string;

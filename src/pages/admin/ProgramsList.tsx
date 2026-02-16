@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 function ProgramIdCell({ programId }: { programId: string }) {
   const [copied, setCopied] = useState(false);

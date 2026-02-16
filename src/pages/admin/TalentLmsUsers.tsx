@@ -23,6 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Link2, UserPlus, Pencil, Trash2, RefreshCw, Info } from "lucide-react";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface UserMapping {
   id: string;

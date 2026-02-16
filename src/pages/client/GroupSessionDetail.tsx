@@ -13,7 +13,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ErrorState } from "@/components/ui/error-state";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Calendar,
@@ -33,6 +32,7 @@ import { toZonedTime } from "date-fns-tz";
 import { useAuth } from "@/contexts/AuthContext";
 import { downloadICSFile } from "@/lib/icsGenerator";
 import { useToast } from "@/hooks/use-toast";
+import { ErrorState } from "@/components/ui/error-state";
 
 export default function GroupSessionDetail() {
   const { groupId, sessionId } = useParams<{ groupId: string; sessionId: string }>();

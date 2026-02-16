@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface ProgramPlan {
   id: string;

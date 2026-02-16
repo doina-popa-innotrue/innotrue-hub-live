@@ -44,7 +44,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ErrorState } from "@/components/ui/error-state";
 import { useToast } from "@/hooks/use-toast";
 import {
   Users,
@@ -72,6 +71,7 @@ import { useGroupSessionMutations, SessionFormData } from "@/hooks/useGroupSessi
 import { GroupPeerAssessmentConfig } from "@/components/groups/GroupPeerAssessmentConfig";
 import { useUserTimezone } from "@/hooks/useUserTimezone";
 import { GroupSessionsList } from "@/components/groups/sessions";
+import { ErrorState } from "@/components/ui/error-state";
 
 export default function AdminGroupDetail() {
   const { id } = useParams<{ id: string }>();

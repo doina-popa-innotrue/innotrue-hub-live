@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Calendar, ArrowRight, BookOpen, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface Group {
   id: string;

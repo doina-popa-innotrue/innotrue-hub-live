@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "lucide-react";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface SharedTask {
   id: string;

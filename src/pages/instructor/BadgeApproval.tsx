@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface PendingBadge {
   id: string;

@@ -36,7 +36,6 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdminLoadingState } from "@/components/admin";
-import { ErrorState } from "@/components/ui/error-state";
 import { useAuth } from "@/contexts/AuthContext";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
@@ -49,6 +48,8 @@ import {
   useQuestionLinkMutations,
 } from "@/hooks/useScenarios";
 import type { ScenarioSection, SectionParagraph, ParagraphQuestionLink } from "@/types/scenarios";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 export default function ScenarioTemplateDetail() {
   const { id } = useParams<{ id: string }>();

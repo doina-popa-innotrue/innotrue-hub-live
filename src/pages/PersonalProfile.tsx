@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Trash2, ExternalLink } from "lucide-react";
 import { InterestsValuesForm } from "@/components/profile/InterestsValuesForm";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface Education {
   institution: string;

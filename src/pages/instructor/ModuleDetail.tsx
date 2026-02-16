@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ErrorState } from "@/components/ui/error-state";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +31,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import ModuleClientContentManager from "@/components/admin/ModuleClientContentManager";
 import { InlineClientContentEditor } from "@/components/modules/InlineClientContentEditor";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 interface ModuleLink {
   name: string;

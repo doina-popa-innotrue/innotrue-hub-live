@@ -21,6 +21,7 @@ import {
   Mail,
 } from "lucide-react";
 import { usePageView } from "@/hooks/useAnalytics";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 // Icon mapping for dynamic features
 const iconMap: Record<string, LucideIcon> = {

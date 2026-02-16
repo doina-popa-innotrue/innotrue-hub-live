@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ErrorState } from "@/components/ui/error-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,6 +48,8 @@ import { ModuleSessionManager } from "@/components/modules/ModuleSessionManager"
 import { hasTierAccess } from "@/lib/tierUtils";
 import ClientStaffNotes from "@/components/admin/ClientStaffNotes";
 import { ManualCompletionControls } from "@/components/admin/ManualCompletionControls";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 interface StudentInfo {
   id: string;

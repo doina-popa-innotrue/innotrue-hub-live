@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Users, ExternalLink, Search, X, Download } from "lucide-react";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface Enrolment {
   id: string;

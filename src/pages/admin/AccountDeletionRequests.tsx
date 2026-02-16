@@ -43,6 +43,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Check, X, Trash2, Loader2 } from "lucide-react";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface DeletionRequest {
   id: string;

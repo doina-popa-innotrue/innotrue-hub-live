@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ValuesAlignment } from "@/components/decisions/ValuesAlignment";
 import { OptionsAnalysis } from "@/components/decisions/OptionsAnalysis";
 import { DecisionReflection } from "@/components/decisions/DecisionReflection";
+import { ErrorState } from "@/components/ui/error-state";
 
 interface Decision {
   id: string;

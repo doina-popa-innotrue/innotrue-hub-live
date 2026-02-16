@@ -20,6 +20,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface Coach {
   user_id: string;

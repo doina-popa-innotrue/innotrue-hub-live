@@ -30,6 +30,7 @@ import {
   useExternalCalendarEvents,
   ExternalCalendarEvent,
 } from "@/hooks/useExternalCalendarEvents";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 /**
  * Calculate next occurrences for a recurring session

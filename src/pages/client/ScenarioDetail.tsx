@@ -19,7 +19,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ErrorState } from "@/components/ui/error-state";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -52,6 +51,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { ScenarioSection, SectionParagraph, ParagraphQuestionLink } from "@/types/scenarios";
 import { ScenarioErrorBoundary } from "@/components/scenarios/ScenarioErrorBoundary";
+import { ErrorState } from "@/components/ui/error-state";
 
 function ScenarioDetailContent() {
   const { id } = useParams<{ id: string }>();

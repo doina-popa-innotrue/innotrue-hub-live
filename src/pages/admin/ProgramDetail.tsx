@@ -86,6 +86,7 @@ import ProgramBadgeManager from "@/components/admin/ProgramBadgeManager";
 import { ProgramCohortsManager } from "@/components/admin/ProgramCohortsManager";
 import { ProgramPlanConfig } from "@/components/admin/ProgramPlanConfig";
 import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface SortableModuleProps {
   module: any;

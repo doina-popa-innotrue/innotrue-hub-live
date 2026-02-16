@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/table";
 import { Loader2, Plus, Edit2, Trash2 } from "lucide-react";
 import { SortableFieldList } from "@/components/admin/SortableFieldList";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface StructureField {
   id: string;

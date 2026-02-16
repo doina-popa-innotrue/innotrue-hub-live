@@ -34,6 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { hasTierAccess } from "@/lib/tierUtils";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface StudentProgress {
   enrollment_id: string;

@@ -28,6 +28,7 @@ import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import DOMPurify from "dompurify";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface EmailTemplate {
   id: string;

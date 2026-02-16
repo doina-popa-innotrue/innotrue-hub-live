@@ -54,6 +54,7 @@ import { DomainReflectionDialog } from "@/components/wheel/DomainReflectionDialo
 import { useWheelFreePlanLimits } from "@/hooks/useWheelFreePlanLimits";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { WheelShareConsentDialog } from "@/components/wheel/WheelShareConsentDialog";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 export default function WheelOfLife() {
   const { user } = useAuth();

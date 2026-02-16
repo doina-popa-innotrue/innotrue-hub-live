@@ -63,6 +63,7 @@ import { ResourceReferencesDialog } from "@/components/admin/ResourceReferencesD
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { validateFile, acceptStringForBucket, sanitizeFilename } from "@/lib/fileValidation";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface Resource {
   id: string;

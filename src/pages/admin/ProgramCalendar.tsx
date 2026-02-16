@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar as CalendarIcon, Users, ChevronRight, Edit } from "lucide-react";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface ScheduledProgram {
   id: string;

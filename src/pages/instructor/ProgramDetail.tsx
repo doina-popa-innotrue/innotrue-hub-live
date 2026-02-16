@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ErrorState } from "@/components/ui/error-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InstructorCoachAssignment } from "@/components/admin/InstructorCoachAssignment";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 interface Module {
   id: string;

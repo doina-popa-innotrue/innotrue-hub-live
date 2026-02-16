@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 export default function PublicProfileSettings() {
   const { user } = useAuth();

@@ -35,8 +35,6 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdminLoadingState } from "@/components/admin";
-import { ErrorState } from "@/components/ui/error-state";
-import { PageLoadingState } from "@/components/ui/page-loading-state";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -54,6 +52,8 @@ import {
   useScenarioScoreSummary,
 } from "@/hooks/useScenarios";
 import type { ScenarioSection, SectionParagraph, ParagraphQuestionLink } from "@/types/scenarios";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 export default function ScenarioEvaluationPage() {
   const { id } = useParams<{ id: string }>();

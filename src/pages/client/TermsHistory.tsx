@@ -21,6 +21,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface TermsAcceptance {
   id: string;

@@ -56,6 +56,7 @@ interface Goal {
 }
 
 import { CATEGORY_LABELS } from "@/lib/wheelOfLifeCategories";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 const TIMEFRAME_LABELS: Record<string, string> = {
   short_term: "Short-term (1-6 months)",

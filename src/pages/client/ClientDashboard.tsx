@@ -36,8 +36,8 @@ import { OnboardingWelcomeCard } from "@/components/dashboard/OnboardingWelcomeC
 import { hasTierAccess } from "@/lib/tierUtils";
 import { useEntitlements } from "@/hooks/useEntitlements";
 import { usePageView } from "@/hooks/useAnalytics";
-import { PageLoadingState } from "@/components/ui/page-loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface Enrollment {
   id: string;

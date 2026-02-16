@@ -13,10 +13,10 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ErrorState } from "@/components/ui/error-state";
 import { FileText, User, Calendar, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { ErrorState } from "@/components/ui/error-state";
 
 interface NoteWithProfile {
   id: string;

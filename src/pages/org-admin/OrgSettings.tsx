@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, Save, Settings, Globe, Bell } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface OrgSettingsData {
   notifyOnMemberJoin?: boolean;

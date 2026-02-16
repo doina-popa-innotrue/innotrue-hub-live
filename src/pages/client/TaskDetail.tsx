@@ -28,6 +28,8 @@ import {
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
 import { useWheelCategories } from "@/hooks/useWheelCategories";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 interface Task {
   id: string;

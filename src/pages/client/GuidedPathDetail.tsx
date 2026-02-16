@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ErrorState } from "@/components/ui/error-state";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Breadcrumb,
@@ -43,6 +42,7 @@ import {
 } from "lucide-react";
 import { addDays, format } from "date-fns";
 import { FeatureGate } from "@/components/FeatureGate";
+import { ErrorState } from "@/components/ui/error-state";
 
 interface TemplateTask {
   id: string;

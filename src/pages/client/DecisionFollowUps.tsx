@@ -16,6 +16,7 @@ import {
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
 import { CapabilityGate } from "@/components/decisions/CapabilityGate";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 export default function DecisionFollowUps() {
   const navigate = useNavigate();

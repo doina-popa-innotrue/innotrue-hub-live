@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Camera, History, Share2, FileEdit, Trash2, User, UserCheck } from "lucide-react";
-import { ErrorState } from "@/components/ui/error-state";
 import { format } from "date-fns";
 import { CapabilitySnapshotForm } from "@/components/capabilities/CapabilitySnapshotForm";
 import { CapabilityEvolutionChart } from "@/components/capabilities/CapabilityEvolutionChart";
@@ -31,6 +30,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { ErrorState } from "@/components/ui/error-state";
 
 export type SnapshotTypeFilter = "all" | "self" | "instructor" | "peer";
 

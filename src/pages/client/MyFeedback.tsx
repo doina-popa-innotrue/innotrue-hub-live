@@ -13,10 +13,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageLoadingState } from "@/components/ui/page-loading-state";
-import { ErrorState } from "@/components/ui/error-state";
 import { usePageView } from "@/hooks/useAnalytics";
 import { useFeedbackInbox, type FeedbackType } from "@/hooks/useFeedbackInbox";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 const typeConfig: Record<
   FeedbackType,

@@ -61,6 +61,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DevelopmentItemDialog } from "@/components/capabilities/DevelopmentItemDialog";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface DevelopmentItem {
   id: string;

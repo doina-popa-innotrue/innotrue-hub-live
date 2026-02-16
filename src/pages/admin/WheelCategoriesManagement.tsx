@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { CircleDot, Save, Loader2, RotateCcw } from "lucide-react";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface WheelCategory {
   id: string;

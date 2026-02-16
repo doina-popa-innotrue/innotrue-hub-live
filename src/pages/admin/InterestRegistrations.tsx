@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calendar, Mail, CheckCircle, XCircle, Clock, Percent } from "lucide-react";
 import { format } from "date-fns";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface Registration {
   id: string;

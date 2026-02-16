@@ -9,6 +9,7 @@ import { BookOpen, Clock, TrendingUp, Award, Target, Brain, FileDown, Loader2 } 
 import { generateLearningTranscript } from "@/lib/pdfExport";
 import { useToast } from "@/hooks/use-toast";
 import { useEntitlements } from "@/hooks/useEntitlements";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 export default function LearningAnalytics() {
   const { user } = useAuth();

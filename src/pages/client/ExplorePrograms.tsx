@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { PageLoadingState } from "@/components/ui/page-loading-state";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +42,7 @@ import {
 import { usePlanAccess } from "@/hooks/usePlanAccess";
 import { PlanLockBadge } from "@/components/programs/PlanLockBadge";
 import { useExploreModuleCompletions } from "@/hooks/useExploreModuleCompletions";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface CrossProgramModule {
   moduleId: string;

@@ -40,6 +40,7 @@ import { CapabilityGate } from "@/components/decisions/CapabilityGate";
 import { useDecisionFeatureAccess } from "@/hooks/useDecisionFeatureAccess";
 import { FeatureGate } from "@/components/FeatureGate";
 import { SessionMismatchGuard } from "@/components/auth/SessionMismatchGuard";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 export default function DecisionDetail() {
   const { id } = useParams();

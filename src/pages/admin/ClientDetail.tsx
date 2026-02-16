@@ -45,6 +45,7 @@ import ClientGoalsSection from "@/components/admin/ClientGoalsSection";
 import ClientStaffNotes from "@/components/admin/ClientStaffNotes";
 import { ClientCreditAudit } from "@/components/admin/ClientCreditAudit";
 import { EnrollmentModuleStaffManager } from "@/components/admin";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 export default function ClientDetail() {
   const { id } = useParams() as { id: string };

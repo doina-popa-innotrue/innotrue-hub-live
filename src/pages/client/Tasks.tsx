@@ -41,6 +41,7 @@ import { Switch } from "@/components/ui/switch";
 import { FeatureGate } from "@/components/FeatureGate";
 import { useWheelCategories } from "@/hooks/useWheelCategories";
 import { usePageView } from "@/hooks/useAnalytics";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 function TasksFallback() {
   const navigate = useNavigate();

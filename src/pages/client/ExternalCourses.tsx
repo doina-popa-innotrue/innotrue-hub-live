@@ -34,6 +34,7 @@ import {
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
 import { FeatureGate } from "@/components/FeatureGate";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface ExternalCourse {
   id: string;

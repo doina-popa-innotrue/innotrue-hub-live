@@ -28,6 +28,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Package, Coins, Loader2 } from "lucide-react";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface AddOn {
   id: string;

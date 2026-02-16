@@ -35,6 +35,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Plus, Trash2, Package, User, Calendar, Coins, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface UserAddOn {
   id: string;

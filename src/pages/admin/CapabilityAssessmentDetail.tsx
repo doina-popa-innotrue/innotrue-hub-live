@@ -47,8 +47,6 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { CapabilitySnapshotView } from "@/components/capabilities/CapabilitySnapshotView";
-import { PageLoadingState } from "@/components/ui/page-loading-state";
-import { ErrorState } from "@/components/ui/error-state";
 import {
   Select,
   SelectContent,
@@ -69,6 +67,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 type Domain = {
   id: string;

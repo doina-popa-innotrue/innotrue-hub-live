@@ -22,6 +22,7 @@ import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { PendingAssignmentsWidget } from "@/components/instructor/PendingAssignmentsWidget";
 import { format } from "date-fns";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface ProgramAssignment {
   id: string;

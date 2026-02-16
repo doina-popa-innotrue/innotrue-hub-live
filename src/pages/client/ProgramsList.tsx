@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { BookOpen, Activity as ActivityIcon, CalendarDays, ArrowRight } from "lucide-react";
 import { hasTierAccess } from "@/lib/tierUtils";
 import { usePageView } from "@/hooks/useAnalytics";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface EnrollmentSummary {
   id: string;

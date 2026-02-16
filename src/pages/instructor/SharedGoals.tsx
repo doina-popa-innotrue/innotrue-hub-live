@@ -34,6 +34,7 @@ interface SharedGoal {
 }
 
 import { CATEGORY_LABELS } from "@/lib/wheelOfLifeCategories";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 const TIMEFRAME_LABELS: Record<string, string> = {
   short: "Short-term",

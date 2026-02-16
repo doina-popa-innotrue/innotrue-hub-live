@@ -13,10 +13,10 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ErrorState } from "@/components/ui/error-state";
 import { CheckSquare, Calendar, User, ArrowLeft, CheckCircle, Circle, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { ErrorState } from "@/components/ui/error-state";
 
 interface TaskWithProfiles {
   id: string;

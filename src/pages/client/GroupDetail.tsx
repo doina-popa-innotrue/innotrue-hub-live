@@ -36,7 +36,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ErrorState } from "@/components/ui/error-state";
 import { useToast } from "@/hooks/use-toast";
 import {
   Users,
@@ -72,6 +71,7 @@ import {
 import { FeatureGate } from "@/components/FeatureGate";
 import { GroupSessionsList } from "@/components/groups/sessions";
 import { SessionMismatchGuard } from "@/components/auth/SessionMismatchGuard";
+import { ErrorState } from "@/components/ui/error-state";
 
 export default function GroupDetail() {
   const { id } = useParams<{ id: string }>();

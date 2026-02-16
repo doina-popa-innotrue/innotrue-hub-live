@@ -25,8 +25,6 @@ import {
   RotateCcw,
   PlayCircle,
 } from "lucide-react";
-import { PageLoadingState } from "@/components/ui/page-loading-state";
-import { ErrorState } from "@/components/ui/error-state";
 import { useTalentLmsSSO } from "@/hooks/useTalentLmsSSO";
 import { useTalentLmsProgress } from "@/hooks/useTalentLmsProgress";
 import { awardSkillsForModuleCompletion } from "@/hooks/useSkillsAcquisition";
@@ -55,6 +53,8 @@ import { ModuleTeamContact } from "@/components/modules/ModuleTeamContact";
 import { usePageView } from "@/hooks/useAnalytics";
 import { SessionMismatchGuard } from "@/components/auth/SessionMismatchGuard";
 import { useModuleSchedulingUrl } from "@/hooks/useModuleSchedulingUrl";
+import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 interface ModuleLink {
   name: string;
