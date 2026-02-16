@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { createHmac } from "node:crypto";
+import { cancelCalcomBooking } from "../_shared/calcom-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -972,7 +973,76 @@ Deno.serve(async (req) => {
                 errorMessage = "No session found for reschedule";
               }
             }
+          } else if (triggerEvent === "BOOKING_CANCELLED") {
+            // Cancel the matching session(s) in the database
+            const bookingUid = payload.uid;
+            console.log("Processing BOOKING_CANCELLED for UID:", bookingUid);
+
+            // Try module_sessions first
+            const { data: cancelledModuleSessions, error: moduleCancelError } = await supabase
+              .from("module_sessions")
+              .update({ status: "cancelled" })
+              .eq("calcom_booking_uid", bookingUid)
+              .select("id");
+
+            if (moduleCancelError) {
+              console.error("Error cancelling module_sessions:", moduleCancelError);
+              throw moduleCancelError;
+            }
+
+            if (cancelledModuleSessions && cancelledModuleSessions.length > 0) {
+              console.log(`Cancelled ${cancelledModuleSessions.length} module_session(s)`);
+              processed = true;
+            }
+
+            // Try group_sessions too (booking could be for either type)
+            const { data: cancelledGroupSessions, error: groupCancelError } = await supabase
+              .from("group_sessions")
+              .update({ status: "cancelled" })
+              .eq("calcom_booking_uid", bookingUid)
+              .select("id");
+
+            if (groupCancelError) {
+              console.error("Error cancelling group_sessions:", groupCancelError);
+              throw groupCancelError;
+            }
+
+            if (cancelledGroupSessions && cancelledGroupSessions.length > 0) {
+              console.log(`Cancelled ${cancelledGroupSessions.length} group_session(s)`);
+              processed = true;
+            }
+
+            if (!processed) {
+              // No matching session found — might already be cancelled or never synced
+              console.log("No session found for cancelled booking UID:", bookingUid);
+              // Still mark as processed — the booking is gone from Cal.com, nothing else to do
+              processed = true;
+            }
           }
+        } else if (triggerEvent === "BOOKING_CANCELLED") {
+          // Handle cancellation even without a mapping — look up by booking UID directly
+          const bookingUid = payload.uid;
+          console.log("Processing BOOKING_CANCELLED (no mapping) for UID:", bookingUid);
+
+          const { error: moduleCancelError } = await supabase
+            .from("module_sessions")
+            .update({ status: "cancelled" })
+            .eq("calcom_booking_uid", bookingUid);
+
+          if (moduleCancelError) {
+            console.error("Error cancelling module_sessions:", moduleCancelError);
+          }
+
+          const { error: groupCancelError } = await supabase
+            .from("group_sessions")
+            .update({ status: "cancelled" })
+            .eq("calcom_booking_uid", bookingUid);
+
+          if (groupCancelError) {
+            console.error("Error cancelling group_sessions:", groupCancelError);
+          }
+
+          processed = true;
         } else {
           console.log("No mapping found for event type, booking logged but not synced to session");
           processed = true;
@@ -980,7 +1050,21 @@ Deno.serve(async (req) => {
       } catch (processError) {
         console.error("Error processing booking:", processError);
         errorMessage = processError instanceof Error ? processError.message : "Unknown error";
-        
+
+        // Cancel the orphaned Cal.com booking when BOOKING_CREATED DB sync fails
+        if (triggerEvent === "BOOKING_CREATED" && payload.uid) {
+          console.log("Cancelling orphaned Cal.com booking after DB failure:", payload.uid);
+          const cancelResult = await cancelCalcomBooking(
+            payload.uid,
+            `Webhook DB sync failed: ${errorMessage}`,
+          );
+          if (cancelResult.success) {
+            errorMessage += " (Cal.com booking auto-cancelled)";
+          } else {
+            errorMessage += ` (WARN: failed to cancel Cal.com booking: ${cancelResult.error})`;
+          }
+        }
+
         // Notify the user about the failed session creation
         if (resolvedUserId && triggerEvent === "BOOKING_CREATED") {
           try {

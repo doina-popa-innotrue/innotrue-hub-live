@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { cancelCalcomBooking } from "../_shared/calcom-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -246,11 +247,22 @@ Deno.serve(async (req) => {
 
     if (updateError) {
       console.error("Failed to update session:", updateError);
+
+      // Cancel the Cal.com booking to prevent orphaned bookings
+      console.log("Cancelling orphaned Cal.com booking:", booking.uid);
+      const cancelResult = await cancelCalcomBooking(
+        booking.uid,
+        "Session update failed — booking auto-cancelled to prevent orphan",
+      );
+      if (!cancelResult.success) {
+        console.error("Failed to cancel orphaned booking:", cancelResult.error);
+      }
+
       return new Response(
-        JSON.stringify({ 
-          error: "Booking created but failed to update session",
+        JSON.stringify({
+          error: "Booking created but failed to update session. Cal.com booking has been cancelled.",
           booking_uid: booking.uid,
-          meeting_url: meetingLink,
+          booking_cancelled: cancelResult.success,
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

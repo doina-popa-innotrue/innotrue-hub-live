@@ -12,21 +12,14 @@
 **Resolution:** Created `enroll_with_credits` PL/pgSQL RPC that wraps credit consumption + enrollment insert in a single DB transaction with automatic rollback. ClientDetail.tsx now calls one atomic RPC instead of two separate operations. Also fixed M6 (credit batch race condition) by adding `FOR UPDATE SKIP LOCKED` to `consume_credits_fifo`.
 **Migration:** `20260215190459_54d8beb9-850f-4f5f-b328-89926cb764b3.sql`
 
-#### 1.2 Cal.com Booking Creates Orphaned Bookings on DB Failure
-**File:** `supabase/functions/calcom-create-booking/index.ts` (lines 219-257)
-**Problem:** If Cal.com booking succeeds but session DB update fails, returns 500. Frontend may retry → duplicate Cal.com bookings.
-**Impact:** Duplicate bookings, confused participants.
-**Fix:** Return 201 with partial success + booking UID, or add idempotency key.
-
-**Cursor prompt:**
-```
-In supabase/functions/calcom-create-booking/index.ts, if the Cal.com API call succeeds but the DB session update fails, the function returns 500 which may cause the frontend to retry and create duplicate bookings.
-
-Fix by:
-1. If Cal.com booking succeeds but DB update fails, return 207 (Multi-Status) with the booking details
-2. Add an idempotency check at the top of the function: if a booking with the same session_id + user_id exists in the last 5 minutes, return the existing booking instead of creating a new one
-3. Log the partial failure to console.error for monitoring
-```
+#### 1.2 Cal.com Booking Creates Orphaned Bookings on DB Failure — ✅ RESOLVED 2026-02-16
+**File:** `supabase/functions/calcom-create-booking/index.ts`, `supabase/functions/calcom-webhook/index.ts`
+**Problem:** If Cal.com booking succeeds but session DB update fails, orphaned bookings accumulate in Cal.com. Also, BOOKING_CANCELLED events from Cal.com were logged but never processed, causing DB sessions to remain "scheduled" after Cal.com cancellation.
+**Resolution:**
+1. **calcom-create-booking:** On DB update failure, auto-cancels the Cal.com booking via `cancelCalcomBooking()` helper.
+2. **calcom-webhook BOOKING_CREATED:** On DB sync failure in catch block, auto-cancels the orphaned Cal.com booking.
+3. **calcom-webhook BOOKING_CANCELLED:** New handler sets matching `module_sessions` / `group_sessions` status to "cancelled" by `calcom_booking_uid`. Works with or without event type mapping.
+4. **Shared utility:** `_shared/calcom-utils.ts` provides `cancelCalcomBooking()` using Cal.com v2 API.
 
 ---
 
@@ -1419,7 +1412,7 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | ~~C1~~ | ~~Credits page FeatureGate blocks self-service~~ — **RESOLVED 2026-02-15** | Part 8 (8.2B) | ~~1 hour~~ | Removed FeatureGate wrapper from Credits.tsx — credits is universal across all plans |
 | ~~C2~~ | ~~AuthContext role fallback~~ — **RESOLVED 2026-02-15** | Part 7 (7.1), Part 1 (1.15) | ~~2 hours~~ | Removed silent "client" fallback. Added `authError` state + error/no-roles UI in ProtectedRoute |
 | ~~C3~~ | ~~Credit loss on failed enrollment~~ — **RESOLVED 2026-02-15** | Part 1 (1.1) | ~~1 day~~ | Created atomic `enroll_with_credits` RPC. Also fixed M6 (`FOR UPDATE SKIP LOCKED`) |
-| C4 | Cal.com orphaned bookings on DB failure | Part 1 (1.2) | 4 hours | Return partial success + booking UID instead of 500, add idempotency key |
+| ~~C4~~ | ~~Cal.com orphaned bookings on DB failure~~ — **RESOLVED 2026-02-16** | Part 1 (1.2) | ~~4 hours~~ | Auto-cancel Cal.com booking on DB failure (both calcom-create-booking and calcom-webhook). Added BOOKING_CANCELLED handler for two-way sync. |
 
 ### 11.2 High Priority (Fix Before Wider Pilot)
 
