@@ -11,6 +11,7 @@ export interface ScenarioTemplate {
   is_protected: boolean;
   is_active: boolean;
   is_locked: boolean;
+  allows_resubmission?: boolean;
   locked_by: string | null;
   locked_at: string | null;
   created_by: string | null;
@@ -90,6 +91,9 @@ export interface ScenarioAssignment {
   evaluated_at: string | null;
   evaluated_by: string | null;
   overall_notes: string | null;
+  parent_assignment_id?: string | null;
+  attempt_number?: number;
+  revision_notes?: string | null;
   created_at: string;
   updated_at: string;
   // Joined data
@@ -196,6 +200,7 @@ export interface ScenarioTemplateFormData {
   category_id: string;
   is_protected: boolean;
   is_active: boolean;
+  allows_resubmission: boolean;
 }
 
 export interface ScenarioCategory {

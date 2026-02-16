@@ -151,6 +151,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // Track whether initSession already handled the initial load.
+    // This prevents the onAuthStateChange listener from re-fetching roles
+    // and potentially overriding a successful state with a timeout error.
+    let initialLoadHandled = false;
+
     const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
       let timeoutId: ReturnType<typeof setTimeout> | null = null;
       try {
@@ -167,8 +172,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Safety valve: never allow the app to be stuck in loading forever.
     const loadingFailSafe = setTimeout(() => {
-      setLoading(false);
-      setAuthError("Authentication timed out. Please refresh the page or try again.");
+      // Only trigger if we're genuinely still stuck in loading
+      if (!initialLoadHandled) {
+        setLoading(false);
+        setAuthError("Authentication timed out. Please refresh the page or try again.");
+      }
     }, 15000);
 
     // Set up auth state listener FIRST
@@ -180,6 +188,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
 
       if (session?.user) {
+        // Skip re-fetching on the initial event if initSession() already handled it.
+        // Only re-fetch on subsequent auth events (e.g. TOKEN_REFRESHED, or a new
+        // SIGNED_IN after the user signed out and back in).
+        if (initialLoadHandled && event === "INITIAL_SESSION") {
+          return;
+        }
+
         // Defer Supabase calls with setTimeout to prevent deadlock
         setTimeout(async () => {
           try {
@@ -190,6 +205,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             );
           } catch (error) {
             console.error("Error fetching user roles:", error);
+            // Only set authError if roles haven't been successfully loaded yet —
+            // don't blank the screen if the user is already using the app
             setAuthError(
               error instanceof Error
                 ? error.message
@@ -235,6 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           );
         }
       } finally {
+        initialLoadHandled = true;
         setLoading(false);
       }
     };

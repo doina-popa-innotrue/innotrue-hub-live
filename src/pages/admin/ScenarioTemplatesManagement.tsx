@@ -40,6 +40,7 @@ const initialFormData: ScenarioTemplateFormData = {
   category_id: "",
   is_protected: true,
   is_active: true,
+  allows_resubmission: false,
 };
 
 export default function ScenarioTemplatesManagement() {
@@ -130,6 +131,7 @@ export default function ScenarioTemplatesManagement() {
       category_id: item.category_id || "",
       is_protected: item.is_protected,
       is_active: item.is_active,
+      allows_resubmission: item.allows_resubmission ?? false,
     });
     setIsDialogOpen(true);
   };
@@ -266,6 +268,22 @@ export default function ScenarioTemplatesManagement() {
                 id="is_active"
                 checked={formData.is_active}
                 onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="allows_resubmission">Allow Re-submission</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Instructors can request clients to revise and resubmit
+                </p>
+              </div>
+              <Switch
+                id="allows_resubmission"
+                checked={formData.allows_resubmission}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, allows_resubmission: checked })
+                }
               />
             </div>
 

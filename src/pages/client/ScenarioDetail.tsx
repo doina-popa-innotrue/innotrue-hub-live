@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   useScenarioAssignment,
@@ -46,6 +46,8 @@ import {
   MessageSquare,
   Star,
   Eye,
+  RotateCcw,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ScenarioSection, SectionParagraph, ParagraphQuestionLink } from "@/types/scenarios";
@@ -89,6 +91,8 @@ function ScenarioDetailContent() {
   const ratingScale = template?.capability_assessments?.rating_scale ?? 5;
   const scoreSummary = useScenarioScoreSummary(id, ratingScale);
   const { data: progress } = useScenarioProgress(assignment?.template_id, id);
+  const attemptNumber = assignment?.attempt_number ?? 1;
+  const isRevision = attemptNumber > 1;
 
   // Initialize local responses from fetched data
   useEffect(() => {
@@ -219,6 +223,11 @@ function ScenarioDetailContent() {
           </Button>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             {template?.title || "Untitled Scenario"}
+            {isRevision && (
+              <Badge variant="outline" className="text-xs">
+                Attempt #{attemptNumber}
+              </Badge>
+            )}
             {isProtected && (
               <Badge variant="secondary" className="flex items-center gap-1">
                 <Shield className="h-3 w-3" />
@@ -284,6 +293,43 @@ function ScenarioDetailContent() {
             <Progress value={progress.percentage} className="h-2" />
           </CardContent>
         </Card>
+      )}
+
+      {/* Revision Banner (for revision drafts) */}
+      {isRevision && assignment?.revision_notes && assignment.status === "draft" && (
+        <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <RotateCcw className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Revision Requested by Your Instructor</p>
+                <p className="text-sm text-muted-foreground">{assignment.revision_notes}</p>
+                {assignment.parent_assignment_id && (
+                  <Link
+                    to={`/scenarios/${assignment.parent_assignment_id}`}
+                    className="text-sm text-primary hover:underline flex items-center gap-1 mt-2"
+                  >
+                    <History className="h-3 w-3" />
+                    View previous attempt
+                  </Link>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Previous attempt link (for evaluated revisions) */}
+      {isRevision && assignment?.parent_assignment_id && assignment.status === "evaluated" && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <History className="h-4 w-4" />
+          <Link
+            to={`/scenarios/${assignment.parent_assignment_id}`}
+            className="text-primary hover:underline"
+          >
+            View previous attempt (Attempt #{attemptNumber - 1})
+          </Link>
+        </div>
       )}
 
       {/* Score Summary (if evaluated) */}

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { FileText, Clock, CheckCircle2, Send, Eye, AlertCircle } from "lucide-react";
+import { FileText, Clock, CheckCircle2, Send, Eye, AlertCircle, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import type { ScenarioAssignment, ScenarioAssignmentStatus } from "@/types/scenarios";
@@ -116,6 +116,8 @@ function ScenarioCard({ assignment }: { assignment: ScenarioAssignment }) {
   const config = statusConfig[assignment.status];
   const isDraft = assignment.status === "draft";
   const isCompleted = assignment.status === "evaluated";
+  const attemptNumber = assignment.attempt_number ?? 1;
+  const isRevision = attemptNumber > 1;
 
   const { data: progress } = useScenarioProgress(assignment.template_id, assignment.id);
 
@@ -132,16 +134,31 @@ function ScenarioCard({ assignment }: { assignment: ScenarioAssignment }) {
           <CardTitle className="text-lg line-clamp-2">
             {template?.title || "Untitled Scenario"}
           </CardTitle>
-          <Badge variant={config.variant} className="flex items-center gap-1 shrink-0">
-            {config.icon}
-            {config.label}
-          </Badge>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {isRevision && (
+              <Badge variant="outline" className="text-xs">
+                #{attemptNumber}
+              </Badge>
+            )}
+            <Badge variant={config.variant} className="flex items-center gap-1">
+              {config.icon}
+              {config.label}
+            </Badge>
+          </div>
         </div>
         {template?.description && !isCompleted && (
           <CardDescription className="line-clamp-2 mt-1">{template.description}</CardDescription>
         )}
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Revision indicator for draft revisions */}
+        {isDraft && isRevision && assignment.revision_notes && (
+          <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+            <RotateCcw className="h-3 w-3" />
+            <span className="line-clamp-1">Revision: {assignment.revision_notes}</span>
+          </div>
+        )}
+
         {/* Progress bar for draft assignments */}
         {isDraft && progress && progress.total > 0 && (
           <div className="space-y-1">

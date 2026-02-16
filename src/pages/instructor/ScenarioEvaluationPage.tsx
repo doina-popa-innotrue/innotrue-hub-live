@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,15 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   ArrowLeft,
   User,
@@ -21,6 +30,8 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
+  RotateCcw,
+  History,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdminLoadingState } from "@/components/admin";
@@ -52,6 +63,8 @@ export default function ScenarioEvaluationPage() {
 
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [overallNotes, setOverallNotes] = useState("");
+  const [showRevisionDialog, setShowRevisionDialog] = useState(false);
+  const [revisionNotes, setRevisionNotes] = useState("");
 
   const { data: assignment, isLoading: assignmentLoading } = useScenarioAssignment(id);
   const { data: sections, isLoading: sectionsLoading } = useScenarioSections(
@@ -60,7 +73,7 @@ export default function ScenarioEvaluationPage() {
   const { data: responses } = useParagraphResponses(id);
   const { data: evaluations } = useParagraphEvaluations(id);
   const { data: scores } = useParagraphQuestionScores(id);
-  const { updateStatusMutation } = useScenarioAssignmentMutations();
+  const { updateStatusMutation, requestRevisionMutation } = useScenarioAssignmentMutations();
 
   const ratingScale = assignment?.scenario_templates?.capability_assessments?.rating_scale || 5;
   const scoreSummary = useScenarioScoreSummary(id, ratingScale);
@@ -115,6 +128,33 @@ export default function ScenarioEvaluationPage() {
     }
   };
 
+  const handleRequestRevision = () => {
+    if (!revisionNotes.trim()) return;
+    requestRevisionMutation.mutate(
+      {
+        parentAssignment: {
+          id: assignment.id,
+          template_id: assignment.template_id,
+          user_id: assignment.user_id,
+          enrollment_id: assignment.enrollment_id,
+          module_id: assignment.module_id,
+          attempt_number: assignment.attempt_number,
+        },
+        revisionNotes: revisionNotes.trim(),
+      },
+      {
+        onSuccess: () => {
+          setShowRevisionDialog(false);
+          setRevisionNotes("");
+          toast({ description: "Revision requested — new attempt created for the client" });
+        },
+      },
+    );
+  };
+
+  const allowsResubmission = assignment.scenario_templates?.allows_resubmission ?? false;
+  const attemptNumber = assignment.attempt_number ?? 1;
+
   // Start review when page loads if status is submitted
   if (assignment.status === "submitted") {
     handleStartReview();
@@ -129,7 +169,14 @@ export default function ScenarioEvaluationPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">{assignment.scenario_templates?.title}</h1>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              {assignment.scenario_templates?.title}
+              {attemptNumber > 1 && (
+                <Badge variant="outline" className="text-xs">
+                  Attempt #{attemptNumber}
+                </Badge>
+              )}
+            </h1>
             <div className="flex items-center gap-2 text-muted-foreground">
               <User className="h-4 w-4" />
               <span>{assignment.profiles?.name}</span>
@@ -139,6 +186,18 @@ export default function ScenarioEvaluationPage() {
                 {assignment.submitted_at &&
                   format(new Date(assignment.submitted_at), "MMM d, yyyy")}
               </span>
+              {assignment.parent_assignment_id && (
+                <>
+                  <span>•</span>
+                  <Link
+                    to={`/teaching/scenarios/${assignment.parent_assignment_id}/evaluate`}
+                    className="text-primary hover:underline flex items-center gap-1"
+                  >
+                    <History className="h-3 w-3" />
+                    Previous attempt
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -151,6 +210,12 @@ export default function ScenarioEvaluationPage() {
               {updateStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <CheckCircle className="h-4 w-4 mr-2" />
               Complete Evaluation
+            </Button>
+          )}
+          {assignment.status === "evaluated" && allowsResubmission && (
+            <Button variant="outline" onClick={() => setShowRevisionDialog(true)}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Request Revision
             </Button>
           )}
         </div>
@@ -268,6 +333,19 @@ export default function ScenarioEvaluationPage() {
         </div>
       </div>
 
+      {/* Revision Notes (if this is a revision attempt) */}
+      {assignment.revision_notes && attemptNumber > 1 && (
+        <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-2 text-sm font-medium mb-1">
+              <RotateCcw className="h-4 w-4 text-amber-600" />
+              Revision Notes (Attempt #{attemptNumber})
+            </div>
+            <p className="text-sm text-muted-foreground">{assignment.revision_notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Current Section Content */}
       {currentSection && (
         <SectionEvaluationView
@@ -279,6 +357,43 @@ export default function ScenarioEvaluationPage() {
           ratingScale={ratingScale}
         />
       )}
+
+      {/* Request Revision Dialog */}
+      <Dialog open={showRevisionDialog} onOpenChange={setShowRevisionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Revision</DialogTitle>
+            <DialogDescription>
+              This will create a new attempt for the client, pre-populated with their previous
+              responses. The current evaluation will be preserved as an immutable snapshot.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Revision Notes</Label>
+            <Textarea
+              value={revisionNotes}
+              onChange={(e) => setRevisionNotes(e.target.value)}
+              placeholder="Describe what the client should revise or improve..."
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRevisionDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRequestRevision}
+              disabled={!revisionNotes.trim() || requestRevisionMutation.isPending}
+            >
+              {requestRevisionMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Create Revision
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -230,5 +230,73 @@ export function useScenarioAssignmentMutations() {
     },
   });
 
-  return { createMutation, bulkCreateMutation, updateStatusMutation, deleteMutation };
+  const requestRevisionMutation = useMutation({
+    mutationFn: async ({
+      parentAssignment,
+      revisionNotes,
+    }: {
+      parentAssignment: {
+        id: string;
+        template_id: string;
+        user_id: string;
+        enrollment_id?: string | null;
+        module_id?: string | null;
+        attempt_number?: number;
+      };
+      revisionNotes: string;
+    }) => {
+      // 1. Create new assignment linked to parent
+      const { data: newAssignment, error: createError } = await supabase
+        .from("scenario_assignments")
+        .insert({
+          template_id: parentAssignment.template_id,
+          user_id: parentAssignment.user_id,
+          enrollment_id: parentAssignment.enrollment_id || null,
+          module_id: parentAssignment.module_id || null,
+          assigned_by: user?.id || null,
+          status: "draft",
+          parent_assignment_id: parentAssignment.id,
+          attempt_number: (parentAssignment.attempt_number || 1) + 1,
+          revision_notes: revisionNotes,
+        })
+        .select("id")
+        .single();
+
+      if (createError) throw createError;
+
+      // 2. Copy paragraph responses from parent
+      const { data: parentResponses, error: fetchError } = await supabase
+        .from("paragraph_responses")
+        .select("paragraph_id, response_text")
+        .eq("assignment_id", parentAssignment.id);
+
+      if (fetchError) throw fetchError;
+
+      if (parentResponses && parentResponses.length > 0) {
+        const newResponses = parentResponses.map((r) => ({
+          assignment_id: newAssignment.id,
+          paragraph_id: r.paragraph_id,
+          response_text: r.response_text,
+        }));
+
+        const { error: copyError } = await supabase
+          .from("paragraph_responses")
+          .insert(newResponses);
+
+        if (copyError) throw copyError;
+      }
+
+      return newAssignment;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["scenario-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["scenario-assignment"] });
+      toast({ description: "Revision requested — new attempt created" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  return { createMutation, bulkCreateMutation, updateStatusMutation, deleteMutation, requestRevisionMutation };
 }

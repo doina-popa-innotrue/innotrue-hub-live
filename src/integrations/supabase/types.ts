@@ -10508,6 +10508,7 @@ export type Database = {
         Row: {
           assigned_at: string
           assigned_by: string | null
+          attempt_number: number
           created_at: string
           enrollment_id: string | null
           evaluated_at: string | null
@@ -10515,6 +10516,8 @@ export type Database = {
           id: string
           module_id: string | null
           overall_notes: string | null
+          parent_assignment_id: string | null
+          revision_notes: string | null
           status: string
           submitted_at: string | null
           template_id: string
@@ -10524,6 +10527,7 @@ export type Database = {
         Insert: {
           assigned_at?: string
           assigned_by?: string | null
+          attempt_number?: number
           created_at?: string
           enrollment_id?: string | null
           evaluated_at?: string | null
@@ -10531,6 +10535,8 @@ export type Database = {
           id?: string
           module_id?: string | null
           overall_notes?: string | null
+          parent_assignment_id?: string | null
+          revision_notes?: string | null
           status?: string
           submitted_at?: string | null
           template_id: string
@@ -10540,6 +10546,7 @@ export type Database = {
         Update: {
           assigned_at?: string
           assigned_by?: string | null
+          attempt_number?: number
           created_at?: string
           enrollment_id?: string | null
           evaluated_at?: string | null
@@ -10547,6 +10554,8 @@ export type Database = {
           id?: string
           module_id?: string | null
           overall_notes?: string | null
+          parent_assignment_id?: string | null
+          revision_notes?: string | null
           status?: string
           submitted_at?: string | null
           template_id?: string
@@ -10573,6 +10582,13 @@ export type Database = {
             columns: ["module_id"]
             isOneToOne: false
             referencedRelation: "program_modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scenario_assignments_parent_assignment_id_fkey"
+            columns: ["parent_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scenario_assignments"
             referencedColumns: ["id"]
           },
           {
@@ -10657,6 +10673,7 @@ export type Database = {
       }
       scenario_templates: {
         Row: {
+          allows_resubmission: boolean
           capability_assessment_id: string | null
           category_id: string | null
           created_at: string
@@ -10672,6 +10689,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allows_resubmission?: boolean
           capability_assessment_id?: string | null
           category_id?: string | null
           created_at?: string
@@ -10687,6 +10705,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allows_resubmission?: boolean
           capability_assessment_id?: string | null
           category_id?: string | null
           created_at?: string
