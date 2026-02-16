@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
-import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
+import { validateFile, acceptStringForBucket, sanitizeFilename } from "@/lib/fileValidation";
 import { useAssessmentFeatureAccess } from "@/hooks/useAssessmentFeatureAccess";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -333,7 +333,7 @@ export default function MyAssessments() {
       const { error: insertError } = await supabase.from("user_assessments").insert({
         user_id: user.id,
         title: formData.title,
-        file_name: selectedFile.name,
+        file_name: sanitizeFilename(selectedFile.name),
         file_path: fileName,
         assessment_id: formData.assessment_id || null,
         notes: formData.notes || null,

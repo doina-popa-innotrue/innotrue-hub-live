@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { ResourcePickerDialog } from "@/components/modules/ResourcePickerDialog";
 import { ScenarioPickerDialog } from "@/components/modules/ScenarioPickerDialog";
-import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
+import { validateFile, acceptStringForBucket, sanitizeFilename } from "@/lib/fileValidation";
 
 interface Attachment {
   id?: string;
@@ -192,7 +192,7 @@ export default function ModuleClientContentManager({
 
       for (const attachment of attachments) {
         if (attachment.file) {
-          const filePath = `${selectedClient}/${moduleId}/${Date.now()}_${attachment.file.name}`;
+          const filePath = `${selectedClient}/${moduleId}/${Date.now()}_${sanitizeFilename(attachment.file.name)}`;
           const { error: uploadError } = await supabase.storage
             .from("module-client-content")
             .upload(filePath, attachment.file);

@@ -62,7 +62,7 @@ import { ResourceSkillsManager } from "@/components/admin/ResourceSkillsManager"
 import { ResourceReferencesDialog } from "@/components/admin/ResourceReferencesDialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
+import { validateFile, acceptStringForBucket, sanitizeFilename } from "@/lib/fileValidation";
 
 interface Resource {
   id: string;
@@ -266,7 +266,7 @@ export default function ResourceLibraryManagement() {
         if (uploadError) throw uploadError;
 
         file_path = fileName;
-        file_name = data.file.name;
+        file_name = sanitizeFilename(data.file.name);
         file_size = data.file.size;
         mime_type = data.file.type;
         setUploading(false);
@@ -367,7 +367,7 @@ export default function ResourceLibraryManagement() {
         if (uploadError) throw uploadError;
 
         updateData.file_path = fileName;
-        updateData.file_name = data.file.name;
+        updateData.file_name = sanitizeFilename(data.file.name);
         updateData.file_size = data.file.size;
         updateData.mime_type = data.file.type;
         setUploading(false);

@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { ResourcePickerDialog } from "./ResourcePickerDialog";
 import { ScenarioPickerDialog } from "./ScenarioPickerDialog";
+import { sanitizeFilename } from "@/lib/fileValidation";
 
 interface Attachment {
   id?: string;
@@ -228,7 +229,7 @@ export function InlineClientContentEditor({
       // Upload new file attachments
       for (const attachment of newAttachments) {
         if (attachment.file) {
-          const filePath = `${clientUserId}/${moduleId}/${Date.now()}_${attachment.file.name}`;
+          const filePath = `${clientUserId}/${moduleId}/${Date.now()}_${sanitizeFilename(attachment.file.name)}`;
           const { error: uploadError } = await supabase.storage
             .from("module-client-content")
             .upload(filePath, attachment.file);
