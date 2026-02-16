@@ -1418,7 +1418,7 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 
 | # | Issue | Source | Effort | Description |
 |---|-------|--------|--------|-------------|
-| H1 | Empty client dashboard — no onboarding | Part 8 (8.2A) | 1 day | New clients see empty sections with no guidance. Add welcome card + action checklist |
+| ~~H1~~ | ~~Empty client dashboard — no onboarding~~ — **RESOLVED 2026-02-16** | Part 8 (8.2A) | ~~1 day~~ | Added OnboardingWelcomeCard with 4-step checklist (profile, Wheel of Life, goals, programs). Auto-hides when complete or dismissed. |
 | H2 | File upload validation inconsistent | Part 1 (1.3) | 4 hours | Client uploads validated but admin uploads and shared utility missing. Standardize |
 | H3 | AI functions accept unlimited input | Part 1 (1.4) | 4 hours | No input size limits before Vertex AI calls. Add truncation helpers |
 | ~~H4~~ | ~~Welcome email not auto-triggered~~ — **RESOLVED 2026-02-15** | Part 7 (7.4) | ~~1 hour~~ | verify-signup now triggers send-welcome-email (non-blocking, service role auth) |
