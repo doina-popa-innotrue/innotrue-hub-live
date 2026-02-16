@@ -46,6 +46,9 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, // 6 MB limit
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Activate new SW immediately so stale chunks are never served after deploys
+        skipWaiting: true,
+        clientsClaim: true,
         // Exclude auth callbacks and API routes from service worker navigation handling
         navigateFallbackDenylist: [/\/auth\//, /\/callback/],
         runtimeCaching: [
