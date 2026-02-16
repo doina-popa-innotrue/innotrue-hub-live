@@ -1376,6 +1376,7 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | M14 | Loading/error states inconsistent | Part 1 (1.14) | 1 week | ✅ RESOLVED 2026-02-16 — PageLoadingState + ErrorState components, 5 pages migrated |
 | M15 | Credit-gated resources have no preview | Part 9 (9.8.2) | 3 days | Users spend credits without knowing content. Add resource preview before deduction |
 | M16 | No assessment templates for common frameworks | Part 9 (9.5.2) | 1 week | Admins build every assessment from scratch. Create seed templates (Leadership, EI, etc.) |
+| M17 | Development items ↔ tasks/groups linking UI | DB schema | 3 days | `development_item_task_links` and `development_item_group_links` tables exist but no UI. Allow linking tasks to development items and development items to groups. Goal/milestone links already work. |
 
 ### 11.4 Enhancement Roadmap (Post-Fixes)
 

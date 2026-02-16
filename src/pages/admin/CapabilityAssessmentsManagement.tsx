@@ -178,23 +178,25 @@ export default function CapabilityAssessmentsManagement() {
     }),
   });
 
-  // Get snapshot counts per assessment
+  // Get snapshot counts per assessment — only runs when assessments exist
   const { data: snapshotCounts } = useQuery({
     queryKey: ["admin-capability-assessment-snapshot-counts"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("capability_snapshots").select("assessment_id");
+      const { data, error } = await supabase
+        .from("capability_snapshots")
+        .select("assessment_id")
+        .not("assessment_id", "is", null);
 
       if (error) throw error;
 
       const counts: Record<string, number> = {};
       (data || []).forEach((item) => {
-        if (item.assessment_id) {
-          counts[item.assessment_id] = (counts[item.assessment_id] || 0) + 1;
-        }
+        counts[item.assessment_id!] = (counts[item.assessment_id!] || 0) + 1;
       });
 
       return counts;
     },
+    enabled: (assessments?.length ?? 0) > 0,
   });
 
   const getSnapshotCount = (assessmentId: string) => {
