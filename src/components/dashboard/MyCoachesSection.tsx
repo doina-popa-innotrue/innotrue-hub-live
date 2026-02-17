@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Users, Mail, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -208,7 +209,13 @@ export function MyCoachesSection() {
   }
 
   if (!staff || staff.length === 0) {
-    return null;
+    return (
+      <EmptyState
+        icon={Users}
+        title="No coaches or instructors yet"
+        description="Your assigned coaches and instructors will appear here"
+      />
+    );
   }
 
   return (

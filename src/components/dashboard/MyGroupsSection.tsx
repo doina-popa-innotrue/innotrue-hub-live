@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { UsersRound, ChevronRight } from "lucide-react";
 
 interface GroupMembership {
@@ -34,7 +35,12 @@ export function MyGroupsSection({ groups }: MyGroupsSectionProps) {
       <Card>
         <CardContent className="pt-6">
           {groups.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No active groups</p>
+            <EmptyState
+              variant="inline"
+              icon={UsersRound}
+              title="No active groups"
+              description="You'll see your groups here once you're added to one"
+            />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {groups.slice(0, 6).map((group) => (

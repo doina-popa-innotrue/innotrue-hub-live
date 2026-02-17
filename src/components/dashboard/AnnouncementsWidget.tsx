@@ -6,7 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DynamicIcon } from "@/components/admin/IconPicker";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { cn } from "@/lib/utils";
-import { Pin } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Newspaper, Pin } from "lucide-react";
 
 interface AnnouncementCategory {
   id: string;
@@ -168,7 +169,13 @@ export function AnnouncementsWidget() {
   }
 
   if (announcements.length === 0) {
-    return null; // Don't show the widget if there are no announcements
+    return (
+      <EmptyState
+        icon={Newspaper}
+        title="No announcements"
+        description="Check back later for the latest news and updates"
+      />
+    );
   }
 
   const currentRollingAnnouncement = rollingAnnouncements[rollingIndex];

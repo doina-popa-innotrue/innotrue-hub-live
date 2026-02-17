@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ClipboardCheck, ArrowRight, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
@@ -158,7 +159,13 @@ export function RecentGradedAssignmentsWidget() {
   }
 
   if (gradedAssignments.length === 0) {
-    return null; // Don't show widget if no recent graded assignments
+    return (
+      <EmptyState
+        icon={ClipboardCheck}
+        title="No recently graded assignments"
+        description="Graded assignments from the past 7 days will appear here"
+      />
+    );
   }
 
   return (
