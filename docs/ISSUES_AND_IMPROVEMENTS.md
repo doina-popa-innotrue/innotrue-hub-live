@@ -1357,7 +1357,7 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 
 Organized by theme, drawing from Parts 2, 3, 5, 6, 9, and 10.
 
-> **Updated 2026-02-17:** Added Priority 0 items (content delivery + cohort readiness) that should be done before or alongside Phase 5. These are pre-requisites for running live/hybrid cohort programs and eliminating TalentLMS friction.
+> **Updated 2026-02-18:** Added Priority 0 items (content delivery + cohort readiness + coach onboarding + assignment routing) that should be done before or alongside Phase 5. These are pre-requisites for running live/hybrid cohort programs, onboarding instructors/coaches, and multi-instructor assignment workflows.
 
 #### Priority 0 — Content Delivery & Cohort Readiness (HIGH — do before next cohort program)
 
@@ -1393,6 +1393,16 @@ Organized by theme, drawing from Parts 2, 3, 5, 6, 9, and 10.
 - Coach-created development items for clients (2-3 days) — backend exists, needs UI prominence
 - See `docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md` Part 5 for full readiness assessment
 
+**Instructor/Coach Assignment & Grading Routing (required for multi-instructor programs):**
+- ~~Remove individualized-only filter~~ ✅ DONE (2026-02-18) — `EnrollmentModuleStaffManager` now shows ALL modules, not just individualized
+- Configurable notification routing: `notify-assignment-submitted` optionally checks `enrollment_module_staff` (1-2 days) — nice to have (broadcast useful for partner instructors)
+- "My Queue" filtering on PendingAssignments: instructor sees their specifically-assigned grading work (2-3 days) — **required**
+- Assignment transfer/reassignment: admin/instructor can hand off grading to another instructor (2-3 days) — **important**
+- Fix `assessor_id` / add designated grader: pre-assign grading responsibility at submission time (0.5-1 day) — nice to have
+- Client-facing instructor display: show enrollment-level instructor to client, not just module-level (1-2 days) — nice to have
+- ✅ Session scheduling already enrollment-aware: `useModuleSchedulingUrl` resolves Cal.com booking URLs using 3-tier hierarchy (enrollment → module → program). No changes needed.
+- See `docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md` Part 6 for full assessment
+
 **Existing coach/instructor infrastructure (already built):**
 - ✅ Admin user creation with role assignment and welcome email
 - ✅ Teaching dashboard with stats, assignments, sessions, shared client items
@@ -1404,6 +1414,8 @@ Organized by theme, drawing from Parts 2, 3, 5, 6, 9, and 10.
 - ✅ Group management (sessions, tasks, check-ins, peer assessments)
 - ✅ 10 sidebar nav items for teaching workflows
 - ✅ Program/module-level instructor and coach assignment
+- ✅ Enrollment-level (per-client) instructor/coach assignment for all modules (individualized filter removed 2026-02-18)
+- ✅ Three-tier staff resolution: enrollment → module → program level
 - ✅ 25+ notification types with email queue
 
 #### Phase 1 — Onboarding & UX Polish (2-3 weeks)
@@ -1497,6 +1509,14 @@ Priority 0 (Cohort Readiness):
   Session Notes → extends cohort_sessions (minor schema addition)
   Auto cohort enrollment → extends Phase 5 enrollment_codes with cohort_id
 
+Priority 0 (Assignment Routing):
+  ~~Remove individualized filter~~ ✅ DONE (2026-02-18) — frontend-only change in EnrollmentModuleStaffManager.tsx
+  Configurable notification routing → modifies notify-assignment-submitted edge function, uses enrollment_module_staff (exists) — nice to have (broadcast useful for now)
+  "My Queue" filtering → modifies PendingAssignments.tsx, uses enrollment_module_staff (exists)
+  Assignment transfer → needs module_assignments.assigned_grader_id (new column)
+  Session scheduling → ✅ Already enrollment-aware via useModuleSchedulingUrl hook (no work needed)
+  Remaining 3 items are independent — can be done in parallel
+
 C1 (Credits FeatureGate) ← no dependencies, standalone fix
 C2 (AuthContext fallback) ← must fix before: Phase 5 (self-signup re-enable)
 C3 (Enrollment atomicity) ← no dependencies
@@ -1577,6 +1597,7 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 | Medium priority (M1-M16) | 6 remaining | 3-4 weeks |
 | **Priority 0 — Content Delivery** | **3 items** | **2-3 weeks** |
 | **Priority 0 — Cohort Readiness** | **6 items** | **3-4 weeks** |
+| **Priority 0 — Assignment Routing** | **5 remaining** (1 done) | **1 week** |
 | Phase 1 — Onboarding/UX | 8 items | 2-3 weeks |
 | Phase 2 — Assessment Intelligence | 7 items | 3-4 weeks |
 | Phase 3 — AI & Engagement | 8 items | 3-4 weeks |
@@ -1591,12 +1612,13 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 1. ~~C1-C4~~ ✅ → ~~H1-H10~~ ✅
 2. **Priority 0 Content Delivery (Tier 1 Web embed)** — immediate UX win, 3-5 days
 3. **Priority 0 Coach Onboarding (welcome card + profile setup + empty states + welcome email)** — required before onboarding coaches, 1.5-2 weeks
-4. **Priority 0 Cohort Readiness (CohortDashboard + Join Session)** — required before next cohort, 2 weeks
-5. Quick medium wins (M2, M11, M9) — interleaved, 2-3 days
-6. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
-7. **Priority 0 Content Delivery (Tier 2 xAPI)** — auto-tracking, 1-2 weeks
-8. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
-9. Remaining phases based on business priorities
+4. **Priority 0 Assignment Routing (~~remove individualized filter~~ ✅ + My Queue + assignment transfer)** — required before multi-instructor programs, 1 week remaining
+5. **Priority 0 Cohort Readiness (CohortDashboard + Join Session)** — required before next cohort, 2 weeks
+6. Quick medium wins (M2, M11, M9) — interleaved, 2-3 days
+7. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
+8. **Priority 0 Content Delivery (Tier 2 xAPI)** — auto-tracking, 1-2 weeks
+9. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
+10. Remaining phases based on business priorities
 
 ### 11.8 New Data Tables Required by Roadmap
 
@@ -1609,6 +1631,8 @@ Several roadmap items require new database tables or fields. These should be pla
 | Priority 0 | Cohort dashboard | No new tables — uses existing `program_cohorts`, `cohort_sessions`, `client_enrollments`, `session_participants` |
 | Priority 0 | Session notes | `cohort_sessions.summary` (TEXT), `cohort_sessions.recording_url` (TEXT), `cohort_sessions.action_items` (JSONB) |
 | Priority 0 | Auto cohort enrollment | `enrollment_codes.cohort_id` (UUID FK to program_cohorts) |
+| Priority 0 | Assignment routing | `module_assignments.assigned_grader_id` (UUID FK to profiles, nullable — set from `enrollment_module_staff` on submission) |
+| Priority 0 | Assignment transfer | No new tables — update `assigned_grader_id`, optional `assignment_transfer_log` for audit trail |
 | Phase 1 | Onboarding | `profiles.onboarding_completed` (boolean) |
 | Phase 3 | Streaks/XP | `engagement_streaks` (user, streak_type, current_count, longest_count, last_activity_date), `user_xp` (user, total_xp, level) |
 | Phase 3 | Activity feed | `activity_feed_events` (user_id, event_type, target_type, target_id, created_at) |

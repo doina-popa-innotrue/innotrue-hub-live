@@ -95,15 +95,14 @@ export function EnrollmentModuleStaffManager({ enrollmentId, programId, clientNa
     },
   });
 
-  // Fetch personalized modules for this program
+  // Fetch all active modules for this program (any module can have per-client staff)
   const { data: modules = [] } = useQuery({
-    queryKey: ["personalized-modules-for-enrollment", programId],
+    queryKey: ["modules-for-enrollment-staff", programId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("program_modules")
         .select("id, title, module_type, is_individualized")
         .eq("program_id", programId)
-        .eq("is_individualized", true)
         .eq("is_active", true)
         .order("order_index");
       if (error) throw error;
@@ -271,10 +270,10 @@ export function EnrollmentModuleStaffManager({ enrollmentId, programId, clientNa
         <div>
           <CardTitle className="flex items-center gap-2 text-base">
             <Users className="h-4 w-4" />
-            Personal Staff Assignments
+            Staff Assignments for {clientName}
           </CardTitle>
           <CardDescription>
-            Assign specific instructors/coaches for {clientName}'s personalized modules
+            Assign specific instructors/coaches per module for this client (overrides program and module defaults)
           </CardDescription>
         </div>
         {availableModules.length > 0 && (
@@ -297,7 +296,7 @@ export function EnrollmentModuleStaffManager({ enrollmentId, programId, clientNa
                     onValueChange={(value) => setFormData({ ...formData, module_id: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a personalized module" />
+                      <SelectValue placeholder="Select a module" />
                     </SelectTrigger>
                     <SelectContent>
                       {availableModules.map((module) => (
@@ -398,8 +397,8 @@ export function EnrollmentModuleStaffManager({ enrollmentId, programId, clientNa
       <CardContent>
         {assignments.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground text-sm">
-            <p>No personal staff assignments</p>
-            <p className="text-xs mt-1">Module and program-level defaults will be used</p>
+            <p>No per-client staff assignments</p>
+            <p className="text-xs mt-1">Module and program-level defaults will be used for scheduling and grading</p>
           </div>
         ) : (
           <Table>

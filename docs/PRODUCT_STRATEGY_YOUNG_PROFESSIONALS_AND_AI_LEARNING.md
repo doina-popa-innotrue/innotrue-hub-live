@@ -1006,3 +1006,239 @@ Coaches and instructors are admin-created (no self-registration needed for now).
 | Development item creation | ⚠️ Partial | Backend exists, UI not prominent for coaches |
 
 **Bottom line:** The teaching workflows are production-ready. What's missing is the onboarding wrapper — the first 10 minutes of a new coach's experience. Fix that, and you're ready to onboard coaches confidently.
+
+---
+
+## Part 6: Instructor/Coach Assignment & Grading Workflow Assessment
+
+> Added 2026-02-17. Assesses how instructor and coach assignment works across modules, programs, and personalized enrollments — and how that connects to assignment grading. Instructor-first perspective (instructors before coaches).
+
+---
+
+### What Already Works
+
+The platform has a **comprehensive staff assignment system** with three tiers:
+
+| Level | Table | Scope | Admin UI |
+|-------|-------|-------|----------|
+| **Program-level** | `program_instructors` / `program_coaches` | All modules in the program | ProgramDetail page |
+| **Module-level** | `module_instructors` / `module_coaches` | Specific module | InstructorCoachAssignment component |
+| **Enrollment-level (personal)** | `enrollment_module_staff` | Specific module for a specific client | EnrollmentModuleStaffManager in ClientDetail |
+
+**The resolution hierarchy (highest wins):**
+1. Enrollment-level (personal) — overrides everything
+2. Module-level — overrides program-level
+3. Program-level — the default
+
+**Assignment grading infrastructure:**
+- Instructors see pending assignments via `/teaching/assignments` (PendingAssignments page)
+- Visibility is scoped: instructors only see assignments from modules/programs they're assigned to
+- Rich grading interface with rubric support, domain/question notes, development items, resources
+- `scored_by` and `scored_at` are recorded when grading completes
+- Client gets email notification when grading is done
+- Status guard prevents grading assignments that aren't "submitted"
+
+---
+
+### Gap 1: Notification Routing Ignores Enrollment-Level Assignments (HIGH)
+
+**Problem:** When a client submits an assignment, `notify-assignment-submitted` sends email to ALL instructors and coaches at the module and program level. It does NOT check `enrollment_module_staff` for personalized assignments.
+
+**Impact:** In a program with 3 instructors where each is assigned to specific clients:
+- Client A submits → Instructor A, B, AND C all get notified (should be only Instructor A)
+- Confusing for instructors, creates noise, risk of wrong instructor grading
+
+**What's needed:**
+- Modify `notify-assignment-submitted` edge function to:
+  1. First check `enrollment_module_staff` for a personal instructor/coach assignment
+  2. If found, notify ONLY the assigned instructor/coach
+  3. If not found, fall back to module-level, then program-level (current behavior)
+- Add `enrollment_id` context to the notification so the lookup is possible
+
+**Effort:** 1-2 days
+
+---
+
+### Gap 2: No Grading Queue Filtering — "My Assignments" vs "All" (HIGH)
+
+**Problem:** The `PendingAssignments` page shows ALL pending assignments from ALL modules/programs the instructor is assigned to. There's no distinction between:
+- Assignments specifically assigned to this instructor (via `enrollment_module_staff`)
+- Assignments they CAN grade but aren't specifically responsible for
+
+**Impact:** With 3 instructors on a program with 30 students, each instructor sees 30 pending assignments. They don't know which ones are "theirs." First-come-first-served creates confusion and potential conflicts.
+
+**What's needed:**
+- Add "My Queue" / "All Pending" toggle or tabs to `PendingAssignments`
+- "My Queue" shows only assignments where the instructor is the enrollment-level assigned staff
+- "All Pending" keeps current behavior (useful for admins and backup graders)
+- Visual indicator (badge/icon) on assignments that are specifically assigned to you
+- Consider: when an enrollment-level assignment exists, auto-filter to "My Queue" by default
+
+**Effort:** 2-3 days
+
+---
+
+### Gap 3: Enrollment-Level Staff Assignment Limited to Individualized Modules Only (MEDIUM)
+
+**Problem:** The `EnrollmentModuleStaffManager` component filters to `is_individualized = true` modules only. You cannot assign a personal instructor to a standard (non-individualized) module for a specific client.
+
+**Impact:** In a cohort program where Module 3 "Leadership Assignment" is standard (all clients do the same assignment), you cannot assign Client A to Instructor X and Client B to Instructor Y for grading. You'd need to make the module "individualized" first, which has other implications.
+
+**What's needed:**
+- Remove (or make optional) the `is_individualized` filter in `EnrollmentModuleStaffManager`
+- Allow enrollment-level staff assignment on any module, not just individualized ones
+- The `enrollment_module_staff` table already supports this — only the frontend filters it out
+- Consider: add a "Assign Staff per Client" toggle on module settings for non-individualized modules
+
+**Effort:** 0.5-1 day (frontend filter change + minor UX adjustments)
+
+---
+
+### Gap 4: No Assignment Transfer / Reassignment Capability (MEDIUM)
+
+**Problem:** Once a client submits an assignment, there is no way to:
+- Reassign it to a specific instructor before grading starts
+- Transfer a partially-graded (draft) assignment to another instructor
+- Hand off grading responsibility (e.g., instructor goes on vacation)
+
+**Impact:** If the designated instructor is unavailable, the assignment sits in limbo. Any instructor on the module CAN grade it, but there's no formal handoff mechanism.
+
+**What's needed:**
+- "Assign to" or "Transfer" button on each pending assignment (admin + original instructor)
+- Edge function to update the designated grader and send notification to the new grader
+- Optional: "Reassign Reason" field for audit trail
+- For draft scoring: preserve the existing draft when transferring
+- Consider: `assigned_instructor_id` column on `module_assignments` (currently absent)
+
+**Effort:** 2-3 days
+
+---
+
+### Gap 5: `assessor_id` Field Misused on Assignment Submission (LOW)
+
+**Problem:** In `ModuleAssignmentForm.tsx`, when a client submits an assignment, `assessor_id` is set to the client's own user ID. This field name suggests it should reference the assessor (grader), not the submitter.
+
+**Impact:** No functional impact currently (the field isn't used for routing), but it's confusing for anyone reading the code or database, and prevents using this field for pre-assigning a grader.
+
+**What's needed:**
+- Option A: Repurpose `assessor_id` to hold the designated grader (set from `enrollment_module_staff` on submission)
+- Option B: Add a new `assigned_grader_id` column and leave `assessor_id` as-is for backward compatibility
+- Either way: set the designated grader during submission using the enrollment-level staff lookup
+
+**Effort:** 0.5-1 day
+
+---
+
+### Gap 6: Client-Facing Instructor Display Doesn't Reflect Enrollment-Level Assignments (LOW)
+
+**Problem:** When a client views a module, they see the module-level instructor(s). If they have a personal instructor assigned via `enrollment_module_staff`, the client view doesn't reflect this. The personalized instructor isn't shown in the module UI.
+
+**What's needed:**
+- Module detail page should check `enrollment_module_staff` for the current user's enrollment
+- If a personal instructor is assigned, display that instructor (not the module-level ones)
+- This aligns the client's experience with the admin's intention
+
+**Effort:** 1-2 days
+
+---
+
+### Recommended Priority for Instructor/Coach Assignment Fixes
+
+| Priority | Gap | Effort | Why |
+|----------|-----|--------|-----|
+| 🟡 1 | **Configurable notification routing** (enrollment-aware) | 1-2 days | Useful for large teams; current broadcast behavior is acceptable for small teams |
+| 🔴 2 | **"My Queue" filtering** on PendingAssignments | 2-3 days | Instructors need to know what's specifically assigned to them |
+| 🟡 3 | **Remove individualized-only filter** for enrollment staff | 0.5-1 day | Unlocks per-client instructor assignment on all modules |
+| 🟡 4 | **Assignment transfer / reassignment** | 2-3 days | Operational necessity when instructors are unavailable |
+| 🟢 5 | **Fix `assessor_id` / add designated grader** | 0.5-1 day | Pre-assign grading responsibility at submission time |
+| 🟢 6 | **Client-facing instructor display** from enrollment level | 1-2 days | Clients should see their personal instructor, not the default |
+
+**To run multi-instructor programs confidently, you need gaps 1-3.** Gap 4 becomes critical once you have instructors going on leave or programs with rotating graders.
+
+**Total effort for solid multi-instructor assignment workflow: ~1-1.5 weeks** (gaps 1-4).
+
+---
+
+### Current State Summary
+
+| Capability | Status | Notes |
+|------------|--------|-------|
+| Assign instructor to program (all modules) | ✅ Working | `program_instructors` table + admin UI |
+| Assign instructor to specific module | ✅ Working | `module_instructors` table + admin UI |
+| Assign personal instructor per client per module | ✅ Working | `enrollment_module_staff` + admin UI (individualized modules only) |
+| Multiple instructors on same module | ✅ Working | Junction tables support many-to-many |
+| Instructor sees only their assigned modules' assignments | ✅ Working | `PendingAssignments` scopes by module/program |
+| Instructor grading with rubric | ✅ Working | `InstructorAssignmentScoring` with capability assessment |
+| Smart notification routing (enrollment-aware) | ❌ Missing | All instructors notified, no per-client routing |
+| "My Queue" vs "All" filtering | ❌ Missing | All assignments shown equally |
+| Per-client instructor on standard (non-individualized) modules | ✅ Fixed | Filter removed — enrollment staff assignment works on all modules |
+| Assignment transfer / reassignment | ❌ Missing | No UI or backend |
+| Pre-assigned grader at submission time | ❌ Missing | `assessor_id` field misused |
+| Client sees their personal instructor | ❌ Missing | Module view shows module-level only |
+
+**Bottom line:** The assignment infrastructure is strong — three-tier staff assignment with full grading workflow. What's missing is the **routing intelligence**: making sure the right instructor gets notified, sees their specific queue, and can hand off when needed. These gaps matter once you have more than one instructor per program.
+
+---
+
+### Session Scheduling & Instructor Assignment — Already Connected
+
+> Added 2026-02-18. Confirms that session scheduling already uses the 3-tier staff hierarchy for Cal.com booking URL resolution. No additional work needed for scheduling.
+
+**Key finding:** The `useModuleSchedulingUrl` hook already resolves the correct instructor's Cal.com booking link using the same 3-tier hierarchy:
+
+1. `enrollment_module_staff` (personal per-client) — checked first
+2. `module_instructors` / `module_coaches` — second
+3. `program_instructors` / `program_coaches` — fallback
+
+**What this means:** When a client clicks "Book Session" on a module, the app already shows the **correct instructor's** Cal.com link based on their enrollment-level assignment. No code changes needed for scheduling.
+
+**`client_instructors` / `client_coaches` vs `enrollment_module_staff`:** These are independent systems. `client_instructors`/`client_coaches` are used for general coaching relationships (shared decisions, tasks, goals). `enrollment_module_staff` is used for module-level scheduling and grading. They are NOT synced — this is by design, since a client's general coach isn't necessarily their instructor on every module.
+
+---
+
+### Multi-Instructor Program Configuration Guide
+
+> How to set up a program where multiple instructors each handle different clients.
+
+**Scenario:** CTA Immersion program. Instructor A handles clients 1-5, Instructor B handles clients 6-10, they co-grade clients 11-13.
+
+#### Step 1: Assign Both Instructors to the Program
+
+1. Go to **Admin → Programs → [Program Name]**
+2. In the **Instructors** section, add both Instructor A and Instructor B
+3. This gives both visibility into all modules and all client submissions
+
+#### Step 2: Assign Per-Client Instructors on Each Module
+
+1. Go to **Admin → Users → [Client Name]** (or find them in the client list)
+2. Find the client's enrollment in the program
+3. In the **"Staff Assignments"** panel, click **"Assign Staff"**
+4. Select the module → select the instructor → save
+5. Repeat for each client-module combination
+
+**What this controls:**
+- **Session booking:** Client sees this instructor's Cal.com link (via `useModuleSchedulingUrl`)
+- **Assignment notifications:** Currently all instructors get notified (broadcast behavior) — this is acceptable for small teams and useful for backup coverage
+- **Assignment grading:** All instructors see all submissions, but you know from the admin side who's responsible for whom
+
+#### Step 3: For Co-Graded Clients (e.g., Clients 11-13)
+
+- Either: assign one instructor as primary and let the other see all assignments (current broadcast behavior)
+- Or: assign both instructors — the table supports one instructor + one coach per enrollment-module row
+
+#### What `is_individualized` Means (Not Related to Staff Assignment)
+
+The `is_individualized` flag on modules controls **content personalization**, not staff assignment:
+- `is_individualized = true` → different content per client via `module_client_content` (e.g., custom assignment briefs)
+- `is_individualized = false` → same content for all clients (standard module)
+
+**After the filter removal fix:** Staff assignment works on ALL modules regardless of this flag. The two concepts (custom content vs custom instructor) are now independent.
+
+#### Current Notification Behavior (Broadcast)
+
+When a client submits an assignment, ALL instructors and coaches on the module AND program get notified. This is:
+- ✅ **Useful** for small teams — everyone has visibility, anyone can grade as backup
+- ✅ **Useful** for partner instructors — allows co-grading without formal routing
+- ⚠️ **Noisy** for large teams — 3+ instructors all getting notified for every submission
+
+**Future improvement (not urgent):** Make notification routing configurable per program — "Notify assigned instructor only" vs "Notify all staff" (documented as Gap 1 in the gap analysis above). The current broadcast behavior is fine for pilot programs.
