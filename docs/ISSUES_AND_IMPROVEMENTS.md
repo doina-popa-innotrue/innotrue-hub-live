@@ -35,40 +35,15 @@
 **Problem:** No input size limits before sending to Vertex AI. Cost spikes, timeouts possible.
 **Resolution:** Created `supabase/functions/_shared/ai-input-limits.ts` with `truncateArray()`, `truncateString()`, `truncateJson()`, `truncateObjectStrings()`, and `enforcePromptLimit()` helpers. Applied to all 3 unbounded AI functions: arrays capped at 20 items, strings at 500 chars, total prompts at 8K chars with truncation warning logging. `analytics-ai-insights` already had a 50K check.
 
-#### 1.5 N+1 Query in Assessment Scoring
-**File:** `src/components/modules/InstructorAssignmentScoring.tsx` (lines 123-134)
-**Problem:** Fetches domains, then loops to query questions per domain. 10 domains = 11 DB calls.
-**Fix:** Use Supabase nested select.
-
-**Cursor prompt:**
-```
-In src/components/modules/InstructorAssignmentScoring.tsx, fix the N+1 query pattern around lines 123-134.
-
-Currently it fetches capability_domains, then loops to query capability_domain_questions for each domain separately.
-
-Replace with a single Supabase nested select:
-const { data } = await supabase
-  .from("capability_domains")
-  .select("id, name, description, order_index, capability_domain_questions(id, question_text, description, order_index)")
-  .eq("assessment_id", assessment.id)
-  .order("order_index");
-
-Then map the nested result to the existing Domain type.
-```
-
-#### 1.6 Assignment Grading Lacks Status Guard
+#### 1.5 N+1 Query in Assessment Scoring — ✅ RESOLVED 2026-02-17
 **File:** `src/components/modules/InstructorAssignmentScoring.tsx`
-**Problem:** Doesn't verify assignment is `submitted` before allowing grading.
+**Problem:** Fetches domains, then loops to query questions per domain. 10 domains = 11 DB calls.
+**Resolution:** Replaced Promise.all loop with single nested Supabase select using `capability_domain_questions` relation. 10 domains now = 1 query instead of 11.
 
-**Cursor prompt:**
-```
-In src/components/modules/InstructorAssignmentScoring.tsx, add a guard that checks the assignment status before allowing grading.
-
-1. After fetching the assignment, check if status === 'submitted'
-2. If status is 'draft' or 'in_progress', show a disabled state with message "Assignment not yet submitted"
-3. If status is 'reviewed', show the existing scores in read-only mode
-4. Only enable the scoring form when status === 'submitted'
-```
+#### 1.6 Assignment Grading Lacks Status Guard — ✅ RESOLVED 2026-02-17
+**File:** `src/components/modules/InstructorAssignmentScoring.tsx`
+**Problem:** Didn't verify assignment is `submitted` before allowing grading.
+**Resolution:** Added UI guard that shows a disabled card with message when assignment isn't submitted. Scoring form only renders for "submitted" or "reviewed" status. Save mutation already had a backend guard preventing completion of non-submitted assignments.
 
 ---
 
