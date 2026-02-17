@@ -435,7 +435,7 @@ export default function CapabilityAssessmentsManagement() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Capability Assessments"
-        description="Create and manage self-rating capability assessments with progress tracking, development items, and instructor evaluations"
+        description="Create and manage capability assessments with self-rating, instructor/coach evaluations, and peer reviews"
         isDialogOpen={isDialogOpen}
         onDialogOpenChange={setIsDialogOpen}
         dialogTitle={editingItem ? "Edit Assessment" : "Create Capability Assessment"}
