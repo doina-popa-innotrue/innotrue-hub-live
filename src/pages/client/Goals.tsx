@@ -127,6 +127,13 @@ export default function Goals() {
   // Initialize filters from URL params
   const categoryParam = searchParams.get("category") || "all";
   const newParam = searchParams.get("new");
+  const actionParam = searchParams.get("action");
+  const titleParam = searchParams.get("title");
+  const descriptionParam = searchParams.get("description");
+
+  // Pre-fill state for create dialog (from URL params, e.g. from assessment suggestions)
+  const [prefillTitle, setPrefillTitle] = useState<string | undefined>(undefined);
+  const [prefillDescription, setPrefillDescription] = useState<string | undefined>(undefined);
 
   const [filters, setFilters] = useState({
     category: categoryParam,
@@ -136,15 +143,27 @@ export default function Goals() {
     search: "",
   });
 
-  // Open create dialog if ?new=true
+  // Open create dialog if ?new=true or ?action=create
   useEffect(() => {
     if (newParam === "true") {
       setShowCreateDialog(true);
-      // Clear the new param from URL
       searchParams.delete("new");
       setSearchParams(searchParams, { replace: true });
     }
   }, [newParam]);
+
+  useEffect(() => {
+    if (actionParam === "create") {
+      setPrefillTitle(titleParam || undefined);
+      setPrefillDescription(descriptionParam || undefined);
+      setShowCreateDialog(true);
+      // Clear action params from URL
+      searchParams.delete("action");
+      searchParams.delete("title");
+      searchParams.delete("description");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [actionParam]);
 
   // Update filters when URL category changes
   useEffect(() => {
@@ -215,6 +234,8 @@ export default function Goals() {
 
   const handleGoalCreated = () => {
     setShowCreateDialog(false);
+    setPrefillTitle(undefined);
+    setPrefillDescription(undefined);
     fetchGoals();
   };
 
@@ -269,13 +290,24 @@ export default function Goals() {
           </div>
         )}
 
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <Dialog
+          open={showCreateDialog}
+          onOpenChange={(open) => {
+            setShowCreateDialog(open);
+            if (!open) {
+              setPrefillTitle(undefined);
+              setPrefillDescription(undefined);
+            }
+          }}
+        >
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Goal</DialogTitle>
             </DialogHeader>
             <GoalForm
               defaultCategory={categoryParam !== "all" ? categoryParam : undefined}
+              defaultTitle={prefillTitle}
+              defaultDescription={prefillDescription}
               onSuccess={handleGoalCreated}
               onCancel={() => setShowCreateDialog(false)}
             />

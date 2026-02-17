@@ -27,6 +27,8 @@ import {
   Library,
   Link as LinkIcon,
   X,
+  CheckSquare,
+  UsersRound,
 } from "lucide-react";
 import {
   Select,
@@ -47,6 +49,8 @@ interface DevelopmentItemData {
   due_date: string | null;
   goal_links?: Array<{ goal_id: string }>;
   milestone_links?: Array<{ milestone_id: string }>;
+  task_links?: Array<{ task_id: string }>;
+  group_links?: Array<{ group_id: string }>;
 }
 
 interface DevelopmentItemDialogProps {
@@ -98,6 +102,8 @@ export function DevelopmentItemDialog({
   const [dueDate, setDueDate] = useState("");
   const [selectedGoalId, setSelectedGoalId] = useState<string>(goalId || "");
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string>(milestoneId || "");
+  const [selectedTaskId, setSelectedTaskId] = useState<string>("");
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("");
 
   // Resource type: 'url', 'file', or 'library'
   const [resourceMode, setResourceMode] = useState<"url" | "file" | "library">("url");
@@ -121,6 +127,8 @@ export function DevelopmentItemDialog({
       setDueDate(editItem.due_date ? editItem.due_date.split("T")[0] : "");
       setSelectedGoalId(editItem.goal_links?.[0]?.goal_id || goalId || "");
       setSelectedMilestoneId(editItem.milestone_links?.[0]?.milestone_id || milestoneId || "");
+      setSelectedTaskId(editItem.task_links?.[0]?.task_id || "");
+      setSelectedGroupId(editItem.group_links?.[0]?.group_id || "");
     } else if (!open) {
       // Reset when closing
       resetForm();
@@ -181,6 +189,38 @@ export function DevelopmentItemDialog({
     enabled: !!selectedGoalId && open,
   });
 
+  // Fetch user's tasks for linking
+  const targetUserId = forUserId || user?.id;
+  const { data: tasks } = useQuery({
+    queryKey: ["user-tasks-for-linking", targetUserId],
+    queryFn: async () => {
+      if (!targetUserId) return [];
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("id, title")
+        .eq("user_id", targetUserId)
+        .order("title");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!targetUserId && open,
+  });
+
+  // Fetch user's groups for linking
+  const { data: groups } = useQuery({
+    queryKey: ["user-groups-for-linking", targetUserId],
+    queryFn: async () => {
+      if (!targetUserId) return [];
+      const { data, error } = await supabase
+        .from("group_memberships")
+        .select("group_id, group:groups(id, name)")
+        .eq("user_id", targetUserId);
+      if (error) throw error;
+      return data?.map((m) => m.group).filter(Boolean) || [];
+    },
+    enabled: !!targetUserId && open,
+  });
+
   const resetForm = () => {
     setItemType(allowedTypes?.[0] || "reflection");
     setTitle("");
@@ -192,6 +232,8 @@ export function DevelopmentItemDialog({
     setSelectedLibraryResource(null);
     if (!goalId) setSelectedGoalId("");
     if (!milestoneId) setSelectedMilestoneId("");
+    setSelectedTaskId("");
+    setSelectedGroupId("");
   };
 
   // Handle file selection
@@ -286,6 +328,8 @@ export function DevelopmentItemDialog({
                 ? selectedLibraryResource.id
                 : null,
             resourceMode,
+            taskId: selectedTaskId || null,
+            groupId: selectedGroupId || null,
           },
         });
 
@@ -403,6 +447,28 @@ export function DevelopmentItemDialog({
         if (linkError) throw linkError;
       }
 
+      // Create link to task
+      if (selectedTaskId) {
+        const { error: linkError } = await supabase
+          .from("development_item_task_links")
+          .insert({
+            development_item_id: item.id,
+            task_id: selectedTaskId,
+          });
+        if (linkError) throw linkError;
+      }
+
+      // Create link to group
+      if (selectedGroupId) {
+        const { error: linkError } = await supabase
+          .from("development_item_group_links")
+          .insert({
+            development_item_id: item.id,
+            group_id: selectedGroupId,
+          });
+        if (linkError) throw linkError;
+      }
+
       return item;
     },
     onSuccess: () => {
@@ -490,6 +556,42 @@ export function DevelopmentItemDialog({
           await supabase.from("development_item_milestone_links").insert({
             development_item_id: editItem.id,
             milestone_id: finalMilestoneId,
+          });
+        }
+      }
+
+      // Update task link if changed
+      const existingTaskId = editItem.task_links?.[0]?.task_id;
+      if (selectedTaskId !== (existingTaskId || "")) {
+        if (existingTaskId) {
+          await supabase
+            .from("development_item_task_links")
+            .delete()
+            .eq("development_item_id", editItem.id)
+            .eq("task_id", existingTaskId);
+        }
+        if (selectedTaskId) {
+          await supabase.from("development_item_task_links").insert({
+            development_item_id: editItem.id,
+            task_id: selectedTaskId,
+          });
+        }
+      }
+
+      // Update group link if changed
+      const existingGroupId = editItem.group_links?.[0]?.group_id;
+      if (selectedGroupId !== (existingGroupId || "")) {
+        if (existingGroupId) {
+          await supabase
+            .from("development_item_group_links")
+            .delete()
+            .eq("development_item_id", editItem.id)
+            .eq("group_id", existingGroupId);
+        }
+        if (selectedGroupId) {
+          await supabase.from("development_item_group_links").insert({
+            development_item_id: editItem.id,
+            group_id: selectedGroupId,
           });
         }
       }
@@ -912,6 +1014,61 @@ export function DevelopmentItemDialog({
             )}
           </div>
         )}
+
+        {/* Task/Group Linking Section */}
+        {(tasks && tasks.length > 0) || (groups && groups.length > 0) ? (
+          <div className="space-y-4 pt-4 border-t">
+            {tasks && tasks.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  <CheckSquare className="h-3.5 w-3.5" />
+                  Link to Task (optional)
+                </Label>
+                <Select
+                  value={selectedTaskId || "__none__"}
+                  onValueChange={(value) => setSelectedTaskId(value === "__none__" ? "" : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a task..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {tasks.map((task) => (
+                      <SelectItem key={task.id} value={task.id}>
+                        {task.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {groups && groups.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  <UsersRound className="h-3.5 w-3.5" />
+                  Link to Group (optional)
+                </Label>
+                <Select
+                  value={selectedGroupId || "__none__"}
+                  onValueChange={(value) => setSelectedGroupId(value === "__none__" ? "" : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a group..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {groups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        ) : null}
 
         <div className="flex justify-end gap-2 pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>

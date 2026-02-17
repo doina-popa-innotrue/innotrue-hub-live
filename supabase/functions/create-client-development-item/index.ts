@@ -25,6 +25,9 @@ interface CreateClientDevelopmentItemRequest {
   mimeType: string | null;
   libraryResourceId: string | null;
   resourceMode: ResourceMode | null;
+  // Task/group linking
+  taskId: string | null;
+  groupId: string | null;
 }
 
 function isUuid(v: string) {
@@ -284,6 +287,24 @@ serve(async (req) => {
         milestone_id: milestoneId,
       });
       if (error) console.error("milestone link error", error);
+    }
+
+    const taskId = typeof body.taskId === "string" && isUuid(body.taskId) ? body.taskId : null;
+    if (taskId) {
+      const { error } = await admin.from("development_item_task_links").insert({
+        development_item_id: item.id,
+        task_id: taskId,
+      });
+      if (error) console.error("task link error", error);
+    }
+
+    const groupId = typeof body.groupId === "string" && isUuid(body.groupId) ? body.groupId : null;
+    if (groupId) {
+      const { error } = await admin.from("development_item_group_links").insert({
+        development_item_id: item.id,
+        group_id: groupId,
+      });
+      if (error) console.error("group link error", error);
     }
 
     return successResponse.ok({ item }, cors);

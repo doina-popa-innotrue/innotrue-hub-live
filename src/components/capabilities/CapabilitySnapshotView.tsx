@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -612,6 +618,91 @@ export function CapabilitySnapshotView({
           </CardContent>
         </Card>
       )}
+
+      {/* Suggested Goals based on weak domains */}
+      {(() => {
+        // Compute weak domains for goal suggestions
+        const weakDomains: { domain: Domain; score: number; percentage: number }[] = [];
+
+        if (assessment.pass_fail_enabled && assessment.pass_fail_threshold) {
+          // Use pass/fail threshold from assessment config
+          for (const domain of assessment.capability_domains) {
+            const status = getDomainPassFailStatus(domain);
+            if (status && !status.passed) {
+              const avg = getDomainAverage(domain);
+              weakDomains.push({
+                domain,
+                score: avg,
+                percentage: (avg / assessment.rating_scale) * 100,
+              });
+            }
+          }
+        } else {
+          // No pass/fail enabled: use bottom 2 domains by percentage score
+          const scored = assessment.capability_domains
+            .map((domain) => {
+              const avg = getDomainAverage(domain);
+              return { domain, score: avg, percentage: (avg / assessment.rating_scale) * 100 };
+            })
+            .sort((a, b) => a.percentage - b.percentage);
+
+          // Take bottom 2 (or fewer if fewer domains exist)
+          weakDomains.push(...scored.slice(0, 2));
+        }
+
+        if (weakDomains.length === 0) return null;
+
+        const assessmentLabel = isEvaluatorAssessment
+          ? evaluatorName
+            ? `evaluator assessment by ${evaluatorName}`
+            : "evaluator assessment"
+          : "self-assessment";
+
+        return (
+          <Card>
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Suggested Goals
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {isEvaluatorAssessment
+                  ? "Areas for improvement identified in your evaluator's assessment"
+                  : "Areas for improvement based on your self-assessment scores"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-2">
+              {weakDomains.map(({ domain, score, percentage }) => (
+                <div
+                  key={domain.id}
+                  className="flex items-center justify-between gap-3 p-3 rounded-lg border"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">{domain.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Score: {score.toFixed(1)}/{assessment.rating_scale} ({percentage.toFixed(0)}%)
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const title = `Improve ${domain.name}`;
+                      const description = `Based on ${assessmentLabel} — scored ${score.toFixed(1)}/${assessment.rating_scale} (${percentage.toFixed(0)}%). Focus on building skills and knowledge in this area.`;
+                      navigate(
+                        `/goals?action=create&title=${encodeURIComponent(title)}&description=${encodeURIComponent(description)}`,
+                      );
+                    }}
+                  >
+                    <Target className="h-3 w-3 mr-1" />
+                    Create Goal
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {showAddButtons && (
         <DevelopmentItemDialog

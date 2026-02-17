@@ -32,6 +32,7 @@ import {
   ChevronRight,
   FolderOpen,
   X,
+  UsersRound,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
@@ -83,6 +84,8 @@ interface DevelopmentItem {
   }>;
   question_links?: Array<{ question_id: string; snapshot_id: string | null }>;
   domain_links?: Array<{ domain_id: string; snapshot_id: string | null }>;
+  task_links?: Array<{ task_id: string; task: { id: string; title: string } }>;
+  group_links?: Array<{ group_id: string; group: { id: string; name: string } }>;
 }
 
 const TYPE_ICONS: Record<string, any> = {
@@ -290,7 +293,15 @@ export default function DevelopmentItems() {
             milestone:goal_milestones(id, title, goal_id)
           ),
           question_links:development_item_question_links(question_id, snapshot_id),
-          domain_links:development_item_domain_links(domain_id, snapshot_id)
+          domain_links:development_item_domain_links(domain_id, snapshot_id),
+          task_links:development_item_task_links(
+            task_id,
+            task:tasks(id, title)
+          ),
+          group_links:development_item_group_links(
+            group_id,
+            group:groups(id, name)
+          )
         `,
         )
         .eq("user_id", user.id)
@@ -478,7 +489,9 @@ export default function DevelopmentItems() {
       (item.goal_links?.length || 0) +
       (item.milestone_links?.length || 0) +
       (item.question_links?.length || 0) +
-      (item.domain_links?.length || 0)
+      (item.domain_links?.length || 0) +
+      (item.task_links?.length || 0) +
+      (item.group_links?.length || 0)
     );
   };
 
@@ -583,7 +596,11 @@ export default function DevelopmentItems() {
               </div>
 
               {/* Linked entities - show in list view */}
-              {viewMode === "list" && (item.goal_links?.length || item.milestone_links?.length) ? (
+              {viewMode === "list" &&
+              (item.goal_links?.length ||
+                item.milestone_links?.length ||
+                item.task_links?.length ||
+                item.group_links?.length) ? (
                 <div className="flex flex-wrap gap-2 mt-3">
                   {item.goal_links?.map((link) => (
                     <Button
@@ -608,6 +625,26 @@ export default function DevelopmentItems() {
                       <Target className="h-3 w-3 mr-1" />
                       {link.milestone.title}
                     </Button>
+                  ))}
+                  {item.task_links?.map((link) => (
+                    <Badge
+                      key={link.task_id}
+                      variant="outline"
+                      className="text-xs flex items-center gap-1"
+                    >
+                      <CheckCircle className="h-3 w-3" />
+                      {link.task.title}
+                    </Badge>
+                  ))}
+                  {item.group_links?.map((link) => (
+                    <Badge
+                      key={link.group_id}
+                      variant="outline"
+                      className="text-xs flex items-center gap-1"
+                    >
+                      <UsersRound className="h-3 w-3" />
+                      {link.group.name}
+                    </Badge>
                   ))}
                 </div>
               ) : null}

@@ -25,11 +25,13 @@ type GoalStatus = Database["public"]["Enums"]["goal_status"];
 interface GoalFormProps {
   goalId?: string;
   defaultCategory?: string;
+  defaultTitle?: string;
+  defaultDescription?: string;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-export default function GoalForm({ goalId, defaultCategory, onSuccess, onCancel }: GoalFormProps) {
+export default function GoalForm({ goalId, defaultCategory, defaultTitle, defaultDescription, onSuccess, onCancel }: GoalFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: categories = [], isLoading: categoriesLoading } = useWheelCategories({
@@ -46,8 +48,8 @@ export default function GoalForm({ goalId, defaultCategory, onSuccess, onCancel 
     status: GoalStatus;
     is_private: boolean;
   }>({
-    title: "",
-    description: "",
+    title: defaultTitle || "",
+    description: defaultDescription || "",
     category: (defaultCategory || "personal_growth") as GoalCategory,
     timeframe_type: "short_term" as GoalTimeframe,
     priority: "medium" as GoalPriority,

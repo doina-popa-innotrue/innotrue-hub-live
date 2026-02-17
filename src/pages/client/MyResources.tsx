@@ -29,6 +29,7 @@ import {
   Lightbulb,
   Globe,
   User,
+  Coins,
 } from "lucide-react";
 import { usePagination } from "@/hooks/usePagination";
 import {
@@ -41,6 +42,8 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { ResourceViewer } from "@/components/resources/ResourceViewer";
+import { ResourceUnlockDialog } from "@/components/resources/ResourceUnlockDialog";
+import { useResourceCredits } from "@/hooks/useResourceCredits";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -75,6 +78,77 @@ export default function MyResources() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerResource, setViewerResource] = useState<UnifiedResource | null>(null);
+
+  // Credit gating state
+  const [unlockTarget, setUnlockTarget] = useState<{
+    resource: UnifiedResource;
+    action: "view" | "download";
+  } | null>(null);
+  const [unlockedIds, setUnlockedIds] = useState<Set<string>>(new Set());
+  const [isUnlocking, setIsUnlocking] = useState(false);
+  const { availableCredits, consumeResourceCredit, refetchCredits } = useResourceCredits();
+
+  // Fetch user's enrolled program IDs (for enrollment exemption)
+  const { data: enrolledProgramIds = [] } = useQuery({
+    queryKey: ["user-enrolled-programs", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("client_enrollments")
+        .select("program_id")
+        .eq("client_user_id", user.id)
+        .eq("status", "active");
+      if (error) throw error;
+      return data.map((e) => e.program_id);
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch credit info for shared_library resources (is_consumable, credit_cost, program links)
+  const { data: resourceCreditInfo = {} } = useQuery({
+    queryKey: ["shared-library-credit-info"],
+    queryFn: async () => {
+      const { data: resources, error } = await supabase
+        .from("resource_library")
+        .select("id, is_consumable, credit_cost")
+        .eq("is_active", true);
+      if (error) throw error;
+
+      // Fetch program links for all resources
+      const resourceIds = (resources || []).map((r) => r.id);
+      const { data: programLinks } = await supabase
+        .from("resource_library_programs")
+        .select("resource_id, program_id")
+        .in("resource_id", resourceIds);
+
+      const info: Record<
+        string,
+        { isConsumable: boolean; creditCost: number; programIds: string[] }
+      > = {};
+      for (const r of resources || []) {
+        info[r.id] = {
+          isConsumable: r.is_consumable ?? false,
+          creditCost: r.credit_cost ?? 0,
+          programIds:
+            programLinks
+              ?.filter((pl) => pl.resource_id === r.id)
+              .map((pl) => pl.program_id) || [],
+        };
+      }
+      return info;
+    },
+  });
+
+  // Check if a resource requires credits (not free and not exempt via enrollment)
+  const getResourceCreditState = (resource: UnifiedResource) => {
+    if (resource.source !== "shared_library") return { requiresCredits: false, cost: 0 };
+    const info = resourceCreditInfo[resource.id];
+    if (!info || !info.isConsumable || info.creditCost <= 0) return { requiresCredits: false, cost: 0 };
+    // Enrollment exemption: if user is enrolled in any program that uses this resource, it's free
+    const isExempt = info.programIds.some((pid) => enrolledProgramIds.includes(pid));
+    if (isExempt) return { requiresCredits: false, cost: 0 };
+    return { requiresCredits: true, cost: info.creditCost };
+  };
 
   // Fetch goal resources
   const { data: goalResources = [] } = useQuery({
@@ -444,7 +518,7 @@ export default function MyResources() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const handleDownload = async (resource: UnifiedResource) => {
+  const performDownload = async (resource: UnifiedResource) => {
     if (!resource.file_path) return;
     try {
       // Try multiple buckets since resources come from different sources
@@ -482,12 +556,54 @@ export default function MyResources() {
     }
   };
 
-  const handleView = (resource: UnifiedResource) => {
+  const performView = (resource: UnifiedResource) => {
     if (resource.url) {
       window.open(resource.url, "_blank");
     } else if (resource.file_path) {
       setViewerResource(resource);
       setViewerOpen(true);
+    }
+  };
+
+  const handleDownload = (resource: UnifiedResource) => {
+    const { requiresCredits, cost } = getResourceCreditState(resource);
+    if (requiresCredits && !unlockedIds.has(resource.id)) {
+      setUnlockTarget({ resource, action: "download" });
+      return;
+    }
+    performDownload(resource);
+  };
+
+  const handleView = (resource: UnifiedResource) => {
+    const { requiresCredits, cost } = getResourceCreditState(resource);
+    if (requiresCredits && !unlockedIds.has(resource.id)) {
+      setUnlockTarget({ resource, action: "view" });
+      return;
+    }
+    performView(resource);
+  };
+
+  const handleUnlock = async () => {
+    if (!unlockTarget) return;
+    setIsUnlocking(true);
+    try {
+      const result = await consumeResourceCredit(unlockTarget.resource.id);
+      if (!result.success) {
+        toast.error(result.error || "Failed to unlock resource");
+        return;
+      }
+      setUnlockedIds((prev) => new Set(prev).add(unlockTarget.resource.id));
+      setUnlockTarget(null);
+      // Proceed with the original action
+      if (unlockTarget.action === "view") {
+        performView(unlockTarget.resource);
+      } else {
+        performDownload(unlockTarget.resource);
+      }
+    } catch (error) {
+      toast.error("Failed to unlock resource");
+    } finally {
+      setIsUnlocking(false);
     }
   };
 
@@ -622,6 +738,15 @@ export default function MyResources() {
                         {formatFileSize(resource.file_size)}
                       </Badge>
                     )}
+                    {(() => {
+                      const { requiresCredits, cost } = getResourceCreditState(resource);
+                      return requiresCredits && !unlockedIds.has(resource.id) ? (
+                        <Badge variant="outline" className="text-xs flex items-center gap-1">
+                          <Coins className="h-3 w-3" />
+                          {cost} credits
+                        </Badge>
+                      ) : null;
+                    })()}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {format(new Date(resource.created_at), "MMM d, yyyy")}
@@ -716,6 +841,20 @@ export default function MyResources() {
             mime_type: viewerResource.mime_type || null,
             downloadable: true,
           }}
+        />
+      )}
+
+      {/* Resource Unlock Dialog */}
+      {unlockTarget && (
+        <ResourceUnlockDialog
+          open={!!unlockTarget}
+          onOpenChange={(open) => !open && setUnlockTarget(null)}
+          resourceTitle={unlockTarget.resource.title}
+          creditCost={getResourceCreditState(unlockTarget.resource).cost}
+          availableCredits={availableCredits}
+          canAfford={availableCredits >= getResourceCreditState(unlockTarget.resource).cost}
+          onUnlock={handleUnlock}
+          isPending={isUnlocking}
         />
       )}
     </div>
