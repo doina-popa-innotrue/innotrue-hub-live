@@ -108,30 +108,29 @@ export function InstructorAssignmentScoring({
     enabled: !!effectiveAssessmentId,
   });
 
-  // Get the domains and questions for scoring
+  // Get the domains and questions for scoring (single nested query instead of N+1)
   const { data: domains } = useQuery({
     queryKey: ["scoring-domains", assessment?.id],
     queryFn: async () => {
       if (!assessment?.id) return [];
-      const { data: domainsData, error: domainsError } = await supabase
+      const { data, error } = await supabase
         .from("capability_domains")
-        .select("id, name, description, order_index")
+        .select(
+          "id, name, description, order_index, capability_domain_questions(id, question_text, description, order_index)",
+        )
         .eq("assessment_id", assessment.id)
         .order("order_index");
-      if (domainsError) throw domainsError;
+      if (error) throw error;
 
-      // Fetch questions for each domain
-      const domainsWithQuestions = await Promise.all(
-        domainsData.map(async (domain) => {
-          const { data: questions } = await supabase
-            .from("capability_domain_questions")
-            .select("id, question_text, description, order_index")
-            .eq("domain_id", domain.id)
-            .order("order_index");
-          return { ...domain, questions: questions || [] } as Domain;
-        }),
-      );
-      return domainsWithQuestions;
+      return (data || []).map((domain) => ({
+        id: domain.id,
+        name: domain.name,
+        description: domain.description,
+        order_index: domain.order_index,
+        questions: (domain.capability_domain_questions || []).sort(
+          (a, b) => a.order_index - b.order_index,
+        ),
+      })) as Domain[];
     },
     enabled: !!assessment?.id,
   });
@@ -530,8 +529,29 @@ export function InstructorAssignmentScoring({
   const snapshotStatus = existingSnapshot?.snapshot?.status;
   // Check both assignment status (reviewed) and snapshot status (completed) to determine if scoring is finalized
   const isCompleted = assignmentStatus === "reviewed" || snapshotStatus === "completed";
+  // Assignment must be submitted before grading is allowed
+  const isNotSubmitted =
+    assignmentStatus && assignmentStatus !== "submitted" && assignmentStatus !== "reviewed";
   // Allow adding resources unless the scoring is finalized
-  const canAddResources = !isCompleted && clientUserId;
+  const canAddResources = !isCompleted && !isNotSubmitted && clientUserId;
+
+  // Show a message when assignment isn't ready for grading
+  if (isNotSubmitted) {
+    return (
+      <Card className="border-muted bg-muted/30">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ClipboardCheck className="h-5 w-5 text-muted-foreground" />
+            <CardTitle className="text-lg text-muted-foreground">Instructor Scoring</CardTitle>
+          </div>
+          <CardDescription>
+            This assignment has not been submitted yet. Scoring will be available once the client
+            submits their work.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
   return (
     <Card className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
