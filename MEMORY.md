@@ -35,6 +35,9 @@
 | `docs/TEST_PLAN.md` | Unit + E2E test plan |
 | `docs/CURSOR_AND_WORKFLOW_GUIDE.md` | Cursor IDE setup, git deploy pipeline, responsive testing |
 | `docs/ENTITLEMENTS_AND_FEATURE_ACCESS.md` | **Entitlements system** — 5 access sources, deny override, plan tiers, FeatureGate/CapabilityGate, admin config |
+| `docs/PHASE5_PLAN.md` | **Phase 5 Self-Registration** — 14-step implementation plan + 7 new roadmap items (R1-R7). Ready for implementation. |
+| `docs/IDE_SETUP_GUIDE.md` | **IDE setup for team** — VS Code (recommended), Cursor, Eclipse. Step-by-step setup, extensions, workspace config. For onboarding new developers. |
+| `docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md` | **Product strategy** — 12 ideas for young professional engagement + 5 AI-guided learning features (module companion, pre-session prep, scenario debrief, goal nudges, conversational dashboard) + anti-hallucination strategy |
 
 ## Key Source Files
 - Supabase client: `src/integrations/supabase/client.ts`
@@ -60,8 +63,10 @@
 
 ## Priority Roadmap (from ISSUES_AND_IMPROVEMENTS.md Part 11)
 **Critical (C1-C4):** ~~Credits FeatureGate~~ ✅, ~~AuthContext role fallback~~ ✅, ~~credit loss on failed enrollment~~ ✅, ~~Cal.com orphaned bookings~~ ✅
-**High (H1-H10):** ~~Empty client dashboard~~ ✅, ~~file upload validation~~ ✅, ~~AI input limits~~ ✅, ~~welcome email~~ ✅, ~~express interest status~~ ✅, feature gate messaging, ~~N+1 query~~ ✅, ~~assignment guard~~ ✅, error handling, org deny override
-**Phases:** 1-Onboarding/UX → 2-Assessment Intelligence → 3-AI/Engagement → 4-Peer/Social → 5-Self-Registration → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
+**High (H1-H10):** ~~Empty client dashboard~~ ✅, ~~file upload validation~~ ✅, ~~AI input limits~~ ✅, ~~welcome email~~ ✅, ~~express interest status~~ ✅, ~~feature gate messaging~~ ✅, ~~N+1 query~~ ✅, ~~assignment guard~~ ✅, ~~error handling~~ ✅, ~~org deny override~~ ✅
+**Medium (remaining):** M2 (psychometric interest tracking), M9 (async notifications), M11 (console.log cleanup), M12 (resource ratings), M13 (Zod validation), M16 (assessment templates)
+**New roadmap items (R1-R7):** R1 assessment question types (Phase 2), R2 coach/instructor onboarding (Phase 1), R3 enhanced coach↔client interaction (Phases 1/4/6), R4 coaches invite own clients (Phase 5), R5 enhanced org management (Phase 6), R6 Sentry coverage (cross-cutting), R7 test coverage (continuous)
+**Phases:** 1-Onboarding/UX → 2-Assessment Intelligence → 3-AI/Engagement → 4-Peer/Social → **5-Self-Registration (plan complete, ready to implement)** → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
 
 ## Known Issues
 - (none currently — all critical/high items documented in roadmap above)
@@ -81,7 +86,7 @@
 - **Preprod Auth Email Hook (2026-02-14):** Incorrect Authorization header. Fixed with correct service role key.
 - **Profiles RLS recursion (2026-02-14):** Circular RLS on profiles. Fixed via `client_can_view_staff_profile()` SECURITY DEFINER function.
 
-## Current State (as of 2026-02-15)
+## Current State (as of 2026-02-17)
 - All strict TypeScript flags enabled (including strictNullChecks). 0 errors.
 - Self-registration disabled during pilot. All users admin-created.
 - 15 storage buckets on all 3 Supabase projects
@@ -90,6 +95,11 @@
 - Lovable sync pipeline operational (bidirectional)
 - Supabase ops scripts operational (deploy, push, sync data/storage)
 - Comprehensive analysis complete: 11-part issues doc + data config guide deployed
+- **All C1-C4 critical and H1-H10 high items resolved.** 6 medium items remain (M2, M9, M11, M12, M13, M16).
+- **Phase 5 plan complete** (`docs/PHASE5_PLAN.md`) — 14 steps covering self-registration, role applications, enrollment codes, bulk import, org invite flow. Not yet implemented.
+- **AI infrastructure:** 4 edge functions (decision-insights, course-recommendations, generate-reflection-prompt, analytics-ai-insights), Vertex AI Gemini 3 Flash (EU/Frankfurt), input truncation, credit-based consumption, explicit consent gating, provider-agnostic architecture
+- **Product strategy documented:** 12 ideas for young professional engagement, 5 new AI-guided learning features planned (module companion, pre-session prep, scenario debrief, goal nudges, conversational dashboard), anti-hallucination strategy with 14 layers mapped
+- **Next steps:** Quick wins (M2, M11, M9) → Phase 5 implementation → AI system prompt hardening → Phase 3 AI features
 
 ## npm Scripts
 ```
