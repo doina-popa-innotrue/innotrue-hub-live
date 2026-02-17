@@ -458,3 +458,196 @@ The platform's competitive advantage over general-purpose AI is **context + cons
 - **Continuity:** AI interactions are stored, connected to goals, and visible to coaches — not ephemeral conversations lost in a chat window
 
 This is what makes in-platform AI valuable for both young professionals (who need guidance and structure) and senior professionals (who need grounding and accountability). External AI gives breadth. Platform AI gives depth.
+
+---
+
+## Part 3: Fixing the Learning Content Delivery Experience
+
+### The Problem
+
+The current flow for accessing learning content is:
+
+```
+Hub → Open program → Open module → Click TalentLMS link → SSO redirect to Academy
+→ Navigate TalentLMS UI → Click "Resume Course" → Popup opens with Rise content
+```
+
+That's **5-7 clicks and 2 full context switches** between "I want to learn" and "I'm learning." Every extra step loses users. For younger users especially, if the first interaction feels clunky, they won't come back.
+
+The root cause: content is authored in **Articulate Rise**, exported as **SCORM**, uploaded to **TalentLMS**, then **linked** from the Hub. Each layer adds friction.
+
+### Current Architecture (What Exists)
+
+The platform already has:
+- **TalentLMS SSO** (`talentlms-sso` edge function) — users authenticate seamlessly
+- **xAPI webhook** (`talentlms-webhook`) — completion data flows back automatically
+- **Progress sync** (`sync-talentlms-progress`) — manual sync button as fallback
+- **Module sections** (`module_sections` table) — multi-block content within modules
+- **External source framework** (`external_sources`, `module_external_mappings`, `external_progress`) — generic framework for any LMS
+- **Resource viewer** — already handles iframe embedding for PDFs and media
+
+The infrastructure is solid. The problem is the delivery path, not the plumbing.
+
+---
+
+### Option Analysis: What Articulate Rise Can Export
+
+Rise supports multiple export formats. Each has different implications:
+
+| Export Format | What It Is | Embeddable? | Tracks Progress? | Needs LMS? |
+|---|---|---|---|---|
+| **SCORM 1.2 / 2004** | Packaged course with tracking API | ✅ With SCORM player | ✅ Via SCORM API | Yes (or SCORM player) |
+| **xAPI (Tin Can)** | Packaged course with xAPI tracking | ✅ With xAPI wrapper | ✅ Via xAPI statements | No (needs LRS) |
+| **Web (HTML)** | Static HTML/CSS/JS bundle | ✅ Direct iframe | ❌ No tracking | No |
+| **PDF** | Flat document | ✅ Via viewer | ❌ No tracking | No |
+| **Video** | MP4 export | ✅ Native player | ❌ No tracking | No |
+
+---
+
+### Recommended Approach: Three Tiers (Pick Based on Need)
+
+#### Tier 1: Quick Win — Embed Rise Web Export Directly (No TalentLMS)
+
+**What:** Export Rise courses as **Web (HTML)** packages. Host the static files in Supabase Storage (or a CDN). Embed them in an iframe directly in the module page.
+
+**User experience:**
+```
+Hub → Open module → Content loads inline (zero clicks)
+```
+
+**Pros:**
+- Eliminates TalentLMS entirely for content delivery
+- Zero context switches — learning happens inside the Hub
+- Works today with existing `ModuleDetail.tsx` + iframe
+- Static files are fast, cacheable, and fully under your control
+
+**Cons:**
+- No automatic progress/completion tracking (Rise Web export doesn't report back)
+- You'd need to track completion manually (user marks "I finished this" or time-based heuristic)
+
+**When to use:** For content where completion tracking isn't critical — introductory modules, awareness content, supplementary reading. Or where you track completion through a follow-up activity (reflection, quiz, assignment) rather than the content itself.
+
+**Implementation:**
+1. Export Rise course as "Web" format (produces a folder with `index.html` + assets)
+2. Upload to Supabase Storage bucket (e.g., `learning-content/{module-id}/`)
+3. Generate a signed URL for `index.html`
+4. Embed in `ModuleDetail.tsx` via iframe:
+   ```html
+   <iframe src="{signed_url}" class="w-full h-[80vh] rounded-lg border" />
+   ```
+5. Add a "Mark as Complete" button below the iframe (updates `module_progress`)
+6. Or: track completion through the next module activity (reflection prompt, quiz)
+
+**Effort:** 3-5 days (upload tooling + iframe component + completion button)
+
+---
+
+#### Tier 2: Better — SCORM Player Embedded in the Hub (No TalentLMS for Delivery)
+
+**What:** Export Rise courses as **SCORM packages**. Use an open-source JavaScript SCORM player to run them directly inside the Hub. SCORM completion events update `module_progress` automatically.
+
+**User experience:**
+```
+Hub → Open module → SCORM content loads inline → Completion auto-tracked
+```
+
+**Pros:**
+- Content loads inside the Hub (no context switch)
+- Automatic progress and completion tracking via SCORM API
+- Quiz scores, time spent, and interaction data captured
+- Rise SCORM exports include all tracking that TalentLMS currently captures
+
+**Cons:**
+- Need to integrate a SCORM player (but good open-source options exist)
+- SCORM packages are larger than web exports (includes tracking JS)
+- Need storage for SCORM packages
+
+**SCORM Player Options:**
+- **SCORM Again** (`scorm-again`, npm) — lightweight, modern SCORM 1.2/2004 runtime. MIT license. Under 50KB. This is the recommended choice.
+- **Rustici SCORM Cloud** — hosted service, paid. Overkill for this use case.
+- **Custom minimal player** — SCORM API is well-documented; a minimal implementation that just captures completion + score is ~200 lines of JS.
+
+**Implementation:**
+1. Install `scorm-again` as a dependency
+2. Create `ScormPlayer.tsx` component:
+   - Extracts SCORM package from Supabase Storage
+   - Initializes SCORM API (handles `LMSInitialize`, `LMSGetValue`, `LMSSetValue`, `LMSCommit`)
+   - Renders content in sandboxed iframe
+   - Listens for completion events (`cmi.core.lesson_status = "completed"`)
+   - On completion: calls `module_progress` update
+3. Create `upload-scorm-package` edge function (admin uploads SCORM .zip → extracts to storage)
+4. Add SCORM content type to module admin form
+5. In `ModuleDetail.tsx`: if module has SCORM content, render `ScormPlayer` instead of link card
+
+**Effort:** 1-2 weeks
+
+**Important note:** This approach means TalentLMS is no longer needed for content delivery. You'd keep TalentLMS only if you use it for other things (enrollment management, certificates, reporting). If the Hub handles all of that (which it increasingly does), you could eventually drop TalentLMS entirely and save the subscription cost.
+
+---
+
+#### Tier 3: Best — xAPI with Learning Record Store (Full Analytics)
+
+**What:** Export Rise courses as **xAPI packages**. Run them in the Hub with an xAPI wrapper. All learning interactions (not just completion, but every click, quiz answer, time spent per slide) flow to a Learning Record Store (LRS).
+
+**User experience:** Same as Tier 2 — inline, zero clicks.
+
+**Additional benefit:** Rich analytics on how users engage with content (which slides they skip, where they spend time, which quiz questions they fail). This data can feed into the AI coaching features — "I noticed you spent extra time on the conflict resolution section. Want to explore that topic further?"
+
+**Cons:**
+- More complex to implement
+- Need an LRS (can use the existing `external_progress` table as a lightweight LRS, or integrate a proper one like Learning Locker / Veracity)
+- xAPI exports from Rise are larger
+
+**When to use:** When you want learning analytics to drive personalization and AI coaching. This is the long-term ideal but not needed now.
+
+**Effort:** 3-4 weeks
+
+**Recommendation:** Plan for this in Phase 3 (AI & Engagement) or Phase 8 (Integrations). The xAPI data would power the AI Learning Companion feature from Part 2 of this document.
+
+---
+
+### What to Do With TalentLMS
+
+TalentLMS currently serves three purposes:
+1. **Content delivery** — hosting and playing Rise SCORM packages
+2. **Progress tracking** — recording completion, scores, time spent
+3. **User management** — TalentLMS user accounts linked to Hub users
+
+With Tier 1 or 2, the Hub takes over purposes 1 and 2. Purpose 3 becomes unnecessary.
+
+**Transition plan:**
+- **Now:** Keep TalentLMS for existing programs already running. Don't disrupt live users.
+- **New programs:** Use Tier 1 (Web embed) or Tier 2 (SCORM player) for all new content. No TalentLMS linking needed.
+- **Migration:** When current programs end, don't re-link them through TalentLMS. Re-upload content directly to the Hub.
+- **Sunset:** Once no active programs use TalentLMS, evaluate whether to keep the subscription. The xAPI webhook and SSO infrastructure stays in the codebase (zero cost when unused) in case you need it again.
+
+**Cost consideration:** TalentLMS has a monthly subscription. If the Hub handles content delivery directly, that subscription becomes unnecessary — saving both money and complexity.
+
+---
+
+### Third-Party Content Strategy (Revisited)
+
+This connects to the earlier question about using TalentLMS/Articulate Rise partner content:
+
+**With direct embedding (Tier 1 or 2), the content strategy becomes cleaner:**
+
+1. **Author in Rise** — it's a good authoring tool, keep using it
+2. **Export as Web or SCORM** — skip TalentLMS entirely
+3. **Upload to Hub storage** — content lives where users are
+4. **Wrap in program** — your assessments, reflections, scenarios, AI debrief around the content
+5. **Track in Hub** — completion, progress, scores all in one place
+
+The "wrapper" strategy from the content discussion becomes much more compelling when the content actually lives inside the wrapper instead of being linked out to another platform.
+
+---
+
+### Recommended Path
+
+| Step | Action | Effort | Impact |
+|------|--------|--------|--------|
+| 1 | **Tier 1: Web embed** for next new program | 3-5 days | Eliminates TalentLMS for new content, zero-click learning |
+| 2 | **Tier 2: SCORM player** when auto-tracking matters | 1-2 weeks | Full tracking without TalentLMS |
+| 3 | Keep TalentLMS for active programs, don't add new ones | — | Transition path |
+| 4 | **Tier 3: xAPI analytics** when AI learning features are built | 3-4 weeks | Feeds AI coaching with learning behavior data |
+
+**Start with Tier 1.** It's the fastest win with the biggest UX improvement. For your next program, export from Rise as Web, upload to storage, embed inline. Users will notice the difference immediately.
