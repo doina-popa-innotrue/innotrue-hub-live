@@ -1353,7 +1353,7 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | H6 | Feature gate messaging for max-plan users | Part 8 (8.6) | 2 hours | ✅ RESOLVED 2026-02-16 — useIsMaxPlan hook, "Contact administrator" messaging |
 | ~~H7~~ | ~~N+1 query in module progress~~ — **RESOLVED 2026-02-15** | Part 1 (1.5) | ~~1 hour~~ | Replaced per-module progress queries with single batched `.in()` query |
 | ~~H8~~ | ~~Assignment grading lacks status guard~~ — **RESOLVED 2026-02-15** | Part 1 (1.6) | ~~1 hour~~ | Added status guard: grading only allowed when assignment is "submitted" |
-| H9 | Edge function error handling inconsistent | Part 1 (1.11) | 1 day | ✅ RESOLVED 2026-02-16 — Shared error-response.ts, 5 functions migrated |
+| ~~H9~~ | ~~Edge function error handling inconsistent~~ — **RESOLVED 2026-02-17** | Part 1 (1.11) | ~~1 day~~ | 60/61 functions now use shared errorResponse/successResponse (oauth-callback excluded: HTML only) |
 | H10 | Entitlement org deny override not supported | Part 1 (1.10) | 4 hours | ✅ RESOLVED 2026-02-16 — is_restrictive flag, deny override in useEntitlements |
 
 ### 11.3 Medium Priority (Improve Experience)
