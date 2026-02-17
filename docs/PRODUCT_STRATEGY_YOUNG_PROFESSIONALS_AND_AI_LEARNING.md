@@ -641,13 +641,192 @@ The "wrapper" strategy from the content discussion becomes much more compelling 
 
 ---
 
-### Recommended Path
+### Recommended Path (Revised — Skip SCORM, Go Direct to xAPI)
+
+After analysis, **SCORM is a dead end.** It's a frozen standard (last updated 2004) that only tracks completion and score. xAPI is the active industry standard that tracks everything — every interaction, time per slide, quiz attempts, revisits. And Rise exports xAPI natively.
+
+The existing `talentlms-webhook` edge function already parses xAPI statements. The `external_progress` table already stores xAPI-style data with `external_metadata` JSONB. Going direct to xAPI is actually *less* work than building a SCORM player you'd throw away.
 
 | Step | Action | Effort | Impact |
 |------|--------|--------|--------|
 | 1 | **Tier 1: Web embed** for next new program | 3-5 days | Eliminates TalentLMS for new content, zero-click learning |
-| 2 | **Tier 2: SCORM player** when auto-tracking matters | 1-2 weeks | Full tracking without TalentLMS |
-| 3 | Keep TalentLMS for active programs, don't add new ones | — | Transition path |
-| 4 | **Tier 3: xAPI analytics** when AI learning features are built | 3-4 weeks | Feeds AI coaching with learning behavior data |
+| 2 | **Direct to xAPI** — Rise xAPI export + lightweight LRS endpoint in Hub | 1-2 weeks | Auto-tracking + rich learning analytics, no SCORM detour |
+| 3 | Keep TalentLMS for active programs only, don't add new ones | — | Transition path |
+| 4 | **xAPI → AI coaching** — feed learning behavior into AI features | Phase 3 | "I noticed you revisited the conflict section — want to explore that?" |
 
-**Start with Tier 1.** It's the fastest win with the biggest UX improvement. For your next program, export from Rise as Web, upload to storage, embed inline. Users will notice the difference immediately.
+**Start with Tier 1** for the immediate UX win. Then go **direct to xAPI** — the effort is comparable to SCORM but the data is vastly richer and future-proof.
+
+**Why skip SCORM:**
+- Rise exports xAPI directly — no intermediate step needed
+- SCORM only tells you "they finished, score 75%." xAPI tells you "how they learned."
+- Building a SCORM player is 1-2 weeks of work you'd throw away when moving to xAPI
+- The existing `talentlms-webhook` already parses xAPI statements — you're halfway there
+- xAPI data feeds directly into the AI Learning Companion feature (Part 2 of this doc)
+
+---
+
+## Part 4: Cohort-Based Programs — Readiness Assessment
+
+### Context
+
+The platform needs to support live and hybrid cohort-based programs (e.g., CTA, leadership programs). Users enroll in a specific cohort, follow a schedule of live sessions + self-paced content, interact with their group, and get coached.
+
+### What Already Exists (Strong Foundation)
+
+The platform has **comprehensive cohort infrastructure** — significantly more than most platforms at this stage:
+
+#### ✅ Cohort Management
+- `program_cohorts` table with status (upcoming/active/completed/cancelled), capacity, start/end dates
+- `cohort_sessions` table linking sessions to cohorts with date, time, location, meeting link, and order
+- `client_enrollments.cohort_id` for cohort-based enrollment
+- Admin UI: `ProgramCohortsManager.tsx` + `CohortSessionsManager.tsx`
+
+#### ✅ Unified Session System (8 Pre-Configured Types)
+- `sessions` table with status workflow (draft → scheduled → confirmed → in_progress → completed)
+- `session_types`: coaching, group_coaching, workshop, mastermind, review_board_mock, peer_coaching, office_hours, webinar
+- `session_type_roles`: presenter, evaluator, observer, facilitator, participant, hot_seat, member, coach, coachee, attendee
+- Max participants, self-registration, registration deadlines
+- `session_participants` with attendance tracking (invited → registered → confirmed → attended/no_show)
+
+#### ✅ Group System
+- `groups` table with status, join type (invitation/open), program association, max members
+- `group_memberships` with roles (member/leader), status (active/pending/left)
+- Group collaboration: tasks, check-ins (with mood tracking), shared notes, member links
+- Group sessions with participant response tracking
+- Peer assessments within groups (`group_peer_assessments`)
+- Integration slots: Circle, Slack, Google Drive, Cal.com, Calendly
+
+#### ✅ Scheduling & Calendar
+- Cal.com integration (SSO, booking creation, webhook for booking events, event type mappings)
+- Google Calendar sync (create events, iCal feeds, calendar tokens)
+- Calendly support (event URI tracking on group sessions)
+- `ProgramCalendar.tsx` admin view
+
+#### ✅ Instructor/Coach Assignment
+- Program-level: `program_instructors`, `program_coaches`
+- Module-level: `module_instructors`, `module_coaches`
+- Client-level: `client_instructors`, `client_coaches`
+- Admin UI: `StaffAssignments.tsx`
+
+#### ✅ Communication
+- 25+ notification types across 8 categories (programs, sessions, assignments, goals, groups, etc.)
+- Email queue with retry logic and template system
+- In-app notifications with read/unread tracking
+- Announcements system with categories
+- Group check-ins for regular updates
+
+#### ✅ Progress Tracking
+- Module-level: `module_progress` (not_started/in_progress/completed)
+- TalentLMS sync (completion, score, time spent)
+- Session attendance (attended/no_show/cancelled)
+- Group session response tracking
+
+---
+
+### What's Missing for Solid Cohort Delivery
+
+Despite the strong foundation, there are gaps that would cause friction in a live cohort program:
+
+#### Gap 1: No Cohort Dashboard for Participants (HIGH PRIORITY)
+**Problem:** Enrolled participants have no single view of "my cohort" — upcoming sessions, group members, progress through the cohort schedule, announcements.
+
+**What's needed:**
+- `CohortDashboard.tsx` — a dedicated page showing:
+  - Cohort name, dates, progress (week X of Y)
+  - Next upcoming session with countdown + join link
+  - Cohort schedule timeline (past sessions marked, future sessions with dates)
+  - Quick links to group, announcements, resources
+  - Cohort-mates list (fellow participants)
+  - My progress vs cohort average (optional, motivational)
+- Route: `/programs/:programId/cohort/:cohortId`
+- Accessible from client dashboard "My Programs" section
+
+**Effort:** 1 week
+
+#### Gap 2: No "Join Session" One-Click Experience (HIGH PRIORITY)
+**Problem:** When a live session starts, participants need a single "Join Now" button that takes them directly to the video call. Currently, meeting URLs are stored but there's no prominent, time-aware "Join" experience.
+
+**What's needed:**
+- Time-aware session card: "Starting in 15 min" → "Join Now" (green button) → "Session in progress" → "Session ended"
+- One-click join via meeting_url (Zoom, Google Meet, Teams — whatever the URL is)
+- Dashboard notification: "Your session starts in 15 minutes" with join button
+- Email reminder with join link (15 min + 1 hour before)
+
+**Effort:** 3-5 days
+
+#### Gap 3: No Session Notes / Post-Session Summary (MEDIUM)
+**Problem:** After a live session, there's no structured place for session outcomes, action items, or recording links. Instructors have `instructor_module_notes` but there's no shared session debrief visible to participants.
+
+**What's needed:**
+- `session_notes` or extend `cohort_sessions` with: summary, recording_url, action_items, resources shared
+- After session: instructor/coach fills in notes → participants see "Session Recap" card
+- AI integration point: AI could auto-generate session summary from notes (future)
+
+**Effort:** 3-5 days
+
+#### Gap 4: No Automated Cohort Enrollment Workflow (MEDIUM)
+**Problem:** Enrolling users in a cohort is manual — admin must assign each user. With Phase 5 self-registration and enrollment codes, cohort assignment should be automatic.
+
+**What's needed:**
+- Enrollment codes should support `cohort_id` — when a user enrolls with a code, they're auto-assigned to the specified cohort
+- Group auto-creation: when a cohort fills up, auto-create a group for the cohort members
+- Extend `enrollment_codes` table: add `cohort_id` field
+
+**Effort:** 2-3 days (extends Phase 5 Step 1 migration)
+
+#### Gap 5: No Cohort-Level Analytics for Admin/Instructor (LOW)
+**Problem:** Admin and instructors can see individual progress but not cohort-level aggregates (completion rate, attendance rate, average scores).
+
+**What's needed:**
+- Cohort analytics panel in admin: attendance %, module completion %, average assessment scores
+- Instructor view: which participants are falling behind, who hasn't completed this week's module
+
+**Effort:** 1 week
+
+#### Gap 6: No Pre/Post-Session Tasks or Homework (LOW)
+**Problem:** Live sessions often have pre-work ("read this before Thursday's session") or homework ("complete this reflection by next week"). No structured way to assign session-linked tasks with deadlines.
+
+**What's needed:**
+- Link existing development items or assignments to specific cohort sessions
+- "Before next session" task category with session-linked deadline
+- Dashboard shows: "Before Thursday's session: Complete Module 3 reflection"
+
+**Effort:** 3-5 days
+
+---
+
+### Recommended Priority for Cohort Readiness
+
+| Priority | Gap | Effort | Why |
+|----------|-----|--------|-----|
+| 🔴 1 | **Cohort Dashboard** for participants | 1 week | Without this, participants are lost — no single view of their cohort experience |
+| 🔴 2 | **Join Session one-click** + time-aware cards | 3-5 days | Live sessions are the core of cohort programs — joining must be frictionless |
+| 🟡 3 | **Session Notes / Recap** | 3-5 days | Participants need post-session reference; instructors need a place for notes |
+| 🟡 4 | **Auto cohort enrollment** (extend Phase 5) | 2-3 days | Manual enrollment doesn't scale for cohort programs |
+| 🟢 5 | **Cohort analytics** | 1 week | Important for instructors but not launch-blocking |
+| 🟢 6 | **Session-linked homework** | 3-5 days | Nice to have; workaround exists via development items |
+
+**To run your first cohort program, you need gaps 1 and 2.** Gaps 3-4 should follow quickly. Gaps 5-6 can wait.
+
+---
+
+### Hybrid Program Model
+
+For a hybrid cohort (live sessions + self-paced content + coaching), the delivery model with the content fix from Part 3 becomes:
+
+```
+Week 1:
+├── Module 1: Self-paced content (Rise xAPI embed — inline, zero clicks)
+├── Live Session: Group workshop (one-click join from cohort dashboard)
+├── Reflection: AI-prompted weekly reflection
+└── Coaching: 1:1 session via Cal.com
+
+Week 2:
+├── Module 2: Self-paced content (Rise xAPI embed)
+├── Scenario: Practice exercise with AI debrief
+├── Live Session: Peer coaching / mastermind
+├── Group Check-in: Weekly accountability
+└── Homework: Complete capability assessment before Week 3
+```
+
+Everything except the live video call happens inside the Hub. The live video is one click away. Content delivery (Part 3) and cohort experience (Part 4) together make this seamless.

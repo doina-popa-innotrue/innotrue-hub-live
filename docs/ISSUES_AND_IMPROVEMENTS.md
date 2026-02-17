@@ -1357,6 +1357,35 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 
 Organized by theme, drawing from Parts 2, 3, 5, 6, 9, and 10.
 
+> **Updated 2026-02-17:** Added Priority 0 items (content delivery + cohort readiness) that should be done before or alongside Phase 5. These are pre-requisites for running live/hybrid cohort programs and eliminating TalentLMS friction.
+
+#### Priority 0 — Content Delivery & Cohort Readiness (HIGH — do before next cohort program)
+
+**Content Delivery (eliminate TalentLMS friction):**
+- Tier 1: Rise Web export → Supabase Storage → iframe embed in ModuleDetail.tsx (3-5 days) — **do first**
+- Tier 2: Rise xAPI export → `xapi-statement-receiver` edge function → `external_progress` table → auto-complete modules (1-2 weeks) — **skip SCORM, go direct to xAPI**
+- Admin upload tooling for Rise packages (part of Tier 1/2 implementation)
+- TalentLMS transition: keep for active programs, no new programs on TalentLMS
+- See `docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md` Part 3 for full analysis
+
+**Cohort Experience (required for live/hybrid programs):**
+- `CohortDashboard.tsx` — participant view with schedule timeline, next session, group, progress (1 week) — **required**
+- Join Session one-click — time-aware session cards with "Join Now" button, meeting URL, email reminders (3-5 days) — **required**
+- Session Notes / Recap — post-session summary, recording link, action items visible to participants (3-5 days)
+- Auto cohort enrollment — extend `enrollment_codes` with `cohort_id` for automatic cohort assignment (2-3 days, extends Phase 5)
+- Cohort analytics — admin/instructor view of attendance %, completion %, who's falling behind (1 week)
+- Session-linked homework — link development items/assignments to specific cohort sessions with deadlines (3-5 days)
+
+**Existing cohort infrastructure (already built):**
+- ✅ `program_cohorts` with status, capacity, dates
+- ✅ `cohort_sessions` with date, time, meeting link, module link
+- ✅ Unified session system (8 types: coaching, group_coaching, workshop, mastermind, review_board, peer_coaching, office_hours, webinar)
+- ✅ `session_participants` with full attendance tracking (invited → registered → confirmed → attended/no_show)
+- ✅ Groups with memberships, tasks, check-ins, notes, peer assessments
+- ✅ Cal.com + Google Calendar + Calendly integration
+- ✅ Program/module-level instructor and coach assignment
+- ✅ 25+ notification types with email queue
+
 #### Phase 1 — Onboarding & UX Polish (2-3 weeks)
 - Client onboarding wizard with persistent checklist (Part 5)
 - Coach/instructor first-login guided flow (Part 5)
@@ -1436,6 +1465,18 @@ Organized by theme, drawing from Parts 2, 3, 5, 6, 9, and 10.
 ### 11.5 Dependency Map
 
 ```
+Priority 0 (Content Delivery):
+  Tier 1 (Web embed) → no dependencies, can start immediately
+  Tier 2 (xAPI) → depends on Tier 1 (same iframe approach, adds tracking endpoint)
+  Tier 2 → reuses existing talentlms-webhook xAPI parsing logic
+  xAPI data → feeds Phase 3 AI Learning Companion (optional but high value)
+
+Priority 0 (Cohort Readiness):
+  CohortDashboard → needs program_cohorts + cohort_sessions (exist)
+  Join Session one-click → needs session_participants + meeting URLs (exist)
+  Session Notes → extends cohort_sessions (minor schema addition)
+  Auto cohort enrollment → extends Phase 5 enrollment_codes with cohort_id
+
 C1 (Credits FeatureGate) ← no dependencies, standalone fix
 C2 (AuthContext fallback) ← must fix before: Phase 5 (self-signup re-enable)
 C3 (Enrollment atomicity) ← no dependencies
@@ -1511,9 +1552,11 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 
 | Category | Items | Total Effort (estimated) |
 |----------|-------|------------------------|
-| Critical fixes (C1-C4) | 4 | 2-3 days |
-| High priority (H1-H10) | 10 | 2 weeks |
-| Medium priority (M1-M16) | 16 | 5-6 weeks |
+| ~~Critical fixes (C1-C4)~~ | ~~4~~ | ~~2-3 days~~ ✅ ALL RESOLVED |
+| ~~High priority (H1-H10)~~ | ~~10~~ | ~~2 weeks~~ ✅ ALL RESOLVED |
+| Medium priority (M1-M16) | 6 remaining | 3-4 weeks |
+| **Priority 0 — Content Delivery** | **3 items** | **2-3 weeks** |
+| **Priority 0 — Cohort Readiness** | **6 items** | **3-4 weeks** |
 | Phase 1 — Onboarding/UX | 8 items | 2-3 weeks |
 | Phase 2 — Assessment Intelligence | 7 items | 3-4 weeks |
 | Phase 3 — AI & Engagement | 8 items | 3-4 weeks |
@@ -1524,7 +1567,15 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 | Phase 8 — Integration Deepening | 4 items | 3-4 weeks |
 | Phase 9 — Strategic | 6 items | 3+ months |
 
-**Recommended execution order:** C1-C4 → H1-H10 → Phase 1 → M1-M16 (interleaved) → Phase 2 → Phase 3 → remaining phases based on business priorities.
+**Recommended execution order (updated 2026-02-17):**
+1. ~~C1-C4~~ ✅ → ~~H1-H10~~ ✅
+2. **Priority 0 Content Delivery (Tier 1 Web embed)** — immediate UX win, 3-5 days
+3. **Priority 0 Cohort Readiness (CohortDashboard + Join Session)** — required before next cohort, 2 weeks
+4. Quick medium wins (M2, M11, M9) — interleaved, 2-3 days
+5. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
+6. **Priority 0 Content Delivery (Tier 2 xAPI)** — auto-tracking, 1-2 weeks
+7. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
+8. Remaining phases based on business priorities
 
 ### 11.8 New Data Tables Required by Roadmap
 
@@ -1532,6 +1583,11 @@ Several roadmap items require new database tables or fields. These should be pla
 
 | Phase | Feature | New Tables / Fields |
 |-------|---------|-------------------|
+| Priority 0 | Content delivery | New storage bucket `learning-content`, `program_modules.embedded_content_url` (TEXT), `program_modules.content_delivery_type` (enum: link, embedded_web, embedded_xapi) |
+| Priority 0 | xAPI receiver | Edge function `xapi-statement-receiver`, extends `external_progress.external_metadata` for xAPI statement storage |
+| Priority 0 | Cohort dashboard | No new tables — uses existing `program_cohorts`, `cohort_sessions`, `client_enrollments`, `session_participants` |
+| Priority 0 | Session notes | `cohort_sessions.summary` (TEXT), `cohort_sessions.recording_url` (TEXT), `cohort_sessions.action_items` (JSONB) |
+| Priority 0 | Auto cohort enrollment | `enrollment_codes.cohort_id` (UUID FK to program_cohorts) |
 | Phase 1 | Onboarding | `profiles.onboarding_completed` (boolean) |
 | Phase 3 | Streaks/XP | `engagement_streaks` (user, streak_type, current_count, longest_count, last_activity_date), `user_xp` (user, total_xp, level) |
 | Phase 3 | Activity feed | `activity_feed_events` (user_id, event_type, target_type, target_id, created_at) |
