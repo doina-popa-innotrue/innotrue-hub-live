@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  UserCircle,
   CircleDot,
   Target,
   Brain,
@@ -18,23 +20,37 @@ import {
   Check,
   Compass,
   Lock,
+  BookOpen,
+  Sparkles,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-interface JourneyStep {
-  id: string;
-  title: string;
-  subtitle: string;
-  icon: any;
-  url: string;
-  featureKey?: string; // Optional feature key for gating
+interface JourneyProgressWidgetProps {
+  userName?: string;
+  hasProfileName: boolean;
+  hasEnrollments: boolean;
 }
 
-export function JourneyProgressWidget() {
+const WELCOME_DISMISS_KEY = "innotrue_welcome_dismissed";
+
+export function JourneyProgressWidget({
+  userName,
+  hasProfileName,
+  hasEnrollments,
+}: JourneyProgressWidgetProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { hasFeature, isLoading: entitlementsLoading } = useEntitlements();
+  const { hasFeature } = useEntitlements();
+
+  const [welcomeDismissed, setWelcomeDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(WELCOME_DISMISS_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
 
   // Check Wheel of Life completion
   const { data: hasWheelData } = useQuery({
@@ -108,13 +124,22 @@ export function JourneyProgressWidget() {
 
   const journeySteps = [
     {
+      id: "profile",
+      title: "Profile",
+      subtitle: "Set up your profile",
+      icon: UserCircle,
+      url: "/account",
+      completed: hasProfileName,
+      featureKey: undefined,
+    },
+    {
       id: "wheel",
       title: "Assess",
       subtitle: "Where am I now?",
       icon: CircleDot,
       url: "/wheel-of-life",
       completed: hasWheelData,
-      featureKey: undefined, // Always available
+      featureKey: undefined,
     },
     {
       id: "goals",
@@ -123,7 +148,16 @@ export function JourneyProgressWidget() {
       icon: Target,
       url: "/goals",
       completed: hasGoals,
-      featureKey: undefined, // Always available
+      featureKey: undefined,
+    },
+    {
+      id: "enroll",
+      title: "Enroll",
+      subtitle: "Find a program",
+      icon: BookOpen,
+      url: "/explore-programs",
+      completed: hasEnrollments,
+      featureKey: undefined,
     },
     {
       id: "decisions",
@@ -150,7 +184,7 @@ export function JourneyProgressWidget() {
       icon: Lightbulb,
       url: "/development-items",
       completed: hasDevItems,
-      featureKey: undefined, // Always available
+      featureKey: undefined,
     },
     {
       id: "review",
@@ -159,7 +193,7 @@ export function JourneyProgressWidget() {
       icon: GitBranch,
       url: "/development-timeline",
       completed: hasDevItems, // Timeline is useful once you have items
-      featureKey: undefined, // Always available
+      featureKey: undefined,
     },
   ];
 
@@ -182,9 +216,22 @@ export function JourneyProgressWidget() {
     navigate(step.url);
   };
 
+  const handleDismissWelcome = () => {
+    setWelcomeDismissed(true);
+    try {
+      localStorage.setItem(WELCOME_DISMISS_KEY, "true");
+    } catch {
+      // ignore storage errors
+    }
+  };
+
   const completedCount = journeySteps.filter((s) => s.completed).length;
-  const nextStep = journeySteps.find((s) => !s.completed);
+  const nextStep = journeySteps.find((s) => !s.completed && !isStepLocked(s));
   const allComplete = completedCount === journeySteps.length;
+
+  // Show welcome greeting for new users (not all steps done + not dismissed)
+  const showWelcome = !welcomeDismissed && !allComplete && completedCount < 4;
+  const greeting = userName ? `Welcome, ${userName}!` : "Welcome to InnoTrue!";
 
   return (
     <Card className="overflow-hidden border-secondary/20 dark:border-secondary/15">
@@ -203,6 +250,32 @@ export function JourneyProgressWidget() {
         </div>
       </CardHeader>
       <CardContent className="pt-4">
+        {/* Welcome greeting for new users */}
+        {showWelcome && (
+          <div className="flex items-start justify-between mb-4 p-3 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/10 dark:bg-primary/20 shrink-0">
+                <Sparkles className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">{greeting}</p>
+                <p className="text-xs text-muted-foreground">
+                  Follow these steps to get started on your growth journey.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
+              onClick={handleDismissWelcome}
+              aria-label="Dismiss welcome message"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+
         {/* Journey Flow Visualization */}
         <div className="flex items-center justify-between mb-4 overflow-x-auto pb-2 gap-1 sm:gap-0">
           <TooltipProvider delayDuration={300}>

@@ -60,7 +60,7 @@ export function OnboardingWelcomeCard({
       label: "Complete your profile",
       description: "Add your name and photo",
       icon: UserCircle,
-      url: "/account-settings",
+      url: "/account",
       completed: hasProfileName,
     },
     {

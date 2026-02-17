@@ -32,7 +32,6 @@ import { DevelopmentHubWidget } from "@/components/dashboard/DevelopmentHubWidge
 import { DevelopmentItemsSection } from "@/components/dashboard/DevelopmentItemsSection";
 import { MyGroupsSection } from "@/components/dashboard/MyGroupsSection";
 import { MyCoachesSection } from "@/components/dashboard/MyCoachesSection";
-import { OnboardingWelcomeCard } from "@/components/dashboard/OnboardingWelcomeCard";
 import { hasTierAccess } from "@/lib/tierUtils";
 import { useEntitlements } from "@/hooks/useEntitlements";
 import { usePageView } from "@/hooks/useAnalytics";
@@ -209,7 +208,6 @@ export default function ClientDashboard() {
   const [refetchTrigger, setRefetchTrigger] = useState(0); // Used to trigger refetch from realtime
   const [isOnContinuationPlan, setIsOnContinuationPlan] = useState(false);
   const [profileName, setProfileName] = useState<string | null>(null);
-  const [hasWheelData, setHasWheelData] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { hasFeature } = useEntitlements();
@@ -310,13 +308,6 @@ export default function ClientDashboard() {
         .order("created_at", { ascending: false })
         .limit(5);
       setGoals((goalsData as Goal[]) || []);
-
-      // Check Wheel of Life completion (for onboarding card)
-      const { count: wheelCount } = await supabase
-        .from("wheel_of_life_snapshots")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
-      setHasWheelData((wheelCount || 0) > 0);
 
       // Fetch active decisions
       const { data: decisionsData } = await supabase
@@ -624,15 +615,6 @@ export default function ClientDashboard() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">My Dashboard</h1>
 
-      {/* Onboarding Welcome Card — shown until new user completes getting-started steps */}
-      <OnboardingWelcomeCard
-        userName={profileName?.split(" ")[0] || undefined}
-        hasWheelData={hasWheelData}
-        hasGoals={goals.length > 0}
-        hasEnrollments={enrollments.length > 0}
-        hasProfileName={!!profileName}
-      />
-
       {/* Section 1: Alerts & Banners */}
       {isOnContinuationPlan && <ContinuationBanner />}
       {hasFeature("credits") && <LowBalanceAlert threshold={10} />}
@@ -647,7 +629,11 @@ export default function ClientDashboard() {
       <AnnouncementsWidget />
 
       {/* Section 3: Journey Progress */}
-      <JourneyProgressWidget />
+      <JourneyProgressWidget
+        userName={profileName?.split(" ")[0] || undefined}
+        hasProfileName={!!profileName}
+        hasEnrollments={enrollments.length > 0}
+      />
 
       {/* Section 4: Quick Stats Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
