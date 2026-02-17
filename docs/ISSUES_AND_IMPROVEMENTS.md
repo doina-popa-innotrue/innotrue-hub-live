@@ -1335,13 +1335,13 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 
 | # | Issue | Source | Effort | Description |
 |---|-------|--------|--------|-------------|
-| M1 | No unified feedback inbox | Part 9 (9.7) | 1 week | 9 feedback mechanisms scattered across the app. Create MyFeedback.tsx |
+| ~~M1~~ | ~~No unified feedback inbox~~ — **RESOLVED 2026-02-16** | Part 9 (9.7) | ~~1 week~~ | Created `MyFeedback.tsx` with tabbed UI aggregating feedback from scenarios, modules, assignments, and goal comments. Hook `useFeedbackInbox.ts` fetches from 4 sources in parallel. Route at `/feedback`. |
 | M2 | Psychometric interest status tracking | Part 10 (10.2.3) | 4 hours | Same status-tracking gap as program interest |
-| M3 | Scenario evaluation has no rubrics | Part 9 (9.6.1) | 3 days | 100% manual scoring, inconsistent across evaluators. Add rubric text per question |
+| ~~M3~~ | ~~Scenario evaluation has no rubrics~~ — **RESOLVED 2026-02-16** | Part 9 (9.6.1) | ~~3 days~~ | Added `rubric_text` column to `paragraph_question_links`. Admin can create/edit rubrics in ScenarioTemplateDetail. Instructors see rubrics during evaluation for scoring guidance. |
 | M4 | No assessment → goal connection | Part 9 (9.5.3) | 3 days | Low-scoring domains don't prompt goal creation. Add post-assessment "Create Goal" prompt |
 | ~~M5~~ | ~~No scenario re-submission~~ — **RESOLVED 2026-02-17** | Part 9 (9.6.3) | ~~2 days~~ | Added `allows_resubmission` template toggle, "Request Revision" button on evaluation page, new attempt model with `parent_assignment_id` + `attempt_number`, response pre-copying, revision banners on client pages |
 | ~~M6~~ | ~~Credit balance race condition~~ — **RESOLVED 2026-02-15** | Part 1 (1.9) | ~~4 hours~~ | Added `FOR UPDATE SKIP LOCKED` to `consume_credits_fifo` (fixed with C3) |
-| M7 | Empty state components for all sections | Part 8 (8.6) | 1 day | Multiple sections render blank with no CTA |
+| M7 | Empty state components — **PARTIALLY RESOLVED 2026-02-16** | Part 8 (8.6) | 2 hours remaining | Reusable `EmptyState` component created (`empty-state.tsx`). Applied to ClientDashboard (2 sections), InstructorCoachDashboard (6 sections), 19 admin pages. **Still needed:** MyGroupsSection, AnnouncementsWidget, RecentGradedAssignmentsWidget, RecentDevelopmentItemsWidget, MyCoachesSection still show null/basic text instead of EmptyState. |
 | ~~M8~~ | ~~Locked sidebar items confusing UX~~ — **RESOLVED (already implemented)** | Part 8 (8.6) | ~~4 hours~~ | Lock icon + tooltip + toast with plan name already in place. Items stay in natural position. |
 | M9 | Notification sending is synchronous | Part 1 (1.8) | 1 day | Group sessions could timeout. Use email queue instead |
 | ~~M10~~ | ~~Dual plans admin UX confusion~~ — **RESOLVED 2026-02-17** | Part 1 (1.12) | ~~2 hours~~ | Added info banners to both plan pages with cross-links explaining when to use each |
