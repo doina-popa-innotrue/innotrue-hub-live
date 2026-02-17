@@ -1320,7 +1320,7 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 
 | # | Issue | Source | Effort | Description |
 |---|-------|--------|--------|-------------|
-| ~~H1~~ | ~~Empty client dashboard — no onboarding~~ — **RESOLVED 2026-02-16** | Part 8 (8.2A) | ~~1 day~~ | Added OnboardingWelcomeCard with 4-step checklist (profile, Wheel of Life, goals, programs). Auto-hides when complete or dismissed. |
+| ~~H1~~ | ~~Empty client dashboard — no onboarding~~ — **RESOLVED 2026-02-16, updated 2026-02-17** | Part 8 (8.2A) | ~~1 day~~ | Initially added OnboardingWelcomeCard with 4-step checklist. **Updated:** Fixed 404 (`/account-settings` → `/account`). Consolidated OnboardingWelcomeCard into JourneyProgressWidget to eliminate semantic overlap — single unified "Your Growth Journey" widget with 8 steps (Profile → Assess → Set Goals → Enroll → Decide → Act → Reflect → Review), dismissible welcome greeting for new users, and premium feature gating. |
 | ~~H2~~ | ~~File upload validation inconsistent~~ — **RESOLVED 2026-02-16** | Part 1 (1.3) | ~~4 hours~~ | Created shared `fileValidation.ts` with bucket-specific presets. Applied to all 13 upload interfaces. |
 | ~~H3~~ | ~~AI functions accept unlimited input~~ — **RESOLVED 2026-02-16** | Part 1 (1.4) | ~~4 hours~~ | Created `ai-input-limits.ts` with truncation helpers. Applied to 3 AI edge functions. |
 | ~~H4~~ | ~~Welcome email not auto-triggered~~ — **RESOLVED 2026-02-15** | Part 7 (7.4) | ~~1 hour~~ | verify-signup now triggers send-welcome-email (non-blocking, service role auth) |
