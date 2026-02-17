@@ -37,7 +37,7 @@
 | `docs/ENTITLEMENTS_AND_FEATURE_ACCESS.md` | **Entitlements system** — 5 access sources, deny override, plan tiers, FeatureGate/CapabilityGate, admin config |
 | `docs/PHASE5_PLAN.md` | **Phase 5 Self-Registration** — 14-step implementation plan + 7 new roadmap items (R1-R7). Ready for implementation. |
 | `docs/IDE_SETUP_GUIDE.md` | **IDE setup for team** — VS Code (recommended), Cursor, Eclipse. Step-by-step setup, extensions, workspace config. For onboarding new developers. |
-| `docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md` | **Product strategy** — 4 parts: young professional engagement (12 ideas), AI-guided learning (5 features + anti-hallucination), content delivery fix (skip SCORM → xAPI), cohort readiness assessment (6 gaps identified) |
+| `docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md` | **Product strategy** — 5 parts: young professionals (12 ideas), AI learning (5 features), content delivery (skip SCORM → xAPI), cohort readiness (6 gaps), coach/instructor onboarding readiness (6 gaps) |
 
 ## Key Source Files
 - Supabase client: `src/integrations/supabase/client.ts`
@@ -83,21 +83,30 @@
 **Medium (remaining):** M2 (psychometric interest tracking), M9 (async notifications), M11 (console.log cleanup), M12 (resource ratings), M13 (Zod validation), M16 (assessment templates)
 **New roadmap items (R1-R7):** R1 assessment question types (Phase 2), R2 coach/instructor onboarding (Phase 1), R3 enhanced coach↔client interaction (Phases 1/4/6), R4 coaches invite own clients (Phase 5), R5 enhanced org management (Phase 6), R6 Sentry coverage (cross-cutting), R7 test coverage (continuous)
 
-**Priority 0 — Content Delivery + Cohort Readiness (NEW, highest priority):**
+**Priority 0 — Content Delivery + Cohort Readiness + Coach Onboarding (highest priority):**
 - Content: Tier 1 Web embed (3-5 days) → Tier 2 xAPI direct (1-2 weeks)
-- Cohort gaps to fill: CohortDashboard for participants (1 week), Join Session one-click (3-5 days), Session Notes/Recap (3-5 days), Auto cohort enrollment via codes (2-3 days), Cohort analytics (1 week), Session-linked homework (3-5 days)
+- Coach onboarding: welcome card (2-3 days), profile setup UI (3-5 days), enhanced empty states (1-2 days), role-specific welcome email (1-2 days)
+- Cohort gaps: CohortDashboard (1 week), Join Session one-click (3-5 days), Session Notes (3-5 days), Auto enrollment (2-3 days), Analytics (1 week), Homework (3-5 days)
 
-**Phases:** **Priority 0 (content + cohort)** → 5-Self-Registration → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
+**Phases:** **Priority 0 (content + coach onboarding + cohort)** → 5-Self-Registration → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
+
+## Coach/Instructor Readiness
+- **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, client progress, notes)
+- **What's missing:** Onboarding welcome card, coach profile setup UI (bio/specialties/scheduling URL), contextual empty states, role-specific welcome email, teaching FAQ, coach-created development items
+- **Admin creates coaches** via `/admin/users` — no self-registration needed currently
+- **Key pages:** `/teaching` (dashboard), `/teaching/students` (clients), `/teaching/assignments`, `/teaching/scenarios`, `/teaching/badges`, `/teaching/assessments`, `/teaching/groups`
+- See `docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md` Part 5 for full readiness assessment
 
 ## Recommended Execution Order (updated 2026-02-17)
 1. ~~C1-C4~~ ✅ → ~~H1-H10~~ ✅
 2. **Priority 0 Content Delivery Tier 1** — Rise Web embed via iframe (3-5 days)
-3. **Priority 0 Cohort Readiness** — CohortDashboard + Join Session one-click (2 weeks)
-4. Quick medium wins (M2, M11, M9) — interleaved (2-3 days)
-5. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
-6. **Priority 0 Content Delivery Tier 2** — xAPI direct (1-2 weeks)
-7. Phase 3 AI — system prompt hardening first (2-3 days), then AI Learning Companion
-8. Remaining phases by business priority
+3. **Priority 0 Coach Onboarding** — welcome card + profile setup + empty states + welcome email (1.5-2 weeks)
+4. **Priority 0 Cohort Readiness** — CohortDashboard + Join Session one-click (2 weeks)
+5. Quick medium wins (M2, M11, M9) — interleaved (2-3 days)
+6. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
+7. **Priority 0 Content Delivery Tier 2** — xAPI direct (1-2 weeks)
+8. Phase 3 AI — system prompt hardening first (2-3 days), then AI Learning Companion
+9. Remaining phases by business priority
 
 ## Known Issues
 - (none currently — all critical/high items documented in roadmap above)
@@ -129,10 +138,11 @@
 - **All C1-C4 critical and H1-H10 high items resolved.** 6 medium items remain (M2, M9, M11, M12, M13, M16).
 - **Phase 5 plan complete** (`docs/PHASE5_PLAN.md`) — 14 steps covering self-registration, role applications, enrollment codes, bulk import, org invite flow. Not yet implemented.
 - **AI infrastructure:** 4 edge functions (decision-insights, course-recommendations, generate-reflection-prompt, analytics-ai-insights), Vertex AI Gemini 3 Flash (EU/Frankfurt), input truncation, credit-based consumption, explicit consent gating, provider-agnostic architecture
-- **Product strategy documented** (`docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md`): 4 parts — young professionals (12 ideas), AI learning (5 features), content delivery (skip SCORM → xAPI), cohort readiness (6 gaps)
+- **Product strategy documented** (`docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md`): 5 parts — young professionals (12 ideas), AI learning (5 features), content delivery (skip SCORM → xAPI), cohort readiness (6 gaps), coach/instructor onboarding (6 gaps)
 - **Content delivery strategy decided:** Skip SCORM. Tier 1 (Web embed) → Tier 2 (xAPI direct). TalentLMS kept for active programs only.
 - **Cohort infrastructure strong:** 8 session types, full attendance tracking, groups with collaboration, Cal.com/Google Calendar. Gaps: CohortDashboard, Join Session UX, Session Notes, auto enrollment, cohort analytics, session homework.
-- **Next steps:** Priority 0 (content embed + cohort dashboard) → Phase 5 → AI prompt hardening → Phase 3
+- **Coach/instructor workflows production-ready:** All teaching tools work (assignments, scenarios, badges, assessments, groups, client progress). Missing: onboarding welcome card, profile setup UI (bio/specialties/scheduling URL), contextual empty states, role-specific welcome email.
+- **Next steps:** Priority 0 (content embed → coach onboarding → cohort dashboard) → Phase 5 → AI prompt hardening → Phase 3
 
 ## npm Scripts
 ```

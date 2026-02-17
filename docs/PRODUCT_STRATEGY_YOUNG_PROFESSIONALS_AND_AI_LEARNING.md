@@ -830,3 +830,179 @@ Week 2:
 ```
 
 Everything except the live video call happens inside the Hub. The live video is one click away. Content delivery (Part 3) and cohort experience (Part 4) together make this seamless.
+
+---
+
+## Part 5: Coach & Instructor Onboarding Readiness
+
+### Context
+
+Coaches and instructors are admin-created (no self-registration needed for now). The question is: when a new coach or instructor logs in for the first time, is the experience solid enough that they can get productive quickly without hand-holding?
+
+### What Already Exists (Good Foundation)
+
+#### ✅ Account Creation & Access
+- Admin creates users via `/admin/users` with role assignment (coach, instructor, or both)
+- Welcome email with password setup link (24h expiry) via `send-welcome-email`
+- Email auto-confirmed for admin-created users
+- Qualification assignment (module types they specialize in)
+
+#### ✅ Teaching Dashboard (`/teaching`)
+- 5 stat cards: Total Programs, Active Clients, Groups, Pending Badges, Your Roles
+- Pending assignments widget (searchable, filterable, sortable)
+- Upcoming sessions widget (next 3 group sessions)
+- Shared items from clients: goals, decisions, tasks (3 columns)
+- Programs tab: card grid with role badge, category, module/client counts
+- Individual modules tab: list view with type icons
+
+#### ✅ Client Management
+- Client progress page with stats (total clients, avg completion, active enrollments)
+- Search + filter by name/email/program/status
+- Student detail with tabs: Overview, Notes, Reflections, Feedback, Assignments
+- Manual module completion control
+
+#### ✅ Core Teaching Workflows
+- **Assignment grading:** Pending/Scored tabs, search, filter, scoring interface with rubric support
+- **Scenario evaluation:** Section-by-section evaluation, question scoring (1-5), revision requests, response history
+- **Badge approval:** Batch or individual, credential URL input (e.g., Credly links)
+- **Capability assessments:** View shared assessments, give evaluations, domain/question notes
+- **Development items:** Review client items, add coaching notes (client-created, coach-reviewed)
+- **Staff notes:** Per-module instructor notes, shared staff notes visible to all staff
+
+#### ✅ Group & Session Management
+- Group listing with member count, status, program link
+- Group sessions: create, schedule, edit, mark attendance
+- Group tasks, check-ins, notes, peer assessments
+
+#### ✅ Navigation
+- 10 sidebar items: Programs, Client Progress, Assignments, Groups, Shared Goals, Shared Decisions, Shared Tasks, Assessments, Scenarios, Badge Approvals
+- External platforms submenu (Academy, Lucid, GDrive, Miro, Mural)
+
+#### ✅ Communication
+- Notification preferences (configurable per type)
+- In-app notifications
+- Email notifications via queue
+
+---
+
+### What's Missing (Gaps for Smooth Onboarding)
+
+#### Gap 1: No Guided First-Login Experience (HIGH)
+**Problem:** A new coach logs in and sees an empty dashboard with 5 zero-count stat cards and empty widgets. There's no guidance on what to do, what to expect, or how to get started. They don't know if something is broken or if they just haven't been assigned anything yet.
+
+**What's needed:**
+- **Welcome card** (similar to client's `JourneyProgressWidget`) with coach-specific steps:
+  1. ✅ Set up your password (auto-complete on first login)
+  2. Complete your profile (bio, specialties, scheduling URL)
+  3. Review your assigned programs (or: "Waiting for admin to assign programs")
+  4. Meet your first client
+- Dismissible after completion
+- Shows "You're all set!" state when all steps done
+
+**Effort:** 2-3 days (reuse `JourneyProgressWidget` pattern)
+
+#### Gap 2: No Profile Completion for Coach-Specific Fields (HIGH)
+**Problem:** Coaches have important fields — `bio`, `specialties`, `certifications`, `scheduling_url` — but there's no dedicated UI to edit them. The public profile settings page handles visibility toggles, but not the actual content of these fields. A new coach can't set up their bio or booking link.
+
+**What's needed:**
+- **Coach Profile Setup** section in Account Settings (or a dedicated page):
+  - Bio (rich text)
+  - Specialties (tags or multi-select)
+  - Certifications (list with optional credential URLs)
+  - Scheduling URL (Cal.com or Calendly link) with URL validation
+  - Profile photo (already exists in general profile)
+- Profile completeness indicator on dashboard ("Your profile is 60% complete")
+- Prompt to complete profile in the onboarding welcome card
+
+**Effort:** 3-5 days
+
+#### Gap 3: No "What to Expect" Context When Empty (MEDIUM)
+**Problem:** Empty states say things like "No program assignments yet" — but don't explain what happens next. A new coach doesn't know if they need to do something or wait for admin.
+
+**What's needed:**
+- Enhanced empty states with context:
+  - Programs: "Your administrator will assign you to programs. Once assigned, your clients and modules will appear here."
+  - Clients: "Clients enrolled in your programs will appear here once you're assigned to a program."
+  - Assignments: "When your clients submit assignments, they'll appear here for your review."
+  - Sessions: "Group sessions will appear once you're assigned to a group or create sessions in your programs."
+- Add admin contact link or "Request assignment" action in empty states
+
+**Effort:** 1-2 days (copy changes + minor component updates)
+
+#### Gap 4: No Coach-Specific Welcome Email Content (MEDIUM)
+**Problem:** The welcome email template is generic — it mentions "programs and modules" and "coaches and instructors" regardless of role. A coach should get coach-specific guidance: "Here's what you'll be doing: reviewing client goals, grading assignments, leading sessions."
+
+**What's needed:**
+- Role-aware welcome email template:
+  - **For coaches:** Emphasize client relationship, shared goals/decisions, coaching sessions, capability assessments
+  - **For instructors:** Emphasize program delivery, assignment grading, scenario evaluation, badge approval
+  - **For both:** Emphasize both sets of responsibilities
+- Include 3-4 "first things to do" specific to their role
+- Link directly to `/teaching` dashboard
+
+**Effort:** 1-2 days (template changes in `send-welcome-email` edge function)
+
+#### Gap 5: No Quick Reference / Help for Teaching Tools (LOW)
+**Problem:** The teaching dashboard has 10+ different tools (assignments, scenarios, badges, assessments, etc.). A new coach doesn't know when to use what. There's no in-context help or quick reference.
+
+**What's needed:**
+- **Teaching FAQ or Quick Guide** page (similar to `OrgAdminFAQ.tsx` which already exists for org admins):
+  - "How do I grade an assignment?"
+  - "How do I evaluate a scenario?"
+  - "What are capability assessments?"
+  - "How do I manage group sessions?"
+  - "What are development items?"
+- Link from sidebar navigation
+- Or: tooltip/info icons on each dashboard section
+
+**Effort:** 1-2 days
+
+#### Gap 6: No Way for Coaches to Create Development Items for Clients (LOW)
+**Problem:** Development items are client-created. Coaches can review and add notes, but can't create items for their clients. In coaching practice, a coach often assigns actions: "By next session, I want you to practice X." The `create-client-development-item` edge function exists and accepts instructor context, but there's no prominent UI for coaches to initiate this.
+
+**What's needed:**
+- "Add Development Item" button in Student Detail page (coach/instructor view)
+- Quick-create dialog: title, description, category, optional deadline, optional link to task/group
+- Shows in client's development items with "Assigned by [Coach Name]" badge
+
+**Effort:** 2-3 days (UI only — edge function already exists)
+
+---
+
+### Recommended Priority for Coach Onboarding
+
+| Priority | Gap | Effort | Why |
+|----------|-----|--------|-----|
+| 🔴 1 | **Welcome card + onboarding checklist** | 2-3 days | First impression matters — empty dashboard with no guidance is confusing |
+| 🔴 2 | **Coach profile setup** (bio, specialties, scheduling URL) | 3-5 days | Coaches need to present themselves; scheduling URL is essential for bookings |
+| 🟡 3 | **Enhanced empty states** with context | 1-2 days | Removes confusion about "is this broken?" |
+| 🟡 4 | **Role-specific welcome email** | 1-2 days | Sets expectations before they even log in |
+| 🟢 5 | **Teaching FAQ / quick guide** | 1-2 days | Reduces support burden, helps self-service |
+| 🟢 6 | **Coach-created development items** | 2-3 days | Enables natural coaching workflow |
+
+**To onboard your first coaches confidently, you need gaps 1 and 2.** Gap 3 is quick and should be included. Gaps 4-6 improve the experience but aren't blocking.
+
+**Total effort for solid coach onboarding: ~1.5-2 weeks** (gaps 1-4).
+
+---
+
+### Overall Readiness Assessment
+
+| Area | Status | Notes |
+|------|--------|-------|
+| Account creation | ✅ Ready | Admin creates, welcome email works |
+| Dashboard | ✅ Ready | Rich, functional, good empty states (but no onboarding) |
+| Client management | ✅ Ready | Full progress tracking, notes, feedback |
+| Assignment grading | ✅ Ready | Search, filter, rubric support, status guard |
+| Scenario evaluation | ✅ Ready | Section-by-section, revision requests |
+| Badge approval | ✅ Ready | Batch + individual, credential URLs |
+| Capability assessments | ✅ Ready | View + evaluate, domain notes |
+| Group sessions | ✅ Ready | Create, schedule, attendance |
+| Profile setup | ❌ Missing | No UI for bio, specialties, scheduling URL |
+| Onboarding guidance | ❌ Missing | No welcome card, no "getting started" flow |
+| Empty state context | ⚠️ Partial | Icons + messages exist, but no "what to expect" |
+| Welcome email | ⚠️ Partial | Works but generic, not role-specific |
+| Teaching FAQ | ❌ Missing | No in-context help for coaching tools |
+| Development item creation | ⚠️ Partial | Backend exists, UI not prominent for coaches |
+
+**Bottom line:** The teaching workflows are production-ready. What's missing is the onboarding wrapper — the first 10 minutes of a new coach's experience. Fix that, and you're ready to onboard coaches confidently.

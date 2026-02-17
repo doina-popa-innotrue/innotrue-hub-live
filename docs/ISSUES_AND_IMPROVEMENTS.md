@@ -1383,6 +1383,26 @@ Organized by theme, drawing from Parts 2, 3, 5, 6, 9, and 10.
 - ✅ `session_participants` with full attendance tracking (invited → registered → confirmed → attended/no_show)
 - ✅ Groups with memberships, tasks, check-ins, notes, peer assessments
 - ✅ Cal.com + Google Calendar + Calendly integration
+
+**Coach & Instructor Onboarding (required before onboarding new coaches):**
+- Welcome card + onboarding checklist for teaching dashboard (2-3 days) — **required** (reuse `JourneyProgressWidget` pattern)
+- Coach profile setup: bio, specialties, certifications, scheduling URL editing UI (3-5 days) — **required**
+- Enhanced empty states with "what to expect" context (1-2 days) — quick win
+- Role-specific welcome email (coach vs instructor vs both) (1-2 days) — quick win
+- Teaching FAQ / quick guide page (1-2 days) — nice to have
+- Coach-created development items for clients (2-3 days) — backend exists, needs UI prominence
+- See `docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md` Part 5 for full readiness assessment
+
+**Existing coach/instructor infrastructure (already built):**
+- ✅ Admin user creation with role assignment and welcome email
+- ✅ Teaching dashboard with stats, assignments, sessions, shared client items
+- ✅ Client progress tracking with full student detail (notes, reflections, feedback, assignments)
+- ✅ Assignment grading (search, filter, rubric, status guard)
+- ✅ Scenario evaluation (section-by-section, revision requests)
+- ✅ Badge approval (batch + individual, credential URLs)
+- ✅ Capability assessments (view shared + evaluate)
+- ✅ Group management (sessions, tasks, check-ins, peer assessments)
+- ✅ 10 sidebar nav items for teaching workflows
 - ✅ Program/module-level instructor and coach assignment
 - ✅ 25+ notification types with email queue
 
@@ -1570,12 +1590,13 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 **Recommended execution order (updated 2026-02-17):**
 1. ~~C1-C4~~ ✅ → ~~H1-H10~~ ✅
 2. **Priority 0 Content Delivery (Tier 1 Web embed)** — immediate UX win, 3-5 days
-3. **Priority 0 Cohort Readiness (CohortDashboard + Join Session)** — required before next cohort, 2 weeks
-4. Quick medium wins (M2, M11, M9) — interleaved, 2-3 days
-5. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
-6. **Priority 0 Content Delivery (Tier 2 xAPI)** — auto-tracking, 1-2 weeks
-7. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
-8. Remaining phases based on business priorities
+3. **Priority 0 Coach Onboarding (welcome card + profile setup + empty states + welcome email)** — required before onboarding coaches, 1.5-2 weeks
+4. **Priority 0 Cohort Readiness (CohortDashboard + Join Session)** — required before next cohort, 2 weeks
+5. Quick medium wins (M2, M11, M9) — interleaved, 2-3 days
+6. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
+7. **Priority 0 Content Delivery (Tier 2 xAPI)** — auto-tracking, 1-2 weeks
+8. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
+9. Remaining phases based on business priorities
 
 ### 11.8 New Data Tables Required by Roadmap
 
