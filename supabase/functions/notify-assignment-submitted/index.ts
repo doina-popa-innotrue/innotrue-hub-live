@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { getStagingRecipients, getStagingSubject } from "../_shared/email-utils.ts";
 import { isValidUUID } from "../_shared/validation.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { errorResponse, successResponse } from "../_shared/error-response.ts";
@@ -21,7 +20,6 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -42,20 +40,12 @@ const handler = async (req: Request): Promise<Response> => {
       return errorResponse.badRequest("Invalid assignment type name", cors);
     }
 
-    // HTML-escape helper to prevent XSS in email templates
-    const escapeHtml = (str: string): string =>
-      str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-
-    const safeAssignmentTypeName = escapeHtml(assignmentTypeName.trim());
+    const safeAssignmentTypeName = assignmentTypeName.trim();
 
     // Get module progress details
     const { data: moduleProgress, error: progressError } = await supabase
       .from("module_progress")
-      .select(`
-        id,
-        module_id,
-        enrollment_id
-      `)
+      .select("id, module_id, enrollment_id")
       .eq("id", moduleProgressId)
       .single();
 
@@ -64,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
       return errorResponse.notFound("Module progress not found", cors);
     }
 
-    // Get enrollment details separately
+    // Get enrollment details
     const { data: enrollment } = await supabase
       .from("client_enrollments")
       .select("client_user_id, program_id")
@@ -73,9 +63,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Get program_id from module if not available from enrollment
     let programId = enrollment?.program_id;
-    
     if (!programId) {
-      // Fallback: get program_id directly from the module
       const { data: moduleData } = await supabase
         .from("program_modules")
         .select("program_id")
@@ -131,7 +119,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     moduleCoaches?.forEach((mc) => recipientIds.add(mc.coach_id));
 
-    // Program-level instructors
+    // Program-level instructors and coaches
     if (programId) {
       const { data: programInstructors } = await supabase
         .from("program_instructors")
@@ -140,7 +128,6 @@ const handler = async (req: Request): Promise<Response> => {
 
       programInstructors?.forEach((pi) => recipientIds.add(pi.instructor_id));
 
-      // Program-level coaches
       const { data: programCoaches } = await supabase
         .from("program_coaches")
         .select("coach_id")
@@ -154,120 +141,48 @@ const handler = async (req: Request): Promise<Response> => {
       return successResponse.ok({ message: "No recipients found" }, cors);
     }
 
-    // Get recipient emails
+    // Use create_notification RPC for each recipient (async via email_queue)
     const recipientIdsArray = Array.from(recipientIds);
-    const recipientEmails: string[] = [];
+    let notifiedCount = 0;
 
     for (const recipientId of recipientIdsArray) {
-      const { data: userData } = await supabase.auth.admin.getUserById(recipientId);
-      if (userData?.user?.email) {
-        recipientEmails.push(userData.user.email);
+      try {
+        await supabase.rpc("create_notification", {
+          p_user_id: recipientId,
+          p_type_key: "assignment_submitted",
+          p_title: `Assignment Submitted: ${safeAssignmentTypeName}`,
+          p_message: `${clientName} submitted ${safeAssignmentTypeName} in ${moduleTitle} (${programTitle})`,
+          p_link: "/teaching/assignments",
+          p_metadata: {
+            assignmentId,
+            moduleProgressId,
+            clientName,
+            assignmentTypeName: safeAssignmentTypeName,
+            moduleName: moduleTitle,
+            programName: programTitle,
+          },
+        });
+        notifiedCount++;
+      } catch (notifError) {
+        console.error(`Error notifying recipient ${recipientId}:`, notifError);
       }
     }
 
-    if (recipientEmails.length === 0 || !resendApiKey) {
-      console.log("No emails to send or Resend not configured");
-      return successResponse.ok({ message: "No emails sent" }, cors);
+    console.log(`Notifications queued for ${notifiedCount}/${recipientIdsArray.length} recipients`);
+
+    // Fire-and-forget: trigger email queue processing
+    try {
+      await supabase.functions.invoke("process-email-queue", {
+        body: {},
+      });
+    } catch (queueError) {
+      // Queue processing failure is non-critical — emails will be picked up on next run
+      console.log("Email queue trigger (non-critical):", queueError);
     }
-
-    // Fetch email template from database
-    const { data: template } = await supabase
-      .from("email_templates")
-      .select("subject, html_content")
-      .eq("template_key", "assignment_submitted")
-      .single();
-
-    // Generate the review link
-    const siteUrl = Deno.env.get("SITE_URL") || "https://app.innotrue.com";
-    const reviewLink = `${siteUrl}/teaching/assignments`;
-
-    let emailSubject: string;
-    let emailHtml: string;
-
-    if (template) {
-      // Use database template with variable substitution
-      emailSubject = template.subject
-        .replace(/\{\{assignmentName\}\}/g, safeAssignmentTypeName)
-        .replace(/\{\{clientName\}\}/g, clientName);
-
-      emailHtml = template.html_content
-        .replace(/\{\{clientName\}\}/g, clientName)
-        .replace(/\{\{assignmentName\}\}/g, safeAssignmentTypeName)
-        .replace(/\{\{moduleName\}\}/g, moduleTitle)
-        .replace(/\{\{programName\}\}/g, programTitle)
-        .replace(/\{\{reviewLink\}\}/g, reviewLink);
-    } else {
-      // Fallback to default template
-      emailSubject = `Assignment Submitted: ${safeAssignmentTypeName} - ${escapeHtml(clientName)}`;
-      emailHtml = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-              .header { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-              .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
-              .assignment-info { background: white; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #6366f1; }
-              .btn { display: inline-block; background: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px; }
-              .footer { text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1 style="margin: 0;">Assignment Submitted</h1>
-              </div>
-              <div class="content">
-                <p>Hello,</p>
-                <p><strong>${escapeHtml(clientName)}</strong> has submitted an assignment for your review.</p>
-
-                <div class="assignment-info">
-                  <p style="margin: 0 0 8px 0;"><strong>Assignment:</strong> ${safeAssignmentTypeName}</p>
-                  <p style="margin: 0 0 8px 0;"><strong>Module:</strong> ${escapeHtml(moduleTitle)}</p>
-                  <p style="margin: 0;"><strong>Program:</strong> ${escapeHtml(programTitle)}</p>
-                </div>
-                
-                <p>Please log in to the InnoTrue Hub to review the submission and provide feedback.</p>
-                
-                <a href="${reviewLink}" class="btn">
-                  Review Assignment
-                </a>
-              </div>
-              <div class="footer">
-                <p>This is an automated notification from InnoTrue Hub.</p>
-              </div>
-            </div>
-          </body>
-        </html>
-      `;
-    }
-
-    const emailResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "InnoTrue Hub <notifications@mail.innotrue.com>",
-        to: getStagingRecipients(recipientEmails),
-        subject: getStagingSubject(emailSubject, recipientEmails),
-        html: emailHtml,
-      }),
-    });
-
-    if (!emailResponse.ok) {
-      const errorText = await emailResponse.text();
-      console.error("Resend API error:", errorText);
-      return errorResponse.serverErrorWithMessage("Failed to send email", cors);
-    }
-
-    console.log(`Notification sent to ${recipientEmails.length} recipients`);
 
     return successResponse.ok({
       success: true,
-      recipientCount: recipientEmails.length
+      recipientCount: notifiedCount,
     }, cors);
   } catch (error) {
     return errorResponse.serverError("notify-assignment-submitted", error, cors);

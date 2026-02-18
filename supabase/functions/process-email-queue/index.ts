@@ -266,6 +266,16 @@ function generateEmailContent(templateKey: string, data: Record<string, any>): E
       `),
     }),
 
+    assignment_submitted: () => ({
+      subject: 'New Assignment Submitted for Review',
+      html: wrapHtml(`
+        <h2 style="margin-top: 0;">Hi ${userName}!</h2>
+        <p>${title}</p>
+        <p>${message}</p>
+        ${link ? `<p style="text-align: center; margin-top: 24px;"><a href="${link}" style="${buttonStyles}">Review Assignment</a></p>` : ''}
+      `),
+    }),
+
     credits_low: () => ({
       subject: 'Low Credit Balance Alert',
       html: wrapHtml(`

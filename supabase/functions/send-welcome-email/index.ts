@@ -54,6 +54,103 @@ const defaultTemplate = {
 </div>`
 };
 
+const instructorDefaultTemplate = {
+  subject: "Welcome to the InnoTrue Teaching Team!",
+  html_content: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+  <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px; text-align: center; border-radius: 8px 8px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to the Teaching Team!</h1>
+  </div>
+  <div style="padding: 30px; background: #f9fafb; border-radius: 0 0 8px 8px;">
+    <p style="font-size: 16px; color: #333;">Hi {{userName}},</p>
+    <p style="font-size: 16px; color: #333;">You've been added as an <strong>instructor</strong> on InnoTrue Hub. Your account is ready — let's get you set up!</p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6366f1;">
+      <p style="margin: 0; color: #666;"><strong>First, set up your password to access the platform:</strong></p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{passwordSetupLink}}"
+         style="background: #6366f1; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+        Set Up Your Password
+      </a>
+    </div>
+
+    <p style="color: #999; font-size: 12px;">Or copy and paste this link into your browser:</p>
+    <p style="color: #999; font-size: 12px; word-break: break-all;">{{passwordSetupLink}}</p>
+
+    <hr style="border: 1px solid #eee; margin: 30px 0;">
+
+    <p style="font-size: 14px; color: #666;">Once you've set your password, you can:</p>
+    <ul style="font-size: 14px; color: #666;">
+      <li>Review and grade student assignments</li>
+      <li>Set up your instructor profile (bio, specializations, scheduling link)</li>
+      <li>Manage your assigned programs and modules</li>
+      <li>Track student progress and provide feedback</li>
+    </ul>
+
+    <p style="font-size: 14px; color: #999; margin-top: 30px;">
+      <em>This link will expire in 24 hours. If you need a new link, please contact your administrator.</em>
+    </p>
+  </div>
+  <hr style="border: 1px solid #eee; margin: 20px 0;">
+  <p style="color: #666; font-size: 12px; text-align: center;">This is an automated notification from InnoTrue Hub.</p>
+</div>`
+};
+
+const coachDefaultTemplate = {
+  subject: "Welcome to InnoTrue as a Coach!",
+  html_content: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+  <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px; text-align: center; border-radius: 8px 8px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to InnoTrue as a Coach!</h1>
+  </div>
+  <div style="padding: 30px; background: #f9fafb; border-radius: 0 0 8px 8px;">
+    <p style="font-size: 16px; color: #333;">Hi {{userName}},</p>
+    <p style="font-size: 16px; color: #333;">You've been added as a <strong>coach</strong> on InnoTrue Hub. Your account is ready — let's get you set up!</p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+      <p style="margin: 0; color: #666;"><strong>First, set up your password to access the platform:</strong></p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{passwordSetupLink}}"
+         style="background: #10b981; color: white; padding: 14px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+        Set Up Your Password
+      </a>
+    </div>
+
+    <p style="color: #999; font-size: 12px;">Or copy and paste this link into your browser:</p>
+    <p style="color: #999; font-size: 12px; word-break: break-all;">{{passwordSetupLink}}</p>
+
+    <hr style="border: 1px solid #eee; margin: 30px 0;">
+
+    <p style="font-size: 14px; color: #666;">Once you've set your password, you can:</p>
+    <ul style="font-size: 14px; color: #666;">
+      <li>Support and guide your assigned clients</li>
+      <li>Set up your coaching profile (bio, specializations, scheduling link)</li>
+      <li>Review shared goals, decisions, and development items</li>
+      <li>Review student assignments and provide feedback</li>
+    </ul>
+
+    <p style="font-size: 14px; color: #999; margin-top: 30px;">
+      <em>This link will expire in 24 hours. If you need a new link, please contact your administrator.</em>
+    </p>
+  </div>
+  <hr style="border: 1px solid #eee; margin: 20px 0;">
+  <p style="color: #666; font-size: 12px; text-align: center;">This is an automated notification from InnoTrue Hub.</p>
+</div>`
+};
+
+function getRoleDefaultTemplate(role: string): { subject: string; html_content: string } {
+  switch (role) {
+    case "instructor":
+      return instructorDefaultTemplate;
+    case "coach":
+      return coachDefaultTemplate;
+    default:
+      return defaultTemplate;
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
   const cors = getCorsHeaders(req);
 
@@ -148,14 +245,44 @@ const handler = async (req: Request): Promise<Response> => {
 
     const userName = profile?.name || targetUser.email?.split("@")[0] || "User";
 
-    // Get email template from database
-    const { data: template } = await adminClient
-      .from("email_templates")
-      .select("subject, html_content")
-      .eq("template_key", "welcome_email")
-      .single();
+    // Get user's roles to determine email template variant
+    const { data: userRolesData } = await adminClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
 
-    const emailTemplate = template || defaultTemplate;
+    const roles = userRolesData?.map((r) => r.role) || [];
+    // Priority: admin > instructor > coach > client
+    const primaryRole = roles.includes("admin")
+      ? "admin"
+      : roles.includes("instructor")
+        ? "instructor"
+        : roles.includes("coach")
+          ? "coach"
+          : "client";
+
+    // Try role-specific template first, then fall back to generic
+    const templateKeys = primaryRole === "instructor"
+      ? ["welcome_email_instructor", "welcome_email"]
+      : primaryRole === "coach"
+        ? ["welcome_email_coach", "welcome_email"]
+        : ["welcome_email"];
+
+    let template: { subject: string; html_content: string } | null = null;
+    for (const key of templateKeys) {
+      const { data: t } = await adminClient
+        .from("email_templates")
+        .select("subject, html_content")
+        .eq("template_key", key)
+        .single();
+      if (t) {
+        template = t;
+        break;
+      }
+    }
+
+    // Use role-specific default template if no DB template found
+    const emailTemplate = template || getRoleDefaultTemplate(primaryRole);
 
     // Generate a password reset link using Supabase Auth
     const { data: resetData, error: resetError } = await adminClient.auth.admin.generateLink({

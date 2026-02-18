@@ -36,6 +36,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { TransferAssignmentDialog } from "@/components/instructor/TransferAssignmentDialog";
+import { ArrowRightLeft } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Assignment {
   id: string;
@@ -89,11 +92,51 @@ export default function PendingAssignments() {
     "30days",
   );
 
+  // My Queue state
+  const [queueFilter, setQueueFilter] = useState<"all" | "mine">(
+    (searchParams.get("queue") as "all" | "mine") || "all",
+  );
+  const [myEnrollmentPairs, setMyEnrollmentPairs] = useState<
+    Set<string>
+  >(new Set());
+  const [loadingMyQueue, setLoadingMyQueue] = useState(false);
+
+  // Transfer dialog state
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [transferAssignments, setTransferAssignments] = useState<Assignment[]>([]);
+
   useEffect(() => {
     if (user) {
       loadPendingAssignments();
+      loadMyEnrollmentPairs();
+      // Mark that the user has visited the assignments page (for staff onboarding card)
+      try {
+        localStorage.setItem("innotrue_staff_viewed_assignments", "true");
+      } catch {
+        // ignore storage errors
+      }
     }
   }, [user, userRole]);
+
+  const loadMyEnrollmentPairs = async () => {
+    if (!user) return;
+    try {
+      setLoadingMyQueue(true);
+      const { data } = await supabase
+        .from("enrollment_module_staff")
+        .select("enrollment_id, module_id")
+        .eq("staff_user_id", user.id);
+
+      if (data) {
+        const pairs = new Set(data.map((d) => `${d.enrollment_id}:${d.module_id}`));
+        setMyEnrollmentPairs(pairs);
+      }
+    } catch (error) {
+      console.error("Error loading enrollment module staff:", error);
+    } finally {
+      setLoadingMyQueue(false);
+    }
+  };
 
   useEffect(() => {
     if (activeTab === "scored" && scoredAssignments.length === 0 && !loadingScored) {
@@ -112,12 +155,38 @@ export default function PendingAssignments() {
     sortBy,
     scoredTimeFilter,
     activeTab,
+    queueFilter,
+    myEnrollmentPairs,
   ]);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab as TabType);
-    setSearchParams({ tab });
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.set("tab", tab);
+      return params;
+    });
   };
+
+  const handleQueueFilterChange = (queue: "all" | "mine") => {
+    setQueueFilter(queue);
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      if (queue === "all") {
+        params.delete("queue");
+      } else {
+        params.set("queue", queue);
+      }
+      return params;
+    });
+  };
+
+  // Compute My Queue count for badge display
+  const myQueueCount = myEnrollmentPairs.size > 0
+    ? pendingAssignments.filter((a) =>
+        myEnrollmentPairs.has(`${a.enrollment_id}:${a.module_id}`),
+      ).length
+    : 0;
 
   const getModuleIdsForUser = async () => {
     const showInstructor = userRole === "instructor";
@@ -405,6 +474,13 @@ export default function PendingAssignments() {
     const sourceAssignments = activeTab === "pending" ? pendingAssignments : scoredAssignments;
     let filtered = [...sourceAssignments];
 
+    // My Queue filter — only show assignments for personally-assigned clients
+    if (queueFilter === "mine" && myEnrollmentPairs.size > 0) {
+      filtered = filtered.filter((a) =>
+        myEnrollmentPairs.has(`${a.enrollment_id}:${a.module_id}`),
+      );
+    }
+
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -546,6 +622,45 @@ export default function PendingAssignments() {
         </TabsList>
 
         <TabsContent value="pending" className="space-y-6">
+          {/* Queue Toggle - only show when user has personal assignments */}
+          {myEnrollmentPairs.size > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="inline-flex items-center rounded-lg border bg-card p-1">
+                <button
+                  onClick={() => handleQueueFilterChange("all")}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                    queueFilter === "all"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  All Assignments
+                  <Badge variant={queueFilter === "all" ? "secondary" : "outline"} className="ml-1 text-xs">
+                    {pendingAssignments.length}
+                  </Badge>
+                </button>
+                <button
+                  onClick={() => handleQueueFilterChange("mine")}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                    queueFilter === "mine"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  My Queue
+                  <Badge variant={queueFilter === "mine" ? "secondary" : "outline"} className="ml-1 text-xs">
+                    {myQueueCount}
+                  </Badge>
+                </button>
+              </div>
+              {queueFilter === "mine" && (
+                <p className="text-xs text-muted-foreground">
+                  Showing only assignments from your personally assigned clients
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Stats Overview */}
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
@@ -666,8 +781,8 @@ export default function PendingAssignments() {
               {filteredPendingAssignments.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   {pendingAssignments.length === 0
-                    ? "No pending assignments. All caught up!"
-                    : "No assignments match your filters"}
+                    ? "No assignments waiting for review. When your students submit work, it will appear here for grading."
+                    : "No assignments match your current filters. Try adjusting your search or filter criteria."}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -721,16 +836,35 @@ export default function PendingAssignments() {
                             </span>
                           </TableCell>
                           <TableCell>
-                            <Button
-                              size="sm"
-                              onClick={() =>
-                                navigate(
-                                  `/teaching/students/${assignment.enrollment_id}?moduleId=${assignment.module_id}&moduleProgressId=${assignment.module_progress_id}`,
-                                )
-                              }
-                            >
-                              Review
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  navigate(
+                                    `/teaching/students/${assignment.enrollment_id}?moduleId=${assignment.module_id}&moduleProgressId=${assignment.module_progress_id}`,
+                                  )
+                                }
+                              >
+                                Review
+                              </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        setTransferAssignments([assignment]);
+                                        setTransferDialogOpen(true);
+                                      }}
+                                    >
+                                      <ArrowRightLeft className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Transfer to another instructor/coach</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -740,6 +874,17 @@ export default function PendingAssignments() {
               )}
             </CardContent>
           </Card>
+
+          {/* Transfer Dialog */}
+          <TransferAssignmentDialog
+            open={transferDialogOpen}
+            onOpenChange={setTransferDialogOpen}
+            assignments={transferAssignments}
+            onTransferComplete={() => {
+              loadPendingAssignments();
+              loadMyEnrollmentPairs();
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="scored" className="space-y-6">

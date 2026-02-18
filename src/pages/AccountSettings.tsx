@@ -18,7 +18,12 @@ import {
   Globe,
   Clock,
   Shield,
+  Briefcase,
+  X,
+  Plus,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { emailChangeSchema, passwordChangeSchema } from "@/lib/validations";
 import { z } from "zod";
@@ -154,7 +159,17 @@ export default function AccountSettings() {
   // Google Drive (admin-assigned, read-only for user)
   const [googleDriveMapping, setGoogleDriveMapping] = useState<GoogleDriveMapping | null>(null);
 
+  // Staff profile state (instructors & coaches)
+  const [bio, setBio] = useState("");
+  const [staffSpecializations, setStaffSpecializations] = useState<string[]>([]);
+  const [staffCompanyName, setStaffCompanyName] = useState("");
+  const [staffSchedulingUrl, setStaffSchedulingUrl] = useState("");
+  const [newSpecialization, setNewSpecialization] = useState("");
+  const [savingStaffProfile, setSavingStaffProfile] = useState(false);
+  const [hasStaffProfileRow, setHasStaffProfileRow] = useState(false);
+
   const isAdmin = userRoles.includes("admin");
+  const isStaff = userRoles.includes("instructor") || userRoles.includes("coach");
 
   useEffect(() => {
     console.log("[AccountSettings] Auth state:", {
@@ -200,6 +215,8 @@ export default function AccountSettings() {
       setTimezone(data.timezone || "UTC");
       setMeetingTimes((data.preferred_meeting_times as unknown as MeetingTimePreference[]) || []);
       setSchedulingUrl(data.scheduling_url || "");
+      setBio(data.bio || "");
+      setStaffSchedulingUrl(data.scheduling_url || "");
 
       // Load billing info from billing_info table
 
@@ -306,6 +323,19 @@ export default function AccountSettings() {
         if (planData) {
           setCurrentPlan(planData);
         }
+      }
+
+      // Load staff profile (instructors & coaches)
+      const { data: staffData } = await supabase
+        .from("staff_profiles")
+        .select("specializations, company_name")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (staffData) {
+        setHasStaffProfileRow(true);
+        setStaffSpecializations(staffData.specializations || []);
+        setStaffCompanyName(staffData.company_name || "");
       }
     } catch (error: any) {
       console.error("Error loading account data:", error);
@@ -462,6 +492,74 @@ export default function AccountSettings() {
     } finally {
       setSavingMeetingTimes(false);
     }
+  };
+
+  const saveStaffProfile = async () => {
+    try {
+      setSavingStaffProfile(true);
+
+      // Save bio and scheduling_url to profiles table
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
+          bio: bio.trim() || null,
+          scheduling_url: staffSchedulingUrl.trim() || null,
+        })
+        .eq("id", user?.id ?? "");
+
+      if (profileError) throw profileError;
+
+      // Keep the shared scheduling URL state in sync
+      setSchedulingUrl(staffSchedulingUrl);
+
+      // Upsert staff_profiles for specializations and company_name
+      if (hasStaffProfileRow) {
+        const { error } = await supabase
+          .from("staff_profiles")
+          .update({
+            specializations: staffSpecializations.length > 0 ? staffSpecializations : null,
+            company_name: staffCompanyName.trim() || null,
+          })
+          .eq("user_id", user?.id ?? "");
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("staff_profiles").insert({
+          user_id: user?.id ?? "",
+          specializations: staffSpecializations.length > 0 ? staffSpecializations : null,
+          company_name: staffCompanyName.trim() || null,
+        });
+        if (error) throw error;
+        setHasStaffProfileRow(true);
+      }
+
+      // Notify other components that profile was updated
+      window.dispatchEvent(new CustomEvent("profile-updated"));
+
+      toast({
+        title: "Staff profile updated",
+        description: "Your professional profile has been saved successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error saving staff profile",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSavingStaffProfile(false);
+    }
+  };
+
+  const addSpecialization = () => {
+    const trimmed = newSpecialization.trim();
+    if (trimmed && !staffSpecializations.includes(trimmed)) {
+      setStaffSpecializations([...staffSpecializations, trimmed]);
+      setNewSpecialization("");
+    }
+  };
+
+  const removeSpecialization = (spec: string) => {
+    setStaffSpecializations(staffSpecializations.filter((s) => s !== spec));
   };
 
   const changeEmail = async () => {
@@ -1050,6 +1148,110 @@ export default function AccountSettings() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Staff Profile - Visible for instructors and coaches */}
+      {isStaff && (
+        <Card id="staff-profile">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5" />
+              <div>
+                <CardTitle>Staff Profile</CardTitle>
+                <CardDescription>
+                  Your professional profile visible to students and administrators
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="staff-bio">Bio</Label>
+              <Textarea
+                id="staff-bio"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Tell students and colleagues about your background, experience, and approach..."
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground">
+                A short professional bio visible on your profile
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Specializations</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {staffSpecializations.map((spec) => (
+                  <Badge key={spec} variant="secondary" className="gap-1 pr-1">
+                    {spec}
+                    <button
+                      type="button"
+                      onClick={() => removeSpecialization(spec)}
+                      className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20"
+                      aria-label={`Remove ${spec}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={newSpecialization}
+                  onChange={(e) => setNewSpecialization(e.target.value)}
+                  placeholder="Add a specialization (e.g. Leadership, Agile, Communication)"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addSpecialization();
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={addSpecialization}
+                  disabled={!newSpecialization.trim()}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Your areas of expertise — press Enter or click + to add
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="staff-company">Company / Organisation</Label>
+              <Input
+                id="staff-company"
+                value={staffCompanyName}
+                onChange={(e) => setStaffCompanyName(e.target.value)}
+                placeholder="e.g. InnoTrue GmbH"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="staff-scheduling-url">Scheduling URL</Label>
+              <Input
+                id="staff-scheduling-url"
+                value={staffSchedulingUrl}
+                onChange={(e) => setStaffSchedulingUrl(e.target.value)}
+                placeholder="https://cal.com/your-name"
+              />
+              <p className="text-xs text-muted-foreground">
+                Students will see a "Book Session" button linking to this URL
+              </p>
+            </div>
+
+            <Button onClick={saveStaffProfile} disabled={savingStaffProfile}>
+              {savingStaffProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Staff Profile
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

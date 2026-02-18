@@ -23,6 +23,7 @@ import { PendingAssignmentsWidget } from "@/components/instructor/PendingAssignm
 import { format } from "date-fns";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { StaffWelcomeCard } from "@/components/instructor/StaffWelcomeCard";
 
 interface ProgramAssignment {
   id: string;
@@ -113,10 +114,22 @@ export default function InstructorCoachDashboard() {
   const [pendingBadges, setPendingBadges] = useState<PendingBadge[]>([]);
   const [groupCount, setGroupCount] = useState(0);
 
+  // Staff welcome card state
+  const [staffProfileName, setStaffProfileName] = useState("");
+  const [hasStaffProfile, setHasStaffProfile] = useState(false);
+  const [hasViewedAssignments, setHasViewedAssignments] = useState(() => {
+    try {
+      return localStorage.getItem("innotrue_staff_viewed_assignments") === "true";
+    } catch {
+      return false;
+    }
+  });
+
   useEffect(() => {
     if (user) {
       loadAssignments();
       loadAdditionalData();
+      loadStaffOnboardingData();
     }
   }, [user, userRole]);
 
@@ -307,6 +320,30 @@ export default function InstructorCoachDashboard() {
       );
       setPendingBadges(badgesWithClients);
     }
+  };
+
+  const loadStaffOnboardingData = async () => {
+    if (!user) return;
+
+    // Load profile name
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("name")
+      .eq("id", user.id)
+      .single();
+
+    setStaffProfileName(profileData?.name || "");
+
+    // Check if staff_profiles row exists with specializations
+    const { data: staffData } = await supabase
+      .from("staff_profiles")
+      .select("specializations")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    setHasStaffProfile(
+      !!(staffData?.specializations && staffData.specializations.length > 0),
+    );
   };
 
   const loadAssignments = async () => {
@@ -524,6 +561,15 @@ export default function InstructorCoachDashboard() {
           Overview of your instructor and coaching assignments
         </p>
       </div>
+
+      {/* Staff Welcome Card */}
+      <StaffWelcomeCard
+        userName={staffProfileName?.split(" ")[0]}
+        hasProfileName={!!staffProfileName}
+        hasStaffProfile={hasStaffProfile}
+        hasProgramAssignments={programAssignments.length > 0}
+        hasViewedAssignments={hasViewedAssignments}
+      />
 
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
@@ -802,12 +848,11 @@ export default function InstructorCoachDashboard() {
 
         <TabsContent value="programs" className="space-y-4">
           {programAssignments.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <GraduationCap className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No program assignments yet</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={GraduationCap}
+              title="No programs assigned yet"
+              description="Your administrator will assign you to programs where you'll instruct or coach students. Once assigned, your programs and enrolled clients will appear here."
+            />
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {programAssignments.map((assignment) => (
@@ -866,12 +911,11 @@ export default function InstructorCoachDashboard() {
 
         <TabsContent value="modules" className="space-y-4">
           {moduleAssignments.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No individual module assignments yet</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={BookOpen}
+              title="No individual module assignments yet"
+              description="Modules from your assigned programs will appear automatically. Your administrator can also assign you to specific modules directly."
+            />
           ) : (
             <div className="space-y-3">
               {moduleAssignments.map((assignment) => (
