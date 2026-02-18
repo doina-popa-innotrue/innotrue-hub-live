@@ -134,6 +134,7 @@ const ScenarioAssignmentsManagement = lazy(
   () => import("./pages/instructor/ScenarioAssignmentsManagement"),
 );
 const ScenarioEvaluationPage = lazy(() => import("./pages/instructor/ScenarioEvaluationPage"));
+const StudentDevelopmentProfile = lazy(() => import("./pages/instructor/StudentDevelopmentProfile"));
 
 // Lazy-loaded pages — Client
 const ClientDashboard = lazy(() => import("./pages/client/ClientDashboard"));
@@ -185,6 +186,7 @@ const AllNotifications = lazy(() => import("./pages/client/AllNotifications"));
 const NotificationSettings = lazy(() => import("./pages/client/NotificationSettings"));
 const ClientScenarios = lazy(() => import("./pages/client/Scenarios"));
 const ClientScenarioDetail = lazy(() => import("./pages/client/ScenarioDetail"));
+const DevelopmentProfile = lazy(() => import("./pages/client/DevelopmentProfile"));
 
 // Lazy-loaded pages — Org Admin
 const OrgAdminDashboard = lazy(() => import("./pages/org-admin/OrgAdminDashboard"));
@@ -1142,6 +1144,16 @@ const App = () => (
                     }
                   />
                   <Route
+                    path="/teaching/students/:enrollmentId/development-profile"
+                    element={
+                      <ProtectedRoute>
+                        <DashboardLayout>
+                          <StudentDevelopmentProfile />
+                        </DashboardLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
                     path="/teaching/groups"
                     element={
                       <ProtectedRoute>
@@ -1328,6 +1340,16 @@ const App = () => (
                       <ProtectedRoute requireRole="client">
                         <DashboardLayout>
                           <GoalDetail />
+                        </DashboardLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/development-profile"
+                    element={
+                      <ProtectedRoute requireRole="client">
+                        <DashboardLayout>
+                          <DevelopmentProfile />
                         </DashboardLayout>
                       </ProtectedRoute>
                     }

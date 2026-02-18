@@ -62,6 +62,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useWheelCategories } from "@/hooks/useWheelCategories";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MilestoneGateDialog } from "@/components/guided-paths/MilestoneGateDialog";
+import { useMilestoneGatesBatch, useDeleteMilestoneGate } from "@/hooks/useMilestoneGates";
+import type { MilestoneGate } from "@/hooks/useMilestoneGates";
 
 interface SurveyQuestion {
   id: string;
@@ -174,6 +177,11 @@ export default function GuidedPathTemplateDetail() {
     value: "" as string | string[],
   });
 
+  // Gate dialog state
+  const [gateDialogOpen, setGateDialogOpen] = useState(false);
+  const [gateTargetMilestoneId, setGateTargetMilestoneId] = useState<string | null>(null);
+  const deleteGate = useDeleteMilestoneGate();
+
   // Form states
   const [goalForm, setGoalForm] = useState({
     title: "",
@@ -243,6 +251,12 @@ export default function GuidedPathTemplateDetail() {
     },
     enabled: !!id,
   });
+
+  // Collect all milestone IDs for batch gate fetching
+  const allMilestoneIds = (template?.guided_path_template_goals || []).flatMap(
+    (g: any) => (g.guided_path_template_milestones || []).map((m: any) => m.id),
+  );
+  const { data: gatesMap = {} } = useMilestoneGatesBatch(allMilestoneIds);
 
   // Fetch conditions for this template
   const { data: conditions = [] } = useQuery({
@@ -1033,6 +1047,57 @@ export default function GuidedPathTemplateDetail() {
                                         ))}
                                       </div>
                                     )}
+
+                                    {/* Assessment Gates (DP3) */}
+                                    <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                                      <h5 className="text-xs font-medium flex items-center gap-1">
+                                        <Filter className="h-3 w-3" />
+                                        Assessment Gates
+                                      </h5>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 text-xs"
+                                        onClick={() => {
+                                          setGateTargetMilestoneId(milestone.id);
+                                          setGateDialogOpen(true);
+                                        }}
+                                      >
+                                        <Plus className="h-3 w-3 mr-1" />
+                                        Add Gate
+                                      </Button>
+                                    </div>
+                                    {(gatesMap[milestone.id] || []).length === 0 ? (
+                                      <p className="text-xs text-muted-foreground italic">
+                                        No assessment gates
+                                      </p>
+                                    ) : (
+                                      <div className="flex flex-wrap gap-1.5 ml-4">
+                                        {(gatesMap[milestone.id] || []).map((gate: MilestoneGate) => (
+                                          <Badge
+                                            key={gate.id}
+                                            variant="outline"
+                                            className="text-xs gap-1 pr-1"
+                                          >
+                                            {gate.gate_label || gate.domain_name || gate.dimension_name || "Gate"}{" "}
+                                            ≥ {gate.min_score}
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-4 w-4 ml-1 hover:bg-destructive/20"
+                                              onClick={() =>
+                                                deleteGate.mutate({
+                                                  id: gate.id,
+                                                  templateMilestoneId: milestone.id,
+                                                })
+                                              }
+                                            >
+                                              <Trash2 className="h-2.5 w-2.5" />
+                                            </Button>
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </CollapsibleContent>
                               </div>
@@ -1523,6 +1588,18 @@ export default function GuidedPathTemplateDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Milestone Gate Dialog (DP3) */}
+      {gateTargetMilestoneId && (
+        <MilestoneGateDialog
+          open={gateDialogOpen}
+          onOpenChange={(open) => {
+            setGateDialogOpen(open);
+            if (!open) setGateTargetMilestoneId(null);
+          }}
+          templateMilestoneId={gateTargetMilestoneId}
+        />
+      )}
     </div>
   );
 }

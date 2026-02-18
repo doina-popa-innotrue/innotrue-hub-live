@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { PathConfirmation } from "@/components/guided-paths/PathConfirmation";
 
 interface SurveyQuestion {
   id: string;
@@ -55,6 +56,9 @@ export function GuidedPathSurveyWizard({
   const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(0);
   const [responses, setResponses] = useState<Record<string, unknown>>({});
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [savedTemplateIds, setSavedTemplateIds] = useState<string[]>([]);
+  const [savedResponseId, setSavedResponseId] = useState<string | undefined>();
 
   const totalSteps = questions.length;
   const currentQuestion = questions[currentStep];
@@ -146,23 +150,29 @@ export function GuidedPathSurveyWizard({
 
       const selectedTemplateIds = evaluateConditions();
 
-      const { error } = await supabase.from("guided_path_survey_responses").insert([
-        {
-          user_id: user.id,
-          family_id: familyId,
-          responses: responses as Json,
-          selected_template_ids: selectedTemplateIds,
-          completed_at: new Date().toISOString(),
-        },
-      ]);
+      const { data, error } = await supabase
+        .from("guided_path_survey_responses")
+        .insert([
+          {
+            user_id: user.id,
+            family_id: familyId,
+            responses: responses as Json,
+            selected_template_ids: selectedTemplateIds,
+            completed_at: new Date().toISOString(),
+          },
+        ])
+        .select("id")
+        .single();
 
       if (error) throw error;
-      return selectedTemplateIds;
+      return { selectedTemplateIds, responseId: data?.id };
     },
-    onSuccess: (selectedTemplateIds) => {
+    onSuccess: ({ selectedTemplateIds, responseId }) => {
       queryClient.invalidateQueries({ queryKey: ["guided-path-survey-responses"] });
-      toast.success("Survey completed! Generating your personalized path...");
-      onComplete(selectedTemplateIds);
+      toast.success("Survey completed! Choose your pace to create your path.");
+      setSavedTemplateIds(selectedTemplateIds);
+      setSavedResponseId(responseId);
+      setShowConfirmation(true);
     },
     onError: (error: Error) => {
       toast.error(`Failed to save survey: ${error.message}`);
@@ -223,6 +233,21 @@ export function GuidedPathSurveyWizard({
     } else {
       onCancel();
     }
+  }
+
+  // Show PathConfirmation after survey is saved
+  if (showConfirmation) {
+    return (
+      <PathConfirmation
+        templateIds={savedTemplateIds}
+        surveyResponseId={savedResponseId}
+        onComplete={() => {
+          toast.success("Your personalized development path has been created!");
+          onComplete(savedTemplateIds);
+        }}
+        onBack={() => setShowConfirmation(false)}
+      />
+    );
   }
 
   if (questions.length === 0) {

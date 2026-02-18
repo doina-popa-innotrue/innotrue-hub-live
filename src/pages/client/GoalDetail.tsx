@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2, Share2, Plus, ListTodo, ChevronRight } from "lucide-react";
+import { Edit2, Trash2, Share2, Plus, ListTodo, ChevronRight, BarChart3, ArrowRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -40,6 +40,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { FeatureGate } from "@/components/FeatureGate";
+import { useGoalAssessmentLink } from "@/hooks/useGoalAssessmentLinks";
 
 interface Goal {
   id: string;
@@ -336,6 +337,8 @@ export default function GoalDetail() {
 
         <LinkedDevelopmentItems goalId={goal.id} />
 
+        <AssessmentProgressSection goalId={goal.id} />
+
         <GoalReflections goalId={goal.id} />
 
         <GoalResources goalId={goal.id} />
@@ -522,5 +525,81 @@ function CreateTaskFromGoalForm({ goalId, goalCategory, onSuccess }: CreateTaskF
         </Button>
       </div>
     </form>
+  );
+}
+
+function AssessmentProgressSection({ goalId }: { goalId: string }) {
+  const { data: link, isLoading } = useGoalAssessmentLink(goalId);
+
+  if (isLoading || !link) return null;
+
+  const ratingScale = link.rating_scale || 10;
+  const scoreAtCreation = link.score_at_creation;
+  const targetScore = link.target_score;
+
+  // Calculate progress percentage between start and target
+  let progressPercent = 0;
+  if (scoreAtCreation != null && targetScore != null && targetScore > scoreAtCreation) {
+    // We show the starting score as the current known score
+    // (real current score would need latest snapshot — can be added later)
+    progressPercent = Math.round(
+      ((scoreAtCreation - scoreAtCreation) / (targetScore - scoreAtCreation)) * 100,
+    );
+  }
+
+  return (
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" />
+          Assessment Progress
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Linked to:</span>
+            <Badge variant="outline">
+              {link.assessment_name || "Assessment"} — {link.domain_name || "Domain"}
+            </Badge>
+          </div>
+
+          <div className="flex items-center gap-3 text-sm">
+            {scoreAtCreation != null && (
+              <div className="flex items-center gap-1">
+                <span className="text-muted-foreground">Started at:</span>
+                <span className="font-semibold">
+                  {scoreAtCreation}/{ratingScale}
+                </span>
+              </div>
+            )}
+            {scoreAtCreation != null && targetScore != null && (
+              <ArrowRight className="h-3 w-3 text-muted-foreground" />
+            )}
+            {targetScore != null && (
+              <div className="flex items-center gap-1">
+                <span className="text-muted-foreground">Target:</span>
+                <span className="font-semibold text-primary">
+                  {targetScore}/{ratingScale}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {scoreAtCreation != null && targetScore != null && (
+            <div className="space-y-1">
+              <Progress value={progressPercent} className="h-2" />
+              <p className="text-xs text-muted-foreground">
+                Take a new assessment to update your current score
+              </p>
+            </div>
+          )}
+
+          {link.notes && (
+            <p className="text-sm text-muted-foreground">{link.notes}</p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

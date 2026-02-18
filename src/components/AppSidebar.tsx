@@ -351,6 +351,12 @@ export function AppSidebar() {
       featureKey: "decision_toolkit_basic",
     },
     {
+      title: "Development Profile",
+      url: "/development-profile",
+      icon: BarChart3,
+      tourId: "client-development-profile",
+    },
+    {
       title: "Development Items",
       url: "/development-items",
       icon: Lightbulb,

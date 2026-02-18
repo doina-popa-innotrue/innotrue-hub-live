@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { FeatureGate } from "@/components/FeatureGate";
 import { usePageView } from "@/hooks/useAnalytics";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { useGoalAssessmentLinks } from "@/hooks/useGoalAssessmentLinks";
 
 function GoalsFallback() {
   const navigate = useNavigate();
@@ -178,6 +179,10 @@ export default function Goals() {
     }
   }, [user]);
 
+  // Fetch assessment links for all goals
+  const goalIds = goals.map((g) => g.id);
+  const { data: assessmentLinksMap = {} } = useGoalAssessmentLinks(goalIds);
+
   useEffect(() => {
     applyFilters();
   }, [goals, filters]);
@@ -285,7 +290,12 @@ export default function Goals() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredGoals.map((goal) => (
-              <GoalCard key={goal.id} goal={goal} onDelete={handleGoalDeleted} />
+              <GoalCard
+                key={goal.id}
+                goal={goal}
+                assessmentLink={assessmentLinksMap[goal.id] || null}
+                onDelete={handleGoalDeleted}
+              />
             ))}
           </div>
         )}

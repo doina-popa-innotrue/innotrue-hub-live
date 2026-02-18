@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Trash2, Calendar, Target, Lock } from "lucide-react";
+import { Trash2, Calendar, Target, Lock, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +20,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useCategoryLookup } from "@/hooks/useWheelCategories";
 
+interface AssessmentLinkInfo {
+  domain_name?: string | null;
+  assessment_name?: string | null;
+  score_at_creation?: number | null;
+  rating_scale?: number;
+}
+
 interface GoalCardProps {
   goal: {
     id: string;
@@ -33,6 +40,7 @@ interface GoalCardProps {
     progress_percentage: number;
     is_private?: boolean;
   };
+  assessmentLink?: AssessmentLinkInfo | null;
   onDelete?: () => void;
 }
 
@@ -49,7 +57,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   high: "bg-destructive/15 text-destructive",
 };
 
-export default function GoalCard({ goal, onDelete }: GoalCardProps) {
+export default function GoalCard({ goal, assessmentLink, onDelete }: GoalCardProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { labels, colors } = useCategoryLookup();
@@ -131,7 +139,7 @@ export default function GoalCard({ goal, onDelete }: GoalCardProps) {
             <Progress value={goal.progress_percentage} className="h-2" />
           </div>
 
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
             <div className="flex items-center gap-1.5">
               <div
                 className="w-3 h-3 rounded-full shrink-0"
@@ -143,6 +151,16 @@ export default function GoalCard({ goal, onDelete }: GoalCardProps) {
               <div className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
                 <span>{format(new Date(goal.target_date), "MMM d, yyyy")}</span>
+              </div>
+            )}
+            {assessmentLink?.domain_name && (
+              <div className="flex items-center gap-1 text-primary">
+                <BarChart3 className="h-3 w-3" />
+                <span>
+                  {assessmentLink.domain_name}
+                  {assessmentLink.score_at_creation != null &&
+                    ` (${assessmentLink.score_at_creation}/${assessmentLink.rating_scale || 10})`}
+                </span>
               </div>
             )}
           </div>

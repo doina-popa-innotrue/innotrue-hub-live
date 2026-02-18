@@ -40,9 +40,10 @@ import {
   BookOpen,
   Calendar,
 } from "lucide-react";
-import { addDays, format } from "date-fns";
+import { format } from "date-fns";
 import { FeatureGate } from "@/components/FeatureGate";
 import { ErrorState } from "@/components/ui/error-state";
+import { instantiateTemplate, type PaceType } from "@/lib/guidedPathInstantiation";
 
 interface TemplateTask {
   id: string;
@@ -64,47 +65,6 @@ interface TemplateMilestone {
   guided_path_template_tasks: TemplateTask[];
 }
 
-// Valid goal categories from the database enum
-type GoalCategory =
-  | "family_home"
-  | "financial_career"
-  | "mental_educational"
-  | "spiritual_ethical"
-  | "social_cultural"
-  | "physical_health"
-  | "health_fitness"
-  | "career_business"
-  | "finances"
-  | "relationships"
-  | "personal_growth"
-  | "fun_recreation"
-  | "physical_environment"
-  | "family_friends"
-  | "romance"
-  | "contribution";
-
-const VALID_GOAL_CATEGORIES: GoalCategory[] = [
-  "family_home",
-  "financial_career",
-  "mental_educational",
-  "spiritual_ethical",
-  "social_cultural",
-  "physical_health",
-  "health_fitness",
-  "career_business",
-  "finances",
-  "relationships",
-  "personal_growth",
-  "fun_recreation",
-  "physical_environment",
-  "family_friends",
-  "romance",
-  "contribution",
-];
-
-// Default days to add when no recommended days are configured
-const DEFAULT_MILESTONE_DAYS = 14;
-
 interface TemplateGoal {
   id: string;
   title: string;
@@ -124,13 +84,6 @@ interface Template {
   is_active: boolean;
   programs?: { id: string; name: string } | null;
   guided_path_template_goals: TemplateGoal[];
-}
-
-function getQuadrant(importance: boolean, urgency: boolean) {
-  if (importance && urgency) return "important_urgent";
-  if (importance && !urgency) return "important_not_urgent";
-  if (!importance && urgency) return "not_important_urgent";
-  return "not_important_not_urgent";
 }
 
 export default function GuidedPathDetail() {
@@ -207,124 +160,20 @@ export default function GuidedPathDetail() {
     mutationFn: async () => {
       if (!template || !user) throw new Error("Missing data");
 
-      const start = new Date(startDate);
-      let currentDate = start;
-
-      // Create goals, milestones, and tasks
-      for (const templateGoal of template.guided_path_template_goals) {
-        // Validate and normalize category
-        const normalizedCategory: GoalCategory = VALID_GOAL_CATEGORIES.includes(
-          templateGoal.category as GoalCategory,
-        )
-          ? (templateGoal.category as GoalCategory)
-          : "personal_growth"; // Default fallback category
-
-        // Create goal
-        const { data: newGoal, error: goalError } = await supabase
-          .from("goals")
-          .insert({
-            user_id: user.id,
-            title: templateGoal.title,
-            description: templateGoal.description,
-            category: normalizedCategory,
-            timeframe_type: templateGoal.timeframe_type,
-            priority: templateGoal.priority,
-            status: "active",
-            progress_percentage: 0,
-          })
-          .select()
-          .single();
-
-        if (goalError) throw goalError;
-
-        // Create milestones
-        for (let mIdx = 0; mIdx < templateGoal.guided_path_template_milestones.length; mIdx++) {
-          const templateMilestone = templateGoal.guided_path_template_milestones[mIdx];
-
-          // Calculate due date based on recommended time and pace preference
-          if (mIdx > 0) {
-            const prevMilestone = templateGoal.guided_path_template_milestones[mIdx - 1];
-            let daysToAdd = DEFAULT_MILESTONE_DAYS;
-            if (paceType === "min" && prevMilestone.recommended_days_min) {
-              daysToAdd = prevMilestone.recommended_days_min;
-            } else if (paceType === "optimal" && prevMilestone.recommended_days_optimal) {
-              daysToAdd = prevMilestone.recommended_days_optimal;
-            } else if (paceType === "max" && prevMilestone.recommended_days_max) {
-              daysToAdd = prevMilestone.recommended_days_max;
-            } else {
-              // Fallback priority: optimal > max > min > default
-              daysToAdd =
-                prevMilestone.recommended_days_optimal ||
-                prevMilestone.recommended_days_max ||
-                prevMilestone.recommended_days_min ||
-                DEFAULT_MILESTONE_DAYS;
-            }
-            currentDate = addDays(currentDate, daysToAdd);
-          }
-
-          const { data: newMilestone, error: milestoneError } = await supabase
-            .from("goal_milestones")
-            .insert({
-              goal_id: newGoal.id,
-              title: templateMilestone.title,
-              description: templateMilestone.description,
-              status: "not_started",
-              order_index: mIdx,
-              due_date: format(currentDate, "yyyy-MM-dd"),
-            })
-            .select()
-            .single();
-
-          if (milestoneError) throw milestoneError;
-
-          // Create tasks for each milestone
-          for (const templateTask of templateMilestone.guided_path_template_tasks) {
-            const { error: taskError } = await supabase.from("tasks").insert({
-              user_id: user.id,
-              title: templateTask.title,
-              description: templateTask.description,
-              status: "todo",
-              importance: templateTask.importance,
-              urgency: templateTask.urgency,
-              quadrant: getQuadrant(templateTask.importance, templateTask.urgency),
-              goal_id: newGoal.id,
-              category: templateGoal.category,
-              source_type: "goal",
-            });
-
-            if (taskError) throw taskError;
-          }
-
-          // Move date forward for next milestone based on pace
-          let nextDays = 0;
-          if (paceType === "min" && templateMilestone.recommended_days_min) {
-            nextDays = templateMilestone.recommended_days_min;
-          } else if (paceType === "optimal" && templateMilestone.recommended_days_optimal) {
-            nextDays = templateMilestone.recommended_days_optimal;
-          } else if (paceType === "max" && templateMilestone.recommended_days_max) {
-            nextDays = templateMilestone.recommended_days_max;
-          } else {
-            nextDays =
-              templateMilestone.recommended_days_optimal ||
-              templateMilestone.recommended_days_max ||
-              templateMilestone.recommended_days_min ||
-              0;
-          }
-          if (nextDays > 0) {
-            currentDate = addDays(currentDate, nextDays);
-          }
-        }
-      }
-
-      return true;
+      return instantiateTemplate(supabase, {
+        userId: user.id,
+        templateId: template.id,
+        startDate: new Date(startDate),
+        paceType: paceType as PaceType,
+      });
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["goals"] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["dev-profile-guided-paths"] });
       toast({
         title: "Path Copied!",
-        description:
-          "Your goals, milestones, and tasks have been created. Visit your Goals page to see them.",
+        description: `Created ${result.goalsCreated} goals, ${result.milestonesCreated} milestones, and ${result.tasksCreated} tasks.`,
       });
       setCopyDialogOpen(false);
       navigate("/goals");
