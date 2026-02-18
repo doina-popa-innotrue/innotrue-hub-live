@@ -13,6 +13,7 @@ import {
   UsersRound,
   BookOpen,
   BarChart3,
+  UserCheck,
 } from "lucide-react";
 import { format } from "date-fns";
 import { CohortSessionCard, type CohortSession } from "@/components/cohort/CohortSessionCard";
@@ -31,6 +32,7 @@ interface CohortData {
   end_date: string | null;
   status: string;
   program_id: string;
+  lead_instructor_name?: string | null;
 }
 
 interface ProgramData {
@@ -81,15 +83,24 @@ export default function CohortDashboard() {
         return;
       }
 
-      // 2. Load cohort info
+      // 2. Load cohort info (including lead instructor name)
       const { data: cohortData } = await supabase
         .from("program_cohorts")
-        .select("id, name, description, start_date, end_date, status, program_id")
+        .select(`
+          id, name, description, start_date, end_date, status, program_id,
+          lead_instructor_id,
+          lead_instructor:profiles!program_cohorts_lead_instructor_id_fkey ( name )
+        `)
         .eq("id", enrollment.cohort_id)
         .single();
 
+      const leadInstructorName = (cohortData as any)?.lead_instructor?.name || null;
+
       if (cohortData) {
-        setCohort(cohortData as CohortData);
+        setCohort({
+          ...(cohortData as any),
+          lead_instructor_name: leadInstructorName,
+        } as CohortData);
       }
 
       // 3. Load program name
@@ -103,13 +114,14 @@ export default function CohortDashboard() {
         setProgram(programData as ProgramData);
       }
 
-      // 4. Load cohort sessions with module titles
+      // 4. Load cohort sessions with module titles and instructor names
       const { data: sessionsData } = await supabase
         .from("cohort_sessions")
         .select(`
           id, title, description, session_date, start_time, end_time,
-          location, meeting_link, module_id, notes,
-          program_modules ( title )
+          location, meeting_link, module_id, notes, instructor_id,
+          program_modules ( title ),
+          instructor:profiles!cohort_sessions_instructor_id_fkey ( name )
         `)
         .eq("cohort_id", enrollment.cohort_id)
         .order("order_index", { ascending: true });
@@ -127,6 +139,7 @@ export default function CohortDashboard() {
           module_id: s.module_id,
           notes: s.notes,
           module_title: s.program_modules?.title || null,
+          instructor_name: s.instructor?.name || leadInstructorName,
         }));
         setSessions(mapped);
       }
@@ -296,10 +309,20 @@ export default function CohortDashboard() {
               </div>
               {cohort && getStatusBadge(cohort.status)}
             </div>
-            {cohort?.description && (
-              <p className="text-sm text-muted-foreground mt-2">
-                {cohort.description}
-              </p>
+            {(cohort?.description || cohort?.lead_instructor_name) && (
+              <div className="mt-2 space-y-1">
+                {cohort?.description && (
+                  <p className="text-sm text-muted-foreground">
+                    {cohort.description}
+                  </p>
+                )}
+                {cohort?.lead_instructor_name && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <UserCheck className="h-3.5 w-3.5" />
+                    Led by {cohort.lead_instructor_name}
+                  </p>
+                )}
+              </div>
             )}
           </CardHeader>
         </Card>

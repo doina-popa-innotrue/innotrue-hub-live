@@ -9,6 +9,7 @@ import {
   Calendar,
   Download,
   BookOpen,
+  UserCheck,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
@@ -27,6 +28,7 @@ export interface CohortSession {
   module_id?: string | null;
   notes?: string | null;
   module_title?: string | null;
+  instructor_name?: string | null;
 }
 
 interface CohortSessionCardProps {
@@ -171,6 +173,12 @@ export function CohortSessionCard({
                       {session.location}
                     </span>
                   )}
+                {session.instructor_name && (
+                  <span className="flex items-center gap-1">
+                    <UserCheck className="h-3.5 w-3.5" />
+                    {session.instructor_name}
+                  </span>
+                )}
               </div>
 
               {/* Module link */}

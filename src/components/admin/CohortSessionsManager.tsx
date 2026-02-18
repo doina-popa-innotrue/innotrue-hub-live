@@ -20,9 +20,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Clock, MapPin, Video, GripVertical, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Clock,
+  MapPin,
+  Video,
+  GripVertical,
+  Loader2,
+  UserCheck,
+  CalendarPlus,
+} from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, addWeeks, addMonths, parseISO } from "date-fns";
 import { TimezoneSelect } from "@/components/profile/TimezoneSelect";
 import { useUserTimezone } from "@/hooks/useUserTimezone";
 import {
@@ -46,12 +57,28 @@ import { CSS } from "@dnd-kit/utilities";
 interface CohortSessionsManagerProps {
   cohortId: string;
   programId: string;
+  cohortInstructorId?: string | null;
+  programInstructors?: { id: string; name: string }[];
+}
+
+interface GenerateFormData {
+  titlePrefix: string;
+  startDate: string;
+  startTime: string;
+  endTime: string;
+  pattern: "weekly" | "biweekly" | "monthly";
+  count: number;
+  location: string;
+  moduleAssignment: "none" | "sequential" | "same";
+  sameModuleId: string;
+  instructorId: string;
 }
 
 interface CohortSession {
   id: string;
   cohort_id: string;
   module_id: string | null;
+  instructor_id: string | null;
   title: string;
   description: string | null;
   session_date: string;
@@ -74,6 +101,7 @@ interface SessionFormData {
   location: string;
   meeting_link: string;
   module_id: string;
+  instructor_id: string;
   notes: string;
 }
 
@@ -86,6 +114,7 @@ const defaultFormData: SessionFormData = {
   location: "",
   meeting_link: "",
   module_id: "",
+  instructor_id: "",
   notes: "",
 };
 
@@ -93,9 +122,10 @@ interface SortableSessionProps {
   session: CohortSession;
   onEdit: (session: CohortSession) => void;
   onDelete: (sessionId: string) => void;
+  instructorName?: string | null;
 }
 
-function SortableSession({ session, onEdit, onDelete }: SortableSessionProps) {
+function SortableSession({ session, onEdit, onDelete, instructorName }: SortableSessionProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: session.id,
   });
@@ -162,17 +192,42 @@ function SortableSession({ session, onEdit, onDelete }: SortableSessionProps) {
               Virtual
             </Badge>
           )}
+          {instructorName && (
+            <span className="flex items-center gap-1">
+              <UserCheck className="h-3 w-3" />
+              {instructorName}
+            </span>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-export function CohortSessionsManager({ cohortId, programId }: CohortSessionsManagerProps) {
+export function CohortSessionsManager({
+  cohortId,
+  programId,
+  cohortInstructorId,
+  programInstructors = [],
+}: CohortSessionsManagerProps) {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<CohortSession | null>(null);
   const [formData, setFormData] = useState<SessionFormData>(defaultFormData);
+
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [generateForm, setGenerateForm] = useState<GenerateFormData>({
+    titlePrefix: "Session",
+    startDate: "",
+    startTime: "09:00",
+    endTime: "10:00",
+    pattern: "weekly",
+    count: 8,
+    location: "",
+    moduleAssignment: "none",
+    sameModuleId: "",
+    instructorId: cohortInstructorId || "",
+  });
 
   const [generatingMeetLink, setGeneratingMeetLink] = useState(false);
   const [bulkGenerating, setBulkGenerating] = useState(false);
@@ -235,6 +290,7 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
         location: data.location || null,
         meeting_link: data.meeting_link || null,
         module_id: data.module_id || null,
+        instructor_id: data.instructor_id || null,
         notes: data.notes || null,
         order_index: editingSession?.order_index ?? (sessions?.length || 0),
         timezone: selectedTimezone || "UTC",
@@ -310,11 +366,13 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
         location: session.location || "",
         meeting_link: session.meeting_link || "",
         module_id: session.module_id || "",
+        instructor_id: session.instructor_id || "",
         notes: session.notes || "",
       });
     } else {
       setEditingSession(null);
-      setFormData(defaultFormData);
+      // Default new sessions to cohort's lead instructor
+      setFormData({ ...defaultFormData, instructor_id: cohortInstructorId || "" });
     }
     setDialogOpen(true);
   };
@@ -477,6 +535,102 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
     }
   }
 
+  const generateMutation = useMutation({
+    mutationFn: async (form: GenerateFormData) => {
+      const dates: string[] = [];
+      let currentDate = parseISO(form.startDate);
+      for (let i = 0; i < form.count; i++) {
+        dates.push(format(currentDate, "yyyy-MM-dd"));
+        if (form.pattern === "weekly") currentDate = addWeeks(currentDate, 1);
+        else if (form.pattern === "biweekly") currentDate = addWeeks(currentDate, 2);
+        else if (form.pattern === "monthly") currentDate = addMonths(currentDate, 1);
+      }
+
+      const existingCount = sessions?.length || 0;
+
+      const newSessions = dates.map((date, i) => {
+        let moduleId: string | null = null;
+        if (form.moduleAssignment === "sequential" && modules && modules[i]) {
+          moduleId = modules[i].id;
+        } else if (form.moduleAssignment === "same" && form.sameModuleId) {
+          moduleId = form.sameModuleId;
+        }
+
+        return {
+          cohort_id: cohortId,
+          title: `${form.titlePrefix} ${i + 1}`,
+          description: null,
+          session_date: date,
+          start_time: form.startTime || null,
+          end_time: form.endTime || null,
+          location: form.location || null,
+          meeting_link: null,
+          module_id: moduleId,
+          instructor_id: form.instructorId || null,
+          notes: null,
+          order_index: existingCount + i,
+          timezone: selectedTimezone || "UTC",
+        };
+      });
+
+      const { error } = await supabase.from("cohort_sessions").insert(newSessions);
+      if (error) throw error;
+      return newSessions.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["cohort-sessions", cohortId] });
+      toast.success(`Generated ${count} sessions`);
+      setGenerateDialogOpen(false);
+      // Reset form for next use
+      setGenerateForm({
+        titlePrefix: "Session",
+        startDate: "",
+        startTime: "09:00",
+        endTime: "10:00",
+        pattern: "weekly",
+        count: 8,
+        location: "",
+        moduleAssignment: "none",
+        sameModuleId: "",
+        instructorId: cohortInstructorId || "",
+      });
+    },
+    onError: () => {
+      toast.error("Failed to generate sessions");
+    },
+  });
+
+  const handleGenerate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!generateForm.startDate) {
+      toast.error("Start date is required");
+      return;
+    }
+    if (generateForm.count < 1 || generateForm.count > 52) {
+      toast.error("Number of sessions must be between 1 and 52");
+      return;
+    }
+    generateMutation.mutate(generateForm);
+  };
+
+  // Preview the dates that will be generated
+  const previewDates = (() => {
+    if (!generateForm.startDate) return [];
+    try {
+      const dates: string[] = [];
+      let currentDate = parseISO(generateForm.startDate);
+      for (let i = 0; i < Math.min(generateForm.count, 52); i++) {
+        dates.push(format(currentDate, "MMM d, yyyy"));
+        if (generateForm.pattern === "weekly") currentDate = addWeeks(currentDate, 1);
+        else if (generateForm.pattern === "biweekly") currentDate = addWeeks(currentDate, 2);
+        else if (generateForm.pattern === "monthly") currentDate = addMonths(currentDate, 1);
+      }
+      return dates;
+    } catch {
+      return [];
+    }
+  })();
+
   if (isLoading) {
     return <div className="text-sm text-muted-foreground">Loading sessions...</div>;
   }
@@ -503,6 +657,14 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
                 : "Generate All Meet Links"}
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setGenerateDialogOpen(true)}
+          >
+            <CalendarPlus className="mr-2 h-3 w-3" />
+            Generate Sessions
+          </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" variant="outline" onClick={() => handleOpenDialog()}>
@@ -634,6 +796,32 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
                 </Select>
               </div>
 
+              {/* Session Instructor */}
+              {programInstructors.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Session Instructor</Label>
+                  <Select
+                    value={formData.instructor_id || "none"}
+                    onValueChange={(v) =>
+                      setFormData({ ...formData, instructor_id: v === "none" ? "" : v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="No instructor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No instructor</SelectItem>
+                      {programInstructors.map((instructor) => (
+                        <SelectItem key={instructor.id} value={instructor.id}>
+                          {instructor.name}
+                          {instructor.id === cohortInstructorId ? " (Cohort default)" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
@@ -655,6 +843,247 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
             </form>
           </DialogContent>
         </Dialog>
+
+          {/* Generate Sessions Dialog */}
+          <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Generate Multiple Sessions</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleGenerate} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="gen-title-prefix">Title Prefix</Label>
+                  <Input
+                    id="gen-title-prefix"
+                    placeholder="e.g., Session, Week, Class"
+                    value={generateForm.titlePrefix}
+                    onChange={(e) =>
+                      setGenerateForm({ ...generateForm, titlePrefix: e.target.value })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Sessions will be named &quot;{generateForm.titlePrefix || "Session"} 1&quot;,
+                    &quot;{generateForm.titlePrefix || "Session"} 2&quot;, etc.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="gen-start-date">First Session Date *</Label>
+                  <Input
+                    id="gen-start-date"
+                    type="date"
+                    value={generateForm.startDate}
+                    onChange={(e) =>
+                      setGenerateForm({ ...generateForm, startDate: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="gen-start-time">Start Time</Label>
+                    <Input
+                      id="gen-start-time"
+                      type="time"
+                      value={generateForm.startTime}
+                      onChange={(e) =>
+                        setGenerateForm({ ...generateForm, startTime: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gen-end-time">End Time</Label>
+                    <Input
+                      id="gen-end-time"
+                      type="time"
+                      value={generateForm.endTime}
+                      onChange={(e) =>
+                        setGenerateForm({ ...generateForm, endTime: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Recurrence Pattern</Label>
+                    <Select
+                      value={generateForm.pattern}
+                      onValueChange={(v) =>
+                        setGenerateForm({
+                          ...generateForm,
+                          pattern: v as GenerateFormData["pattern"],
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="biweekly">Biweekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gen-count">Number of Sessions</Label>
+                    <Input
+                      id="gen-count"
+                      type="number"
+                      min="1"
+                      max="52"
+                      value={generateForm.count}
+                      onChange={(e) =>
+                        setGenerateForm({
+                          ...generateForm,
+                          count: Math.max(1, Math.min(52, parseInt(e.target.value) || 1)),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="gen-location">Location (optional)</Label>
+                  <Input
+                    id="gen-location"
+                    placeholder="e.g., Room 101 or Online"
+                    value={generateForm.location}
+                    onChange={(e) =>
+                      setGenerateForm({ ...generateForm, location: e.target.value })
+                    }
+                  />
+                </div>
+
+                {/* Module assignment */}
+                <div className="space-y-2">
+                  <Label>Module Assignment</Label>
+                  <Select
+                    value={generateForm.moduleAssignment}
+                    onValueChange={(v) =>
+                      setGenerateForm({
+                        ...generateForm,
+                        moduleAssignment: v as GenerateFormData["moduleAssignment"],
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No module linked</SelectItem>
+                      <SelectItem value="sequential">
+                        Sequential (auto-assign modules in order)
+                      </SelectItem>
+                      <SelectItem value="same">Same module for all</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {generateForm.moduleAssignment === "sequential" && modules && (
+                    <p className="text-xs text-muted-foreground">
+                      Will assign {Math.min(generateForm.count, modules.length)} modules in order.
+                      {generateForm.count > modules.length &&
+                        ` Sessions beyond module ${modules.length} will have no module.`}
+                    </p>
+                  )}
+                  {generateForm.moduleAssignment === "same" && (
+                    <Select
+                      value={generateForm.sameModuleId || "none"}
+                      onValueChange={(v) =>
+                        setGenerateForm({
+                          ...generateForm,
+                          sameModuleId: v === "none" ? "" : v,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select module" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select module</SelectItem>
+                        {modules?.map((module) => (
+                          <SelectItem key={module.id} value={module.id}>
+                            Module {module.order_index}: {module.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                {/* Instructor */}
+                {programInstructors.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Instructor</Label>
+                    <Select
+                      value={generateForm.instructorId || "none"}
+                      onValueChange={(v) =>
+                        setGenerateForm({
+                          ...generateForm,
+                          instructorId: v === "none" ? "" : v,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="No instructor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No instructor</SelectItem>
+                        {programInstructors.map((instructor) => (
+                          <SelectItem key={instructor.id} value={instructor.id}>
+                            {instructor.name}
+                            {instructor.id === cohortInstructorId ? " (Cohort default)" : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Preview */}
+                {previewDates.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Preview ({previewDates.length} sessions)</Label>
+                    <div className="max-h-40 overflow-y-auto rounded-md border p-2 space-y-1">
+                      {previewDates.map((date, i) => (
+                        <p key={i} className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">
+                            {generateForm.titlePrefix || "Session"} {i + 1}
+                          </span>
+                          {" — "}
+                          {date}
+                          {generateForm.startTime && ` at ${generateForm.startTime}`}
+                          {generateForm.moduleAssignment === "sequential" &&
+                            modules &&
+                            modules[i] && (
+                              <span className="text-primary ml-1">
+                                → {modules[i].title}
+                              </span>
+                            )}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setGenerateDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={generateMutation.isPending}>
+                    <CalendarPlus className="mr-2 h-4 w-4" />
+                    {generateMutation.isPending
+                      ? "Generating..."
+                      : `Generate ${generateForm.count} Sessions`}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -669,14 +1098,21 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-2">
-              {sessions?.map((session) => (
-                <SortableSession
-                  key={session.id}
-                  session={session}
-                  onEdit={handleOpenDialog}
-                  onDelete={handleDelete}
-                />
-              ))}
+              {sessions?.map((session) => {
+                const instrId = session.instructor_id || cohortInstructorId;
+                const instrName = instrId
+                  ? programInstructors.find((i) => i.id === instrId)?.name
+                  : null;
+                return (
+                  <SortableSession
+                    key={session.id}
+                    session={session}
+                    onEdit={handleOpenDialog}
+                    onDelete={handleDelete}
+                    instructorName={instrName}
+                  />
+                );
+              })}
             </div>
           </SortableContext>
         </DndContext>

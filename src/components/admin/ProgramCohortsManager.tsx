@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Calendar, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Pencil, Trash2, Calendar, Users, ChevronDown, ChevronUp, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -40,6 +40,7 @@ interface Cohort {
   end_date: string | null;
   capacity: number | null;
   status: "upcoming" | "active" | "completed" | "cancelled";
+  lead_instructor_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -51,6 +52,7 @@ interface CohortFormData {
   end_date: string;
   capacity: string;
   status: "upcoming" | "active" | "completed" | "cancelled";
+  lead_instructor_id: string;
 }
 
 const defaultFormData: CohortFormData = {
@@ -60,6 +62,7 @@ const defaultFormData: CohortFormData = {
   end_date: "",
   capacity: "",
   status: "upcoming",
+  lead_instructor_id: "",
 };
 
 export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps) {
@@ -80,6 +83,27 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
 
       if (error) throw error;
       return data as Cohort[];
+    },
+  });
+
+  // Fetch instructors assigned to this program
+  const { data: programInstructors } = useQuery({
+    queryKey: ["program-instructors-list", programId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("program_instructors")
+        .select("instructor_id, profiles:instructor_id(id, name)")
+        .eq("program_id", programId);
+
+      if (error) throw error;
+      return (
+        data
+          ?.map((d) => {
+            const profile = d.profiles as unknown as { id: string; name: string } | null;
+            return profile ? { id: profile.id, name: profile.name || "Unknown" } : null;
+          })
+          .filter(Boolean) as { id: string; name: string }[]
+      ) || [];
     },
   });
 
@@ -113,6 +137,7 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
         end_date: data.end_date || null,
         capacity: data.capacity ? parseInt(data.capacity) : null,
         status: data.status,
+        lead_instructor_id: data.lead_instructor_id || null,
       };
 
       if (editingCohort) {
@@ -160,6 +185,7 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
         end_date: cohort.end_date || "",
         capacity: cohort.capacity?.toString() || "",
         status: cohort.status,
+        lead_instructor_id: cohort.lead_instructor_id || "",
       });
     } else {
       setEditingCohort(null);
@@ -307,6 +333,34 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
                 </div>
               </div>
 
+              {/* Lead Instructor */}
+              {programInstructors && programInstructors.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Lead Instructor</Label>
+                  <Select
+                    value={formData.lead_instructor_id || "none"}
+                    onValueChange={(v) =>
+                      setFormData({ ...formData, lead_instructor_id: v === "none" ? "" : v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="No lead instructor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No lead instructor</SelectItem>
+                      {programInstructors.map((instructor) => (
+                        <SelectItem key={instructor.id} value={instructor.id}>
+                          {instructor.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    The instructor who leads this cohort. Sessions inherit this by default.
+                  </p>
+                </div>
+              )}
+
               <div className="flex justify-end gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>
                   Cancel
@@ -367,6 +421,14 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
                             {enrolledCount}
                             {cohort.capacity ? ` / ${cohort.capacity}` : ""} enrolled
                           </span>
+                          {cohort.lead_instructor_id && (
+                            <span className="flex items-center gap-1">
+                              <UserCheck className="h-3 w-3" />
+                              {programInstructors?.find(
+                                (i) => i.id === cohort.lead_instructor_id,
+                              )?.name || "Instructor"}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -399,7 +461,12 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
                   </CardHeader>
                   <CollapsibleContent>
                     <CardContent className="border-t pt-4">
-                      <CohortSessionsManager cohortId={cohort.id} programId={programId} />
+                      <CohortSessionsManager
+                        cohortId={cohort.id}
+                        programId={programId}
+                        cohortInstructorId={cohort.lead_instructor_id}
+                        programInstructors={programInstructors || []}
+                      />
                     </CardContent>
                   </CollapsibleContent>
                 </Card>
