@@ -2,6 +2,9 @@
 -- Allows admin to assign a client to a cohort during enrollment.
 -- Backward compatible: p_cohort_id defaults to NULL.
 
+-- Drop the old 8-param overload first to avoid ambiguous function name
+DROP FUNCTION IF EXISTS public.enroll_with_credits(uuid, uuid, text, uuid, numeric, integer, integer, text);
+
 CREATE OR REPLACE FUNCTION public.enroll_with_credits(
   p_client_user_id uuid,
   p_program_id uuid,
@@ -97,5 +100,5 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
--- Grant remains the same (already granted to authenticated)
-GRANT EXECUTE ON FUNCTION public.enroll_with_credits TO authenticated;
+-- Grant with full signature to avoid ambiguity
+GRANT EXECUTE ON FUNCTION public.enroll_with_credits(uuid, uuid, text, uuid, numeric, integer, integer, text, uuid) TO authenticated;
