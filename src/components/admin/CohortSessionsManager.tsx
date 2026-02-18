@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Clock, MapPin, Video, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, Clock, MapPin, Video, GripVertical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { TimezoneSelect } from "@/components/profile/TimezoneSelect";
@@ -173,6 +173,11 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<CohortSession | null>(null);
   const [formData, setFormData] = useState<SessionFormData>(defaultFormData);
+
+  const [generatingMeetLink, setGeneratingMeetLink] = useState(false);
+  const [bulkGenerating, setBulkGenerating] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(0);
+  const [bulkTotal, setBulkTotal] = useState(0);
 
   // Get user's timezone with fallback
   const { timezone: userTimezone } = useUserTimezone();
@@ -351,6 +356,127 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
     }
   };
 
+  async function handleGenerateMeetLink() {
+    if (!formData.session_date || !formData.start_time) {
+      toast.error("Set date and start time first");
+      return;
+    }
+    setGeneratingMeetLink(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const startISO = `${formData.session_date}T${formData.start_time}:00`;
+      const endISO = formData.end_time
+        ? `${formData.session_date}T${formData.end_time}:00`
+        : new Date(new Date(startISO).getTime() + 60 * 60 * 1000).toISOString(); // default 1h
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-calendar-create-event`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            summary: formData.title || "Cohort Session",
+            startTime: startISO,
+            endTime: endISO,
+            timezone: selectedTimezone || "UTC",
+          }),
+        },
+      );
+
+      if (!response.ok) throw new Error("Failed to create Meet link");
+      const result = await response.json();
+      if (result.meetingLink) {
+        setFormData((prev) => ({ ...prev, meeting_link: result.meetingLink }));
+        toast.success("Google Meet link generated!");
+      } else {
+        toast.error("Event created but no Meet link returned. Check Google Workspace settings.");
+      }
+    } catch (err) {
+      console.error("Meet link generation failed:", err);
+      toast.error("Failed to generate Meet link. You can paste one manually.");
+    } finally {
+      setGeneratingMeetLink(false);
+    }
+  }
+
+  async function handleBulkGenerateMeetLinks() {
+    const sessionsWithoutLink = sessions?.filter((s) => !s.meeting_link) || [];
+    if (sessionsWithoutLink.length === 0) {
+      toast.info("All sessions already have meeting links");
+      return;
+    }
+
+    setBulkGenerating(true);
+    setBulkProgress(0);
+    setBulkTotal(sessionsWithoutLink.length);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      let successCount = 0;
+
+      for (const cohortSession of sessionsWithoutLink) {
+        try {
+          const startISO = cohortSession.start_time
+            ? `${cohortSession.session_date}T${cohortSession.start_time}`
+            : `${cohortSession.session_date}T09:00:00`;
+          const endISO = cohortSession.end_time
+            ? `${cohortSession.session_date}T${cohortSession.end_time}`
+            : new Date(new Date(startISO).getTime() + 60 * 60 * 1000).toISOString();
+
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-calendar-create-event`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${session?.access_token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                summary: cohortSession.title || "Cohort Session",
+                startTime: startISO,
+                endTime: endISO,
+                timezone: selectedTimezone || "UTC",
+                cohortSessionId: cohortSession.id,
+              }),
+            },
+          );
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.meetingLink) {
+              // Update the session in DB (in case edge function cohortSessionId path didn't run)
+              await supabase
+                .from("cohort_sessions")
+                .update({ meeting_link: result.meetingLink })
+                .eq("id", cohortSession.id);
+              successCount++;
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to generate Meet link for session ${cohortSession.id}:`, err);
+        }
+        setBulkProgress((prev) => prev + 1);
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["cohort-sessions", cohortId] });
+      toast.success(`Generated Meet links for ${successCount}/${sessionsWithoutLink.length} sessions`);
+    } catch (err) {
+      console.error("Bulk Meet link generation failed:", err);
+      toast.error("Failed to generate Meet links");
+    } finally {
+      setBulkGenerating(false);
+      setBulkProgress(0);
+      setBulkTotal(0);
+    }
+  }
+
   if (isLoading) {
     return <div className="text-sm text-muted-foreground">Loading sessions...</div>;
   }
@@ -359,13 +485,31 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-medium">Live Sessions</h4>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" variant="outline" onClick={() => handleOpenDialog()}>
-              <Plus className="mr-2 h-3 w-3" />
-              Add Session
+        <div className="flex items-center gap-2">
+          {sessions && sessions.some((s) => !s.meeting_link) && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleBulkGenerateMeetLinks}
+              disabled={bulkGenerating}
+            >
+              {bulkGenerating ? (
+                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+              ) : (
+                <Video className="mr-2 h-3 w-3" />
+              )}
+              {bulkGenerating
+                ? `Generating (${bulkProgress}/${bulkTotal})...`
+                : "Generate All Meet Links"}
             </Button>
-          </DialogTrigger>
+          )}
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" onClick={() => handleOpenDialog()}>
+                <Plus className="mr-2 h-3 w-3" />
+                Add Session
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>{editingSession ? "Edit Session" : "Add Session"}</DialogTitle>
@@ -437,13 +581,35 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
 
               <div className="space-y-2">
                 <Label htmlFor="meeting-link">Meeting Link</Label>
-                <Input
-                  id="meeting-link"
-                  type="url"
-                  placeholder="https://meet.google.com/..."
-                  value={formData.meeting_link}
-                  onChange={(e) => setFormData({ ...formData, meeting_link: e.target.value })}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="meeting-link"
+                    type="url"
+                    placeholder="https://meet.google.com/..."
+                    value={formData.meeting_link}
+                    onChange={(e) => setFormData({ ...formData, meeting_link: e.target.value })}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateMeetLink}
+                    disabled={generatingMeetLink || !formData.session_date || !formData.start_time}
+                    title="Auto-generate Google Meet link"
+                    className="shrink-0"
+                  >
+                    {generatingMeetLink ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Video className="h-4 w-4 mr-1" />
+                    )}
+                    {generatingMeetLink ? "" : "Meet"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Paste a link manually or click &quot;Meet&quot; to auto-generate a Google Meet link.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -489,6 +655,7 @@ export function CohortSessionsManager({ cohortId, programId }: CohortSessionsMan
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {sessions?.length === 0 ? (

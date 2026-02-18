@@ -14,6 +14,7 @@ interface CreateEventRequest {
   attendeeEmails?: string[];
   memberUserIds?: string[]; // Alternative: fetch emails server-side from auth.users
   sessionId?: string; // Optional: update group_sessions with meeting link
+  cohortSessionId?: string; // Optional: update cohort_sessions with meeting link
   calendarId?: string; // Optional: defaults to primary
   // Recurrence support
   recurrencePattern?: string; // 'daily' | 'weekly' | 'biweekly' | 'monthly'
@@ -333,7 +334,7 @@ serve(async (req) => {
     }
     
     const body: CreateEventRequest = await req.json();
-    const { summary, description, startTime, endTime, timezone, attendeeEmails, memberUserIds, sessionId, calendarId, recurrencePattern, recurrenceEndDate } = body;
+    const { summary, description, startTime, endTime, timezone, attendeeEmails, memberUserIds, sessionId, cohortSessionId, calendarId, recurrencePattern, recurrenceEndDate } = body;
     
     // Validate required fields
     if (!summary || !startTime || !endTime) {
@@ -442,7 +443,21 @@ serve(async (req) => {
         }
       }
     }
-    
+
+    // If cohortSessionId provided, update the cohort_sessions table with the meeting link
+    if (cohortSessionId && meetLink) {
+      const { error: cohortUpdateError } = await supabase
+        .from('cohort_sessions')
+        .update({ meeting_link: meetLink })
+        .eq('id', cohortSessionId);
+
+      if (cohortUpdateError) {
+        console.error('Failed to update cohort session with meeting link:', cohortUpdateError);
+      } else {
+        console.log(`Updated cohort session ${cohortSessionId} with meeting link`);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         eventId: event.id,

@@ -76,6 +76,10 @@ export default function ClientDetail() {
   const [selectedProgramPlan, setSelectedProgramPlan] = useState("");
   const [adminDiscountPercent, setAdminDiscountPercent] = useState<string>("");
   const [tierCreditCost, setTierCreditCost] = useState<number | null>(null);
+  const [selectedCohort, setSelectedCohort] = useState("");
+  const [availableCohorts, setAvailableCohorts] = useState<
+    { id: string; name: string; status: string; capacity: number | null; enrolled_count: number }[]
+  >([]);
   const [isActive, setIsActive] = useState(true);
   const [expandedEnrollment, setExpandedEnrollment] = useState<string | null>(null);
   const [enrollmentModules, setEnrollmentModules] = useState<Record<string, any[]>>({});
@@ -236,6 +240,53 @@ export default function ClientDetail() {
     fetchTierCost();
   }, [selectedProgram, selectedTier]);
 
+  // Fetch available cohorts when program changes
+  useEffect(() => {
+    async function fetchCohorts() {
+      if (!selectedProgram) {
+        setAvailableCohorts([]);
+        setSelectedCohort("");
+        return;
+      }
+      // Fetch cohorts for this program
+      const { data: cohorts } = await supabase
+        .from("program_cohorts")
+        .select("id, name, status, capacity")
+        .eq("program_id", selectedProgram)
+        .in("status", ["upcoming", "active"])
+        .order("start_date");
+
+      if (!cohorts || cohorts.length === 0) {
+        setAvailableCohorts([]);
+        setSelectedCohort("");
+        return;
+      }
+
+      // Count enrollments per cohort
+      const { data: enrollmentData } = await supabase
+        .from("client_enrollments")
+        .select("cohort_id")
+        .eq("program_id", selectedProgram)
+        .not("cohort_id", "is", null);
+
+      const countMap: Record<string, number> = {};
+      enrollmentData?.forEach((e) => {
+        if (e.cohort_id) {
+          countMap[e.cohort_id] = (countMap[e.cohort_id] || 0) + 1;
+        }
+      });
+
+      setAvailableCohorts(
+        cohorts.map((c) => ({
+          ...c,
+          enrolled_count: countMap[c.id] || 0,
+        })),
+      );
+      setSelectedCohort("");
+    }
+    fetchCohorts();
+  }, [selectedProgram]);
+
   async function assignCoach() {
     if (!selectedCoach) return;
 
@@ -393,6 +444,7 @@ export default function ClientDetail() {
         p_original_credit_cost: originalCreditCost,
         p_final_credit_cost: finalCreditCost,
         p_description: `Enrolled in ${program?.name} (${selectedTier}) by admin`,
+        p_cohort_id: selectedCohort || null,
       },
     );
 
@@ -418,6 +470,7 @@ export default function ClientDetail() {
     toast.success(`Program assigned!${creditMsg}`);
     setOpen(false);
     setAdminDiscountPercent("");
+    setSelectedCohort("");
     window.location.reload();
   }
 
@@ -974,6 +1027,34 @@ export default function ClientDetail() {
                     Determines which features are available based on this enrollment.
                   </p>
                 </div>
+
+                {/* Cohort Assignment (only shown when program has cohorts) */}
+                {availableCohorts.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Cohort (optional)</Label>
+                    <Select
+                      value={selectedCohort || "none"}
+                      onValueChange={(v) => setSelectedCohort(v === "none" ? "" : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="No cohort" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No cohort</SelectItem>
+                        {availableCohorts.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name} ({c.status})
+                            {c.capacity ? ` — ${c.enrolled_count}/${c.capacity}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Assign this client to a specific cohort for scheduled live sessions.
+                    </p>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label>Admin Discount (%)</Label>
                   <Input
