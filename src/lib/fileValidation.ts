@@ -128,6 +128,12 @@ export const UPLOAD_PRESETS: Record<string, FileValidationPreset> = {
     label: "Reflection resource",
     friendlyTypes: "Images, PDF, Office docs, text, CSV, video, audio",
   },
+  "module-content-packages": {
+    allowedMimeTypes: ["application/zip", "application/x-zip-compressed"],
+    maxSizeBytes: 500 * 1024 * 1024, // 500 MB
+    label: "Content package",
+    friendlyTypes: "ZIP archive",
+  },
   "coach-feedback-attachments": {
     allowedMimeTypes: ALLOWED_MIME_TYPES.document,
     maxSizeBytes: FILE_SIZE_LIMITS.document,

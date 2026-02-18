@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,9 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { X, Plus } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { X, Plus, Package, Trash2, Upload, CheckCircle2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ModuleType {
@@ -38,6 +41,7 @@ interface ModuleLink {
 
 interface ModuleFormProps {
   initialData?: {
+    id?: string; // Module ID — needed for content package upload
     title: string;
     description: string;
     content?: string;
@@ -49,6 +53,7 @@ interface ModuleFormProps {
     code?: string;
     featureKey?: string | null;
     capabilityAssessmentId?: string | null;
+    contentPackagePath?: string | null;
   };
   onSubmit: (data: {
     title: string;
@@ -93,6 +98,12 @@ export default function ModuleForm({
   const [moduleTypes, setModuleTypes] = useState<ModuleType[]>([]);
   const [consumableFeatures, setConsumableFeatures] = useState<Feature[]>([]);
   const [capabilityAssessments, setCapabilityAssessments] = useState<CapabilityAssessment[]>([]);
+  const [contentPackagePath, setContentPackagePath] = useState<string | null>(
+    initialData?.contentPackagePath || null,
+  );
+  const [uploadingPackage, setUploadingPackage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -133,6 +144,88 @@ export default function ModuleForm({
 
   const removeLink = (index: number) => {
     setLinks(links.filter((_, i) => i !== index));
+  };
+
+  const handlePackageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !initialData?.id) return;
+
+    if (!file.name.endsWith(".zip")) {
+      toast.error("Please upload a ZIP file");
+      return;
+    }
+
+    if (file.size > 500 * 1024 * 1024) {
+      toast.error("File size exceeds 500 MB limit");
+      return;
+    }
+
+    setUploadingPackage(true);
+    setUploadProgress(10);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error("Authentication required");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("moduleId", initialData.id);
+
+      setUploadProgress(30);
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/upload-content-package`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: formData,
+        },
+      );
+
+      setUploadProgress(80);
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast.error(result.error || "Upload failed");
+        return;
+      }
+
+      setContentPackagePath(result.content_package_path);
+      setUploadProgress(100);
+      toast.success(`Content package uploaded (${result.files_uploaded} files)`);
+    } catch (err) {
+      toast.error("Upload failed — check your connection");
+      console.error("Content package upload error:", err);
+    } finally {
+      setUploadingPackage(false);
+      setUploadProgress(0);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemovePackage = async () => {
+    if (!initialData?.id) return;
+
+    const { error } = await supabase
+      .from("program_modules")
+      .update({ content_package_path: null })
+      .eq("id", initialData.id);
+
+    if (error) {
+      toast.error("Failed to remove content package");
+    } else {
+      setContentPackagePath(null);
+      toast.success("Content package removed");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -301,6 +394,80 @@ export default function ModuleForm({
           Optional. Link a capability assessment for clients to complete as part of this module.
         </p>
       </div>
+
+      {/* Content Package — only available in edit mode (needs module ID) */}
+      {initialData?.id && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Package className="h-5 w-5" />
+              Content Package
+            </CardTitle>
+            <CardDescription>
+              Upload a Rise/web export ZIP to embed interactive learning content directly in the module.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {contentPackagePath ? (
+              <div className="flex items-center justify-between p-3 border rounded-lg bg-green-50 dark:bg-green-950/20">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="text-sm font-medium">Content package uploaded</p>
+                    <p className="text-xs text-muted-foreground">{contentPackagePath}</p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleRemovePackage}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Remove
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingPackage}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    {uploadingPackage ? "Uploading..." : "Upload ZIP"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    ZIP archive up to 500 MB. Must contain an index.html file.
+                  </p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".zip"
+                  className="hidden"
+                  onChange={handlePackageUpload}
+                />
+                {uploadingPackage && (
+                  <div className="space-y-1">
+                    <Progress value={uploadProgress} />
+                    <p className="text-xs text-muted-foreground text-center">
+                      {uploadProgress < 30
+                        ? "Preparing upload..."
+                        : uploadProgress < 80
+                          ? "Uploading and extracting..."
+                          : "Finalizing..."}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

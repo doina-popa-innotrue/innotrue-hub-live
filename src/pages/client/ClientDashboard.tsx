@@ -37,6 +37,8 @@ import { useEntitlements } from "@/hooks/useEntitlements";
 import { usePageView } from "@/hooks/useAnalytics";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { CohortSessionCard, type CohortSession } from "@/components/cohort/CohortSessionCard";
+import { useUserTimezone } from "@/hooks/useUserTimezone";
 
 interface Enrollment {
   id: string;
@@ -208,9 +210,16 @@ export default function ClientDashboard() {
   const [refetchTrigger, setRefetchTrigger] = useState(0); // Used to trigger refetch from realtime
   const [isOnContinuationPlan, setIsOnContinuationPlan] = useState(false);
   const [profileName, setProfileName] = useState<string | null>(null);
+  const [nextCohortSession, setNextCohortSession] = useState<{
+    session: CohortSession;
+    programId: string;
+    programName: string;
+    cohortName: string;
+  } | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { hasFeature } = useEntitlements();
+  const { timezone: userTimezone } = useUserTimezone();
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -495,6 +504,59 @@ export default function ClientDashboard() {
         acquired: skillsCount || 0,
       });
 
+      // Fetch next cohort session (if user has any active cohort enrollment)
+      const { data: cohortEnrollments } = await supabase
+        .from("client_enrollments")
+        .select(`
+          id,
+          cohort_id,
+          program_cohorts (
+            id, name, program_id,
+            programs ( id, name )
+          )
+        `)
+        .eq("client_user_id", user.id)
+        .eq("status", "active")
+        .not("cohort_id", "is", null);
+
+      if (cohortEnrollments && cohortEnrollments.length > 0) {
+        const cohortIds = cohortEnrollments
+          .filter((e: any) => e.cohort_id)
+          .map((e: any) => e.cohort_id);
+
+        if (cohortIds.length > 0) {
+          const today = new Date().toISOString().split("T")[0];
+          const { data: nextSessions } = await supabase
+            .from("cohort_sessions")
+            .select("id, title, description, session_date, start_time, end_time, location, meeting_link, module_id, notes")
+            .in("cohort_id", cohortIds)
+            .gte("session_date", today)
+            .order("session_date", { ascending: true })
+            .limit(1);
+
+          if (nextSessions && nextSessions.length > 0) {
+            const nextSession = nextSessions[0];
+            const enrollment = cohortEnrollments.find(
+              (e: any) => e.cohort_id === (nextSession as any).cohort_id,
+            ) as any;
+            // Find the enrollment that owns this cohort by matching cohort_id
+            const ownerEnrollment = cohortEnrollments.find((e: any) => {
+              const cohort = e.program_cohorts as any;
+              return cohort?.id === e.cohort_id;
+            }) as any;
+            const cohort = (ownerEnrollment || cohortEnrollments[0] as any).program_cohorts as any;
+            const program = cohort?.programs as any;
+
+            setNextCohortSession({
+              session: nextSession as CohortSession,
+              programId: program?.id || "",
+              programName: program?.name || "",
+              cohortName: cohort?.name || "",
+            });
+          }
+        }
+      }
+
       setLoading(false);
     }
 
@@ -634,6 +696,36 @@ export default function ClientDashboard() {
         hasProfileName={!!profileName}
         hasEnrollments={enrollments.length > 0}
       />
+
+      {/* Section 3b: Next Cohort Session */}
+      {nextCohortSession && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Next Live Session
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                navigate(`/programs/${nextCohortSession.programId}/cohort`)
+              }
+            >
+              View Schedule
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground mb-2">
+            {nextCohortSession.cohortName} • {nextCohortSession.programName}
+          </p>
+          <CohortSessionCard
+            session={nextCohortSession.session}
+            userTimezone={userTimezone}
+            programId={nextCohortSession.programId}
+            isHighlighted
+          />
+        </div>
+      )}
 
       {/* Section 4: Quick Stats Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

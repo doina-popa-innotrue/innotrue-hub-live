@@ -142,6 +142,7 @@ const ClientProgramsList = lazy(() => import("./pages/client/ProgramsList"));
 const ExplorePrograms = lazy(() => import("./pages/client/ExplorePrograms"));
 const ClientProgramDetail = lazy(() => import("./pages/client/ProgramDetail"));
 const ModuleDetail = lazy(() => import("./pages/client/ModuleDetail"));
+const CohortDashboard = lazy(() => import("./pages/client/CohortDashboard"));
 const Goals = lazy(() => import("./pages/client/Goals"));
 const GoalDetail = lazy(() => import("./pages/client/GoalDetail"));
 const DevelopmentTimeline = lazy(() => import("./pages/client/DevelopmentTimeline"));
@@ -1297,6 +1298,16 @@ const App = () => (
                       <ProtectedRoute requireRole="client">
                         <DashboardLayout>
                           <ModuleDetail />
+                        </DashboardLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/programs/:programId/cohort"
+                    element={
+                      <ProtectedRoute requireRole="client">
+                        <DashboardLayout>
+                          <CohortDashboard />
                         </DashboardLayout>
                       </ProtectedRoute>
                     }

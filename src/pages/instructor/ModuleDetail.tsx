@@ -52,6 +52,7 @@ interface Module {
   links?: ModuleLink[];
   program_id: string;
   order_index: number;
+  content_package_path?: string | null;
 }
 
 interface EnrolledClient {
@@ -333,6 +334,29 @@ export default function InstructorModuleDetail() {
           )}
 
           <ModuleSectionsDisplay moduleId={moduleId!} />
+
+          {/* Embedded content package preview (Rise/web export) */}
+          {module.content_package_path && (
+            <Card className="border-primary/50 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  Content Package Preview
+                </CardTitle>
+                <CardDescription>
+                  This is how the embedded learning content appears to participants
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <iframe
+                  src={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-content-package?module=${module.id}&path=index.html`}
+                  className="w-full border-0 rounded-lg"
+                  style={{ minHeight: "75vh" }}
+                  title={module.title}
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {module.links && module.links.length > 0 && (
             <Card>

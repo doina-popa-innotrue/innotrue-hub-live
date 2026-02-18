@@ -1412,6 +1412,7 @@ export default function ProgramDetail() {
                   <TabsContent value="details" className="mt-4">
                     <ModuleForm
                       initialData={{
+                        id: editingModule.id,
                         title: editingModule.title,
                         description: editingModule.description,
                         content: editingModule.content || "",
@@ -1423,6 +1424,7 @@ export default function ProgramDetail() {
                         code: editingModule.code || "",
                         featureKey: editingModule.feature_key || null,
                         capabilityAssessmentId: editingModule.capability_assessment_id || null,
+                        contentPackagePath: editingModule.content_package_path || null,
                       }}
                       onSubmit={updateModule}
                       onCancel={() => {

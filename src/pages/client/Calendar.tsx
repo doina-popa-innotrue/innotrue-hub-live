@@ -575,11 +575,9 @@ export default function ClientCalendar() {
         }
         break;
       case "cohort_session":
-        // For cohort sessions, navigate to the program or open meeting link
-        if (event.metadata.meetingLink) {
-          window.open(event.metadata.meetingLink, "_blank");
-        } else if (event.metadata.programId) {
-          navigate(`/programs/${event.metadata.programId}`);
+        // Navigate to the cohort dashboard for the program
+        if (event.metadata.programId) {
+          navigate(`/programs/${event.metadata.programId}/cohort`);
         }
         break;
     }

@@ -25,6 +25,7 @@ import {
   Calendar,
   AlertCircle,
 } from "lucide-react";
+import { format } from "date-fns";
 import { useTalentLmsProgress } from "@/hooks/useTalentLmsProgress";
 import { useCrossProgramCompletion } from "@/hooks/useCrossProgramCompletion";
 import {
@@ -81,6 +82,12 @@ export default function ProgramDetail() {
   const [program, setProgram] = useState<any>(null);
   const [modules, setModules] = useState<Module[]>([]);
   const [enrollment, setEnrollment] = useState<any>(null);
+  const [cohortInfo, setCohortInfo] = useState<{
+    name: string;
+    start_date: string | null;
+    end_date: string | null;
+    status: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [programPlanAccess, setProgramPlanAccess] = useState<{
     isLocked: boolean;
@@ -233,6 +240,19 @@ export default function ProgramDetail() {
       }
       setProgram(programData);
       setEnrollment(enrollmentData);
+
+      // Load cohort info if enrollment has a cohort
+      if (enrollmentData?.cohort_id) {
+        const { data: cohortData } = await supabase
+          .from("program_cohorts")
+          .select("name, start_date, end_date, status")
+          .eq("id", enrollmentData.cohort_id)
+          .single();
+        if (cohortData) {
+          setCohortInfo(cohortData);
+        }
+      }
+
       setLoading(false);
     }
     fetchData();
@@ -600,6 +620,33 @@ export default function ProgramDetail() {
           modules={modules.map((m) => ({ id: m.id, title: m.title }))}
           showModuleTeams={true}
         />
+
+        {/* Cohort Schedule Card */}
+        {cohortInfo && (
+          <Card className="border-primary/30 bg-primary/5 cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate(`/programs/${id}/cohort`)}>
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-primary/10 p-2">
+                    <Calendar className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{cohortInfo.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {cohortInfo.start_date && cohortInfo.end_date
+                        ? `${format(new Date(cohortInfo.start_date), "MMM d")} – ${format(new Date(cohortInfo.end_date), "MMM d, yyyy")}`
+                        : "Live cohort schedule"}
+                    </p>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm">
+                  View Schedule
+                  <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Cross-program completion notice */}
         {crossCompletedCount > 0 && (

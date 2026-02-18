@@ -77,6 +77,7 @@ interface Module {
   calendly_event_url?: string;
   plan_id?: string | null;
   min_plan_tier?: number;
+  content_package_path?: string | null;
   progress?: {
     id: string;
     status: string;
@@ -183,7 +184,7 @@ export default function ModuleDetail() {
 
       const { data: moduleData } = await supabase
         .from("program_modules")
-        .select("*, plan_id, min_plan_tier")
+        .select("*, plan_id, min_plan_tier, content_package_path")
         .eq("id", moduleId)
         .single();
 
@@ -651,6 +652,30 @@ export default function ModuleDetail() {
 
         {/* New module sections */}
         {!isLocked && <ModuleSectionsDisplay moduleId={module.id} />}
+
+        {/* Embedded content package (Rise/web export) */}
+        {!isLocked && module.content_package_path && (
+          <Card className="border-primary/50 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-primary" />
+                InnoTrue Academy Learning Module
+              </CardTitle>
+              <CardDescription>
+                Complete this interactive learning module at your own pace
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <iframe
+                src={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-content-package?module=${module.id}&path=index.html`}
+                className="w-full border-0 rounded-lg"
+                style={{ minHeight: "75vh" }}
+                title={module.title}
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Client-specific content for individualized modules */}
         {!isLocked && clientContent && (

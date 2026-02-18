@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { useSessionTimeStatus } from "@/hooks/useSessionTimeStatus";
 
 export interface GroupSessionCardProps {
   session: any;
@@ -56,7 +57,22 @@ export function GroupSessionCard({
   const sessionDate = new Date(session.session_date);
   const zonedDate = toZonedTime(sessionDate, userTimezone);
   const isGenerated = session.isGeneratedOccurrence;
-  const isPast = sessionDate < new Date();
+
+  // Extract date string (YYYY-MM-DD) for the time status hook
+  const sessionDateStr = session.session_date?.split("T")[0] || new Date(session.session_date).toISOString().split("T")[0];
+  // Extract time from the timestamp (group sessions store full timestamps, not separate time fields)
+  const sessionTimeStr = format(sessionDate, "HH:mm:ss");
+  const endTimeStr = session.duration_minutes
+    ? format(new Date(sessionDate.getTime() + session.duration_minutes * 60000), "HH:mm:ss")
+    : null;
+
+  const timeStatus = useSessionTimeStatus({
+    sessionDate: sessionDateStr,
+    startTime: sessionTimeStr,
+    endTime: endTimeStr,
+    userTimezone,
+  });
+  const isPast = timeStatus.label === "Ended";
 
   const linkTo = isGenerated
     ? `${linkPrefix}/${groupId}/sessions/${session.parentSessionId}`
@@ -120,6 +136,18 @@ export function GroupSessionCard({
                     </Badge>
                   )}
                   {getStatusBadge(session.status)}
+                  {/* Time-aware status badge */}
+                  {session.status === "scheduled" && timeStatus.label !== "Upcoming" && (
+                    <Badge variant={timeStatus.variant === "destructive" ? "destructive" : timeStatus.variant === "default" ? "default" : "secondary"} className="text-xs">
+                      {timeStatus.label === "Live Now" && (
+                        <span className="relative flex h-2 w-2 mr-1">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+                        </span>
+                      )}
+                      {timeStatus.label}
+                    </Badge>
+                  )}
                 </div>
 
                 {session.description && (
@@ -154,12 +182,17 @@ export function GroupSessionCard({
 
           {/* Action buttons row */}
           <div className="flex flex-wrap items-center gap-2 pl-0 sm:pl-7">
-            {/* Join Meeting button */}
+            {/* Join Meeting button — enhanced with time awareness */}
             {videoLink && !isPast && (
-              <Button size="sm" variant="default" asChild>
+              <Button
+                size="sm"
+                variant="default"
+                className={timeStatus.label === "Live Now" ? "animate-pulse" : ""}
+                asChild
+              >
                 <a href={videoLink} target="_blank" rel="noopener noreferrer">
                   <Video className="mr-2 h-3.5 w-3.5" />
-                  Join
+                  {timeStatus.isJoinable ? (timeStatus.label === "Live Now" ? "Join Now" : "Join") : "Join"}
                 </a>
               </Button>
             )}
