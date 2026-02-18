@@ -41,7 +41,7 @@
 │                     Supabase                                 │
 │  ┌────────────┐  ┌──────────────┐  ┌───────────────────┐   │
 │  │ PostgreSQL │  │   Auth       │  │   Storage          │   │
-│  │ 369+ tables│  │ Google OAuth │  │   File uploads     │   │
+│  │ 373+ tables│  │ Google OAuth │  │   File uploads     │   │
 │  │ RLS on all │  │ Email/Pass   │  │   Wheel PDFs       │   │
 │  └────────────┘  └──────────────┘  └───────────────────┘   │
 │  ┌──────────────────────────────────────────────────────┐   │
@@ -59,7 +59,7 @@
 **Stack:** React 18 + Vite 5 + TypeScript (strict) + Supabase + Tailwind CSS + shadcn/ui
 
 **Key design decisions:**
-- SPA with lazy-loaded routes (160+ pages, code-split to 977KB main bundle)
+- SPA with lazy-loaded routes (162+ pages, code-split to 977KB main bundle)
 - Supabase for backend (auth, database, storage, edge functions) — no custom server
 - Google Vertex AI for AI features (EU data residency in Frankfurt, europe-west3)
 - Resend for transactional email (13 edge functions)
@@ -109,7 +109,7 @@ fi && npm run build
 ### Supabase project details
 
 Both preprod and prod have:
-- 393 database migrations applied
+- 414 database migrations applied
 - Seed data loaded (`supabase/seed.sql`)
 - 63 edge functions deployed
 - Google OAuth configured
@@ -159,7 +159,7 @@ After login, users must accept the current platform terms before accessing the a
 
 ### Schema overview
 
-- **369+ tables**, 20+ enum types, 393 migrations
+- **373+ tables**, 20+ enum types, 414 migrations
 - All public tables have **RLS enabled** (276 tables total, 41 with explicit policies, 235 locked to service_role only)
 - Key enums: `app_role`, `program_category`, `module_type`, `enrollment_status`, `decision_status`, `goal_category`
 
@@ -295,7 +295,7 @@ STAGING_EMAIL_OVERRIDE=your@email.com
 
 ### Code splitting
 
-All 160+ page components are lazy-loaded in `src/App.tsx`:
+All 162+ page components are lazy-loaded in `src/App.tsx`:
 ```typescript
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 ```
@@ -313,6 +313,23 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 | State management | React Query for server state, React Context for auth |
 | Path alias | `@/` maps to `src/` |
 | Icons | Lucide React |
+
+### Shared services (`src/lib/`)
+
+Reusable business logic extracted into shared service modules:
+
+| Service | File | Purpose |
+|---------|------|---------|
+| Assessment scoring | `src/lib/assessmentScoring.ts` | `calculateDomainScore()`, `parseQuestionTypes()`, `validateTypeWeights()` — shared by snapshot form, view, and charts |
+| Path instantiation | `src/lib/guidedPathInstantiation.ts` | `instantiateTemplate()`, `estimateCompletionDate()` — shared by survey wizard PathConfirmation and GuidedPathDetail copy dialog |
+| File validation | `src/lib/fileValidation.ts` | `validateFile(file, bucket)`, `sanitizeFilename()` — shared by all 13 upload interfaces |
+
+### Key hooks (DP1-DP4 additions)
+
+| Hook | File | Purpose |
+|------|------|---------|
+| `useGoalAssessmentLinks` | `src/hooks/useGoalAssessmentLinks.ts` | Goal↔assessment link CRUD with domain/assessment name joins |
+| `useMilestoneGates` | `src/hooks/useMilestoneGates.ts` | Gates CRUD, batch fetch, traffic-light status computation, override creation |
 
 ### Cookie consent banner
 

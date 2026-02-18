@@ -688,6 +688,8 @@ The platform has **three distinct assessment systems** sharing `assessment_categ
 - `module_assignment_types.scoring_assessment_id` → capability assessments
 - `scenario_templates.capability_assessment_id` → capability assessments
 - `psychometric_assessments.feature_key` → features table (plan gating)
+- `goal_assessment_links` → links goals to any assessment source (capability assessments, domains, snapshots, definitions, psychometric) (DP1)
+- `guided_path_milestone_gates` → links template milestones to assessment domains/dimensions for readiness gates (DP3)
 
 ---
 
@@ -1005,6 +1007,11 @@ Missing module_resources       → Resource modules have no content to display
 Missing is_restrictive config  → Org-sponsored plans can't deny features → employees get features org wants blocked
 Missing enroll_with_credits    → Enrollment + credit deduction not atomic → race conditions / partial states
 Missing file_validation        → Uploads not validated → wrong file types or oversized files in storage
+Missing goal_assessment_links  → Goals have no assessment traceability → Development Profile shows no score journey (DP1)
+Missing milestone_gates config → Guided path milestones have no readiness signals → gate indicators absent (DP3)
+Missing gate_overrides         → Coaches can't waive gates → clients blocked by advisory gates (DP3)
+Missing instantiations record  → Template-to-goal creation not tracked → no pace/date/status metadata (DP4)
+Missing template_goal_id col   → Goals created from templates not traceable → Development Profile can't show path progress (DP4)
 ```
 
 ---
@@ -1106,6 +1113,13 @@ Use this checklist when setting up a new environment or verifying configuration.
 - [ ] **Credit-gated resources** — Set `is_consumable = true` + `credit_cost` on premium resources
 - [ ] **Coach feedback templates** — Module feedback templates for structured coach feedback
 - [ ] **Feedback inbox** — Verify `/feedback` page aggregates from scenario evaluations, module feedback, assignment grading, and goal comments
+
+### Layer 3G — Development Profile & Guided Path Gates (DP1-DP4)
+- [ ] **Goal assessment links** — Goals linked to capability domains/assessments with score_at_creation and target_score (DP1)
+- [ ] **Milestone gates** — Admin configures gates on template milestones with assessment source + min_score (DP3)
+- [ ] **Gate overrides** — Coaches/instructors can waive gates with required reason (DP3)
+- [ ] **Path instantiations** — Verify survey wizard creates goals via PathConfirmation step (DP4)
+- [ ] **Template traceability** — Goals created from templates have `template_goal_id` + `instantiation_id` set (DP4)
 
 ### Layer 4 — Programs
 - [ ] **Program plans** — At least one program plan with features
@@ -1228,6 +1242,11 @@ After population, verify each path works:
 - [ ] Wheel of Life: client accesses from dashboard → rates categories → sees radar chart
 - [ ] File uploads: validate MIME type + size against bucket presets, filename sanitized
 - [ ] Auth error handling: roleless user sees "Account Not Configured" (not silent client fallback)
+- [ ] Goal assessment link (DP1): create goal → link to capability domain → badge shows on GoalCard → score history on GoalDetail
+- [ ] Development Profile (DP2): navigate to /development-profile → all 5 sections render (or empty states) → coach/instructor can view client's profile via /teaching/students/:enrollmentId/development-profile
+- [ ] Milestone gates (DP3): admin adds gate to template milestone → client sees traffic-light indicator → coach/instructor waives gate with reason
+- [ ] Path instantiation (DP4): complete guided path survey → see PathConfirmation with pace selector → create path → verify goals/milestones/tasks created with correct due dates
+- [ ] GuidedPathDetail copy (DP4): verify "Copy This Path" on GuidedPathDetail still works with shared `instantiateTemplate()` service
 
 ---
 
@@ -1377,13 +1396,106 @@ The platform has 9 distinct feedback mechanisms stored across different tables:
 
 | Table | Purpose |
 |-------|---------|
-| `goals` | Client goals with category, status, target date |
+| `goals` | Client goals with category, status, target date, optional `template_goal_id` + `instantiation_id` (DP4) |
 | `goal_milestones` | Sub-goals/milestones within a goal |
 | `goal_resources` | Files attached to goals |
+| `goal_assessment_links` | Links a goal to an assessment source with score tracking (DP1) |
 
 **Goal categories:** Uses `goal_category` enum. Goals are not feature-gated — available to all authenticated users.
 
 **Assessment-driven goal creation (implemented):** `CapabilitySnapshotView` now shows a "Suggested Goals" section for weak domains. Clicking "Create Goal" navigates to `/goals?action=create&title={domain name}&description={assessment context}` with pre-filled title and description. This connects low-scoring assessment domains directly to goal creation.
+
+### Goal Assessment Links (DP1)
+
+`goal_assessment_links` provides polymorphic assessment traceability for goals:
+
+| Field | Purpose |
+|-------|---------|
+| `goal_id` | The linked goal (required) |
+| `capability_assessment_id` | Link to capability assessment (optional) |
+| `capability_domain_id` | Link to specific domain (optional) |
+| `capability_snapshot_id` | Link to specific snapshot (optional) |
+| `assessment_definition_id` | Link to assessment definition (optional) |
+| `psychometric_assessment_id` | Link to psychometric assessment (optional) |
+| `score_at_creation` | Score when goal was created |
+| `target_score` | Target score to achieve |
+| `notes` | Free text notes |
+
+**RLS:** Follows `goal_milestones` / `goal_shares` patterns — owner CRUD, shared users SELECT, coaches SELECT via `client_coaches`, instructors SELECT via `client_instructors`, admin SELECT.
+
+**UI integration:**
+- `GoalForm.tsx` — optional "Linked Assessment" collapsible section (assessment type → domain → scores)
+- `GoalCard.tsx` — assessment origin badge "📊 [Domain Name] (X/N)"
+- `GoalDetail.tsx` — score history section with progress bar (creation → current → target)
+
+**Hook:** `src/hooks/useGoalAssessmentLinks.ts` — `useGoalAssessmentLink(goalId)`, `useCreateGoalAssessmentLink()`
+
+### Guided Path Instantiations (DP4)
+
+`guided_path_instantiations` tracks the lifecycle of template-to-goal creation:
+
+| Field | Purpose |
+|-------|---------|
+| `user_id` | Client who instantiated the path |
+| `template_id` | Source guided path template |
+| `survey_response_id` | Link to survey that triggered instantiation (optional) |
+| `pace_multiplier` | Speed factor (0.7 intensive / 1.0 standard / 1.5 part-time) |
+| `started_at` | When the path was started |
+| `estimated_completion_date` | Calculated from pace × milestone days |
+| `actual_completion_date` | Filled when path is completed |
+| `status` | active / paused / completed / abandoned |
+
+**RLS:** Owner full CRUD, admin SELECT all, coaches SELECT via `client_coaches`, instructors SELECT via `client_instructors`.
+
+**Goals table additions (DP4):**
+- `goals.template_goal_id` → `guided_path_template_goals(id)` — traces which template goal this was created from
+- `goals.instantiation_id` → `guided_path_instantiations(id)` — traces which instantiation created this goal
+
+**Shared service:** `src/lib/guidedPathInstantiation.ts`
+- `instantiateTemplate(supabase, options)` — creates instantiation record, goals with `template_goal_id` + `instantiation_id`, milestones with pace-adjusted dates, tasks
+- `estimateCompletionDate(templateGoals, startDate, paceType)` — preview helper
+
+### Milestone Gates (DP3)
+
+Assessment-gated milestones provide advisory readiness signals on guided path template milestones:
+
+**`guided_path_milestone_gates`:**
+
+| Field | Purpose |
+|-------|---------|
+| `template_milestone_id` | The template milestone this gate is on |
+| `capability_assessment_id` | Link to capability assessment (one of the assessment sources) |
+| `capability_domain_id` | Link to capability domain (one of the assessment sources) |
+| `assessment_definition_id` | Link to assessment definition (one of the assessment sources) |
+| `assessment_dimension_id` | Link to assessment dimension (one of the assessment sources) |
+| `min_score` | Minimum score required to pass the gate |
+| `gate_label` | Display label (auto-generated, editable) |
+
+**RLS:** SELECT for all authenticated (templates are config data); INSERT/UPDATE/DELETE admin only.
+
+**`milestone_gate_overrides`:**
+
+| Field | Purpose |
+|-------|---------|
+| `goal_milestone_id` | The actual goal milestone being overridden |
+| `gate_id` | Which gate is being waived |
+| `overridden_by` | Coach/instructor/admin who waived |
+| `reason` | Required explanation for the waiver |
+
+**RLS:** Goal owner SELECT, shared users SELECT, coaches SELECT + INSERT via `client_coaches`, instructors SELECT + INSERT via `client_instructors`, admin full CRUD.
+
+**Gates are advisory, not blocking** — coaching is human-judgment-based. Traffic-light indicators:
+- 🟢 Green: score ≥ min_score OR override exists
+- 🟡 Amber: score within 1 point of min_score
+- 🔴 Red: score < min_score - 1
+- ⚪ Grey: no assessment data
+
+**UI components:**
+- `MilestoneGateDialog.tsx` — admin dialog for adding gates to template milestones
+- `MilestoneGateStatus.tsx` — traffic-light badge rendering with tooltips
+- `WaiveGateDialog.tsx` — coach/instructor gate waiver with required reason
+
+**Hook:** `src/hooks/useMilestoneGates.ts` — `useMilestoneGates(templateMilestoneId)`, `useMilestoneGatesBatch(milestoneIds)`, `useMilestoneGateStatus(goalMilestoneId, userId)`, `useCreateMilestoneGate()`, `useDeleteMilestoneGate()`, `useCreateGateOverride()`
 
 ---
 
@@ -1411,7 +1523,7 @@ These tables will be needed as the enhancement roadmap (ISSUES_AND_IMPROVEMENTS.
 | Phase 7 | Module ordering | `program_modules.is_sequential`, `module_progress.unlock_override` | Allow non-sequential module access | Pending |
 | Phase 9 | Micro-learning | `module_types` enum: `micro_learning` | New module type for 2-5 min content | Pending |
 | M12 | Resource ratings | `resource_ratings` | 1-5 star rating + review text per resource | Pending |
-| M4 | Assessment→Goal | `goals.assessment_snapshot_id` | Link goal to assessment result that prompted it | ✅ **Done** — via URL params (`/goals?action=create&title=...`) |
+| M4 | Assessment→Goal | `goals.assessment_snapshot_id` | Link goal to assessment result that prompted it | ✅ **Done** — via URL params (`/goals?action=create&title=...`) + `goal_assessment_links` table (DP1) |
 | M5 | Scenario re-submission | `scenario_templates.allows_resubmission`, `scenario_assignments.parent_assignment_id/attempt_number/revision_notes` | Configurable revision workflow | ✅ **Done** — schema + UI implemented |
 | M3 | Evaluation rubrics | `paragraph_question_links.rubric_text` | Scoring rubric guidance for evaluators | ✅ **Done** — schema + UI implemented |
 | M15 | Credit-gated resources | `resource_library.is_consumable/credit_cost` | Resources that cost credits to access | ✅ **Done** — schema + `ResourceUnlockDialog` |
@@ -1432,3 +1544,8 @@ These tables will be needed as the enhancement roadmap (ISSUES_AND_IMPROVEMENTS.
 | RLS helper | `user_is_enrolled_in_program()` RPC | Avoids RLS recursion in staff/assessment policies |
 | Credit safety | `consume_credits_fifo()` + `FOR UPDATE SKIP LOCKED` | Prevents double-spend under concurrent requests |
 | Auth error state | `AuthContext.authError` + `clearAuthError()` | Surfaces role fetch failures instead of silent fallback |
+| DP1 Assessment links | `goal_assessment_links` table | Polymorphic goal↔assessment traceability with score tracking |
+| DP3 Milestone gates | `guided_path_milestone_gates` table | Assessment readiness gates on template milestones (advisory, not blocking) |
+| DP3 Gate overrides | `milestone_gate_overrides` table | Coach/instructor waiver of assessment gates with required reason |
+| DP4 Instantiations | `guided_path_instantiations` table | Tracks template-to-goal creation lifecycle (pace, dates, status) |
+| DP4 Goal traceability | `goals.template_goal_id`, `goals.instantiation_id` | Links goals back to source template and instantiation record |

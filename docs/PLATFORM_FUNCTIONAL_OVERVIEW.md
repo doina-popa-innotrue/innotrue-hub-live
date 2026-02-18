@@ -1,6 +1,6 @@
 # InnoTrue Hub — Platform Functional Overview
 
-> Last updated: 2026-02-18
+> Last updated: 2026-02-19
 > This document describes the InnoTrue Hub platform from a functional perspective: what it does, who uses it, how the pieces connect, and how things flow. It is intended for platform administrators, partner instructors, developers joining the project, and stakeholders evaluating platform capabilities.
 
 ---
@@ -21,10 +21,11 @@
    - 4.8 Coaching & Instructor Workflows
    - 4.9 Resources & Learning Content
    - 4.10 Guided Paths
-   - 4.11 Credits, Plans & Entitlements
-   - 4.12 Notifications & Communication
-   - 4.13 Organizations
-   - 4.14 AI Features
+   - 4.11 Development Profile
+   - 4.12 Credits, Plans & Entitlements
+   - 4.13 Notifications & Communication
+   - 4.14 Organizations
+   - 4.15 AI Features
 5. [Instructor & Coach Assignment System](#5-instructor--coach-assignment-system)
 6. [Content Delivery](#6-content-delivery)
 7. [Integrations & External Tools](#7-integrations--external-tools)
@@ -78,6 +79,7 @@ The end user going through a development program.
 - Participate in group sessions, peer coaching, and check-ins
 - Book coaching/instructor sessions via Cal.com
 - View feedback, badges, skills map, and progress analytics
+- View their **Development Profile** — unified strengths/gaps/goals/skills/paths dashboard
 - Access the resource library and AI-powered recommendations
 - Use AI reflection prompts connected to their goals and progress
 
@@ -134,7 +136,7 @@ Manages their organization's members and program access within the platform.
 │  ┌─────────┐ ┌──────────┐ ┌─────────┐ ┌─────────────┐  │
 │  │  Auth    │ │ Database │ │ Storage │ │ Edge Funcs   │  │
 │  │  (OAuth) │ │ (Postgres│ │ (15     │ │ (61          │  │
-│  │         │ │  369+    │ │ buckets)│ │  functions)  │  │
+│  │         │ │  373+    │ │ buckets)│ │  functions)  │  │
 │  │         │ │  tables) │ │         │ │              │  │
 │  └─────────┘ └──────────┘ └─────────┘ └─────────────┘  │
 ├─────────────────────────────────────────────────────────┤
@@ -242,7 +244,7 @@ Scenarios support certification: if a client meets the scoring threshold across 
 
 These are the ongoing coaching tools clients use alongside structured programs:
 
-**Goals:** Client sets goals with milestones, progress tracking, and AI-generated reflection prompts. Coaches see shared goals and can add notes.
+**Goals:** Client sets goals with milestones, progress tracking, and AI-generated reflection prompts. Coaches see shared goals and can add notes. Goals can be **linked to assessments** (capability assessments, domains, definitions, or psychometric assessments) for traceability — showing a score journey from creation through current to target score. Goals created from guided path templates retain `template_goal_id` and `instantiation_id` for full path traceability.
 
 **Decisions:** A structured decision-making framework with:
 - Decision logging with context, options, and chosen path
@@ -336,16 +338,41 @@ coaching, group_coaching, workshop, mastermind, review_board_mock, peer_coaching
 
 ### 4.10 Guided Paths
 
-Guided paths are structured learning journeys that organize resources and activities into a recommended sequence:
+Guided paths are structured development journeys that convert assessment-driven recommendations into actionable goals, milestones, and tasks:
 
-- Admin creates guided path templates with steps
-- Templates belong to guided path families (for grouping related paths)
-- Clients can enroll in guided paths and progress through steps
-- Feature-gated: requires `guided_paths` entitlement
+- **Templates:** Admin creates guided path templates with goals → milestones → tasks. Each milestone has recommended days (min/optimal/max) for pace calculation.
+- **Families:** Templates belong to guided path families for grouping related paths.
+- **Survey-driven matching:** Clients take an intake survey (`GuidedPathSurveyWizard`) that matches them to appropriate templates based on their responses. After completing the survey, a **PathConfirmation** step shows matched templates with pace selection and estimated completion date.
+- **Pace selection:** Three pace options — Intensive (min days), Standard (optimal days, recommended), Part-time (max days). The selected pace determines milestone due dates.
+- **Instantiation:** When the client confirms, the shared `instantiateTemplate()` service creates actual goals, milestones, and tasks from the template. Each goal retains `template_goal_id` and `instantiation_id` for traceability.
+- **Manual copy:** Clients can also copy a path directly from the `GuidedPathDetail` page using the same shared instantiation service.
+- **Assessment gates (advisory):** Template milestones can have assessment gates configured by admin — linking to capability domains or assessment dimensions with a minimum score. Gates show traffic-light indicators (🟢🟡🔴⚪) but are advisory, not blocking. Coaches and instructors can waive gates with a required reason.
+- **Tracking:** `guided_path_instantiations` tracks the lifecycle (active/paused/completed/abandoned) with pace, estimated and actual completion dates.
 
 ---
 
-### 4.11 Credits, Plans & Entitlements
+### 4.11 Development Profile
+
+The **Development Profile** (`/development-profile`) is a unified view connecting assessments, goals, development items, skills, and guided paths into a single dashboard:
+
+**Five sections:**
+
+| Section | What It Shows |
+|---------|---------------|
+| **Strengths & Gaps Matrix** | Latest capability snapshot domain scores normalized to percentages, color-coded (green ≥80%, amber 50-79%, red <50%), with trend arrows comparing latest vs previous snapshot |
+| **Active Development Items** | Development items grouped by linked domain, with status badges (pending/in_progress/completed) |
+| **Assessment-Linked Goal Progress** | Goals with assessment links showing progress bar + score journey (creation → current → target) |
+| **Skills Earned** | User skills displayed as badge grid grouped by skill category |
+| **Guided Path Progress** | Active guided paths from survey responses with completion percentage and template details |
+
+**Access:**
+- **Client:** `/development-profile` — sees their own data
+- **Coach/Instructor:** `/teaching/students/:enrollmentId/development-profile` — sees client's data (resolves client user ID from enrollment)
+- **Admin:** Can view any profile via admin tools
+
+---
+
+### 4.12 Credits, Plans & Entitlements
 
 **Two plan systems:**
 
@@ -378,7 +405,7 @@ Guided paths are structured learning journeys that organize resources and activi
 
 ---
 
-### 4.12 Notifications & Communication
+### 4.13 Notifications & Communication
 
 **25+ notification types across 8 categories:** programs, sessions, assignments, goals, groups, assessments, system, billing
 
@@ -397,7 +424,7 @@ Guided paths are structured learning journeys that organize resources and activi
 
 ---
 
-### 4.13 Organizations
+### 4.14 Organizations
 
 Organizations allow companies to manage groups of users:
 
@@ -410,7 +437,7 @@ Organizations allow companies to manage groups of users:
 
 ---
 
-### 4.14 AI Features
+### 4.15 AI Features
 
 **4 AI edge functions powered by Vertex AI Gemini 3 Flash (EU/Frankfurt):**
 
@@ -563,12 +590,12 @@ Consumption analytics, user behavior analytics, program completions, system sett
 
 | Metric | Count |
 |--------|-------|
-| Database tables | 369+ |
+| Database tables | 373+ |
 | Database enums | 25 |
-| Database migrations | 411 |
+| Database migrations | 414 |
 | Edge functions | 61 |
-| Frontend pages | 160+ (71 admin, 54 client, 13 teaching, 9 org-admin, 13+ shared) |
-| React hooks | 65 |
+| Frontend pages | 162+ (71 admin, 56 client, 13 teaching, 9 org-admin, 13+ shared) |
+| React hooks | 67 |
 | Storage buckets | 15 |
 | Notification types | 25+ |
 | Session types | 8 |

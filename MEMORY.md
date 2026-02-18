@@ -50,11 +50,12 @@
 - Routes: `src/App.tsx` | Sentry: `src/main.tsx` | Error boundary: `src/components/ErrorBoundary.tsx`
 - Edge functions: `supabase/functions/` (61 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`
 - Assessment scoring: `src/lib/assessmentScoring.ts` (weighted question type scoring for capability assessments)
+- Guided path instantiation: `src/lib/guidedPathInstantiation.ts` (shared template→goals service with pace/date logic)
 - Tests: `src/lib/__tests__/` (18 files, 303 tests) | CI: `.github/workflows/ci.yml`
 - Seed: `supabase/seed.sql` | Cursor rules: `.cursorrules`
 
 ## Database Schema
-- 369+ tables, 25 enums, 411 migrations
+- 373+ tables, 25 enums, 414 migrations
 - Key enums: `app_role` (admin, client, coach, instructor), `module_type`, `enrollment_status`
 - **Two plan systems:** Subscription plans (`plans` table, tier 0-4) + Program plans (`program_plans`, per-enrollment features)
 - `useEntitlements` merges 5 sources: subscription, program plan, add-ons, tracks, org-sponsored (highest wins)
@@ -114,16 +115,16 @@
 
 **Priority 0 — Development Profile & Assessment-Driven Guided Paths (see `docs/DEVELOPMENT_PROFILE_ANALYSIS.md`):**
 Approved for development 2026-02-18. Connects 3 assessment systems + development items + goals + guided paths into unified development journey.
-- DP1: Assessment ↔ Goal traceability (1-2 days) — `goal_assessment_links` table
-- DP2: Development Profile page (3-5 days) — unified strengths/gaps/progress view
-- DP3: Assessment-gated milestones (3-5 days) — traffic-light readiness on guided path milestones, coach override
-- DP4: Intake-driven path recommendation (3-5 days) — fix survey instantiation bug, conditional skip, pace multiplier, estimated duration
+- ~~DP1: Assessment ↔ Goal traceability~~ ✅ DONE — `goal_assessment_links` table, GoalForm linked assessment section, GoalCard assessment badge, GoalDetail score history
+- ~~DP2: Development Profile page~~ ✅ DONE — unified 5-section page (StrengthsGapsMatrix, ActiveDevelopmentItems, AssessmentGoalProgress, SkillsEarned, GuidedPathProgress) + coach/instructor StudentDevelopmentProfile view + sidebar nav + routes
+- ~~DP3: Assessment-gated milestones~~ ✅ DONE — `guided_path_milestone_gates` + `milestone_gate_overrides` tables, admin gate config on template milestones, traffic-light indicators (🟢🟡🔴⚪), coach/instructor waive with reason
+- ~~DP4: Intake-driven path recommendation~~ ✅ DONE — `guided_path_instantiations` table, shared `instantiateTemplate()` service, PathConfirmation with pace selector, survey wizard bug fix, GuidedPathDetail refactored to shared service
 - DP5: Module ↔ domain mapping (2-3 days) — modules tagged to assessment domains
 - DP6: Psychometric structured results (2-3 days) — manual score entry for DISC/VIA/etc.
 - DP7: Readiness dashboard (3-5 days) — capstone coach + client view combining all data
-- **Known bug:** `GuidedPathSurveyWizard` saves survey response but never instantiates template goals/milestones (fixed in DP4)
+- ~~**Known bug:** `GuidedPathSurveyWizard` saves survey response but never instantiates template goals/milestones~~ ✅ Fixed in DP4
 
-**Phases:** **P0 cohort scheduling gaps (G1-G6)** → **Development Profile (DP1-DP4)** → 5-Self-Registration → Development Profile (DP5-DP7) → Content Tier 2 xAPI → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
+**Phases:** ~~P0 cohort scheduling gaps (G1-G6)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → 5-Self-Registration → Development Profile (DP5-DP7) → Content Tier 2 xAPI → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, client progress, notes)
@@ -151,8 +152,8 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 4. ~~Priority 0 Assignment Routing~~ ✅ — individualized filter + My Queue + assignment transfer + async notifications
 5. ~~Priority 0 Cohort Core~~ ✅ — CohortDashboard + Join Session one-click + calendar + dashboard widget
 6. **Priority 0 Cohort Scheduling Gaps** — G1 enrollment UI + G2 Meet links + G3 instructor + G5 recurrence (~1 week)
-7. **Priority 0 Cohort Quality** — G4 attendance + G6 notifications + G7 session notes (~1.5 weeks)
-8. **Development Profile (DP1-DP4)** — assessment↔goal links, profile page, gated milestones, intake-driven paths (~2-3 weeks)
+7. ~~**Priority 0 Cohort Quality**~~ ✅ — G4 attendance + G6 notifications + G7 session notes
+8. ~~**Development Profile (DP1-DP4)**~~ ✅ — assessment↔goal links, profile page, gated milestones, intake-driven paths
 9. Quick medium wins (M2, M11) — interleaved (2 days)
 10. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
 11. **Development Profile (DP5-DP7)** — module↔domain mapping, psychometric structured results, readiness dashboard (~1-2 weeks)
@@ -178,7 +179,7 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 - **Preprod Auth Email Hook (2026-02-14):** Incorrect Authorization header. Fixed with correct service role key.
 - **Profiles RLS recursion (2026-02-14):** Circular RLS on profiles. Fixed via `client_can_view_staff_profile()` SECURITY DEFINER function.
 
-## Current State (as of 2026-02-18)
+## Current State (as of 2026-02-19)
 - All strict TypeScript flags enabled (including strictNullChecks). 0 errors.
 - Self-registration disabled during pilot. All users admin-created.
 - 15 storage buckets on all 3 Supabase projects
@@ -195,8 +196,18 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 - **Cohort core experience DONE:** CohortDashboard (schedule timeline, next session, ICS, progress), CohortSessionCard (time-aware status, pulsing join, ICS), Calendar integration, ClientDashboard widget. **Remaining gaps:** cohort assignment UI on enrollment, Google Meet automation, instructor on cohort, attendance tracking, recurrence, notifications, session notes. See `docs/COHORT_SCHEDULING_ANALYSIS.md`.
 - **Coach/instructor onboarding DONE:** Staff Welcome Card, profile setup (bio, specializations, company), enhanced empty states, role-specific welcome emails.
 - **Assignment routing DONE:** My Queue filtering, assignment transfer dialog, async notifications via create_notification RPC. Remaining: configurable notification routing (nice to have), assessor_id cleanup.
-- **Development Profile plan approved** (`docs/DEVELOPMENT_PROFILE_ANALYSIS.md`): 7-phase plan (DP1-DP7) connecting 3 assessment systems + development items + goals + guided paths. 6 new tables. Prioritised for development — immediate value for CTA preparation clients. Known bug: `GuidedPathSurveyWizard` doesn't instantiate templates (fixed in DP4).
-- **Next steps:** P0 cohort scheduling gaps (G1-G6) → Development Profile (DP1-DP4) → Phase 5 → DP5-DP7 → Content Tier 2 xAPI → Phase 3 AI
+- **Development Profile DP1-DP4 DONE** (`docs/DEVELOPMENT_PROFILE_ANALYSIS.md`): Assessment↔goal linking (`goal_assessment_links`), unified Development Profile page (5 sections), assessment-gated milestones (`guided_path_milestone_gates` + `milestone_gate_overrides`), path instantiation service (`guided_path_instantiations`). 4 new tables, 15 new files, 7 modified files. Survey wizard bug fixed. DP5-DP7 remaining.
+- **Key new components (DP1-DP4):**
+  - `src/pages/client/DevelopmentProfile.tsx` — unified 5-section development profile (StrengthsGapsMatrix, ActiveDevelopmentItems, AssessmentGoalProgress, SkillsEarned, GuidedPathProgress)
+  - `src/pages/instructor/StudentDevelopmentProfile.tsx` — coach/instructor view of client's development profile
+  - `src/lib/guidedPathInstantiation.ts` — shared `instantiateTemplate()` + `estimateCompletionDate()` service
+  - `src/components/guided-paths/PathConfirmation.tsx` — pace selector + instantiation confirmation
+  - `src/components/guided-paths/MilestoneGateStatus.tsx` — traffic-light gate indicators (🟢🟡🔴⚪)
+  - `src/components/guided-paths/MilestoneGateDialog.tsx` — admin gate config dialog
+  - `src/components/guided-paths/WaiveGateDialog.tsx` — coach/instructor gate waiver
+  - `src/hooks/useGoalAssessmentLinks.ts` — goal↔assessment CRUD
+  - `src/hooks/useMilestoneGates.ts` — gates CRUD, batch fetch, status computation, overrides
+- **Next steps:** Phase 5 Self-Registration → DP5-DP7 → Content Tier 2 xAPI → Phase 3 AI
 
 ## npm Scripts
 ```
