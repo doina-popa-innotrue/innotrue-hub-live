@@ -69,6 +69,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 import { ErrorState } from "@/components/ui/error-state";
+import {
+  parseQuestionTypes,
+  validateTypeWeights,
+  type QuestionTypeDefinition,
+} from "@/lib/assessmentScoring";
 
 type Domain = {
   id: string;
@@ -86,6 +91,8 @@ type Question = {
   description: string | null;
   input_type: string;
   options: { label: string; value: string }[] | null;
+  question_type: string | null;
+  type_weight: number | null;
   order_index: number;
   created_at: string;
 };
@@ -111,8 +118,15 @@ export default function CapabilityAssessmentDetail() {
     description: "",
     input_type: "slider",
     options: [] as { label: string; value: string }[],
+    question_type: "" as string,
+    type_weight: "" as string,
   });
   const [newOptionLabel, setNewOptionLabel] = useState("");
+
+  // Question types configuration state
+  const [typeDialogOpen, setTypeDialogOpen] = useState(false);
+  const [editingTypeIndex, setEditingTypeIndex] = useState<number | null>(null);
+  const [typeForm, setTypeForm] = useState({ name: "", weight: "" });
 
   // Fetch assessment
   const { data: assessment, isLoading: assessmentLoading } = useQuery({
@@ -223,6 +237,58 @@ export default function CapabilityAssessmentDetail() {
 
   const [selectedSnapshot, setSelectedSnapshot] = useState<any | null>(null);
 
+  // Parsed question types from assessment
+  const assessmentQuestionTypes = parseQuestionTypes(assessment?.question_types);
+  const typeWeightValidation = assessmentQuestionTypes
+    ? validateTypeWeights(assessmentQuestionTypes)
+    : null;
+
+  // Question types mutation
+  const updateQuestionTypesMutation = useMutation({
+    mutationFn: async (types: QuestionTypeDefinition[] | null) => {
+      const { error } = await supabase
+        .from("capability_assessments")
+        .update({ question_types: types })
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["capability-assessment", id] });
+      toast({ description: "Question types updated" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleAddType = () => {
+    if (!typeForm.name.trim() || !typeForm.weight) return;
+    const current = assessmentQuestionTypes || [];
+    const newTypes = [...current, { name: typeForm.name.trim(), weight: parseFloat(typeForm.weight) }];
+    updateQuestionTypesMutation.mutate(newTypes);
+    setTypeForm({ name: "", weight: "" });
+    setTypeDialogOpen(false);
+  };
+
+  const handleUpdateType = () => {
+    if (editingTypeIndex === null || !typeForm.name.trim() || !typeForm.weight) return;
+    const current = assessmentQuestionTypes || [];
+    const newTypes = [...current];
+    newTypes[editingTypeIndex] = { name: typeForm.name.trim(), weight: parseFloat(typeForm.weight) };
+    updateQuestionTypesMutation.mutate(newTypes);
+    setTypeForm({ name: "", weight: "" });
+    setEditingTypeIndex(null);
+    setTypeDialogOpen(false);
+  };
+
+  const handleDeleteType = (index: number) => {
+    const current = assessmentQuestionTypes || [];
+    const typeName = current[index].name;
+    if (!confirm(`Delete type "${typeName}"? Questions assigned to this type will become untyped.`)) return;
+    const newTypes = current.filter((_, i) => i !== index);
+    updateQuestionTypesMutation.mutate(newTypes.length > 0 ? newTypes : null);
+  };
+
   // Domain mutations
   const createDomainMutation = useMutation({
     mutationFn: async (data: typeof domainForm) => {
@@ -282,13 +348,15 @@ export default function CapabilityAssessmentDetail() {
       const maxOrder = domainQuestions.length
         ? Math.max(...domainQuestions.map((q) => q.order_index)) + 1
         : 0;
-      const insertData = {
+      const insertData: Record<string, unknown> = {
         domain_id: data.domain_id,
         question_text: data.question_text,
         description: data.description || null,
         input_type: data.input_type,
         options: data.input_type !== "slider" && data.options.length > 0 ? data.options : null,
         order_index: maxOrder,
+        question_type: data.question_type || null,
+        type_weight: data.type_weight ? parseFloat(data.type_weight) : null,
       };
       const { error } = await supabase.from("capability_domain_questions").insert([insertData]);
       if (error) throw error;
@@ -307,11 +375,13 @@ export default function CapabilityAssessmentDetail() {
 
   const updateQuestionMutation = useMutation({
     mutationFn: async ({ questionId, data }: { questionId: string; data: typeof questionForm }) => {
-      const updateData = {
+      const updateData: Record<string, unknown> = {
         question_text: data.question_text,
         description: data.description || null,
         input_type: data.input_type,
         options: data.input_type !== "slider" && data.options.length > 0 ? data.options : null,
+        question_type: data.question_type || null,
+        type_weight: data.type_weight ? parseFloat(data.type_weight) : null,
       };
       const { error } = await supabase
         .from("capability_domain_questions")
@@ -460,7 +530,7 @@ export default function CapabilityAssessmentDetail() {
   };
 
   const resetQuestionForm = () => {
-    setQuestionForm({ question_text: "", description: "", input_type: "slider", options: [] });
+    setQuestionForm({ question_text: "", description: "", input_type: "slider", options: [], question_type: "", type_weight: "" });
     setNewOptionLabel("");
   };
 
@@ -500,6 +570,8 @@ export default function CapabilityAssessmentDetail() {
       description: question.description || "",
       input_type: question.input_type || "slider",
       options: (question.options as { label: string; value: string }[]) || [],
+      question_type: question.question_type || "",
+      type_weight: question.type_weight != null ? String(question.type_weight) : "",
     });
     setQuestionDialogOpen(true);
   };
@@ -581,6 +653,137 @@ export default function CapabilityAssessmentDetail() {
         </TabsList>
 
         <TabsContent value="domains" className="space-y-4">
+          {/* Question Types Configuration */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">Question Types</CardTitle>
+                  <CardDescription>
+                    Define question categories with weights for weighted scoring. Leave empty for simple averaging.
+                  </CardDescription>
+                </div>
+                <Dialog
+                  open={typeDialogOpen}
+                  onOpenChange={(open) => {
+                    setTypeDialogOpen(open);
+                    if (!open) {
+                      setEditingTypeIndex(null);
+                      setTypeForm({ name: "", weight: "" });
+                    }
+                  }}
+                >
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Type
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingTypeIndex !== null ? "Edit Question Type" : "Add Question Type"}
+                      </DialogTitle>
+                      <DialogDescription>
+                        Define a question category and its weight percentage.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                      <div>
+                        <Label htmlFor="type-name">Type Name *</Label>
+                        <Input
+                          id="type-name"
+                          value={typeForm.name}
+                          onChange={(e) => setTypeForm({ ...typeForm, name: e.target.value })}
+                          placeholder="e.g., Knowledge"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="type-weight">Weight (%) *</Label>
+                        <Input
+                          id="type-weight"
+                          type="number"
+                          min="1"
+                          max="100"
+                          value={typeForm.weight}
+                          onChange={(e) => setTypeForm({ ...typeForm, weight: e.target.value })}
+                          placeholder="e.g., 30"
+                        />
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <Button variant="outline" onClick={() => setTypeDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={editingTypeIndex !== null ? handleUpdateType : handleAddType}
+                          disabled={!typeForm.name.trim() || !typeForm.weight || updateQuestionTypesMutation.isPending}
+                        >
+                          {updateQuestionTypesMutation.isPending && (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          )}
+                          {editingTypeIndex !== null ? "Update" : "Add"}
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {!assessmentQuestionTypes || assessmentQuestionTypes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No question types configured. All questions are weighted equally (simple averaging).
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {assessmentQuestionTypes.map((t, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg"
+                      >
+                        <span className="text-sm font-medium">{t.name}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {t.weight}%
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => {
+                            setEditingTypeIndex(i);
+                            setTypeForm({ name: t.name, weight: String(t.weight) });
+                            setTypeDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => handleDeleteType(i)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  {typeWeightValidation && !typeWeightValidation.valid && (
+                    <p className="text-sm text-amber-600">
+                      Weights sum to {typeWeightValidation.total}% (should be 100%)
+                    </p>
+                  )}
+                  {typeWeightValidation?.valid && (
+                    <p className="text-sm text-green-600">
+                      Weights sum to 100% ✓
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Knowledge Domains</h2>
             <Dialog
@@ -835,6 +1038,12 @@ export default function CapabilityAssessmentDetail() {
                                           </>
                                         )}
                                       </Badge>
+                                      {question.question_type && (
+                                        <Badge variant="secondary" className="text-xs">
+                                          {question.question_type}
+                                          {question.type_weight != null && ` (${question.type_weight}%)`}
+                                        </Badge>
+                                      )}
                                     </div>
                                     {question.description && (
                                       <p className="text-xs text-muted-foreground mt-1">
@@ -1195,6 +1404,49 @@ export default function CapabilityAssessmentDetail() {
                 </SelectContent>
               </Select>
             </div>
+            {/* Question Type — only shown when assessment has types configured */}
+            {assessmentQuestionTypes && assessmentQuestionTypes.length > 0 && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="question-type">Question Type</Label>
+                  <Select
+                    value={questionForm.question_type}
+                    onValueChange={(value) =>
+                      setQuestionForm({ ...questionForm, question_type: value === "__none__" ? "" : value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">None (untyped)</SelectItem>
+                      {assessmentQuestionTypes.map((t) => (
+                        <SelectItem key={t.name} value={t.name}>
+                          {t.name} ({t.weight}%)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="type-weight-override">Weight Override</Label>
+                  <Input
+                    id="type-weight-override"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={questionForm.type_weight}
+                    onChange={(e) =>
+                      setQuestionForm({ ...questionForm, type_weight: e.target.value })
+                    }
+                    placeholder="Equal (default)"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Leave blank for equal weighting within this type
+                  </p>
+                </div>
+              </div>
+            )}
             {(questionForm.input_type === "single_choice" ||
               questionForm.input_type === "multi_choice") && (
               <div className="space-y-2">

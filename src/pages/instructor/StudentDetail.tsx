@@ -21,6 +21,7 @@ import {
   MessageSquare,
   BookOpen,
   UserCog,
+  Plus,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,6 +51,7 @@ import ClientStaffNotes from "@/components/admin/ClientStaffNotes";
 import { ManualCompletionControls } from "@/components/admin/ManualCompletionControls";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { DevelopmentItemDialog } from "@/components/capabilities/DevelopmentItemDialog";
 
 interface StudentInfo {
   id: string;
@@ -115,6 +117,10 @@ export default function StudentDetail() {
     moduleTitle: string;
     moduleId: string;
   } | null>(null);
+  const [devItemDialog, setDevItemDialog] = useState<{
+    open: boolean;
+    moduleProgressId: string;
+  }>({ open: false, moduleProgressId: "" });
 
   // Auto-open the reflections dialog if query params specify a module
   useEffect(() => {
@@ -723,19 +729,37 @@ export default function StudentDetail() {
                         </Button>
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        {enrollmentId && (
-                          <ManualCompletionControls
-                            moduleProgressId={module.id || undefined}
-                            enrollmentId={enrollmentId}
-                            moduleId={module.module_id}
-                            type="module"
-                            isCompleted={module.status === "completed"}
-                            onSuccess={() => {
-                              // Refresh module progress
-                              window.location.reload();
-                            }}
-                          />
-                        )}
+                        <div className="flex items-center gap-1">
+                          {module.id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Add Development Item"
+                              onClick={() =>
+                                setDevItemDialog({
+                                  open: true,
+                                  moduleProgressId: module.id,
+                                })
+                              }
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {enrollmentId && (
+                            <ManualCompletionControls
+                              moduleProgressId={module.id || undefined}
+                              enrollmentId={enrollmentId}
+                              moduleId={module.module_id}
+                              type="module"
+                              isCompleted={module.status === "completed"}
+                              onSuccess={() => {
+                                // Refresh module progress
+                                window.location.reload();
+                              }}
+                            />
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -841,6 +865,18 @@ export default function StudentDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Development Item Dialog */}
+      {studentInfo && (
+        <DevelopmentItemDialog
+          open={devItemDialog.open}
+          onOpenChange={(open) => setDevItemDialog((prev) => ({ ...prev, open }))}
+          forUserId={studentInfo.id}
+          moduleProgressId={devItemDialog.moduleProgressId}
+          dialogTitle="Add Development Item for Client"
+          dialogDescription={`Create a development item for ${studentInfo.name}`}
+        />
+      )}
 
       {/* Reflections & Feedback Dialog */}
       <Dialog open={!!viewingReflections} onOpenChange={handleCloseReflectionsDialog}>

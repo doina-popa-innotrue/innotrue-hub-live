@@ -25,6 +25,11 @@ import {
   CartesianGrid,
 } from "recharts";
 import { format } from "date-fns";
+import {
+  parseQuestionTypes,
+  calculateTypeScores,
+  type ScoredQuestion,
+} from "@/lib/assessmentScoring";
 
 interface SnapshotRating {
   id: string;
@@ -48,6 +53,8 @@ interface Domain {
   capability_domain_questions: {
     id: string;
     question_text: string;
+    question_type?: string | null;
+    type_weight?: number | null;
   }[];
 }
 
@@ -55,6 +62,7 @@ interface Assessment {
   id: string;
   name: string;
   rating_scale: number;
+  question_types?: unknown;
   capability_domains: Domain[];
 }
 
@@ -77,7 +85,11 @@ export function CapabilityEvolutionChart({
 }: CapabilityEvolutionChartProps) {
   const [compareMode, setCompareMode] = useState<"latest-vs-first" | "custom">("latest-vs-first");
   const [viewMode, setViewMode] = useState<"radar" | "line">("radar");
+  const [radarMode, setRadarMode] = useState<"domains" | "types">("domains");
   const [sourceFilter, setSourceFilter] = useState<SnapshotSourceFilter>("all");
+
+  // Parse question types for "View by Types" radar mode
+  const questionTypes = parseQuestionTypes(assessment.question_types);
 
   // Separate source filters for each comparison snapshot
   const [sourceFilter1, setSourceFilter1] = useState<SnapshotSourceFilter>("all");
@@ -151,10 +163,43 @@ export function CapabilityEvolutionChart({
   const { snapshot1, snapshot2 } = getComparisonSnapshots();
 
   const getRadarData = () => {
+    if (radarMode === "types" && questionTypes) {
+      return getTypeRadarData();
+    }
     return assessment.capability_domains.map((domain) => ({
       domain: domain.name,
       current: snapshot1 ? getDomainAverageForSnapshot(snapshot1, domain) : 0,
       previous: snapshot2 ? getDomainAverageForSnapshot(snapshot2, domain) : 0,
+      fullMark: assessment.rating_scale,
+    }));
+  };
+
+  const getTypeRadarDataForSnapshot = (snapshot: Snapshot) => {
+    if (!questionTypes) return [];
+    const allQuestions: ScoredQuestion[] = [];
+    for (const domain of assessment.capability_domains) {
+      for (const q of domain.capability_domain_questions) {
+        const rating = snapshot.capability_snapshot_ratings.find((r) => r.question_id === q.id);
+        allQuestions.push({
+          questionId: q.id,
+          rating: rating?.rating || 0,
+          questionType: q.question_type || null,
+          typeWeight: q.type_weight ?? null,
+        });
+      }
+    }
+    return calculateTypeScores(allQuestions, questionTypes);
+  };
+
+  const getTypeRadarData = () => {
+    if (!questionTypes) return [];
+    const currentScores = snapshot1 ? getTypeRadarDataForSnapshot(snapshot1) : [];
+    const previousScores = snapshot2 ? getTypeRadarDataForSnapshot(snapshot2) : [];
+
+    return questionTypes.map((t) => ({
+      domain: `${t.name} (${t.weight}%)`,
+      current: currentScores.find((s) => s.typeName === t.name)?.average || 0,
+      previous: previousScores.find((s) => s.typeName === t.name)?.average || 0,
       fullMark: assessment.rating_scale,
     }));
   };
@@ -223,6 +268,17 @@ export function CapabilityEvolutionChart({
                   <SelectItem value="line">Timeline</SelectItem>
                 </SelectContent>
               </Select>
+              {viewMode === "radar" && questionTypes && questionTypes.length > 0 && (
+                <Select value={radarMode} onValueChange={(v) => setRadarMode(v as "domains" | "types")}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="domains">By Domains</SelectItem>
+                    <SelectItem value="types">By Question Types</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
               {overallChange !== 0 && (
                 <Badge variant={overallChange > 0 ? "default" : "secondary"}>
                   {overallChange > 0 ? "+" : ""}

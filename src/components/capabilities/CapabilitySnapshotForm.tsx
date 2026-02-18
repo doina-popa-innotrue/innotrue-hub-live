@@ -14,6 +14,12 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { ChevronDown, ChevronRight, Save, X, CloudOff, Cloud, Loader2 } from "lucide-react";
 import { useClientStaffRelationships } from "@/hooks/useClientStaffRelationships";
+import {
+  parseQuestionTypes,
+  calculateDomainScore,
+  type ScoredQuestion,
+} from "@/lib/assessmentScoring";
+
 interface Domain {
   id: string;
   name: string;
@@ -24,6 +30,8 @@ interface Domain {
     question_text: string;
     description: string | null;
     order_index: number;
+    question_type?: string | null;
+    type_weight?: number | null;
   }[];
 }
 
@@ -35,6 +43,7 @@ interface Assessment {
   instructions_self: string | null;
   instructions_evaluator: string | null;
   assessment_mode: "self" | "evaluator" | "both";
+  question_types?: unknown;
   capability_domains: Domain[];
 }
 
@@ -477,10 +486,22 @@ export function CapabilitySnapshotForm({
     markChanged();
   };
 
+  // Parse question types from assessment
+  const questionTypes = parseQuestionTypes(assessment.question_types);
+
+  const getDomainScoreData = (domain: Domain) => {
+    const scoredQuestions: ScoredQuestion[] = domain.capability_domain_questions.map((q) => ({
+      questionId: q.id,
+      rating: ratings[q.id] || 0,
+      questionType: q.question_type || null,
+      typeWeight: q.type_weight ?? null,
+    }));
+    return calculateDomainScore(scoredQuestions, questionTypes);
+  };
+
   const getDomainAverage = (domain: Domain) => {
-    const domainRatings = domain.capability_domain_questions.map((q) => ratings[q.id] || 0);
-    if (domainRatings.length === 0) return 0;
-    return domainRatings.reduce((a, b) => a + b, 0) / domainRatings.length;
+    const score = getDomainScoreData(domain);
+    return score.weightedAverage ?? score.simpleAverage;
   };
 
   const getOverallAverage = () => {
@@ -625,7 +646,9 @@ export function CapabilitySnapshotForm({
                           )}
                         </div>
                       </div>
-                      <Badge variant="secondary">Avg: {getDomainAverage(domain).toFixed(1)}</Badge>
+                      <Badge variant="secondary">
+                        {questionTypes ? "Weighted" : "Avg"}: {getDomainAverage(domain).toFixed(1)}
+                      </Badge>
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -635,7 +658,14 @@ export function CapabilitySnapshotForm({
                       <div key={question.id} className="space-y-3">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
-                            <Label className="text-sm font-medium">{question.question_text}</Label>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Label className="text-sm font-medium">{question.question_text}</Label>
+                              {question.question_type && (
+                                <Badge variant="secondary" className="text-xs font-normal">
+                                  {question.question_type}
+                                </Badge>
+                              )}
+                            </div>
                             {question.description && (
                               <p className="text-xs text-muted-foreground mt-0.5">
                                 {question.description}
@@ -663,6 +693,21 @@ export function CapabilitySnapshotForm({
                         />
                       </div>
                     ))}
+                    {/* Type subtotals — shown when question types are configured */}
+                    {questionTypes && questionTypes.length > 0 && (() => {
+                      const scoreData = getDomainScoreData(domain);
+                      return scoreData.typeSubtotals.length > 0 ? (
+                        <div className="flex flex-wrap gap-3 pt-2 border-t">
+                          {scoreData.typeSubtotals.map((ts) => (
+                            <div key={ts.typeName} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <span className="font-medium">{ts.typeName}:</span>
+                              <span>{ts.average.toFixed(1)}/{assessment.rating_scale}</span>
+                              <span className="text-muted-foreground/60">({ts.typeWeight}%)</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
                     <div className="space-y-2 pt-2 border-t">
                       <Label htmlFor={`notes-${domain.id}`}>
                         Reflections on {domain.name} (optional)
