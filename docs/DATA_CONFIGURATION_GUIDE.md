@@ -121,23 +121,25 @@ Subscription tiers that users are assigned to. Stored on `profiles.plan_id`.
 ### 2.3 Plan Features (`plan_features`)
 Map features to plans with optional limits. This defines what each plan tier can access.
 
-| Plan | Feature | Limit | Meaning |
-|------|---------|-------|---------|
-| Free | ai_coach | 20 | 20 AI coach uses/month |
-| Free | session_coaching | 1 | 1 coaching session/month |
-| Base | ai_coach | 50 | 50 AI coach uses/month |
-| Base | session_coaching | 3 | 3 coaching sessions/month |
-| Pro | ai_coach | 100 | 100 AI coach uses/month |
-| Pro | session_coaching | 5 | 5 coaching sessions/month |
-| ... | ... | ... | Higher tiers get more |
+| Plan | Feature | Limit | Is Restrictive | Meaning |
+|------|---------|-------|----------------|---------|
+| Free | ai_coach | 20 | false | 20 AI coach uses/month |
+| Free | session_coaching | 1 | false | 1 coaching session/month |
+| Base | ai_coach | 50 | false | 50 AI coach uses/month |
+| Base | session_coaching | 3 | false | 3 coaching sessions/month |
+| Pro | ai_coach | 100 | false | 100 AI coach uses/month |
+| Pro | session_coaching | 5 | false | 5 coaching sessions/month |
+| Enterprise | community | 0 | **true** | **Deny** — blocks community even if granted by other sources |
+| ... | ... | ... | ... | Higher tiers get more |
 
 - `limit_value = NULL` → unlimited access (non-consumable features)
 - `limit_value = 0` → feature disabled for this plan
 - `limit_value > 0` → monthly usage cap
+- **`is_restrictive = true`** → **deny override** — explicitly blocks this feature regardless of grants from any other source (subscription, add-ons, tracks). Used by org-sponsored plans to enforce org policy (e.g., block community access for employees)
 
-**Admin UI:** Plans Management → Edit Plan → Features tab
+**Admin UI:** Plans Management → Edit Plan → Features tab (includes "Deny" toggle per feature)
 **Depends on:** plans, features
-**Needed by:** Entitlement resolution (`useEntitlements` hook)
+**Needed by:** Entitlement resolution (`useEntitlements` hook — deny entries override all grants)
 
 ### 2.4 Plan Prices (`plan_prices`)
 Link plans to Stripe for billing. Each purchasable plan needs at least one price.
@@ -531,6 +533,10 @@ Created via auth (signup/invite) or seeded for demo.
 - `plan_id` → must reference a valid plan
 - Role assignment → `user_roles` table (admin, client, coach, instructor)
 
+**Auth error handling:** Users without roles now see an "Account Not Configured" error screen (the silent `roles = ["client"]` fallback was removed). Role fetch failures surface as `authError` in AuthContext with retry/sign-out options.
+
+**Welcome email:** After successful signup verification (`verify-signup` edge function), a non-blocking call to `send-welcome-email` is triggered automatically using the service role key.
+
 ### 5.3 Client Enrollments (`client_enrollments`)
 Enroll a user in a program.
 
@@ -539,8 +545,12 @@ Enroll a user in a program.
 | `client_user_id` | The enrolled user |
 | `program_id` | The program |
 | `program_plan_id` | Their access tier within the program (optional) |
-| `status` | active, completed, withdrawn, etc. |
+| `status` | active, completed, withdrawn, paused, etc. |
 | `enrolled_at` | Enrollment date |
+
+**Atomic enrollment RPC:** `enroll_with_credits(p_client_user_id, p_program_id, p_tier, p_program_plan_id, p_discount_percent, p_original_credit_cost, p_final_credit_cost, p_description)` — combines credit consumption + enrollment creation in a single database transaction to prevent partial states (credits deducted but enrollment not created, or vice versa). Returns `{success, enrollment_id, credit_details}`.
+
+**Helper RPC:** `user_is_enrolled_in_program(user_id, program_id)` — SECURITY DEFINER function that checks enrollment status (active, paused, or completed) without triggering RLS recursion. Used by multiple RLS policies on staff and assessment tables.
 
 **Depends on:** users (profiles), programs, program_plans (optional)
 
@@ -555,6 +565,7 @@ Each user has a credit balance initialized from their plan's `credit_allowance`.
 
 **Replenished:** Monthly based on plan's credit_allowance
 **Topped up:** Via Stripe credit package purchase
+**Concurrency safety:** `consume_credits_fifo()` uses `FOR UPDATE SKIP LOCKED` on `credit_batches` to prevent double-spend under concurrent consumption
 
 ### 5.5 Coach Assignments
 - `program_coaches` — which coaches are assigned to which programs
@@ -584,6 +595,8 @@ The `structure` JSON field defines the form fields clients fill out. Admin creat
 ```
 draft → submitted → reviewed → completed
 ```
+
+**Grading guard:** Instructors can only grade assignments in `submitted` status — drafts and already-reviewed assignments are blocked with a message.
 
 **Data Flow:**
 1. Admin creates **assignment types** with JSON structure (form field definitions)
@@ -655,14 +668,17 @@ Scenario-based learning where instructors create realistic situations and client
 | Table | Purpose |
 |-------|---------|
 | `scenario_categories` | Categorize scenarios (with color, display order) |
-| `scenario_templates` | Scenario definitions (title, description, locked/protected flags) |
+| `scenario_templates` | Scenario definitions (title, description, locked/protected flags, **allows_resubmission**) |
 | `scenario_sections` | Ordered sections within a scenario (context, task, reflection, etc.) |
-| `scenario_assignments` | Assign scenarios to specific users/enrollments/modules |
-| Paragraph responses | Client text responses per section |
+| `scenario_assignments` | Assign scenarios to specific users/enrollments/modules (**parent_assignment_id**, **attempt_number**, **revision_notes**) |
+| `paragraph_responses` | Client text responses per section |
+| `paragraph_question_links` | Link section paragraphs to capability assessment questions (includes **rubric_text** for scoring guidance) |
 
 **Status Flow:**
 ```
 draft → submitted → in_review → evaluated
+                                    ↓ (if allows_resubmission)
+                              revision requested → new draft (attempt_number + 1)
 ```
 
 **Data Flow:**
@@ -670,12 +686,19 @@ draft → submitted → in_review → evaluated
 2. Instructor creates **scenario template** with sections:
    - Each section has a title, instructions, and order
    - Sections represent parts of the scenario (context/background, task, reflection prompts)
+   - Optionally set `allows_resubmission = true` to enable revision requests
 3. Instructor optionally links a **capability assessment** for automated scoring
-4. Instructor **assigns** scenario to students (individually or via module link)
-5. Client opens scenario, reads sections, writes responses in each section
-6. Client submits → status = `submitted`
-7. Instructor reviews, adds feedback (`overall_notes`) → status = `evaluated`
-8. If linked to assessment, system may compute scores from responses
+4. Instructor optionally adds **rubric_text** on paragraph-question links for scoring guidance
+5. Instructor **assigns** scenario to students (individually or via module link)
+6. Client opens scenario, reads sections, writes responses in each section
+7. Client submits → status = `submitted`
+8. Instructor reviews, adds feedback (`overall_notes`) → status = `evaluated`
+9. If linked to assessment, system may compute scores from responses
+10. **(New) Revision flow:** If template `allows_resubmission`, instructor can click "Request Revision":
+    - Creates new assignment with `parent_assignment_id = original.id`, `attempt_number = original + 1`
+    - Copies all `paragraph_responses` from parent to new assignment (pre-filled)
+    - Instructor adds `revision_notes` explaining what to improve
+    - Client sees new draft with previous responses + revision notes displayed
 
 **Template Protection:**
 - `is_protected` — prevents deletion (defaults to true)
@@ -761,6 +784,8 @@ Complex session types have defined roles:
 
 **Calendar Integrations:**
 - **Cal.com** — primary booking system (edge functions: `calcom-create-booking`, `calcom-webhook`, `calcom-get-booking-url`)
+  - **Orphan prevention:** If DB sync fails after a Cal.com booking is created, the system auto-cancels the Cal.com booking via `_shared/calcom-utils.ts` → `cancelCalcomBooking()` to prevent orphaned bookings
+  - **Cancellation webhook:** `BOOKING_CANCELLED` trigger in `calcom-webhook` cancels corresponding `module_sessions` and `group_sessions` by UID
 - **Google Calendar** — OAuth sync for personal calendars
 - **Zoom / Microsoft Teams** — OAuth meeting creation (`oauth-create-meeting`)
 
@@ -816,6 +841,9 @@ Resources can optionally cost credits:
 - `is_consumable = true` → accessing deducts credits
 - `credit_cost` → number of credits per access
 - `feature_key` → user must have this feature via their plan
+- **Enrollment exemption:** If a user is enrolled in a program linked to the resource (via `resource_library_programs`), credit cost is waived
+- **UI:** `ResourceUnlockDialog` shows credit cost, available balance, and "After unlock" balance before deduction
+- **Hook:** `useResourceCredits()` manages credit checking and consumption
 
 **Module Assignment:**
 Resources are assigned to modules via `module_client_content_resources` with a `section_type`:
@@ -863,23 +891,32 @@ Additionally, **scenarios** can be linked to any module via `scenario_assignment
 
 ## Storage Buckets Reference
 
-| Bucket | Feature Area | Purpose |
-|--------|-------------|---------|
-| `module-assignment-attachments` | Assignments | Client file uploads during submission |
-| `module-client-content` | Modules | Module-level content files |
-| `module-reflection-resources` | Reflections | Reflection resource files |
-| `coach-feedback-attachments` | Coaching | Coach feedback file uploads |
-| `resource-library` | Resources | Resource library file storage |
-| `goal-resources` | Goals | Goal-related file uploads |
-| `task-note-resources` | Tasks | Task note attachments |
-| `development-item-files` | Development | Development item uploads |
-| `program-logos` | Programs | Program and badge images |
-| `avatars` | Users | Profile pictures |
-| `email-assets` | Email | Email template assets |
-| `psychometric-assessments` | Psychometric | Client-uploaded PDF results |
-| `session-attachments` | Sessions | Session-related file uploads |
-| `scenario-attachments` | Scenarios | Scenario-related files |
-| `wheel-pdfs` | Wheel of Life | Generated Wheel PDF exports |
+| Bucket | Feature Area | MIME Category | Size Limit | Purpose |
+|--------|-------------|---------------|-----------|---------|
+| `avatars` | Users | Image only | 2 MB | Profile pictures |
+| `program-logos` | Programs | Image only | 2 MB | Program and badge images |
+| `email-assets` | Email | Image only | 2 MB | Email template assets |
+| `client-badges` | Programs | Image only | 2 MB | Badge images |
+| `module-assignment-attachments` | Assignments | Document | 25 MB | Client file uploads during submission |
+| `module-client-content` | Modules | Document | 25 MB | Module-level content files |
+| `module-reflection-resources` | Reflections | Document | 25 MB | Reflection resource files |
+| `coach-feedback-attachments` | Coaching | Document | 25 MB | Coach feedback file uploads |
+| `resource-library` | Resources | Document | 25 MB | Resource library file storage |
+| `goal-resources` | Goals | Document | 25 MB | Goal-related file uploads |
+| `task-note-resources` | Tasks | Document | 25 MB | Task note attachments |
+| `development-item-files` | Development | Document | 25 MB | Development item uploads |
+| `group-notes` | Groups | Document | 25 MB | Group note attachments |
+| `psychometric-assessments` | Psychometric | Assessment | 10 MB | Client-uploaded PDF results (PDF, JPG, PNG only) |
+| `session-attachments` | Sessions | — | — | Session-related file uploads |
+| `scenario-attachments` | Scenarios | — | — | Scenario-related files |
+| `wheel-pdfs` | Wheel of Life | — | — | Generated Wheel PDF exports |
+
+**MIME categories** (defined in `src/lib/fileValidation.ts`):
+- **Image only:** JPG, PNG, GIF, WebP, SVG
+- **Document:** Images + PDF, Word, Excel, PowerPoint, TXT, CSV, JSON, MP4, WebM, MP3, WAV, OGG
+- **Assessment:** PDF, JPG, PNG only
+
+**File validation:** All uploads are validated client-side via `validateFile(file, bucket)` against per-bucket presets. Filenames are sanitized via `sanitizeFilename()` to prevent path traversal, special characters, and excessive length (max 200 chars).
 
 ---
 
@@ -893,6 +930,17 @@ Additionally, **scenarios** can be linked to any module via `scenario_assignment
 | **Vertex AI** | AI features (credits system) | Already configured, GCP project + service account | `GCP_SERVICE_ACCOUNT_KEY`, `GCP_PROJECT_ID`, `GCP_LOCATION` |
 | **TalentLMS** | Layer 4 (course modules) | Setup courses, configure webhook for xAPI | `TALENTLMS_API_KEY`, `TALENTLMS_WEBHOOK_SECRET`, `TALENTLMS_DOMAIN` |
 | **Circle** | Community SSO | Setup community, configure headless auth | `CIRCLE_API_KEY`, `CIRCLE_COMMUNITY_ID`, `CIRCLE_COMMUNITY_DOMAIN`, `CIRCLE_HEADLESS_AUTH_TOKEN` |
+
+### Edge Function Shared Utilities
+
+All 61 edge functions use three shared utility libraries (mandatory for new functions):
+
+| Utility | Import Path | Purpose |
+|---------|-------------|---------|
+| **CORS** | `_shared/cors.ts` | `getCorsHeaders(req)` → returns CORS headers; variable MUST be named `cors` |
+| **Responses** | `_shared/error-response.ts` | `errorResponse.badRequest/unauthorized/forbidden/notFound/rateLimit/serverError` + `successResponse.ok/created/noContent` — NEVER construct `new Response()` manually |
+| **AI Input** | `_shared/ai-input-limits.ts` | `truncateArray/String/Json()`, `enforcePromptLimit()` — prevents oversized AI prompts (max 8K chars, 20 array items) |
+| **Cal.com** | `_shared/calcom-utils.ts` | `cancelCalcomBooking(uid, reason?)` — cancels bookings via Cal.com v2 API (used for orphan prevention) |
 
 ---
 
@@ -920,19 +968,41 @@ Missing psychometric catalog   → Clients see empty Explore Assessments page
 Missing resource_categories    → Resources have no categorization
 Missing module_sessions        → Session modules have no linked session → Nothing to book
 Missing module_resources       → Resource modules have no content to display
+Missing is_restrictive config  → Org-sponsored plans can't deny features → employees get features org wants blocked
+Missing enroll_with_credits    → Enrollment + credit deduction not atomic → race conditions / partial states
+Missing file_validation        → Uploads not validated → wrong file types or oversized files in storage
 ```
 
 ---
 
 ## Entitlement Resolution (how it all comes together)
 
-The `useEntitlements` hook merges **5 sources** at runtime. For each feature, the **highest limit wins**:
+The `useEntitlements` hook merges **5 sources** at runtime. For each feature, the **highest limit wins** — unless an explicit deny exists:
 
 1. **Subscription plan features** — from `plan_features` via user's `profiles.plan_id`
 2. **Program plan features** — from `program_plan_features` via enrollment's `program_plan_id`
 3. **User add-ons** — manual feature grants (admin can give individual users extra access)
 4. **Track-specific allocations** — track membership can provide additional features
-5. **Org-sponsored features** — organization can sponsor features for their members
+5. **Org-sponsored features** — organization can sponsor features for their members (can include **deny overrides**)
+
+**Source priority** (for display): add_on > track > org_sponsored > subscription > program_plan
+
+### Deny Override (Restrictive Features)
+
+An org-sponsored plan can **explicitly deny** a feature by marking `plan_features.is_restrictive = true`. When any source has `isDenied: true`, the feature is **blocked regardless of grants from ALL other sources**.
+
+```
+Example: Acme Corp sponsors Enterprise plan for employees, but denies "community" feature.
+→ Even if employee personally subscribes to Pro (which includes community), it's blocked.
+→ Admin sets: plan_features WHERE plan_id = enterprise AND feature_key = 'community' → is_restrictive = true
+```
+
+### Max-Plan Detection
+
+The `useIsMaxPlan()` hook detects whether a user is on the highest purchasable plan tier:
+- Compares `user.tier_level >= max(purchasable plans.tier_level)`
+- When `isMaxPlan = true`, `FeatureGate` and `CapabilityGate` show "Contact administrator" instead of "Upgrade Plan"
+- Uses `plans.is_purchasable` flag to filter which plans are available for self-purchase
 
 Credits are **additive**: `plans.credit_allowance` + `program_plans.credit_allowance` + top-ups.
 
@@ -951,8 +1021,8 @@ Use this checklist when setting up a new environment or verifying configuration.
 
 ### Layer 2 — Plans & Features
 - [ ] **Features** — All 34 features created with correct keys
-- [ ] **Plans** — 7 plans with correct tier levels and credit allowances
-- [ ] **Plan features** — Every plan has feature mappings with limits
+- [ ] **Plans** — 7 plans with correct tier levels, credit allowances, and `is_purchasable` flags
+- [ ] **Plan features** — Every plan has feature mappings with limits + deny overrides (`is_restrictive`) for org-sponsored plans
 - [ ] **Plan prices** — Purchasable plans have Stripe price IDs (Stripe products created)
 
 ### Layer 3A — Sessions
@@ -991,12 +1061,16 @@ Use this checklist when setting up a new environment or verifying configuration.
 ### Layer 3E — Scenarios
 - [ ] **Scenario categories** — Categories with color and display order
 - [ ] **Scenario templates** — At least one template with sections and paragraphs
+- [ ] **Re-submission config** — Set `allows_resubmission = true` on templates that support revision requests
 - [ ] **Paragraph question links** — Link section paragraphs to capability assessment questions (for scoring)
+- [ ] **Rubric text** — Add `rubric_text` on paragraph-question links to provide scoring guidance for evaluators
 
 ### Layer 3F — Resources & Feedback
 - [ ] **Resource categories** — Categories for the resource library
 - [ ] **Resource collections** — Optional grouped collections with ordered items
+- [ ] **Credit-gated resources** — Set `is_consumable = true` + `credit_cost` on premium resources
 - [ ] **Coach feedback templates** — Module feedback templates for structured coach feedback
+- [ ] **Feedback inbox** — Verify `/feedback` page aggregates from scenario evaluations, module feedback, assignment grading, and goal comments
 
 ### Layer 4 — Programs
 - [ ] **Program plans** — At least one program plan with features
@@ -1016,7 +1090,7 @@ Use this checklist when setting up a new environment or verifying configuration.
 ### Layer 5 — Platform & Users
 - [ ] **Platform terms** — Current terms exist (is_current = true)
 - [ ] **Demo users** — Test users with correct roles and plan assignments
-- [ ] **Storage buckets** — All 15 buckets exist (including `module-assessment-attachments`)
+- [ ] **Storage buckets** — All 17 buckets exist (including `client-badges`, `group-notes`)
 
 ---
 
@@ -1096,46 +1170,78 @@ supabase db reset    # runs all migrations + seed.sql
 ### Verification Checklist
 After population, verify each path works:
 - [ ] Client login → dashboard → browse programs → enroll → access modules
-- [ ] Client takes capability assessment (self-assessment mode)
+- [ ] Client takes capability assessment (self-assessment mode) → weak domains suggest goals
 - [ ] Public assessment at `/public-assessment/:slug` → email capture → scoring → PDF
 - [ ] Instructor creates scenario assignment → client responds → instructor evaluates
-- [ ] Session booking via Cal.com integration
-- [ ] Credit deduction on AI use / session booking
+- [ ] Scenario re-submission: instructor requests revision → new draft created with previous responses pre-filled
+- [ ] Session booking via Cal.com integration (verify orphan prevention on failure)
+- [ ] Credit deduction on AI use / session booking (verify FIFO locking under concurrent use)
+- [ ] Credit-gated resource: unlock dialog → credits deducted → access granted (enrolled users exempt)
 - [ ] Notification delivery (email + in-app)
+- [ ] Feedback inbox: `/feedback` shows aggregated feedback from scenarios, modules, assignments, goals
 - [ ] Coach views assigned clients → provides module feedback
+- [ ] Staff assignment 3-tier hierarchy: enrollment_module_staff overrides module_instructors overrides program_instructors
 - [ ] Org admin invites member → member accepts → org dashboard shows member
+- [ ] Org deny override: `is_restrictive = true` on org plan blocks feature even if user's personal plan grants it
 - [ ] Psychometric assessment: browse catalog → express interest → admin sees registration
 - [ ] Resource access: enrolled resource visible → public resource visible → private resource hidden
 - [ ] Wheel of Life: client accesses from dashboard → rates categories → sees radar chart
+- [ ] File uploads: validate MIME type + size against bucket presets, filename sanitized
+- [ ] Auth error handling: roleless user sees "Account Not Configured" (not silent client fallback)
 
 ---
 
 ## Feature Area: Coaching & Staff Configuration
 
-### Coach Assignment Model
+### Coach & Instructor Assignment Model
 
-Coaches and instructors require data configuration at multiple levels:
+Coaches and instructors use a **3-tier hierarchy** for staff assignment. Higher tiers override lower ones.
+
+**3-Tier Staff Assignment Hierarchy:**
+
+| Tier | Tables | Scope | Priority |
+|------|--------|-------|----------|
+| 1 (lowest) | `program_instructors`, `program_coaches` | All modules in a program | Fallback |
+| 2 | `module_instructors`, `module_coaches` | Specific module across all clients | Middle |
+| 3 (highest) | `enrollment_module_staff` | Specific client + specific module | Wins |
+
+Additionally: `client_instructors`, `client_coaches` provide direct per-client assignments (not module-scoped).
+
+**Key resolution hook:** `useModuleSchedulingUrl` resolves Cal.com booking URLs by walking the 3-tier hierarchy (enrollment_module_staff → module_instructors → program_instructors) to find the correct instructor's Cal.com link for session booking.
 
 **Tables:**
 
 | Table | Purpose |
 |-------|---------|
 | `user_roles` | Assigns `coach` or `instructor` role to a user |
-| `program_coaches` | Links coaches to programs (which programs they coach in) |
+| `program_coaches` | Links coaches to programs (Tier 1) |
+| `program_instructors` | Links instructors to programs (Tier 1) |
+| `module_instructors` | Links instructors to specific modules (Tier 2) |
+| `module_coaches` | Links coaches to specific modules (Tier 2) |
+| `enrollment_module_staff` | Per-client per-module staff assignment (Tier 3 — highest priority) |
 | `client_coaches` | Links a specific coach to a specific client (direct assignment) |
+| `client_instructors` | Links a specific instructor to a specific client (direct assignment) |
 | `coach_instructor_requests` | Client requests for coach assignment (admin reviews) |
+
+**Per-client staff assignment (Tier 3):**
+- Available on **all active modules** (not limited to individualized modules — the `is_individualized` filter was removed)
+- Admin UI: "Staff Assignments for {clientName}" in enrollment management
+- Overrides both program-level and module-level assignments
 
 **Configuration sequence:**
 1. Admin creates user with `coach` or `instructor` role
-2. Admin assigns coach to programs via `program_coaches`
-3. Admin assigns coach to specific clients via `client_coaches`
-4. OR: client requests coach via `RequestCoachInstructorDialog` → admin approves
+2. Admin assigns coach/instructor to programs via `program_coaches` / `program_instructors` (Tier 1)
+3. Optionally assigns to specific modules via `module_instructors` / `module_coaches` (Tier 2)
+4. Optionally assigns per-client per-module via `enrollment_module_staff` (Tier 3 — overrides above)
+5. OR: client requests coach via `RequestCoachInstructorDialog` → admin approves
 
 **What coaches need configured:**
 - Profile: bio, specialties, meeting preferences, calendar URL, avatar, timezone
 - Qualifications: which module types instructor can teach
 - Program assignments: which programs they coach in
 - Client assignments: which clients they're assigned to
+
+**Notification behavior:** `notify-assignment-submitted` notifies **ALL** staff assigned to the module (intentionally — useful for partner instructors who share grading responsibilities).
 
 **Current gaps (documented in ISSUES_AND_IMPROVEMENTS.md Part 5):**
 - No coach verification workflow (no `verification_status` on profiles)
@@ -1164,6 +1270,8 @@ Coaches and instructors require data configuration at multiple levels:
 4. Org purchases credit packages and/or platform tier (Essentials/Professional)
 5. Org sponsors member enrollments (deducts from org credit balance)
 6. Members configure sharing consent (profile, enrollments, progress, assessments, goals)
+
+**RLS fix:** `organization_members` UPDATE policy now uses `has_org_role()` SECURITY DEFINER function to avoid self-referential recursion.
 
 **Current gaps (documented in ISSUES_AND_IMPROVEMENTS.md Part 5):**
 - No org onboarding wizard
@@ -1212,7 +1320,15 @@ The platform has 9 distinct feedback mechanisms stored across different tables:
 | Session feedback | Unclear implementation | Post-session |
 | Coach general | Via module feedback templates | Coach → Client |
 
-**Current gap:** No unified feedback table or view. Client must navigate to each feature area to find feedback. See ISSUES_AND_IMPROVEMENTS.md Part 9 (§9.7) for unified feedback hub recommendation.
+**Unified Feedback Inbox (implemented):** The `MyFeedback` page (`/feedback`) aggregates feedback from 4 sources into a single view with tab filtering (all / scenario / module / assignment / goal):
+- `scenario_assignments` (status = evaluated) → scenario evaluation feedback
+- `coach_module_feedback` (status = published) → coach module feedback
+- `module_assignments` (status = reviewed + instructor_notes) → assignment grading feedback
+- `goal_comments` (from other users) → goal comments from coaches
+
+**Hook:** `useFeedbackInbox(limit?)` fetches and merges all 4 sources. Returns `FeedbackItem[]` with `{id, type, title, summary, givenBy, givenAt, linkTo, contextLabel}`.
+
+**Dashboard widget:** `RecentFeedbackWidget` shows latest feedback items on the client dashboard.
 
 ### Goal System Data
 
@@ -1224,32 +1340,47 @@ The platform has 9 distinct feedback mechanisms stored across different tables:
 
 **Goal categories:** Uses `goal_category` enum. Goals are not feature-gated — available to all authenticated users.
 
-**Current gap:** Goals are not connected to assessment results. Low-scoring assessment domains don't prompt goal creation. See ISSUES_AND_IMPROVEMENTS.md Part 9 (§9.5.3).
+**Assessment-driven goal creation (implemented):** `CapabilitySnapshotView` now shows a "Suggested Goals" section for weak domains. Clicking "Create Goal" navigates to `/goals?action=create&title={domain name}&description={assessment context}` with pre-filled title and description. This connects low-scoring assessment domains directly to goal creation.
 
 ---
 
 ## Future Data Tables (Roadmap)
 
-These tables will be needed as the enhancement roadmap (ISSUES_AND_IMPROVEMENTS.md Part 11) is implemented. Listed here for planning — none exist yet.
+These tables will be needed as the enhancement roadmap (ISSUES_AND_IMPROVEMENTS.md Part 11) is implemented. Items marked ✅ have been implemented (via URL params, UI changes, or schema additions) since the last update.
 
-| Roadmap Phase | Feature | New Table / Field | Purpose |
-|---------------|---------|-------------------|---------|
-| Phase 1 | Onboarding | `profiles.onboarding_completed` | Track whether client completed first-login checklist |
-| Phase 3 | Streaks/XP | `engagement_streaks` | Daily/weekly streak tracking per user |
-| Phase 3 | Streaks/XP | `user_xp` | XP points and level per user |
-| Phase 3 | Activity feed | `activity_feed_events` | Social feed events (completed module, set goal, etc.) |
-| Phase 3 | Smart notifications | `user_activity_patterns` | Per-user engagement timing data for ML-driven send times |
-| Phase 4 | Coach matching | `coach_specializations` | Specialization tags per coach |
-| Phase 4 | Coach matching | `matching_preferences` | Client preferences for coach specializations |
-| Phase 5 | Coach registration | `coach_applications` | Self-registration applications with admin review |
-| Phase 5 | Org self-service | `org_applications` | Self-service org creation with admin review |
-| Phase 5 | Access requests | `access_requests` | For roleless OAuth users requesting access |
-| Phase 5 | Coach verification | `profiles.verification_status` | Pending/verified/rejected verification state |
-| Phase 5 | Org trials | `organizations.trial_ends_at`, `.is_trial` | Trial period tracking |
-| Phase 6 | Org branding | `org_branding` | Logo, accent color, custom display name per org |
-| Phase 6 | Seat warnings | `organizations.max_sponsored_seats`, `.seat_warning_threshold` | Seat limit tracking + alert threshold |
-| Phase 7 | Flexible pacing | `client_enrollments.pacing_mode` | Self-paced vs cohort-paced toggle |
-| Phase 7 | Module ordering | `program_modules.is_sequential`, `module_progress.unlock_override` | Allow non-sequential module access |
-| Phase 9 | Micro-learning | `module_types` enum: `micro_learning` | New module type for 2-5 min content |
-| M12 | Resource ratings | `resource_ratings` | 1-5 star rating + review text per resource |
-| M4 | Assessment→Goal | `goals.assessment_snapshot_id` | Link goal to assessment result that prompted it |
+| Roadmap Phase | Feature | New Table / Field | Purpose | Status |
+|---------------|---------|-------------------|---------|--------|
+| Phase 1 | Onboarding | `profiles.onboarding_completed` | Track whether client completed first-login checklist | ✅ **Done** — `OnboardingWelcomeCard` with localStorage dismissal |
+| Phase 3 | Streaks/XP | `engagement_streaks` | Daily/weekly streak tracking per user | Pending |
+| Phase 3 | Streaks/XP | `user_xp` | XP points and level per user | Pending |
+| Phase 3 | Activity feed | `activity_feed_events` | Social feed events (completed module, set goal, etc.) | Pending |
+| Phase 3 | Smart notifications | `user_activity_patterns` | Per-user engagement timing data for ML-driven send times | Pending |
+| Phase 4 | Coach matching | `coach_specializations` | Specialization tags per coach | Pending |
+| Phase 4 | Coach matching | `matching_preferences` | Client preferences for coach specializations | Pending |
+| Phase 5 | Coach registration | `coach_applications` | Self-registration applications with admin review | Pending (plan ready) |
+| Phase 5 | Org self-service | `org_applications` | Self-service org creation with admin review | Pending (plan ready) |
+| Phase 5 | Access requests | `access_requests` | For roleless OAuth users requesting access | Pending (plan ready) |
+| Phase 5 | Coach verification | `profiles.verification_status` | Pending/verified/rejected verification state | Pending (plan ready) |
+| Phase 5 | Org trials | `organizations.trial_ends_at`, `.is_trial` | Trial period tracking | Pending (plan ready) |
+| Phase 6 | Org branding | `org_branding` | Logo, accent color, custom display name per org | Pending |
+| Phase 6 | Seat warnings | `organizations.max_sponsored_seats`, `.seat_warning_threshold` | Seat limit tracking + alert threshold | Pending |
+| Phase 7 | Flexible pacing | `client_enrollments.pacing_mode` | Self-paced vs cohort-paced toggle | Pending |
+| Phase 7 | Module ordering | `program_modules.is_sequential`, `module_progress.unlock_override` | Allow non-sequential module access | Pending |
+| Phase 9 | Micro-learning | `module_types` enum: `micro_learning` | New module type for 2-5 min content | Pending |
+| M12 | Resource ratings | `resource_ratings` | 1-5 star rating + review text per resource | Pending |
+| M4 | Assessment→Goal | `goals.assessment_snapshot_id` | Link goal to assessment result that prompted it | ✅ **Done** — via URL params (`/goals?action=create&title=...`) |
+| M5 | Scenario re-submission | `scenario_templates.allows_resubmission`, `scenario_assignments.parent_assignment_id/attempt_number/revision_notes` | Configurable revision workflow | ✅ **Done** — schema + UI implemented |
+| M3 | Evaluation rubrics | `paragraph_question_links.rubric_text` | Scoring rubric guidance for evaluators | ✅ **Done** — schema + UI implemented |
+| M15 | Credit-gated resources | `resource_library.is_consumable/credit_cost` | Resources that cost credits to access | ✅ **Done** — schema + `ResourceUnlockDialog` |
+| M1 | Unified feedback | `/feedback` route + `useFeedbackInbox` | Aggregated feedback from 4 sources | ✅ **Done** — page + widget + hook |
+| M17 | Dev item linking | `development_item_task_links`, `development_item_group_links` | Link dev items to tasks and groups | ✅ **Done** — new tables + UI |
+
+### Recently Added Schema (not in original roadmap)
+
+| Feature | Table/Field | Purpose |
+|---------|------------|---------|
+| Deny override | `plan_features.is_restrictive` | Org policy override — explicitly blocks feature regardless of other grants |
+| Atomic enrollment | `enroll_with_credits()` RPC | Single-transaction enrollment + credit consumption |
+| RLS helper | `user_is_enrolled_in_program()` RPC | Avoids RLS recursion in staff/assessment policies |
+| Credit safety | `consume_credits_fifo()` + `FOR UPDATE SKIP LOCKED` | Prevents double-spend under concurrent requests |
+| Auth error state | `AuthContext.authError` + `clearAuthError()` | Surfaces role fetch failures instead of silent fallback |
