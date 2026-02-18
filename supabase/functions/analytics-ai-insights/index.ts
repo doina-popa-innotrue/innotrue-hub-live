@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { errorResponse, successResponse } from "../_shared/error-response.ts";
+import { aiChatCompletion, AI_MODEL } from "../_shared/ai-config.ts";
 
 serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -56,13 +57,7 @@ serve(async (req) => {
       return errorResponse.badRequest("Analytics data too large. Please narrow your date range or filters.", cors);
     }
 
-    const { getAIApiKey, AI_ENDPOINT, AI_MODEL } = await import('../_shared/ai-config.ts');
-    let aiApiKey: string;
-    try {
-      aiApiKey = getAIApiKey();
-    } catch {
-      return errorResponse.serverErrorWithMessage("AI service not configured", cors);
-    }
+
 
     // Build a focused prompt based on what the admin wants to analyze
     let focusPrompt = "";
@@ -124,21 +119,13 @@ ${JSON.stringify(analyticsData.error_summary, null, 2)}
 
 Please provide actionable insights based on this data.`;
 
-    const response = await fetch(AI_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${aiApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        stream: false,
-      }),
-    });
+    const response = await aiChatCompletion(
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      { model: AI_MODEL },
+    );
 
     if (!response.ok) {
       if (response.status === 429) {

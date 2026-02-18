@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { truncateArray, truncateString, truncateJson, enforcePromptLimit } from "../_shared/ai-input-limits.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { errorResponse, successResponse } from "../_shared/error-response.ts";
+import { aiChatCompletion, AI_MODEL } from "../_shared/ai-config.ts";
 
 // Per-user rate limiting (in-memory, per instance)
 const userRateLimits = new Map<string, { count: number; resetTime: number }>();
@@ -165,9 +166,6 @@ serve(async (req) => {
     const safeAcquiredSkills = truncateArray(acquiredSkills, 50);
     const safeExternalCourses = truncateArray(externalCoursesData, 20);
 
-    const { getAIApiKey, AI_ENDPOINT, AI_MODEL } = await import('../_shared/ai-config.ts');
-    const aiApiKey = getAIApiKey();
-
     const providerInstruction = allowedProviders.length > 0
       ? `For external courses, ONLY suggest from these providers: ${allowedProviders.join(', ')}.`
       : 'You may suggest external courses from any reputable provider.';
@@ -179,17 +177,13 @@ serve(async (req) => {
       console.warn('course-recommendations: user message was truncated to fit AI input limits');
     }
 
-    const aiResponse = await fetch(AI_ENDPOINT, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${aiApiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        messages: [
-          { role: "system", content: `You are a learning advisor. Prioritize platform programs first.` },
-          { role: "user", content: userMessage }
-        ]
-      }),
-    });
+    const aiResponse = await aiChatCompletion(
+      [
+        { role: "system", content: `You are a learning advisor. Prioritize platform programs first.` },
+        { role: "user", content: userMessage }
+      ],
+      { model: AI_MODEL },
+    );
 
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) return errorResponse.rateLimit("AI rate limit exceeded", cors);

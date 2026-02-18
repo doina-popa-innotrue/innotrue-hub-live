@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { truncateArray, truncateString, truncateObjectStrings, enforcePromptLimit } from "../_shared/ai-input-limits.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { errorResponse, successResponse } from "../_shared/error-response.ts";
+import { aiChatCompletion, AI_MODEL } from "../_shared/ai-config.ts";
 
 async function checkPlatformAILimit(supabaseAdmin: any): Promise<{ allowed: boolean; message?: string }> {
   const now = new Date();
@@ -174,31 +175,21 @@ Provide a detailed, personalized analysis covering:
 
 Format the response as structured markdown with clear sections.`;
 
-    const { getAIApiKey, AI_ENDPOINT, AI_MODEL } = await import('../_shared/ai-config.ts');
-    const aiApiKey = getAIApiKey();
-
     const { prompt: safePrompt, wasTruncated } = enforcePromptLimit(prompt);
     if (wasTruncated) {
       console.warn('decision-insights: prompt was truncated to fit AI input limits');
     }
 
-    const aiResponse = await fetch(AI_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${aiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert decision-making coach analyzing patterns to provide actionable insights.'
-          },
-          { role: 'user', content: safePrompt }
-        ],
-      }),
-    });
+    const aiResponse = await aiChatCompletion(
+      [
+        {
+          role: 'system',
+          content: 'You are an expert decision-making coach analyzing patterns to provide actionable insights.'
+        },
+        { role: 'user', content: safePrompt }
+      ],
+      { model: AI_MODEL },
+    );
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();

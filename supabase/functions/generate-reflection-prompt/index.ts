@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { truncateArray, truncateString, enforcePromptLimit } from "../_shared/ai-input-limits.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { errorResponse, successResponse } from "../_shared/error-response.ts";
+import { aiChatCompletion, AI_MODEL } from "../_shared/ai-config.ts";
 
 interface UserContext {
   recentModuleCompletions: Array<{ title: string; completed_at: string }>;
@@ -24,8 +25,6 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const { getAIApiKey, AI_ENDPOINT, AI_MODEL } = await import('../_shared/ai-config.ts');
-    const aiApiKey = getAIApiKey();
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -211,22 +210,13 @@ ${context.recentReflections.map(r => `- "${r.content}"`).join('\n') || 'No recen
 
     console.log('Calling AI for prompt generation...');
 
-    const aiResponse = await fetch(AI_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${aiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage },
-        ],
-        max_tokens: 150,
-        temperature: 0.8,
-      }),
-    });
+    const aiResponse = await aiChatCompletion(
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ],
+      { model: AI_MODEL, max_tokens: 150, temperature: 0.8 },
+    );
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
