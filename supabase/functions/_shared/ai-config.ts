@@ -65,8 +65,9 @@
 export const AI_PROVIDER = "vertex" as const;
 export const AI_ENDPOINT = ""; // Built dynamically from GCP_PROJECT_ID and GCP_LOCATION
 export const AI_API_KEY_NAME = "GCP_SERVICE_ACCOUNT_KEY";
-export const AI_MODEL = "google/gemini-3-flash-preview";
-// Fallback if preview is unstable: "google/gemini-2.5-flash"
+export const AI_MODEL = "google/gemini-2.5-flash";
+// Note: gemini-3-flash-preview requires global endpoint (no EU data residency).
+// Use gemini-2.5-flash for regional endpoints like europe-west3.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GOOGLE GEMINI AI Studio  (Simple API key, US-based processing)
@@ -244,6 +245,8 @@ async function getVertexAccessToken(): Promise<string> {
 
 /**
  * Build the Vertex AI OpenAI-compatible endpoint URL.
+ * Uses the global hostname with location in the path, per Google's docs:
+ * https://docs.cloud.google.com/vertex-ai/generative-ai/docs/start/openai
  */
 function getVertexEndpoint(): string {
   const projectId = Deno.env.get("GCP_PROJECT_ID");
@@ -251,7 +254,7 @@ function getVertexEndpoint(): string {
   if (!projectId) {
     throw new Error("GCP_PROJECT_ID is not configured");
   }
-  return `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/endpoints/openapi/chat/completions`;
+  return `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/endpoints/openapi/chat/completions`;
 }
 
 // ─── Main chat completion function ───────────────────────────────────────────
