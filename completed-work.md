@@ -1,5 +1,46 @@
 # Completed Work — Detailed History
 
+## R1 — Assessment Question Types & Weighted Scoring (2026-02-18)
+
+Added dynamic question type categorization and weighted scoring to capability assessments. Fully backward-compatible — assessments without types work exactly as before.
+
+**Migration:** `20260218200000_add_assessment_question_types.sql` — 3 new columns:
+- `capability_assessments.question_types` (JSONB) — admin-defined types with weights, e.g., `[{"name":"Knowledge","weight":30},{"name":"Judgement","weight":50},{"name":"Communication","weight":20}]`
+- `capability_domain_questions.question_type` (TEXT) — which type a question belongs to (nullable)
+- `capability_domain_questions.type_weight` (NUMERIC) — optional per-question weight override
+
+**Scoring helper:** `src/lib/assessmentScoring.ts` with 16 unit tests in `src/lib/__tests__/assessmentScoring.test.ts`:
+- `parseQuestionTypes()` — parses and validates JSONB input
+- `validateTypeWeights()` — checks weights sum to 100 (with floating-point tolerance)
+- `calculateDomainScore()` — returns `{simpleAverage, weightedAverage, typeSubtotals, questionCount}`
+- `calculateTypeScores()` — cross-domain type averages for radar chart types mode
+
+**Admin UI** (`CapabilityAssessmentDetail.tsx`):
+- "Question Types" configuration card — add/edit/delete types with name + weight, sum-to-100 validation (green/amber indicator)
+- Question type dropdown + weight override input in question create/edit dialog (only shown when types configured)
+- Type badge on question list items
+
+**Client form** (`CapabilitySnapshotForm.tsx`):
+- Type label badge next to each question
+- Domain score displays weighted average when types configured ("Weighted" badge instead of "Avg")
+- Type subtotals section below domain questions (per-type averages with bars)
+
+**Snapshot view** (`CapabilitySnapshotView.tsx`):
+- Read-only type badges on questions + type subtotals (same pattern as form)
+
+**Evolution chart** (`CapabilityEvolutionChart.tsx`):
+- "By Domains" / "By Question Types" Select toggle (only visible when types configured)
+- Types mode: radar chart axes are question types showing cross-domain type averages
+
+## Coach-Created Development Items (2026-02-18)
+
+Added UI entry point for coaches/instructors to create development items for clients from the Student Detail page. No backend changes needed — uses existing `create-client-development-item` edge function and `DevelopmentItemDialog` component (already supports instructor mode via `forUserId` prop).
+
+**StudentDetail.tsx changes:**
+- "+" button per module row in Actions column (alongside ManualCompletionControls)
+- Opens `DevelopmentItemDialog` with `forUserId={studentInfo.id}` and `moduleProgressId={module.id}`
+- Custom dialog title: "Add Development Item for {student name}"
+
 ## H6, H9, M14, H10 — Feature Improvements (2026-02-16)
 
 **H6 — Feature gate messaging for max-plan users:**

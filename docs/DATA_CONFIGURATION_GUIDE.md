@@ -330,15 +330,15 @@ Each template uses Handlebars-style variables (`{{user_name}}`, `{{program_name}
 The platform has **three distinct assessment systems** that share `assessment_categories` but serve different purposes.
 
 ### 3.9 Capability Assessments (`capability_assessments`)
-Slider-based self/evaluator assessments where clients rate themselves (or are rated) across competency domains.
+Slider-based self/evaluator assessments where clients rate themselves (or are rated) across competency domains. Supports optional **question types** with weighted scoring.
 
 **Tables:**
 
 | Table | Purpose |
 |-------|---------|
-| `capability_assessments` | Assessment definitions (name, instructions, scale, mode) |
+| `capability_assessments` | Assessment definitions (name, instructions, scale, mode, **question_types** JSONB) |
 | `capability_domains` | Competency areas within an assessment |
-| `capability_domain_questions` | Questions per domain (rated on slider 1–N scale) |
+| `capability_domain_questions` | Questions per domain (rated on slider 1–N scale, optional **question_type** + **type_weight**) |
 | `assessment_families` | Group related capability assessments together |
 | `capability_snapshots` | A completed assessment instance (scores, evaluator info) |
 | `snapshot_domain_ratings` | Per-domain scores within a snapshot |
@@ -352,20 +352,52 @@ Slider-based self/evaluator assessments where clients rate themselves (or are ra
 4. **Peer evaluation** — via `GroupPeerAssessmentsPanel.tsx` (configured in `group_peer_assessments`)
 5. **Public** — unauthenticated access is NOT supported for capability assessments (see 3.10 below)
 
-**Scoring:** Client-side domain averages from slider ratings — NO server-side scoring matrix.
+**Scoring:** Two modes, selected automatically based on configuration:
+- **Without question types (default):** Simple average of all question ratings in a domain — `avg(all ratings)`
+- **With question types:** Weighted average by type — `sum(avg(questions_of_type) * type_weight / 100)` for each type
+
+**Question Types (R1):**
+Admin can configure dynamic question types per assessment (e.g., Knowledge, Judgement, Communication). Types are stored as JSONB in `capability_assessments.question_types`:
+```json
+[
+  { "name": "Knowledge", "weight": 30 },
+  { "name": "Judgement", "weight": 50 },
+  { "name": "Communication", "weight": 20 }
+]
+```
+- Weights must sum to 100% (validated in admin UI with visual feedback)
+- Each question can optionally be assigned to a type via `capability_domain_questions.question_type`
+- Questions without a type are grouped as "Untyped" and receive the remaining weight
+- Optional per-question weight override via `capability_domain_questions.type_weight`
+- **Backward compatible:** Assessments without question types work exactly as before (simple average)
+
+**Scoring helper:** `src/lib/assessmentScoring.ts` — shared by `CapabilitySnapshotForm`, `CapabilitySnapshotView`, and `CapabilityEvolutionChart`:
+- `parseQuestionTypes(input)` — parses and validates JSONB question types
+- `validateTypeWeights(types)` — checks weights sum to 100
+- `calculateDomainScore(questions, types)` — returns simple + weighted averages with type subtotals
+- `calculateTypeScores(questions, types)` — cross-domain type averages (for radar chart types mode)
+
 **Pass/fail:** Optional — `pass_fail_enabled`, `pass_fail_mode` (overall / per_domain), `pass_fail_threshold`
+
 **Visualization:** Radar charts + line evolution charts comparing snapshots over time
+- **"By Domains" mode (default):** Radar chart axes are competency domains
+- **"By Question Types" mode (new):** Radar chart axes are question types, showing weighted type averages across all domains
+- Both modes support snapshot comparison (latest vs previous, self vs evaluator)
 
 **Structure:**
 ```
 Assessment: "Architecture Self Knowledge Check"
+├── Question Types: Knowledge (30%), Judgement (50%), Communication (20%)
 ├── Domain 1: System Architecture (9 questions, 5-point slider)
+│   ├── Q1: "Explain microservices..." [Knowledge]
+│   ├── Q2: "When would you choose..." [Judgement]
+│   └── ...
 ├── Domain 2: Security & Identity (7 questions)
 ├── ...
 └── Domain 7: Communication (10 questions)
 ```
 
-**Admin UI:** Assessments Management → Create/edit assessments, families, domains, questions
+**Admin UI:** Assessments Management → Create/edit assessments, families, domains, questions, **question types**
 **Depends on:** assessment_categories, assessment_families (optional)
 **Needed by:** Program modules (`capability_assessment_id`), scenario templates (`capability_assessment_id`), assignment types (`scoring_assessment_id`)
 
@@ -631,11 +663,11 @@ The platform has **three distinct assessment systems** sharing `assessment_categ
 
 **System A: Capability Assessments** (`capability_assessments`)
 - Slider-based (1–N scale) per question, organized by competency domains
-- Scoring: client-side domain averages from slider ratings (no server-side matrix)
+- Scoring: client-side domain averages — simple average (default) or **weighted by question types** (when configured)
 - Modes: `self`, `evaluator`, `both` (comparison)
-- Visualization: radar charts + line evolution charts across snapshots
+- Visualization: radar charts + line evolution charts across snapshots, with **"By Domains" / "By Question Types" toggle**
 - 5 access paths: self, module-linked, instructor evaluation, peer evaluation, (no public)
-- **Admin setup:** Create assessment → add domains → add questions per domain → optionally configure families, pass/fail
+- **Admin setup:** Create assessment → optionally configure question types (name + weight %) → add domains → add questions per domain (optionally assign question type) → optionally configure families, pass/fail
 
 **System B: Assessment Definitions / Public** (`assessment_definitions`)
 - Multiple-choice questions scored server-side via `compute-assessment-scores`
@@ -962,6 +994,8 @@ Missing scenario_categories    → Can't create scenario templates
 Missing scenario_templates     → Instructors can't assign scenarios to students
 Missing scoring_matrix         → compute-assessment-scores returns empty results (assessment_definitions only)
 Missing capability_domains     → Capability assessment has no questions to rate → Empty form
+Missing question_types config  → Weighted scoring not active → falls back to simple average (non-breaking)
+Invalid question_type weights  → Weights don't sum to 100 → admin UI warns, scoring still works with normalization
 Missing assessment_dimensions  → Assessment definition has no scoring dimensions → No scores computed
 Missing assessment_families    → Capability assessments ungrouped (non-breaking, just UI organization)
 Missing psychometric catalog   → Clients see empty Explore Assessments page
@@ -1043,8 +1077,9 @@ Use this checklist when setting up a new environment or verifying configuration.
 **Capability Assessments:**
 - [ ] **Assessment families** — Group related capability assessments (optional but recommended)
 - [ ] **Capability assessments** — At least one assessment with mode (self/evaluator/both), scale, pass/fail config
+- [ ] **Question types** — Optional: configure question types with weights summing to 100% (e.g., Knowledge 30%, Judgement 50%, Communication 20%)
 - [ ] **Capability domains** — Competency areas per assessment with order_index
-- [ ] **Domain questions** — Questions per domain (slider-rated 1–N)
+- [ ] **Domain questions** — Questions per domain (slider-rated 1–N), optionally assigned to question types
 - [ ] **Group peer assessments** — Configured per group if peer evaluation is used
 
 **Assessment Definitions (Public/Self):**
@@ -1120,9 +1155,10 @@ supabase db reset    # runs all migrations + seed.sql
 **Capability Assessments:**
 1. Create assessment families (optional grouping)
 2. Create capability assessments (name, mode, scale, pass/fail settings)
-3. Add domains per assessment (ordered competency areas)
-4. Add questions per domain (slider-rated)
-5. Configure group peer assessments if peer evaluation is used
+3. Optionally configure question types with weights (e.g., Knowledge 30%, Judgement 50%, Communication 20% — must sum to 100%)
+4. Add domains per assessment (ordered competency areas)
+5. Add questions per domain (slider-rated), optionally assigning each to a question type
+6. Configure group peer assessments if peer evaluation is used
 
 **Assessment Definitions (Public/Self):**
 1. Create assessment definitions (name, slug, is_active)
@@ -1171,6 +1207,10 @@ supabase db reset    # runs all migrations + seed.sql
 After population, verify each path works:
 - [ ] Client login → dashboard → browse programs → enroll → access modules
 - [ ] Client takes capability assessment (self-assessment mode) → weak domains suggest goals
+- [ ] Capability assessment with question types: weighted domain scores display correctly, type subtotals shown
+- [ ] Capability assessment without question types: simple average unchanged (backward compatibility)
+- [ ] Radar chart "By Question Types" toggle shows per-type averages across domains
+- [ ] Coach creates development item from Student Detail page via "+" button on module row
 - [ ] Public assessment at `/public-assessment/:slug` → email capture → scoring → PDF
 - [ ] Instructor creates scenario assignment → client responds → instructor evaluates
 - [ ] Scenario re-submission: instructor requests revision → new draft created with previous responses pre-filled
@@ -1242,6 +1282,9 @@ Additionally: `client_instructors`, `client_coaches` provide direct per-client a
 - Client assignments: which clients they're assigned to
 
 **Notification behavior:** `notify-assignment-submitted` notifies **ALL** staff assigned to the module (intentionally — useful for partner instructors who share grading responsibilities).
+
+**Coach-created development items:**
+Coaches and instructors can create development items for their clients directly from the Student Detail page (`/teaching/students/:enrollmentId`). A "+" button per module row opens the `DevelopmentItemDialog` in instructor mode (uses existing `create-client-development-item` edge function). No backend changes required — only a UI entry point was added.
 
 **Current gaps (documented in ISSUES_AND_IMPROVEMENTS.md Part 5):**
 - No coach verification workflow (no `verification_status` on profiles)
@@ -1374,11 +1417,16 @@ These tables will be needed as the enhancement roadmap (ISSUES_AND_IMPROVEMENTS.
 | M15 | Credit-gated resources | `resource_library.is_consumable/credit_cost` | Resources that cost credits to access | ✅ **Done** — schema + `ResourceUnlockDialog` |
 | M1 | Unified feedback | `/feedback` route + `useFeedbackInbox` | Aggregated feedback from 4 sources | ✅ **Done** — page + widget + hook |
 | M17 | Dev item linking | `development_item_task_links`, `development_item_group_links` | Link dev items to tasks and groups | ✅ **Done** — new tables + UI |
+| R1 | Question types | `capability_assessments.question_types`, `capability_domain_questions.question_type/type_weight` | Dynamic weighted question type scoring for capability assessments | ✅ **Done** — migration + scoring helper + admin/client/view/chart UI |
+| — | Coach dev items UI | (no schema change — uses existing `create-client-development-item`) | Coach/instructor creates development items from Student Detail page | ✅ **Done** — "+" button per module row in StudentDetail |
 
 ### Recently Added Schema (not in original roadmap)
 
 | Feature | Table/Field | Purpose |
 |---------|------------|---------|
+| R1 Question types | `capability_assessments.question_types` (JSONB) | Dynamic question type definitions with weights per assessment |
+| R1 Question type assignment | `capability_domain_questions.question_type` (TEXT) | Which type a question belongs to (nullable — backward compatible) |
+| R1 Per-question weight | `capability_domain_questions.type_weight` (NUMERIC) | Optional per-question weight override within its type |
 | Deny override | `plan_features.is_restrictive` | Org policy override — explicitly blocks feature regardless of other grants |
 | Atomic enrollment | `enroll_with_credits()` RPC | Single-transaction enrollment + credit consumption |
 | RLS helper | `user_is_enrolled_in_program()` RPC | Avoids RLS recursion in staff/assessment policies |

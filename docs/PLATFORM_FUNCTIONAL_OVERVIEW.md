@@ -205,15 +205,19 @@ The platform has three distinct assessment systems that share a common category 
 
 | System | Purpose | Scoring | Visualization |
 |--------|---------|---------|---------------|
-| **Capability Assessments** | Self-assessment and evaluator-assessment on skill domains | Client-side domain averages via slider (1-N scale) | Radar chart + evolution over time |
+| **Capability Assessments** | Self-assessment and evaluator-assessment on skill domains | Client-side domain averages — simple average or **weighted by question types** | Radar chart (by domains or by question types) + evolution over time |
 | **Definition Assessments** | Structured evaluations with server-side scoring | Server-side via `compute-assessment-scores` edge function (confidential scoring matrix) | Dimension bars + interpretation text |
 | **Psychometric Assessments** | External assessment catalog (MBTI, Big Five, etc.) | None — document/PDF upload catalog | None — storage and reference |
 
 **Capability assessments** are the most actively used:
 - Admin creates assessment frameworks with domains and questions
+- Admin can optionally configure **question types** (e.g., Knowledge, Judgement, Communication) with weighted scoring — types are fully dynamic and admin-defined per assessment
+- Each question can be assigned to a type; untyped questions are grouped separately
 - Client takes self-assessment (slider ratings per question per domain)
+- Domain scores show either simple average (default) or weighted average by question type
+- Type subtotals are displayed per domain (e.g., "Knowledge: 7.5 / 10, Judgement: 8.0 / 10")
 - Coach/instructor can add their own evaluation
-- Results show radar chart comparing self vs evaluator over time
+- Results show radar chart comparing self vs evaluator over time, with toggle between **"By Domains"** and **"By Question Types"** views
 - Assessments can be shared with staff for review
 
 ---
@@ -249,7 +253,7 @@ These are the ongoing coaching tools clients use alongside structured programs:
 
 **Tasks:** Action items that can be standalone or linked to goals, decisions, or group activities. Status workflow with completion tracking.
 
-**Development Items:** Items on the client's personal development plan. Can be client-created or coach-assigned. Linked to assessments, feedback, and coaching notes.
+**Development Items:** Items on the client's personal development plan. Can be client-created or coach/instructor-created. Coaches and instructors can create development items directly from the Student Detail page via a "+" button on each module row, opening the `DevelopmentItemDialog` in instructor mode. Linked to assessments, feedback, and coaching notes.
 
 ---
 
@@ -303,6 +307,7 @@ coaching, group_coaching, workshop, mastermind, review_board_mock, peer_coaching
 - Search and filter by name, email, program, status
 - Student detail page with tabs: Overview, Notes, Reflections, Feedback, Assignments
 - Manual module completion control (instructor can mark modules complete)
+- **Development item creation** — "+" button per module row to create development items for the client
 
 **Teaching Tools:**
 - Assignment grading with rubric support
@@ -538,7 +543,7 @@ Programs, modules, module types, assignment types, scenario templates, guided pa
 User creation with role assignment, client detail with enrollment management, instructor/coach lists, staff assignments, interest registrations, deletion requests, coach/instructor access requests
 
 ### Assessment Configuration
-Assessment builder (custom assessments), capability assessments with domain/question configuration, assessment families and categories, wheel of life categories, psychometric assessment catalog
+Assessment builder (custom assessments), capability assessments with domain/question configuration and **question type management** (dynamic types with weighted scoring), assessment families and categories, wheel of life categories, psychometric assessment catalog
 
 ### Plans & Billing
 Subscription plans (tier 0-4), program plans (per-enrollment features), features management with deny override, add-ons, credit services, discount codes, consumption analytics
@@ -560,7 +565,7 @@ Consumption analytics, user behavior analytics, program completions, system sett
 |--------|-------|
 | Database tables | 369+ |
 | Database enums | 25 |
-| Database migrations | 403 |
+| Database migrations | 411 |
 | Edge functions | 61 |
 | Frontend pages | 160+ (71 admin, 54 client, 13 teaching, 9 org-admin, 13+ shared) |
 | React hooks | 65 |
@@ -568,7 +573,7 @@ Consumption analytics, user behavior analytics, program completions, system sett
 | Notification types | 25+ |
 | Session types | 8 |
 | Session roles | 10 |
-| Unit tests | 279 (16 test files) |
+| Unit tests | 303 (18 test files) |
 | Environment variables | 41 |
 
 ### Tech Stack Summary

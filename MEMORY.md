@@ -47,11 +47,12 @@
 - Auth: `src/pages/Auth.tsx`, `src/contexts/AuthContext.tsx`
 - Routes: `src/App.tsx` | Sentry: `src/main.tsx` | Error boundary: `src/components/ErrorBoundary.tsx`
 - Edge functions: `supabase/functions/` (61 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`
-- Tests: `src/lib/__tests__/` (16 files, 279 tests) | CI: `.github/workflows/ci.yml`
+- Assessment scoring: `src/lib/assessmentScoring.ts` (weighted question type scoring for capability assessments)
+- Tests: `src/lib/__tests__/` (18 files, 303 tests) | CI: `.github/workflows/ci.yml`
 - Seed: `supabase/seed.sql` | Cursor rules: `.cursorrules`
 
 ## Database Schema
-- 369+ tables, 25 enums, 403 migrations
+- 369+ tables, 25 enums, 411 migrations
 - Key enums: `app_role` (admin, client, coach, instructor), `module_type`, `enrollment_status`
 - **Two plan systems:** Subscription plans (`plans` table, tier 0-4) + Program plans (`program_plans`, per-enrollment features)
 - `useEntitlements` merges 5 sources: subscription, program plan, add-ons, tracks, org-sponsored (highest wins)
@@ -60,7 +61,7 @@
 ## Three Assessment Systems (share `assessment_categories`)
 | System | Table | Scoring | Visualization |
 |--------|-------|---------|---------------|
-| Capability | `capability_assessments` | Client-side domain averages (slider 1-N) | Radar + evolution charts |
+| Capability | `capability_assessments` | Client-side domain averages — simple or weighted by question types (slider 1-N) | Radar (by domains or types) + evolution charts |
 | Definitions (Public) | `assessment_definitions` | Server-side via `compute-assessment-scores` (confidential matrix) | Dimension bars + interpretation text |
 | Psychometric | `psychometric_assessments` | None (document catalog/PDF upload) | None |
 
@@ -98,7 +99,7 @@
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, client progress, notes)
-- **What's missing (onboarding):** Onboarding welcome card, coach profile setup UI (bio/specialties/scheduling URL), contextual empty states, role-specific welcome email, teaching FAQ, coach-created development items
+- **What's missing (onboarding):** Onboarding welcome card, coach profile setup UI (bio/specialties/scheduling URL), contextual empty states, role-specific welcome email, teaching FAQ
 - **Admin creates coaches** via `/admin/users` — no self-registration needed currently
 - **Key pages:** `/teaching` (dashboard), `/teaching/students` (clients), `/teaching/assignments`, `/teaching/scenarios`, `/teaching/badges`, `/teaching/assessments`, `/teaching/groups`
 - See `docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md` Part 5 for full readiness assessment
