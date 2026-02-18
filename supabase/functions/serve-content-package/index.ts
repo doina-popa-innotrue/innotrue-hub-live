@@ -8,8 +8,9 @@
  * GET /serve-content-package?module={moduleId}&path={relative/path}
  *
  * Browser caches assets after first load via Cache-Control headers.
- * For index.html, a <base> tag is injected so relative asset paths resolve
- * back through this same edge function.
+ * For HTML/CSS files, relative URLs (src, href, url()) are rewritten server-side
+ * to route through this same edge function. A runtime script also intercepts
+ * dynamic fetch/XHR calls for resources loaded by JavaScript.
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -50,6 +51,30 @@ const MIME_TYPES: Record<string, string> = {
 function getMimeType(filePath: string): string {
   const ext = filePath.substring(filePath.lastIndexOf(".")).toLowerCase();
   return MIME_TYPES[ext] || "application/octet-stream";
+}
+
+/**
+ * Resolve a relative path against a directory base, handling ./ and ../
+ * e.g. resolvePath("content/scormcontent/", "../lib/main.js") => "content/lib/main.js"
+ */
+function resolvePath(base: string, relative: string): string {
+  // Strip query string and fragment from relative path for resolution
+  const [relClean] = relative.split(/[?#]/, 1);
+  const suffix = relative.substring(relClean.length); // preserve ?query#hash
+
+  const parts = base.split("/").filter(Boolean);
+  const relParts = relClean.split("/");
+
+  for (const part of relParts) {
+    if (part === "." || part === "") continue;
+    if (part === "..") {
+      parts.pop();
+    } else {
+      parts.push(part);
+    }
+  }
+
+  return parts.join("/") + suffix;
 }
 
 Deno.serve(async (req: Request) => {
@@ -158,34 +183,15 @@ Deno.serve(async (req: Request) => {
   const contentType = getMimeType(filePath);
   const isHtml = filePath.endsWith(".html") || filePath.endsWith(".htm");
 
-  // For HTML files, inject a <base> tag so relative asset paths resolve through this proxy
+  // For HTML files, rewrite relative URLs so all sub-resources route through this proxy
   if (isHtml) {
     let html = await fileData.text();
 
-    // Build base URL that points back to this edge function with the same module param
-    // All relative paths will resolve as: /serve-content-package?module=xxx&token=yyy&path={relative_path}
-    // Include the auth token so sub-resource requests (CSS, JS, images) are also authenticated
+    // Build the proxy base URL for resolving sub-resources
     const tokenForSubResources = tokenParam || "";
-    const baseHref = `${supabaseUrl}/functions/v1/serve-content-package?module=${moduleId}&token=${tokenForSubResources}&path=`;
-
-    // Inject <base> tag and a tiny script that rewrites relative resource URLs
-    const baseTag = `<base href="${baseHref}">`;
-    const rewriteScript = `<script>
-// Rewrite relative fetch/XHR calls to go through the content proxy
-(function() {
-  const BASE = "${baseHref}";
-  const origFetch = window.fetch;
-  window.fetch = function(input, init) {
-    if (typeof input === 'string' && !input.startsWith('http') && !input.startsWith('data:') && !input.startsWith('blob:')) {
-      input = BASE + input;
-    }
-    return origFetch.call(this, input, init);
-  };
-})();
-</script>`;
+    const proxyBase = `${supabaseUrl}/functions/v1/serve-content-package?module=${moduleId}&token=${tokenForSubResources}&path=`;
 
     // Strip any CSP meta tags from the Rise HTML that would block iframe embedding
-    // Rise exports sometimes include restrictive frame-ancestors or X-Frame-Options
     html = html.replace(
       /<meta\s+http-equiv=["']Content-Security-Policy["'][^>]*>/gi,
       ""
@@ -195,13 +201,62 @@ Deno.serve(async (req: Request) => {
       ""
     );
 
+    // Remove any existing <base> tags (Rise might set its own)
+    html = html.replace(/<base\s[^>]*>/gi, "");
+
+    // Rewrite relative URLs in HTML attributes (src, href, action, poster, data)
+    // Matches relative paths — skips absolute URLs (http/https/data/blob/mailto/javascript/#)
+    html = html.replace(
+      /((?:src|href|action|poster|data)\s*=\s*["'])(?!https?:\/\/|data:|blob:|mailto:|javascript:|#)([^"']+)(["'])/gi,
+      (_match, prefix, relPath, suffix) => {
+        // Resolve the relative path against the current file's directory
+        const currentDir = filePath.includes("/") ? filePath.substring(0, filePath.lastIndexOf("/") + 1) : "";
+        const resolvedPath = resolvePath(currentDir, relPath);
+        return `${prefix}${proxyBase}${resolvedPath}${suffix}`;
+      }
+    );
+
+    // Rewrite url() references in inline styles and <style> blocks
+    html = html.replace(
+      /url\(\s*["']?(?!https?:\/\/|data:|blob:)([^"')]+)["']?\s*\)/gi,
+      (_match, relPath) => {
+        const currentDir = filePath.includes("/") ? filePath.substring(0, filePath.lastIndexOf("/") + 1) : "";
+        const resolvedPath = resolvePath(currentDir, relPath);
+        return `url("${proxyBase}${resolvedPath}")`;
+      }
+    );
+
+    // Inject a script that intercepts dynamic resource loading (fetch, XHR, dynamic imports)
+    const rewriteScript = `<script>
+(function() {
+  var BASE = ${JSON.stringify(proxyBase)};
+
+  // Rewrite fetch()
+  var origFetch = window.fetch;
+  window.fetch = function(input, init) {
+    if (typeof input === 'string' && !input.startsWith('http') && !input.startsWith('data:') && !input.startsWith('blob:')) {
+      input = BASE + input;
+    }
+    return origFetch.call(this, input, init);
+  };
+
+  // Rewrite XMLHttpRequest.open()
+  var origOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url) {
+    if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith('data:') && !url.startsWith('blob:')) {
+      url = BASE + url;
+    }
+    return origOpen.apply(this, [method, url].concat(Array.prototype.slice.call(arguments, 2)));
+  };
+})();
+</script>`;
+
     if (html.includes("<head>")) {
-      html = html.replace("<head>", `<head>${baseTag}${rewriteScript}`);
+      html = html.replace("<head>", `<head>${rewriteScript}`);
     } else if (html.includes("<HEAD>")) {
-      html = html.replace("<HEAD>", `<HEAD>${baseTag}${rewriteScript}`);
+      html = html.replace("<HEAD>", `<HEAD>${rewriteScript}`);
     } else {
-      // Fallback: prepend
-      html = `${baseTag}${rewriteScript}${html}`;
+      html = `${rewriteScript}${html}`;
     }
 
     return new Response(html, {
@@ -218,7 +273,34 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // For non-HTML assets, serve with aggressive caching
+  // For CSS files, rewrite url() references to route through this proxy
+  const isCss = filePath.endsWith(".css");
+  if (isCss) {
+    let css = await fileData.text();
+    const tokenForSubResources = tokenParam || "";
+    const proxyBase = `${supabaseUrl}/functions/v1/serve-content-package?module=${moduleId}&token=${tokenForSubResources}&path=`;
+    const cssDir = filePath.includes("/") ? filePath.substring(0, filePath.lastIndexOf("/") + 1) : "";
+
+    css = css.replace(
+      /url\(\s*["']?(?!https?:\/\/|data:|blob:)([^"')]+)["']?\s*\)/gi,
+      (_match, relPath) => {
+        const resolvedPath = resolvePath(cssDir, relPath);
+        return `url("${proxyBase}${resolvedPath}")`;
+      }
+    );
+
+    return new Response(css, {
+      status: 200,
+      headers: {
+        ...cors,
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=86400, immutable",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  }
+
+  // For all other assets (JS, images, fonts, etc.), serve with aggressive caching
   return new Response(fileData, {
     status: 200,
     headers: {
