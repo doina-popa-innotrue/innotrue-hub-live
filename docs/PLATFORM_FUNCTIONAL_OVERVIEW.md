@@ -320,6 +320,13 @@ coaching, group_coaching, workshop, mastermind, review_board_mock, peer_coaching
 - Manual module completion control (instructor can mark modules complete)
 - **Development item creation** — "+" button per module row to create development items for the client
 
+**Cohort & Session Management (Instructor/Coach):**
+- **Cohort instructor assignment:** Lead instructor assigned at cohort level (`lead_instructor_id`), individual session instructors assigned per session (`instructor_id`). Names displayed on session cards.
+- **Attendance tracking:** `AttendanceTracker` component allows instructors and coaches to mark attendance (present/absent/excused/late) per participant per session. Clients can view their own attendance record.
+- **Session recap editing:** After sessions, instructors can edit recording URL, session summary, and action items. Participants view the published recap on their session detail page.
+- **Gate waiver (DP3):** Coaches and instructors can waive assessment gates on guided path milestones via `WaiveGateDialog` with required reason. Gates are advisory (never blocking).
+- **Development Profile view:** Coaches and instructors can view a client's unified Development Profile (5 sections) via `/teaching/students/:enrollmentId/development-profile`.
+
 **Teaching Tools:**
 - Assignment grading with rubric support
 - Scenario evaluation with section-by-section scoring and revision requests

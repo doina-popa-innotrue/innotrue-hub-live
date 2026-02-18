@@ -182,7 +182,7 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 ## Current State (as of 2026-02-19)
 - All strict TypeScript flags enabled (including strictNullChecks). 0 errors.
 - Self-registration disabled during pilot. All users admin-created.
-- 15 storage buckets on all 3 Supabase projects
+- 16 storage buckets on all 3 Supabase projects
 - Full environment isolation (Stripe test/live, separate Cal.com keys, etc.)
 - Resend: 1 API key, 1 domain, SMTP configured on all projects
 - Lovable sync pipeline operational (bidirectional)
@@ -193,7 +193,7 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 - **AI infrastructure:** 4 edge functions (decision-insights, course-recommendations, generate-reflection-prompt, analytics-ai-insights), Vertex AI Gemini 3 Flash (EU/Frankfurt), input truncation, credit-based consumption, explicit consent gating, provider-agnostic architecture
 - **Product strategy documented** (`docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md`): 6 parts — young professionals (12 ideas), AI learning (5 features), content delivery (skip SCORM → xAPI), cohort readiness (6 gaps), coach/instructor onboarding (6 gaps), instructor/coach assignment & grading routing (6 gaps)
 - **Content delivery Tier 1 DONE:** Rise ZIP upload + auth-gated edge function proxy + iframe embed in ModuleDetail. Private storage bucket, JWT + enrollment check on every request. TalentLMS kept for active programs only. Tier 2 (xAPI direct) not started.
-- **Cohort core experience DONE:** CohortDashboard (schedule timeline, next session, ICS, progress), CohortSessionCard (time-aware status, pulsing join, ICS), Calendar integration, ClientDashboard widget. **Remaining gaps:** cohort assignment UI on enrollment, Google Meet automation, instructor on cohort, attendance tracking, recurrence, notifications, session notes. See `docs/COHORT_SCHEDULING_ANALYSIS.md`.
+- **Cohort core experience + G1-G7 DONE:** CohortDashboard (schedule timeline, next session, ICS, progress), CohortSessionCard (time-aware status, pulsing join, ICS), Calendar integration, ClientDashboard widget. G1-G7 gaps resolved: cohort assignment on enrollment (`enroll_with_credits` RPC with `p_cohort_id`), Google Meet automation, instructor assignment on cohorts (`lead_instructor_id`) and sessions (`instructor_id`), attendance tracking (`cohort_session_attendance` — instructors/coaches mark, clients read own), bulk session generation, session reminders (`send-schedule-reminders` edge function), session notes/recap (instructors edit, participants view). **Remaining:** G8 (session quality/feedback), G9 (cohort analytics), G10 (multi-cohort management). See `docs/COHORT_SCHEDULING_ANALYSIS.md`.
 - **Coach/instructor onboarding DONE:** Staff Welcome Card, profile setup (bio, specializations, company), enhanced empty states, role-specific welcome emails.
 - **Assignment routing DONE:** My Queue filtering, assignment transfer dialog, async notifications via create_notification RPC. Remaining: configurable notification routing (nice to have), assessor_id cleanup.
 - **Development Profile DP1-DP4 DONE** (`docs/DEVELOPMENT_PROFILE_ANALYSIS.md`): Assessment↔goal linking (`goal_assessment_links`), unified Development Profile page (5 sections), assessment-gated milestones (`guided_path_milestone_gates` + `milestone_gate_overrides`), path instantiation service (`guided_path_instantiations`). 4 new tables, 15 new files, 7 modified files. Survey wizard bug fixed. DP5-DP7 remaining.

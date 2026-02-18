@@ -1271,6 +1271,13 @@ Coaches and instructors use a **3-tier hierarchy** for staff assignment. Higher 
 
 Additionally: `client_instructors`, `client_coaches` provide direct per-client assignments (not module-scoped).
 
+**Cohort-level instructor assignment (G3):**
+In addition to the 3-tier module hierarchy, instructors can be assigned at the **cohort level**:
+- `program_cohorts.lead_instructor_id` — lead instructor for the entire cohort (FK to `auth.users`)
+- `cohort_sessions.instructor_id` — instructor for a specific session (FK to `auth.users`, overrides cohort lead)
+- Instructor names are displayed on `CohortSessionCard` components
+- Instructors and coaches can mark attendance via `cohort_session_attendance` (G4) and edit session recaps (G7)
+
 **Key resolution hook:** `useModuleSchedulingUrl` resolves Cal.com booking URLs by walking the 3-tier hierarchy (enrollment_module_staff → module_instructors → program_instructors) to find the correct instructor's Cal.com link for session booking.
 
 **Tables:**
