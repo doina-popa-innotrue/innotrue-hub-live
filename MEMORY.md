@@ -41,6 +41,8 @@
 | `docs/PLATFORM_FUNCTIONAL_OVERVIEW.md` | **Platform functional overview** — human-readable guide to the entire platform: roles, architecture, 14 functional areas, staff assignment system, content delivery, integrations, admin tooling, key flows |
 | `docs/VALUE_PROPOSITION_CANVAS.md` | **Strategyzer Value Proposition Canvas** — 4 customer segments (coaching orgs, learners, coaches/instructors, corporate L&D), each with Customer Profile (jobs, pains, gains) + Value Map (products, pain relievers, gain creators), competitive differentiation, assumptions to validate |
 | `docs/BUSINESS_MODEL_CANVAS.md` | **Strategyzer Business Model Canvas** — 9 building blocks: customer segments (4, multi-sided platform), value propositions, channels (awareness/evaluation/delivery/support), customer relationships, revenue streams (subscriptions + credits + org billing), key resources, key activities, key partnerships (tech + business), cost structure. Includes cross-block analysis, assumptions/risks, business model patterns, current vs target state comparison |
+| `docs/COHORT_SCHEDULING_ANALYSIS.md` | **Cohort scheduling audit** — full infrastructure audit (DB schema, admin UI, calendar integrations, 3 parallel session systems), scenario walkthroughs, 10 gaps (G1-G10), build vs buy recommendation (Google Calendar for Meet links, not TalentLMS/Zoom), 3-phase implementation plan with DB changes |
+| `docs/DEVELOPMENT_PROFILE_ANALYSIS.md` | **Development Profile & Assessment-Driven Guided Paths** — 7-phase plan connecting 3 assessment systems + development items + goals + guided paths into unified development journey. Assessment-gated milestones, intake-driven path recommendation, readiness dashboard. 6 new tables, ~18-28 days total. Approved for development 2026-02-18. |
 
 ## Key Source Files
 - Supabase client: `src/integrations/supabase/client.ts`
@@ -85,49 +87,78 @@
 ## Priority Roadmap (from ISSUES_AND_IMPROVEMENTS.md Part 11)
 **Critical (C1-C4):** ~~All resolved~~ ✅
 **High (H1-H10):** ~~All resolved~~ ✅
-**Medium (remaining):** M2 (psychometric interest tracking), M9 (async notifications), M11 (console.log cleanup), M12 (resource ratings), M13 (Zod validation), M16 (assessment templates)
-**New roadmap items (R1-R7):** ~~R1 assessment question types~~ ✅ DONE (migration + scoring helper + admin UI + client form + snapshot view + evolution chart), R2 coach/instructor onboarding (Phase 1), R3 enhanced coach↔client interaction (Phases 1/4/6), R4 coaches invite own clients (Phase 5), R5 enhanced org management (Phase 6), R6 Sentry coverage (cross-cutting), R7 test coverage (continuous)
-**Coach-created development items:** ✅ DONE — "+" button per module row in StudentDetail opens DevelopmentItemDialog in instructor mode (uses existing edge function)
+**Medium (remaining):** M2 (psychometric interest tracking), ~~M9 (async notifications)~~ ✅ DONE, M11 (console.log cleanup), M12 (resource ratings), M13 (Zod validation), M16 (assessment templates)
+**New roadmap items (R1-R7):** ~~R1 assessment question types~~ ✅ DONE, R2 coach/instructor onboarding (Phase 1), R3 enhanced coach↔client interaction (Phases 1/4/6), R4 coaches invite own clients (Phase 5), R5 enhanced org management (Phase 6), R6 Sentry coverage (cross-cutting), R7 test coverage (continuous)
+**Coach-created development items:** ✅ DONE
 
-**Priority 0 — Content Delivery + Coach Onboarding + Assignment Routing + Cohort Readiness (highest priority):**
-- Content: Tier 1 Web embed (3-5 days) → Tier 2 xAPI direct (1-2 weeks)
-- Coach onboarding: welcome card (2-3 days), profile setup UI (3-5 days), enhanced empty states (1-2 days), role-specific welcome email (1-2 days)
-- Assignment routing: ~~remove individualized-only filter~~ ✅ DONE, "My Queue" filtering (2-3 days), assignment transfer (2-3 days), configurable notification routing (1-2 days, nice to have)
-- Cohort gaps: CohortDashboard (1 week), Join Session one-click (3-5 days), Session Notes (3-5 days), Auto enrollment (2-3 days), Analytics (1 week), Homework (3-5 days)
+**Priority 0 — Status (updated 2026-02-18):**
+- ~~Content Tier 1 Web embed~~ ✅ DONE — Rise ZIP upload + auth-gated edge function proxy + iframe embed
+- ~~Coach onboarding~~ ✅ DONE — welcome card, profile setup, enhanced empty states, role-specific welcome email
+- ~~Assignment routing~~ ✅ DONE — individualized filter removed, My Queue filtering, assignment transfer dialog, async notifications
+- ~~CohortDashboard~~ ✅ DONE — participant view with schedule, next session highlight, ICS, progress, group section
+- ~~Join Session one-click~~ ✅ DONE — time-aware status hook, pulsing join button, dashboard widget
+- Content Tier 2 xAPI direct — not started (1-2 weeks)
+- Cohort scheduling gaps — see below
 
-**Phases:** **Priority 0 (content + coach onboarding + assignment routing + cohort)** → 5-Self-Registration → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
+**Priority 0 — Cohort Scheduling Gaps (see `docs/COHORT_SCHEDULING_ANALYSIS.md` for full analysis):**
+- G1: Cohort assignment UI on enrollment (1 day) — **blocker**
+- G2: Google Meet link automation for sessions (2 days) — **blocker**
+- G3: Instructor assignment on cohort/session (1-2 days) — high
+- G4: Attendance tracking (2-3 days) — high
+- G5: Recurring session generation (1-2 days) — high
+- G6: Session notifications/reminders (2 days) — high
+- G7: Session notes/recap (3 days) — medium
+- G8: Enrollment codes (2-3 days) — Phase 5
+- G9: Cohort analytics dashboard (1 week) — medium
+- G10: Session-linked homework (3-5 days) — medium
+
+**Priority 0 — Development Profile & Assessment-Driven Guided Paths (see `docs/DEVELOPMENT_PROFILE_ANALYSIS.md`):**
+Approved for development 2026-02-18. Connects 3 assessment systems + development items + goals + guided paths into unified development journey.
+- DP1: Assessment ↔ Goal traceability (1-2 days) — `goal_assessment_links` table
+- DP2: Development Profile page (3-5 days) — unified strengths/gaps/progress view
+- DP3: Assessment-gated milestones (3-5 days) — traffic-light readiness on guided path milestones, coach override
+- DP4: Intake-driven path recommendation (3-5 days) — fix survey instantiation bug, conditional skip, pace multiplier, estimated duration
+- DP5: Module ↔ domain mapping (2-3 days) — modules tagged to assessment domains
+- DP6: Psychometric structured results (2-3 days) — manual score entry for DISC/VIA/etc.
+- DP7: Readiness dashboard (3-5 days) — capstone coach + client view combining all data
+- **Known bug:** `GuidedPathSurveyWizard` saves survey response but never instantiates template goals/milestones (fixed in DP4)
+
+**Phases:** **P0 cohort scheduling gaps (G1-G6)** → **Development Profile (DP1-DP4)** → 5-Self-Registration → Development Profile (DP5-DP7) → Content Tier 2 xAPI → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, client progress, notes)
-- **What's missing (onboarding):** Onboarding welcome card, coach profile setup UI (bio/specialties/scheduling URL), contextual empty states, role-specific welcome email, teaching FAQ
+- **Onboarding:** ✅ DONE — Staff Welcome Card with 4-step checklist, Staff Profile setup (bio, specializations, company), enhanced empty states on teaching pages, role-specific welcome emails
 - **Admin creates coaches** via `/admin/users` — no self-registration needed currently
 - **Key pages:** `/teaching` (dashboard), `/teaching/students` (clients), `/teaching/assignments`, `/teaching/scenarios`, `/teaching/badges`, `/teaching/assessments`, `/teaching/groups`
-- See `docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md` Part 5 for full readiness assessment
+- **Remaining:** Teaching FAQ/quick guide page (nice to have)
 
 ## Instructor/Coach Assignment & Grading
 - **3-tier staff assignment:** program → module → enrollment (personal per client). All have admin UI.
 - **Assignment grading:** Full rubric support, scored_by tracking, email notifications, PendingAssignments page scoped by module/program
-- **What works:** Assign instructor to module (everyone sees same), personal instructor per client (ALL modules — individualized filter removed 2026-02-18), grading with rubric + development items
+- **What works:** Assign instructor to module (everyone sees same), personal instructor per client (ALL modules — individualized filter removed 2026-02-18), grading with rubric + development items, **"My Queue" filtering** on PendingAssignments, **assignment transfer dialog** between staff members
 - **Session scheduling:** Already enrollment-aware via `useModuleSchedulingUrl` hook — resolves Cal.com booking URL using 3-tier hierarchy (enrollment_module_staff → module_instructors → program_instructors). No changes needed.
-- **Notification behavior:** `notify-assignment-submitted` broadcasts to ALL instructors/coaches at module + program level. This is intentionally kept as-is — useful for partner instructors in small teams. Configurable routing is a future nice-to-have.
-- **What's missing (5 remaining gaps):** Configurable notification routing (nice to have), "My Queue" vs "All" filtering (required), no assignment transfer/reassignment, `assessor_id` misused, client doesn't see personal instructor
-- **Key components:** `InstructorCoachAssignment` (module/program), `EnrollmentModuleStaffManager` (per-client per-module), `InstructorAssignmentScoring` (grading), `PendingAssignments` (queue)
+- **Notification behavior:** `notify-assignment-submitted` and `notify-assignment-graded` now use async `create_notification` RPC (non-blocking). Broadcasts to ALL instructors/coaches at module + program level — intentionally kept for partner instructors in small teams.
+- **Remaining gaps:** Configurable notification routing (nice to have), `assessor_id` cleanup (nice to have), client doesn't see personal instructor (nice to have)
+- **Key components:** `InstructorCoachAssignment` (module/program), `EnrollmentModuleStaffManager` (per-client per-module), `InstructorAssignmentScoring` (grading), `PendingAssignments` (queue), `TransferAssignmentDialog` (transfer)
 - **Key hooks:** `useModuleSchedulingUrl` (3-tier Cal.com URL resolution, enrollment-aware)
-- **Key edge functions:** `notify-assignment-submitted` (broadcasts to all instructors — acceptable for now), `notify-assignment-graded` (notifies client)
+- **Key edge functions:** `notify-assignment-submitted` (async, broadcasts), `notify-assignment-graded` (async, notifies client)
 - **Note:** `client_instructors`/`client_coaches` are separate from `enrollment_module_staff` — used for general coaching relationships (decisions, tasks), not synced by design
-- See `docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md` Part 6 for full assessment
 
 ## Recommended Execution Order (updated 2026-02-18)
 1. ~~C1-C4~~ ✅ → ~~H1-H10~~ ✅
-2. **Priority 0 Content Delivery Tier 1** — Rise Web embed via iframe (3-5 days)
-3. **Priority 0 Coach Onboarding** — welcome card + profile setup + empty states + welcome email (1.5-2 weeks)
-4. **Priority 0 Assignment Routing** — ~~remove individualized filter~~ ✅ + My Queue + assignment transfer (1 week remaining)
-5. **Priority 0 Cohort Readiness** — CohortDashboard + Join Session one-click (2 weeks)
-6. Quick medium wins (M2, M11, M9) — interleaved (2-3 days)
-7. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
-8. **Priority 0 Content Delivery Tier 2** — xAPI direct (1-2 weeks)
-9. Phase 3 AI — system prompt hardening first (2-3 days), then AI Learning Companion
-10. Remaining phases by business priority
+2. ~~Priority 0 Content Delivery Tier 1~~ ✅ — Rise Web embed via iframe
+3. ~~Priority 0 Coach Onboarding~~ ✅ — welcome card + profile setup + empty states + welcome email
+4. ~~Priority 0 Assignment Routing~~ ✅ — individualized filter + My Queue + assignment transfer + async notifications
+5. ~~Priority 0 Cohort Core~~ ✅ — CohortDashboard + Join Session one-click + calendar + dashboard widget
+6. **Priority 0 Cohort Scheduling Gaps** — G1 enrollment UI + G2 Meet links + G3 instructor + G5 recurrence (~1 week)
+7. **Priority 0 Cohort Quality** — G4 attendance + G6 notifications + G7 session notes (~1.5 weeks)
+8. **Development Profile (DP1-DP4)** — assessment↔goal links, profile page, gated milestones, intake-driven paths (~2-3 weeks)
+9. Quick medium wins (M2, M11) — interleaved (2 days)
+10. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
+11. **Development Profile (DP5-DP7)** — module↔domain mapping, psychometric structured results, readiness dashboard (~1-2 weeks)
+12. **Content Delivery Tier 2** — xAPI direct (1-2 weeks)
+13. Phase 3 AI — system prompt hardening first (2-3 days), then AI Learning Companion
+14. Remaining phases by business priority
 
 ## Known Issues
 - (none currently — all critical/high items documented in roadmap above)
@@ -156,15 +187,16 @@
 - Lovable sync pipeline operational (bidirectional)
 - Supabase ops scripts operational (deploy, push, sync data/storage)
 - Comprehensive analysis complete: 11-part issues doc + data config guide deployed
-- **All C1-C4 critical and H1-H10 high items resolved.** 6 medium items remain (M2, M9, M11, M12, M13, M16).
+- **All C1-C4 critical and H1-H10 high items resolved.** 5 medium items remain (M2, M11, M12, M13, M16). M9 resolved.
 - **Phase 5 plan complete** (`docs/PHASE5_PLAN.md`) — 14 steps covering self-registration, role applications, enrollment codes, bulk import, org invite flow. Not yet implemented.
 - **AI infrastructure:** 4 edge functions (decision-insights, course-recommendations, generate-reflection-prompt, analytics-ai-insights), Vertex AI Gemini 3 Flash (EU/Frankfurt), input truncation, credit-based consumption, explicit consent gating, provider-agnostic architecture
 - **Product strategy documented** (`docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md`): 6 parts — young professionals (12 ideas), AI learning (5 features), content delivery (skip SCORM → xAPI), cohort readiness (6 gaps), coach/instructor onboarding (6 gaps), instructor/coach assignment & grading routing (6 gaps)
-- **Content delivery strategy decided:** Skip SCORM. Tier 1 (Web embed) → Tier 2 (xAPI direct). TalentLMS kept for active programs only.
-- **Cohort infrastructure strong:** 8 session types, full attendance tracking, groups with collaboration, Cal.com/Google Calendar. Gaps: CohortDashboard, Join Session UX, Session Notes, auto enrollment, cohort analytics, session homework.
-- **Coach/instructor workflows production-ready:** All teaching tools work (assignments, scenarios, badges, assessments, groups, client progress). Missing: onboarding welcome card, profile setup UI (bio/specialties/scheduling URL), contextual empty states, role-specific welcome email.
-- **Instructor/coach assignment system strong:** 3-tier staff assignment works (program → module → enrollment). Grading works. Session scheduling already enrollment-aware (`useModuleSchedulingUrl`). Per-client instructor now works on ALL modules (filter removed 2026-02-18). Notification broadcast useful for partner instructors. Remaining: "My Queue" filtering, assignment transfer.
-- **Next steps:** Priority 0 (content embed → coach onboarding → assignment routing → cohort dashboard) → Phase 5 → AI prompt hardening → Phase 3
+- **Content delivery Tier 1 DONE:** Rise ZIP upload + auth-gated edge function proxy + iframe embed in ModuleDetail. Private storage bucket, JWT + enrollment check on every request. TalentLMS kept for active programs only. Tier 2 (xAPI direct) not started.
+- **Cohort core experience DONE:** CohortDashboard (schedule timeline, next session, ICS, progress), CohortSessionCard (time-aware status, pulsing join, ICS), Calendar integration, ClientDashboard widget. **Remaining gaps:** cohort assignment UI on enrollment, Google Meet automation, instructor on cohort, attendance tracking, recurrence, notifications, session notes. See `docs/COHORT_SCHEDULING_ANALYSIS.md`.
+- **Coach/instructor onboarding DONE:** Staff Welcome Card, profile setup (bio, specializations, company), enhanced empty states, role-specific welcome emails.
+- **Assignment routing DONE:** My Queue filtering, assignment transfer dialog, async notifications via create_notification RPC. Remaining: configurable notification routing (nice to have), assessor_id cleanup.
+- **Development Profile plan approved** (`docs/DEVELOPMENT_PROFILE_ANALYSIS.md`): 7-phase plan (DP1-DP7) connecting 3 assessment systems + development items + goals + guided paths. 6 new tables. Prioritised for development — immediate value for CTA preparation clients. Known bug: `GuidedPathSurveyWizard` doesn't instantiate templates (fixed in DP4).
+- **Next steps:** P0 cohort scheduling gaps (G1-G6) → Development Profile (DP1-DP4) → Phase 5 → DP5-DP7 → Content Tier 2 xAPI → Phase 3 AI
 
 ## npm Scripts
 ```

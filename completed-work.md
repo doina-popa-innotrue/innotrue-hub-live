@@ -1,5 +1,57 @@
 # Completed Work — Detailed History
 
+## P0 Tier 1 — Content Delivery + CohortDashboard + Join Session (2026-02-18)
+
+Three features enabling live cohort program delivery end-to-end. Commit `6ab2ca5`, 16 files, 1,740 insertions.
+
+**Feature A — Content Delivery Tier 1 (auth-protected):**
+- **Migration:** `20260218300000_add_content_package_path.sql` — `content_package_path` TEXT on `program_modules`, private `module-content-packages` storage bucket (500MB limit)
+- **`serve-content-package` edge function:** Auth-gated proxy. Validates JWT, checks enrollment/role, serves files from private storage. Injects `<base>` tag + fetch rewrite script into HTML for Rise relative path resolution. Non-HTML: 24h cache. HTML: 5min private cache.
+- **`upload-content-package` edge function:** Admin-only. Accepts ZIP via multipart form, extracts with JSZip, uploads to `{moduleId}/{uuid}/`, verifies `index.html`, cleans up previous package, updates `content_package_path`.
+- **Admin UI:** Content Package upload card in `ModuleForm.tsx` (edit mode only). Progress bar, remove button, file validation.
+- **Client embed:** iframe in `ModuleDetail.tsx` with `sandbox="allow-scripts allow-same-origin allow-forms allow-popups"`, 75vh min-height
+- **Instructor preview:** iframe in instructor `ModuleDetail.tsx` Overview tab
+- **ProgramDetail.tsx:** Passes `id` + `contentPackagePath` to ModuleForm initialData
+- **fileValidation.ts:** Added `module-content-packages` preset (ZIP only, 500MB)
+
+**Feature B — CohortDashboard:**
+- **`CohortDashboard.tsx`:** Route `/programs/:programId/cohort`. Loads enrollment → cohort → sessions (with module title join) → module progress → group. Sections: breadcrumb, cohort header, next session highlight, session timeline, "Add All to Calendar", module progress bar, group section.
+- **`App.tsx`:** Lazy-loaded route with ProtectedRoute + DashboardLayout
+- **`ProgramDetail.tsx` (client):** "Cohort Schedule" card with navigate to CohortDashboard
+- **`Calendar.tsx`:** Click handler for cohort_session events → navigates to CohortDashboard
+
+**Feature C — Join Session One-Click:**
+- **`useSessionTimeStatus.ts`:** Reactive hook (30s interval). Returns label ("Upcoming"/"Starts in X min"/"Live Now"/"Ended"), variant, isJoinable.
+- **`CohortSessionCard.tsx`:** New component with time-aware status badge, pulsing "Join Now" button, ICS download, module link, highlighted variant.
+- **`GroupSessionCard.tsx`:** Enhanced with `useSessionTimeStatus` hook, time-aware badge, pulsing join.
+- **`ClientDashboard.tsx`:** "Next Live Session" widget fetching next cohort session across all enrollments.
+
+## P0 — Staff Onboarding + Async Notifications (2026-02-18)
+
+7 features for coach/instructor onboarding and assignment workflow. Commit `5865146`, 9 files, 1,194 insertions.
+
+- **`StaffWelcomeCard.tsx`:** 4-step onboarding checklist (profile, students, assignments, sessions) on teaching dashboard. Auto-hides on dismiss (localStorage).
+- **Account Settings:** Staff Profile section with bio, specializations, company fields.
+- **`InstructorCoachDashboard.tsx`:** Enhanced empty states with "what to expect" context.
+- **`PendingAssignments.tsx`:** "My Queue" filtering via `enrollment_module_staff` + "All" toggle. Assignment count badges.
+- **`TransferAssignmentDialog.tsx`:** Transfer grading between staff members. Dropdown of eligible staff, updates assignment record.
+- **`send-welcome-email`:** Role-specific variants (instructor/coach/client) with different content.
+- **`notify-assignment-submitted` + `notify-assignment-graded`:** Refactored to async delivery via `create_notification` RPC (non-blocking). Reduced complexity.
+
+## Development Profile & Assessment-Driven Guided Paths — Analysis (2026-02-18)
+
+Strategic analysis and 7-phase implementation plan approved for development. Connects 3 assessment systems + development items + goals + guided paths into a unified development journey.
+
+**Document:** `docs/DEVELOPMENT_PROFILE_ANALYSIS.md` — full analysis including:
+- Current state audit of all assessment, development item, goal, and guided path tables
+- Gap analysis: systems exist but don't talk to each other (no assessment→goal FK, survey wizard doesn't instantiate templates)
+- 7-phase plan (DP1-DP7): assessment↔goal traceability, Development Profile page, assessment-gated milestones, intake-driven path recommendation, module↔domain mapping, psychometric structured results, readiness dashboard
+- 6 new database tables, 2 altered columns, ~18-28 days total
+- UX wireframes for Development Profile and Readiness Dashboard
+- Key design decisions: gates advisory not blocking, intake-driven not backward planning, manual-first for psychometrics
+
+**Roadmap updates:** MEMORY.md, ISSUES_AND_IMPROVEMENTS.md updated with DP1-DP7 items in execution order and data tables section.
+
 ## R1 — Assessment Question Types & Weighted Scoring (2026-02-18)
 
 Added dynamic question type categorization and weighted scoring to capability assessments. Fully backward-compatible — assessments without types work exactly as before.

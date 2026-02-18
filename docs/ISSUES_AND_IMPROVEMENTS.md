@@ -1362,61 +1362,89 @@ Organized by theme, drawing from Parts 2, 3, 5, 6, 9, and 10.
 #### Priority 0 — Content Delivery & Cohort Readiness (HIGH — do before next cohort program)
 
 **Content Delivery (eliminate TalentLMS friction):**
-- Tier 1: Rise Web export → Supabase Storage → iframe embed in ModuleDetail.tsx (3-5 days) — **do first**
+- ~~Tier 1: Rise Web export → Supabase Storage → iframe embed~~ ✅ DONE (2026-02-18) — private storage bucket + `serve-content-package` auth-gated proxy + `upload-content-package` ZIP extraction + iframe embed in client/instructor ModuleDetail
 - Tier 2: Rise xAPI export → `xapi-statement-receiver` edge function → `external_progress` table → auto-complete modules (1-2 weeks) — **skip SCORM, go direct to xAPI**
-- Admin upload tooling for Rise packages (part of Tier 1/2 implementation)
 - TalentLMS transition: keep for active programs, no new programs on TalentLMS
-- See `docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md` Part 3 for full analysis
 
 **Cohort Experience (required for live/hybrid programs):**
-- `CohortDashboard.tsx` — participant view with schedule timeline, next session, group, progress (1 week) — **required**
-- Join Session one-click — time-aware session cards with "Join Now" button, meeting URL, email reminders (3-5 days) — **required**
+- ~~`CohortDashboard.tsx`~~ ✅ DONE (2026-02-18) — schedule timeline, next session highlight, ICS download, module progress, group section
+- ~~Join Session one-click~~ ✅ DONE (2026-02-18) — `useSessionTimeStatus` hook (30s reactive), CohortSessionCard + GroupSessionCard enhanced, Next Session widget on ClientDashboard
 - Session Notes / Recap — post-session summary, recording link, action items visible to participants (3-5 days)
 - Auto cohort enrollment — extend `enrollment_codes` with `cohort_id` for automatic cohort assignment (2-3 days, extends Phase 5)
 - Cohort analytics — admin/instructor view of attendance %, completion %, who's falling behind (1 week)
 - Session-linked homework — link development items/assignments to specific cohort sessions with deadlines (3-5 days)
 
+**Cohort Scheduling Gaps (identified 2026-02-18 — see `docs/COHORT_SCHEDULING_ANALYSIS.md`):**
+- G1: **Cohort assignment UI on enrollment** — admin can't assign client to cohort from enrollment form. Must edit DB directly. (1 day) — **blocker**
+- G2: **Google Meet link automation** — admin manually types Meet/Zoom URLs per session. Reuse existing `google-calendar-create-event` edge function. (2 days) — **blocker**
+- G3: **Instructor on cohort/session** — no `instructor_id` on cohorts or sessions. Can't say "this instructor leads this cohort." (1-2 days) — high
+- G4: **Attendance tracking** — no `cohort_session_attendance` table. Can't track who attended. (2-3 days) — high
+- G5: **Recurring session generation** — admin must create each session manually. For 16-week programs, very tedious. (1-2 days) — high
+- G6: **Session notifications/reminders** — no email/in-app when sessions created or approaching. (2 days) — high
+- G7: **Session notes/recap** — recording URL, summary, action items on past sessions. (3 days) — medium
+- G8: **Enrollment codes** — self-enrollment via link/code. Part of Phase 5. (2-3 days) — deferred
+- G9: **Cohort analytics** — attendance %, completion %, at-risk students. (1 week) — medium
+- G10: **Session-linked homework** — assignments tied to specific sessions with deadlines. (3-5 days) — medium
+
 **Existing cohort infrastructure (already built):**
 - ✅ `program_cohorts` with status, capacity, dates
-- ✅ `cohort_sessions` with date, time, meeting link, module link
-- ✅ Unified session system (8 types: coaching, group_coaching, workshop, mastermind, review_board, peer_coaching, office_hours, webinar)
-- ✅ `session_participants` with full attendance tracking (invited → registered → confirmed → attended/no_show)
+- ✅ `cohort_sessions` with date, time, timezone, meeting link, module link
+- ✅ `ProgramCohortsManager` admin UI (full CRUD, session management, drag-and-drop reorder)
+- ✅ `CohortDashboard` client view (schedule, next session, ICS, progress, groups)
+- ✅ `CohortSessionCard` (time-aware status, pulsing join, ICS download)
+- ✅ Calendar integration (cohort sessions on client Calendar, click → CohortDashboard)
+- ✅ ClientDashboard "Next Live Session" widget
 - ✅ Groups with memberships, tasks, check-ins, notes, peer assessments
-- ✅ Cal.com + Google Calendar + Calendly integration
+- ✅ Cal.com (for module_sessions) + Google Calendar (for group_sessions) + ICS generation
+- Note: Cal.com and Google Calendar integrations do NOT currently touch cohort_sessions (manual links only)
 
 **Coach & Instructor Onboarding (required before onboarding new coaches):**
-- Welcome card + onboarding checklist for teaching dashboard (2-3 days) — **required** (reuse `JourneyProgressWidget` pattern)
-- Coach profile setup: bio, specialties, certifications, scheduling URL editing UI (3-5 days) — **required**
-- Enhanced empty states with "what to expect" context (1-2 days) — quick win
-- Role-specific welcome email (coach vs instructor vs both) (1-2 days) — quick win
+- ~~Welcome card + onboarding checklist~~ ✅ DONE (2026-02-18) — `StaffWelcomeCard` with 4-step checklist on teaching dashboard
+- ~~Coach profile setup~~ ✅ DONE (2026-02-18) — bio, specializations, company fields in Account Settings
+- ~~Enhanced empty states~~ ✅ DONE (2026-02-18) — contextual "what to expect" on teaching pages
+- ~~Role-specific welcome email~~ ✅ DONE (2026-02-18) — instructor/coach/client variants in `send-welcome-email`
+- ~~Coach-created development items~~ ✅ DONE (2026-02-18) — "+" button per module in StudentDetail
 - Teaching FAQ / quick guide page (1-2 days) — nice to have
-- Coach-created development items for clients (2-3 days) — backend exists, needs UI prominence
-- See `docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md` Part 5 for full readiness assessment
 
 **Instructor/Coach Assignment & Grading Routing (required for multi-instructor programs):**
-- ~~Remove individualized-only filter~~ ✅ DONE (2026-02-18) — `EnrollmentModuleStaffManager` now shows ALL modules, not just individualized
-- Configurable notification routing: `notify-assignment-submitted` optionally checks `enrollment_module_staff` (1-2 days) — nice to have (broadcast useful for partner instructors)
-- "My Queue" filtering on PendingAssignments: instructor sees their specifically-assigned grading work (2-3 days) — **required**
-- Assignment transfer/reassignment: admin/instructor can hand off grading to another instructor (2-3 days) — **important**
-- Fix `assessor_id` / add designated grader: pre-assign grading responsibility at submission time (0.5-1 day) — nice to have
-- Client-facing instructor display: show enrollment-level instructor to client, not just module-level (1-2 days) — nice to have
-- ✅ Session scheduling already enrollment-aware: `useModuleSchedulingUrl` resolves Cal.com booking URLs using 3-tier hierarchy (enrollment → module → program). No changes needed.
-- See `docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md` Part 6 for full assessment
+- ~~Remove individualized-only filter~~ ✅ DONE (2026-02-18) — `EnrollmentModuleStaffManager` shows ALL modules
+- ~~"My Queue" filtering~~ ✅ DONE (2026-02-18) — PendingAssignments filters by `enrollment_module_staff`
+- ~~Assignment transfer/reassignment~~ ✅ DONE (2026-02-18) — `TransferAssignmentDialog` component
+- ~~Async notification delivery~~ ✅ DONE (2026-02-18) — `notify-assignment-submitted` and `notify-assignment-graded` now use `create_notification` RPC (non-blocking)
+- Configurable notification routing: optionally check `enrollment_module_staff` (1-2 days) — nice to have
+- Fix `assessor_id` / add designated grader (0.5-1 day) — nice to have
+- Client-facing instructor display: show enrollment-level instructor to client (1-2 days) — nice to have
+- ✅ Session scheduling already enrollment-aware: `useModuleSchedulingUrl` resolves Cal.com booking URLs using 3-tier hierarchy
 
-**Existing coach/instructor infrastructure (already built):**
+**Existing coach/instructor infrastructure (all built):**
 - ✅ Admin user creation with role assignment and welcome email
-- ✅ Teaching dashboard with stats, assignments, sessions, shared client items
+- ✅ Teaching dashboard with stats, assignments, sessions, shared client items + **Staff Welcome Card**
+- ✅ **Staff profile setup** (bio, specializations, company) in Account Settings
 - ✅ Client progress tracking with full student detail (notes, reflections, feedback, assignments)
-- ✅ Assignment grading (search, filter, rubric, status guard)
+- ✅ Assignment grading (search, filter, rubric, status guard) + **My Queue filtering** + **transfer dialog**
 - ✅ Scenario evaluation (section-by-section, revision requests)
 - ✅ Badge approval (batch + individual, credential URLs)
 - ✅ Capability assessments (view shared + evaluate)
 - ✅ Group management (sessions, tasks, check-ins, peer assessments)
 - ✅ 10 sidebar nav items for teaching workflows
 - ✅ Program/module-level instructor and coach assignment
-- ✅ Enrollment-level (per-client) instructor/coach assignment for all modules (individualized filter removed 2026-02-18)
+- ✅ Enrollment-level (per-client) instructor/coach assignment for all modules
 - ✅ Three-tier staff resolution: enrollment → module → program level
-- ✅ 25+ notification types with email queue
+- ✅ 25+ notification types with email queue + **async delivery via RPC**
+
+**Development Profile & Assessment-Driven Guided Paths (approved 2026-02-18 — see `docs/DEVELOPMENT_PROFILE_ANALYSIS.md`):**
+
+Connects 3 assessment systems + development items + goals + guided paths into a unified development journey. 7 phases, 6 new tables, ~3-4 weeks total. Prioritised for immediate development — high value for CTA preparation clients.
+
+- DP1: **Assessment ↔ Goal traceability** — `goal_assessment_links` table. Show assessment origin on goal cards. (1-2 days)
+- DP2: **Development Profile page** — unified strengths/gaps/progress view from all assessment sources. Client + coach views. (3-5 days)
+- DP3: **Assessment-gated milestones** — traffic-light readiness signals on guided path milestones, coach override. Gates are advisory, not blocking. (3-5 days)
+- DP4: **Intake-driven path recommendation** — fix survey instantiation bug (critical), conditional milestone skipping, pace multiplier, estimated duration display. (3-5 days)
+- DP5: **Module ↔ domain mapping** — admin tags modules to assessment domains, module completion informs profile. (2-3 days)
+- DP6: **Psychometric structured results** — manual score entry for DISC/VIA/MBTI, result schemas per assessment type. (2-3 days)
+- DP7: **Readiness dashboard** — coach view of all clients on guided paths with readiness scores, attention signals, batch actions. Client "My Readiness" widget. (3-5 days)
+- **Known bug:** `GuidedPathSurveyWizard` saves survey response + `selected_template_ids` but never instantiates template into real goals/milestones. Fixed in DP4.
+- **Key design decisions:** Gates advisory not blocking (coach override), intake-driven recommendation not backward planning (clients set unrealistic timelines), manual-first for psychometrics (AI parsing deferred), strengths matter too (not just gap-filling).
 
 #### Phase 1 — Onboarding & UX Polish (2-3 weeks)
 - Client onboarding wizard with persistent checklist (Part 5)
@@ -1588,16 +1616,20 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 | LinkedIn badge sharing improvements | Part 6, §6.8 | Already works, just needs prominence adjustment |
 | Manager visibility opt-in | Part 6, §6.8 | Subset of org consent system (already exists) |
 
-### 11.7 Effort Summary
+### 11.7 Effort Summary (updated 2026-02-18)
 
-| Category | Items | Total Effort (estimated) |
-|----------|-------|------------------------|
-| ~~Critical fixes (C1-C4)~~ | ~~4~~ | ~~2-3 days~~ ✅ ALL RESOLVED |
-| ~~High priority (H1-H10)~~ | ~~10~~ | ~~2 weeks~~ ✅ ALL RESOLVED |
-| Medium priority (M1-M16) | 6 remaining | 3-4 weeks |
-| **Priority 0 — Content Delivery** | **3 items** | **2-3 weeks** |
-| **Priority 0 — Cohort Readiness** | **6 items** | **3-4 weeks** |
-| **Priority 0 — Assignment Routing** | **5 remaining** (1 done) | **1 week** |
+| Category | Items | Status |
+|----------|-------|--------|
+| ~~Critical fixes (C1-C4)~~ | ~~4~~ | ✅ ALL RESOLVED |
+| ~~High priority (H1-H10)~~ | ~~10~~ | ✅ ALL RESOLVED |
+| Medium priority (M1-M16) | 5 remaining (11 resolved) | M2, M11, M12, M13, M16 |
+| ~~Priority 0 — Content Delivery Tier 1~~ | ~~3 items~~ | ✅ DONE (2026-02-18) |
+| ~~Priority 0 — Coach Onboarding~~ | ~~6 items~~ | ✅ DONE (2026-02-18) |
+| ~~Priority 0 — Assignment Routing~~ | ~~6 items~~ | ✅ DONE (2026-02-18) |
+| ~~Priority 0 — Cohort Core~~ | ~~2 items~~ | ✅ DONE (2026-02-18) |
+| **Priority 0 — Cohort Scheduling Gaps** | **10 items (G1-G10)** | **~2.5 weeks remaining** |
+| **Priority 0 — Development Profile** | **7 phases (DP1-DP7)** | **~3-4 weeks total** |
+| Priority 0 — Content Delivery Tier 2 | xAPI direct | 1-2 weeks |
 | Phase 1 — Onboarding/UX | 8 items | 2-3 weeks |
 | Phase 2 — Assessment Intelligence | 7 items | 3-4 weeks |
 | Phase 3 — AI & Engagement | 8 items | 3-4 weeks |
@@ -1608,17 +1640,21 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 | Phase 8 — Integration Deepening | 4 items | 3-4 weeks |
 | Phase 9 — Strategic | 6 items | 3+ months |
 
-**Recommended execution order (updated 2026-02-17):**
+**Recommended execution order (updated 2026-02-18):**
 1. ~~C1-C4~~ ✅ → ~~H1-H10~~ ✅
-2. **Priority 0 Content Delivery (Tier 1 Web embed)** — immediate UX win, 3-5 days
-3. **Priority 0 Coach Onboarding (welcome card + profile setup + empty states + welcome email)** — required before onboarding coaches, 1.5-2 weeks
-4. **Priority 0 Assignment Routing (~~remove individualized filter~~ ✅ + My Queue + assignment transfer)** — required before multi-instructor programs, 1 week remaining
-5. **Priority 0 Cohort Readiness (CohortDashboard + Join Session)** — required before next cohort, 2 weeks
-6. Quick medium wins (M2, M11, M9) — interleaved, 2-3 days
-7. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
-8. **Priority 0 Content Delivery (Tier 2 xAPI)** — auto-tracking, 1-2 weeks
-9. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
-10. Remaining phases based on business priorities
+2. ~~Priority 0 Content Delivery Tier 1~~ ✅ — Rise embed + auth-gated proxy
+3. ~~Priority 0 Coach Onboarding~~ ✅ — welcome card + profile setup + empty states + welcome email
+4. ~~Priority 0 Assignment Routing~~ ✅ — My Queue + transfer dialog + async notifications
+5. ~~Priority 0 Cohort Core~~ ✅ — CohortDashboard + Join Session + calendar + dashboard widget
+6. **Priority 0 Cohort Scheduling Gaps (G1-G6)** — enrollment UI + Meet links + instructor + recurrence + attendance + notifications (~1.5 weeks)
+7. **Priority 0 Cohort Quality (G7-G10)** — session notes + analytics + homework (~2 weeks)
+8. **Development Profile (DP1-DP4)** — assessment↔goal links, profile page, gated milestones, intake-driven paths (~2-3 weeks). See `docs/DEVELOPMENT_PROFILE_ANALYSIS.md`.
+9. Quick medium wins (M2, M11) — interleaved, 2 days
+10. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
+11. **Development Profile (DP5-DP7)** — module↔domain mapping, psychometric structured results, readiness dashboard (~1-2 weeks)
+12. **Content Delivery Tier 2 (xAPI direct)** — auto-tracking, 1-2 weeks
+13. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
+14. Remaining phases based on business priorities
 
 ### 11.8 New Data Tables Required by Roadmap
 
@@ -1626,13 +1662,16 @@ Several roadmap items require new database tables or fields. These should be pla
 
 | Phase | Feature | New Tables / Fields |
 |-------|---------|-------------------|
-| Priority 0 | Content delivery | New storage bucket `learning-content`, `program_modules.embedded_content_url` (TEXT), `program_modules.content_delivery_type` (enum: link, embedded_web, embedded_xapi) |
-| Priority 0 | xAPI receiver | Edge function `xapi-statement-receiver`, extends `external_progress.external_metadata` for xAPI statement storage |
-| Priority 0 | Cohort dashboard | No new tables — uses existing `program_cohorts`, `cohort_sessions`, `client_enrollments`, `session_participants` |
-| Priority 0 | Session notes | `cohort_sessions.summary` (TEXT), `cohort_sessions.recording_url` (TEXT), `cohort_sessions.action_items` (JSONB) |
-| Priority 0 | Auto cohort enrollment | `enrollment_codes.cohort_id` (UUID FK to program_cohorts) |
-| Priority 0 | Assignment routing | `module_assignments.assigned_grader_id` (UUID FK to profiles, nullable — set from `enrollment_module_staff` on submission) |
-| Priority 0 | Assignment transfer | No new tables — update `assigned_grader_id`, optional `assignment_transfer_log` for audit trail |
+| ~~Priority 0~~ | ~~Content delivery Tier 1~~ | ✅ DONE — `program_modules.content_package_path` (TEXT), `module-content-packages` private storage bucket |
+| Priority 0 | xAPI receiver (Tier 2) | Edge function `xapi-statement-receiver`, extends `external_progress.external_metadata` for xAPI statement storage |
+| ~~Priority 0~~ | ~~Cohort dashboard~~ | ✅ DONE — uses existing tables, no new migrations needed |
+| Priority 0 | G1 Cohort enrollment UI | Alter `enroll_with_credits` RPC to accept `p_cohort_id` parameter |
+| Priority 0 | G3 Instructor on cohort | `program_cohorts.lead_instructor_id` (UUID FK), `cohort_sessions.instructor_id` (UUID FK) |
+| Priority 0 | G4 Attendance tracking | New `cohort_session_attendance` table (session_id, user_id, status, marked_by, notes) |
+| Priority 0 | G7 Session notes | `cohort_sessions.recording_url` (TEXT), `cohort_sessions.summary` (TEXT), `cohort_sessions.action_items` (JSONB) |
+| Priority 0 | G8 Auto cohort enrollment | `enrollment_codes` table with `cohort_id` (UUID FK to program_cohorts) — deferred to Phase 5 |
+| ~~Priority 0~~ | ~~Assignment routing~~ | ✅ DONE — async via `create_notification` RPC, My Queue via `enrollment_module_staff` |
+| ~~Priority 0~~ | ~~Assignment transfer~~ | ✅ DONE — `TransferAssignmentDialog` component |
 | Phase 1 | Onboarding | `profiles.onboarding_completed` (boolean) |
 | Phase 3 | Streaks/XP | `engagement_streaks` (user, streak_type, current_count, longest_count, last_activity_date), `user_xp` (user, total_xp, level) |
 | Phase 3 | Activity feed | `activity_feed_events` (user_id, event_type, target_type, target_id, created_at) |
@@ -1647,5 +1686,10 @@ Several roadmap items require new database tables or fields. These should be pla
 | Phase 6 | Seat warnings | `organizations.max_sponsored_seats`, `organizations.seat_warning_threshold` |
 | Phase 7 | Flexible pacing | `client_enrollments.pacing_mode` (self_paced/cohort_paced) |
 | Phase 7 | Module ordering | `program_modules.is_sequential` (boolean), `module_progress.unlock_override` |
+| Dev Profile DP1 | Assessment ↔ Goal traceability | `goal_assessment_links` (goal_id, capability_assessment_id, capability_domain_id, capability_snapshot_id, assessment_definition_id, psychometric_assessment_id, score_at_creation, target_score) |
+| Dev Profile DP3 | Assessment-gated milestones | `guided_path_milestone_gates` (template_milestone_id, assessment/domain refs, min_score), `milestone_gate_overrides` (goal_milestone_id, gate_id, overridden_by, reason) |
+| Dev Profile DP4 | Intake-driven path recommendation | `guided_path_instantiations` (user_id, template_id, survey_response_id, pace_multiplier, estimated_completion_date, status), `goals.template_goal_id` + `goals.instantiation_id` (ALTER) |
+| Dev Profile DP5 | Module ↔ domain mapping | `module_domain_mappings` (module_id, capability_domain_id, relevance) |
+| Dev Profile DP6 | Psychometric structured results | `psychometric_result_schemas` (assessment_id, dimensions JSONB), `psychometric_results` (user_assessment_id, scores JSONB, entered_by) |
 | Phase 9 | Micro-learning | New `micro_learning` value in `module_types` enum |
 | Phase 12 | Resource ratings | `resource_ratings` (user_id, resource_id, rating, review_text) |
