@@ -47,7 +47,7 @@ Edge functions deployed separately via `npm run deploy:functions`.
 
 ## Edge Function Patterns (MANDATORY)
 
-All 61 edge functions in `supabase/functions/` follow these standardized patterns. **New edge functions MUST follow them too.**
+All 63 edge functions in `supabase/functions/` follow these standardized patterns. **New edge functions MUST follow them too.**
 
 ### 1. CORS — Use `getCorsHeaders(req)` from shared utility
 
@@ -211,7 +211,7 @@ Use `@/` path alias for all imports (maps to `src/`).
 - `src/lib/` — Utility functions and helpers
 - `src/lib/__tests__/` — Unit tests (Vitest, 303 tests in 18 files)
 - `src/integrations/supabase/` — Supabase client, types, generated types
-- `supabase/functions/` — 61 Deno edge functions
+- `supabase/functions/` — 63 Deno edge functions
 - `supabase/functions/_shared/` — Shared edge function utilities:
   - `cors.ts` — Origin-aware CORS headers (`getCorsHeaders(req)`)
   - `error-response.ts` — Typed error/success response helpers

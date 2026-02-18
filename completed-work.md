@@ -46,7 +46,7 @@ Three commits resolving 7 of 10 identified cohort scheduling gaps. `fddd72a` (G1
 - **G3 — Instructor on cohort/session:** Migration adds `program_cohorts.lead_instructor_id` and `cohort_sessions.instructor_id` FK columns. Admin UI: instructor dropdowns on cohort and session forms. Instructor name shown on session cards.
 - **G4 — Attendance tracking:** New `cohort_session_attendance` table (session_id, user_id, status [present/absent/excused/late], marked_by, notes). RLS: instructors/coaches can mark, clients read own, admin full. `AttendanceTracker.tsx` component on session detail.
 - **G5 — Recurring session generation:** "Generate Sessions" bulk action on cohort management. Inputs: recurrence (weekly/biweekly), day of week, time, timezone, count. Creates N sessions linked to sequential modules.
-- **G6 — Session notifications/reminders:** `send-session-reminder` edge function. Sends email 24h and 1h before session. Uses `create_notification` RPC for in-app. Triggered by pg_cron job.
+- **G6 — Session notifications/reminders:** `send-schedule-reminders` edge function. Sends email 24h and 1h before session. Uses `create_notification` RPC for in-app. Triggered by pg_cron job.
 - **G7 — Session notes/recap:** Migration adds `cohort_sessions.recording_url`, `cohort_sessions.summary`, `cohort_sessions.action_items` (JSONB). Session recap section visible to participants after session. Instructor can edit notes.
 
 ## P0 Tier 1 — Content Delivery + CohortDashboard + Join Session (2026-02-18)

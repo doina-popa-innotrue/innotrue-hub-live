@@ -48,14 +48,14 @@
 - Supabase client: `src/integrations/supabase/client.ts`
 - Auth: `src/pages/Auth.tsx`, `src/contexts/AuthContext.tsx`
 - Routes: `src/App.tsx` | Sentry: `src/main.tsx` | Error boundary: `src/components/ErrorBoundary.tsx`
-- Edge functions: `supabase/functions/` (61 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`
+- Edge functions: `supabase/functions/` (63 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`, `error-response.ts`, `ai-input-limits.ts`, `calcom-utils.ts`
 - Assessment scoring: `src/lib/assessmentScoring.ts` (weighted question type scoring for capability assessments)
 - Guided path instantiation: `src/lib/guidedPathInstantiation.ts` (shared template→goals service with pace/date logic)
 - Tests: `src/lib/__tests__/` (18 files, 303 tests) | CI: `.github/workflows/ci.yml`
 - Seed: `supabase/seed.sql` | Cursor rules: `.cursorrules`
 
 ## Database Schema
-- 373+ tables, 25 enums, 414 migrations
+- 380+ tables, 25 enums, 420 migrations
 - Key enums: `app_role` (admin, client, coach, instructor), `module_type`, `enrollment_status`
 - **Two plan systems:** Subscription plans (`plans` table, tier 0-4) + Program plans (`program_plans`, per-enrollment features)
 - `useEntitlements` merges 5 sources: subscription, program plan, add-ons, tracks, org-sponsored (highest wins)
@@ -102,13 +102,13 @@
 - Cohort scheduling gaps — see below
 
 **Priority 0 — Cohort Scheduling Gaps (see `docs/COHORT_SCHEDULING_ANALYSIS.md` for full analysis):**
-- G1: Cohort assignment UI on enrollment (1 day) — **blocker**
-- G2: Google Meet link automation for sessions (2 days) — **blocker**
-- G3: Instructor assignment on cohort/session (1-2 days) — high
-- G4: Attendance tracking (2-3 days) — high
-- G5: Recurring session generation (1-2 days) — high
-- G6: Session notifications/reminders (2 days) — high
-- G7: Session notes/recap (3 days) — medium
+- ~~G1: Cohort assignment UI on enrollment~~ ✅ DONE — `enroll_with_credits` RPC accepts `p_cohort_id`, cohort dropdown on enrollment form
+- ~~G2: Google Meet link automation~~ ✅ DONE — auto-generates Meet link when creating sessions
+- ~~G3: Instructor on cohort/session~~ ✅ DONE — `lead_instructor_id` on cohorts, `instructor_id` on sessions, admin UI dropdowns
+- ~~G4: Attendance tracking~~ ✅ DONE — `cohort_session_attendance` table, `AttendanceTracker.tsx`, instructor/coach marking
+- ~~G5: Recurring session generation~~ ✅ DONE — "Generate Sessions" bulk action, weekly/biweekly recurrence
+- ~~G6: Session notifications/reminders~~ ✅ DONE — `send-schedule-reminders` edge function, 24h + 1h before, `create_notification` RPC
+- ~~G7: Session notes/recap~~ ✅ DONE — `recording_url`, `summary`, `action_items` on `cohort_sessions`, recap section
 - G8: Enrollment codes (2-3 days) — Phase 5
 - G9: Cohort analytics dashboard (1 week) — medium
 - G10: Session-linked homework (3-5 days) — medium
@@ -124,7 +124,7 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 - DP7: Readiness dashboard (3-5 days) — capstone coach + client view combining all data
 - ~~**Known bug:** `GuidedPathSurveyWizard` saves survey response but never instantiates template goals/milestones~~ ✅ Fixed in DP4
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G6)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → 5-Self-Registration → Development Profile (DP5-DP7) → Content Tier 2 xAPI → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → Cohort quality (G8-G10) → 5-Self-Registration → Development Profile (DP5-DP7) → Content Tier 2 xAPI → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, client progress, notes)
@@ -145,15 +145,15 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 - **Key edge functions:** `notify-assignment-submitted` (async, broadcasts), `notify-assignment-graded` (async, notifies client)
 - **Note:** `client_instructors`/`client_coaches` are separate from `enrollment_module_staff` — used for general coaching relationships (decisions, tasks), not synced by design
 
-## Recommended Execution Order (updated 2026-02-18)
+## Recommended Execution Order (updated 2026-02-19)
 1. ~~C1-C4~~ ✅ → ~~H1-H10~~ ✅
 2. ~~Priority 0 Content Delivery Tier 1~~ ✅ — Rise Web embed via iframe
 3. ~~Priority 0 Coach Onboarding~~ ✅ — welcome card + profile setup + empty states + welcome email
 4. ~~Priority 0 Assignment Routing~~ ✅ — individualized filter + My Queue + assignment transfer + async notifications
 5. ~~Priority 0 Cohort Core~~ ✅ — CohortDashboard + Join Session one-click + calendar + dashboard widget
-6. **Priority 0 Cohort Scheduling Gaps** — G1 enrollment UI + G2 Meet links + G3 instructor + G5 recurrence (~1 week)
-7. ~~**Priority 0 Cohort Quality**~~ ✅ — G4 attendance + G6 notifications + G7 session notes
-8. ~~**Development Profile (DP1-DP4)**~~ ✅ — assessment↔goal links, profile page, gated milestones, intake-driven paths
+6. ~~Priority 0 Cohort Scheduling Gaps (G1-G7)~~ ✅ — enrollment UI + Meet links + instructor + recurrence + attendance + notifications + session notes
+7. ~~**Development Profile (DP1-DP4)**~~ ✅ — assessment↔goal links, profile page, gated milestones, intake-driven paths
+8. **Priority 0 Cohort Quality (G8-G10)** — enrollment codes + analytics + session-linked homework (~1 week)
 9. Quick medium wins (M2, M11) — interleaved (2 days)
 10. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
 11. **Development Profile (DP5-DP7)** — module↔domain mapping, psychometric structured results, readiness dashboard (~1-2 weeks)

@@ -763,7 +763,9 @@ Sessions are live scheduled meetings — coaching calls, workshops, group sessio
 | `session_participants` | Who's attending + their role + status |
 | `group_sessions` | Group session records (with Cal.com integration fields) |
 | `group_session_participants` | Group session attendees |
-| `cohort_sessions` | Sessions for cohort-based delivery |
+| `cohort_sessions` | Sessions for cohort-based delivery. Includes `instructor_id` (G3), `recording_url`, `summary`, `action_items` JSONB (G7) |
+| `cohort_session_attendance` | Attendance tracking per cohort session (G4): session_id, user_id, status (present/absent/excused/late), marked_by, notes |
+| `program_cohorts` | Cohort management. Includes `lead_instructor_id` (G3) for cohort-level instructor assignment |
 | `module_sessions` | Link sessions to program modules |
 | `session_module_links` | Additional session-to-module mapping |
 
@@ -943,6 +945,7 @@ Additionally, **scenarios** can be linked to any module via `scenario_assignment
 | `psychometric-assessments` | Psychometric | Assessment | 10 MB | Client-uploaded PDF results (PDF, JPG, PNG only) |
 | `session-attachments` | Sessions | — | — | Session-related file uploads |
 | `scenario-attachments` | Scenarios | — | — | Scenario-related files |
+| `module-content-packages` | Modules | ZIP only | 500 MB | Rise/web content package storage (private, auth-gated via `serve-content-package` edge function) |
 | `wheel-pdfs` | Wheel of Life | — | — | Generated Wheel PDF exports |
 
 **MIME categories** (defined in `src/lib/fileValidation.ts`):
@@ -967,13 +970,15 @@ Additionally, **scenarios** can be linked to any module via `scenario_assignment
 
 ### Edge Function Shared Utilities
 
-All 61 edge functions use three shared utility libraries (mandatory for new functions):
+All 63 edge functions use six shared utility libraries (mandatory for new functions):
 
 | Utility | Import Path | Purpose |
 |---------|-------------|---------|
 | **CORS** | `_shared/cors.ts` | `getCorsHeaders(req)` → returns CORS headers; variable MUST be named `cors` |
 | **Responses** | `_shared/error-response.ts` | `errorResponse.badRequest/unauthorized/forbidden/notFound/rateLimit/serverError` + `successResponse.ok/created/noContent` — NEVER construct `new Response()` manually |
 | **AI Input** | `_shared/ai-input-limits.ts` | `truncateArray/String/Json()`, `enforcePromptLimit()` — prevents oversized AI prompts (max 8K chars, 20 array items) |
+| **AI Config** | `_shared/ai-config.ts` | `aiChatCompletion()`, `AI_MODEL` — Vertex AI provider config, OAuth2, model selection |
+| **Email** | `_shared/email-utils.ts` | `getStagingRecipient()`, `checkUserEmailStatus()` — staging override + user email status checks |
 | **Cal.com** | `_shared/calcom-utils.ts` | `cancelCalcomBooking(uid, reason?)` — cancels bookings via Cal.com v2 API (used for orphan prevention) |
 
 ---

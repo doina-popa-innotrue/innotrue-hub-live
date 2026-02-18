@@ -1343,7 +1343,7 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | ~~M6~~ | ~~Credit balance race condition~~ — **RESOLVED 2026-02-15** | Part 1 (1.9) | ~~4 hours~~ | Added `FOR UPDATE SKIP LOCKED` to `consume_credits_fifo` (fixed with C3) |
 | ~~M7~~ | ~~Empty state components~~ — **RESOLVED 2026-02-17** | Part 8 (8.6) | ~~2 hours~~ | Reusable `EmptyState` component (`empty-state.tsx`) with icon + title + description + optional CTA. Applied across all dashboard widgets: ClientDashboard, InstructorCoachDashboard, 19 admin pages, MyGroupsSection, AnnouncementsWidget, RecentGradedAssignmentsWidget, MyCoachesSection. RecentDevelopmentItemsWidget already had a custom empty state with CTA. |
 | ~~M8~~ | ~~Locked sidebar items confusing UX~~ — **RESOLVED (already implemented)** | Part 8 (8.6) | ~~4 hours~~ | Lock icon + tooltip + toast with plan name already in place. Items stay in natural position. |
-| M9 | Notification sending is synchronous | Part 1 (1.8) | 1 day | Group sessions could timeout. Use email queue instead |
+| ~~M9~~ | ~~Notification sending is synchronous~~ — **RESOLVED 2026-02-18** | Part 1 (1.8) | ~~1 day~~ | Refactored `notify-assignment-submitted` and `notify-assignment-graded` to async delivery via `create_notification` RPC (non-blocking). Email queue (`process-email-queue`) already handles batch sending. |
 | ~~M10~~ | ~~Dual plans admin UX confusion~~ — **RESOLVED 2026-02-17** | Part 1 (1.12) | ~~2 hours~~ | Added info banners to both plan pages with cross-links explaining when to use each |
 | M11 | Console statements in production | Part 1 (1.7) | 4 hours | ~26 files have console.log (~54 statements). Replace with Sentry or remove |
 | M12 | No resource ratings or feedback | Part 9 (9.8.3) | 3 days | No quality signal on resources. Add 1-5 star rating |
@@ -1622,7 +1622,7 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 |----------|-------|--------|
 | ~~Critical fixes (C1-C4)~~ | ~~4~~ | ✅ ALL RESOLVED |
 | ~~High priority (H1-H10)~~ | ~~10~~ | ✅ ALL RESOLVED |
-| Medium priority (M1-M16) | 5 remaining (11 resolved) | M2, M11, M12, M13, M16 |
+| Medium priority (M1-M17) | 5 remaining (12 resolved) | M2, M11, M12, M13, M16 |
 | ~~Priority 0 — Content Delivery Tier 1~~ | ~~3 items~~ | ✅ DONE (2026-02-18) |
 | ~~Priority 0 — Coach Onboarding~~ | ~~6 items~~ | ✅ DONE (2026-02-18) |
 | ~~Priority 0 — Assignment Routing~~ | ~~6 items~~ | ✅ DONE (2026-02-18) |

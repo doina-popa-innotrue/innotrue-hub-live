@@ -41,7 +41,7 @@
 │                     Supabase                                 │
 │  ┌────────────┐  ┌──────────────┐  ┌───────────────────┐   │
 │  │ PostgreSQL │  │   Auth       │  │   Storage          │   │
-│  │ 373+ tables│  │ Google OAuth │  │   File uploads     │   │
+│  │ 380+ tables│  │ Google OAuth │  │   File uploads     │   │
 │  │ RLS on all │  │ Email/Pass   │  │   Wheel PDFs       │   │
 │  └────────────┘  └──────────────┘  └───────────────────┘   │
 │  ┌──────────────────────────────────────────────────────┐   │
@@ -59,7 +59,7 @@
 **Stack:** React 18 + Vite 5 + TypeScript (strict) + Supabase + Tailwind CSS + shadcn/ui
 
 **Key design decisions:**
-- SPA with lazy-loaded routes (162+ pages, code-split to 977KB main bundle)
+- SPA with lazy-loaded routes (164+ pages, code-split to 977KB main bundle)
 - Supabase for backend (auth, database, storage, edge functions) — no custom server
 - Google Vertex AI for AI features (EU data residency in Frankfurt, europe-west3)
 - Resend for transactional email (13 edge functions)
@@ -109,7 +109,7 @@ fi && npm run build
 ### Supabase project details
 
 Both preprod and prod have:
-- 414 database migrations applied
+- 420 database migrations applied
 - Seed data loaded (`supabase/seed.sql`)
 - 63 edge functions deployed
 - Google OAuth configured
@@ -159,7 +159,7 @@ After login, users must accept the current platform terms before accessing the a
 
 ### Schema overview
 
-- **373+ tables**, 20+ enum types, 414 migrations
+- **380+ tables**, 20+ enum types, 420 migrations
 - All public tables have **RLS enabled** (276 tables total, 41 with explicit policies, 235 locked to service_role only)
 - Key enums: `app_role`, `program_category`, `module_type`, `enrollment_status`, `decision_status`, `goal_category`
 
@@ -207,9 +207,12 @@ All functions have `verify_jwt = false` in `supabase/config.toml` — they imple
 
 | File | Purpose |
 |------|---------|
-| `_shared/cors.ts` | Environment-aware CORS with origin allowlisting |
+| `_shared/cors.ts` | Environment-aware CORS with origin allowlisting (`getCorsHeaders(req)`) |
+| `_shared/error-response.ts` | Typed error/success response helpers (`errorResponse.*`, `successResponse.*`) |
 | `_shared/ai-config.ts` | AI provider configuration (swappable: Vertex AI, Mistral, Azure, OpenAI) |
+| `_shared/ai-input-limits.ts` | Prompt truncation helpers (`truncateString`, `truncateArray`, `enforcePromptLimit`) |
 | `_shared/email-utils.ts` | Staging email override + user email status checks |
+| `_shared/calcom-utils.ts` | Cal.com API helpers (booking cancellation) |
 
 ### CORS configuration
 
@@ -295,7 +298,7 @@ STAGING_EMAIL_OVERRIDE=your@email.com
 
 ### Code splitting
 
-All 162+ page components are lazy-loaded in `src/App.tsx`:
+All 164+ page components are lazy-loaded in `src/App.tsx`:
 ```typescript
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 ```
@@ -451,7 +454,7 @@ Auth endpoints are never cached.
 
 ### Unit tests (Vitest)
 
-- **210+ tests** in `src/lib/__tests__/` (11 test files)
+- **303 tests** in `src/lib/__tests__/` (18 test files)
 - Run: `npm test` (single run), `npm run test:watch` (watch mode)
 - Coverage: `npm run test:coverage`
 

@@ -135,8 +135,8 @@ Manages their organization's members and program access within the platform.
 │                    Supabase Backend                      │
 │  ┌─────────┐ ┌──────────┐ ┌─────────┐ ┌─────────────┐  │
 │  │  Auth    │ │ Database │ │ Storage │ │ Edge Funcs   │  │
-│  │  (OAuth) │ │ (Postgres│ │ (15     │ │ (61          │  │
-│  │         │ │  373+    │ │ buckets)│ │  functions)  │  │
+│  │  (OAuth) │ │ (Postgres│ │ (16     │ │ (63          │  │
+│  │         │ │  380+    │ │ buckets)│ │  functions)  │  │
 │  │         │ │  tables) │ │         │ │              │  │
 │  └─────────┘ └──────────┘ └─────────┘ └─────────────┘  │
 ├─────────────────────────────────────────────────────────┤
@@ -291,6 +291,15 @@ coaching, group_coaching, workshop, mastermind, review_board_mock, peer_coaching
 4. Client books directly through Cal.com
 5. Cal.com webhook updates the session record in the database
 6. Both client and instructor get email confirmation
+
+**Cohort session management (G1-G7):**
+- **Cohort assignment on enrollment (G1):** Admin selects cohort when enrolling a client; the `enroll_with_credits` RPC accepts `p_cohort_id` for atomic enrollment + cohort assignment.
+- **Google Meet automation (G2):** Sessions auto-generate Meet links via Google Calendar API when created.
+- **Instructor assignment (G3):** Cohorts have a `lead_instructor_id`; individual sessions have an `instructor_id`. Instructor name displayed on session cards.
+- **Attendance tracking (G4):** `cohort_session_attendance` table tracks present/absent/excused/late per participant. `AttendanceTracker` component for instructors/coaches to mark attendance.
+- **Bulk session generation (G5):** "Generate Sessions" action creates weekly or biweekly sessions linked to sequential modules.
+- **Session reminders (G6):** `send-schedule-reminders` edge function sends email + in-app notifications 24h and 1h before sessions.
+- **Session notes/recap (G7):** Past sessions display recording URL, summary, and action items. Instructors can edit recap content visible to participants.
 
 ---
 
@@ -530,7 +539,7 @@ Client experience: Hub → Program → Module → Content loads inline. Zero cli
 
 | Phase | What | Effort |
 |-------|------|--------|
-| **Tier 1 (next)** | Embed Rise Web export directly in iframe. Manual "Mark as Complete." | 3-5 days |
+| ~~**Tier 1**~~ ✅ DONE | Embed Rise Web export directly in iframe. Auth-gated `serve-content-package` edge function. Manual "Mark as Complete." | ~~3-5 days~~ |
 | **Tier 2 (after)** | Rise xAPI export with lightweight LRS endpoint. Auto-tracking of progress, time, interactions. | 1-2 weeks |
 | **TalentLMS** | Keep for active programs. No new programs added. Sunset when current programs end. | Ongoing |
 
@@ -590,13 +599,13 @@ Consumption analytics, user behavior analytics, program completions, system sett
 
 | Metric | Count |
 |--------|-------|
-| Database tables | 373+ |
+| Database tables | 380+ |
 | Database enums | 25 |
-| Database migrations | 414 |
-| Edge functions | 61 |
-| Frontend pages | 162+ (71 admin, 56 client, 13 teaching, 9 org-admin, 13+ shared) |
-| React hooks | 67 |
-| Storage buckets | 15 |
+| Database migrations | 420 |
+| Edge functions | 63 |
+| Frontend pages | 164+ (71 admin, 58 client, 13 teaching, 9 org-admin, 13+ shared) |
+| React hooks | 69 |
+| Storage buckets | 16 |
 | Notification types | 25+ |
 | Session types | 8 |
 | Session roles | 10 |
