@@ -1,5 +1,54 @@
 # Completed Work — Detailed History
 
+## DP1-DP4 Development Profile (2026-02-19)
+
+Assessment ↔ goal traceability, unified Development Profile page, assessment-gated milestones, and intake-driven path instantiation. Commit `c6b2e11`, 26 files, 3,519 insertions, 182 deletions. 3 migrations, 15 new files, 12 modified files.
+
+**DP1 — Assessment ↔ Goal Traceability:**
+- **Migration:** `20260219400000_dp1_goal_assessment_links.sql` — `goal_assessment_links` table with polymorphic FK refs to capability_assessments, capability_domains, capability_snapshots, assessment_definitions, psychometric_assessments. Score tracking: `score_at_creation`, `target_score`. RLS: owner, shared users (via `goal_shares`), coaches (via `client_coaches`), instructors (via `client_instructors`), admin.
+- **`useGoalAssessmentLinks.ts`** — `useGoalAssessmentLink(goalId)` + `useCreateGoalAssessmentLink()` hooks with domain name joins.
+- **`GoalForm.tsx`** — Collapsible "Linked Assessment" section: assessment type select → cascading domain/dimension → score inputs. `assessmentContext` prop for pre-population from assessment detail pages.
+- **`GoalCard.tsx`** — Assessment origin badge: "📊 [Domain Name] (X/N)" when linked.
+- **`GoalDetail.tsx`** — "Assessment Progress" section: score at creation → current → target progress bar, "Re-assess" link.
+
+**DP2 — Development Profile Page:**
+- **`DevelopmentProfile.tsx`** — 5-section unified page at `/development-profile`:
+  - **StrengthsGapsMatrix** — capability snapshot domain averages (via `calculateDomainScore()`) + assessment definition dimension scores, normalized to %, color-coded (green/amber/red), trend arrows from evolution data.
+  - **ActiveDevelopmentItems** — `development_items` + `development_item_links` grouped by domain, status badges.
+  - **AssessmentGoalProgress** — goals joined with `goal_assessment_links`, progress bars + score overlay.
+  - **SkillsEarned** — `user_skills` + `skills` + `skill_categories` badge grid.
+  - **GuidedPathProgress** — active path survey responses with template goals, gate traffic-light indicators.
+- **`StudentDevelopmentProfile.tsx`** — Coach/instructor/admin view reusing same sub-components with `userId` prop.
+- **Router:** Lazy-loaded at `/development-profile` (client) and `/teaching/students/:enrollmentId/development-profile`.
+- **Sidebar:** Added to `clientPlanningItems` in `AppSidebar.tsx`.
+
+**DP3 — Assessment-Gated Milestones:**
+- **Migration:** `20260220400000_dp3_milestone_gates.sql` — `guided_path_milestone_gates` (template_milestone_id, assessment/domain refs, min_score, gate_label) + `milestone_gate_overrides` (goal_milestone_id, gate_id, overridden_by, reason). RLS: gates SELECT all auth / INSERT+UPDATE+DELETE admin only; overrides SELECT via goal chain / INSERT for coach+instructor+admin / DELETE admin only.
+- **`MilestoneGateDialog.tsx`** — Admin gate config: assessment type → domain/dimension → min_score → gate_label.
+- **`MilestoneGateStatus.tsx`** — Traffic-light indicators: 🟢 met or overridden, 🟡 within 1 point, 🔴 below threshold, ⚪ no data.
+- **`WaiveGateDialog.tsx`** — Coach/instructor override with required reason field.
+- **`useMilestoneGates.ts`** — `useMilestoneGates(templateMilestoneId)` + `useMilestoneGateStatus(goalMilestoneId, userId)`.
+- **`GuidedPathTemplateDetail.tsx`** — "Gates" sub-section per milestone in admin view.
+
+**DP4 — Intake-Driven Path Instantiation:**
+- **Migration:** `20260221400000_dp4_path_instantiation.sql` — `guided_path_instantiations` table (user_id, template_id, survey_response_id, pace_multiplier, started_at, estimated_completion_date, status). `goals` table altered: `template_goal_id` + `instantiation_id` columns.
+- **`guidedPathInstantiation.ts`** — Shared service: `instantiateTemplate()` creates instantiation record → fetches template goals/milestones/tasks → creates goals with `template_goal_id` + `instantiation_id` → pace-adjusted milestone due dates → creates tasks. Returns `InstantiationResult` with counts + estimated completion. `estimateCompletionDate()` for preview.
+- **`PathConfirmation.tsx`** — Shown after survey: matched template summary, pace selector (Intensive 0.7x / Standard 1.0x / Part-time 1.5x), start date picker, estimated completion display, "Create My Path" button.
+- **`GuidedPathSurveyWizard.tsx`** — Added PathConfirmation as final step instead of immediate save+navigate. Survey wizard bug ✅ fixed.
+- **`GuidedPathDetail.tsx`** — Refactored inline `copyMutation` (206-339 lines) to use shared `instantiateTemplate()`.
+
+## G1-G7 Cohort Scheduling Gaps (2026-02-18 – 2026-02-19)
+
+Three commits resolving 7 of 10 identified cohort scheduling gaps. `fddd72a` (G1+G2), `b858d38` (G3+G5), `a0bc2ad` (G4+G6+G7).
+
+- **G1 — Cohort assignment on enrollment:** Migration adds `p_cohort_id` parameter to `enroll_with_credits` RPC. Enrollment form shows cohort dropdown when program has cohorts. Auto-assigns client to selected cohort on enrollment.
+- **G2 — Google Meet link automation:** Reuses `google-calendar-create-event` edge function pattern. Auto-generates Meet link when creating cohort sessions. Stored in `cohort_sessions.meeting_link`.
+- **G3 — Instructor on cohort/session:** Migration adds `program_cohorts.lead_instructor_id` and `cohort_sessions.instructor_id` FK columns. Admin UI: instructor dropdowns on cohort and session forms. Instructor name shown on session cards.
+- **G4 — Attendance tracking:** New `cohort_session_attendance` table (session_id, user_id, status [present/absent/excused/late], marked_by, notes). RLS: instructors/coaches can mark, clients read own, admin full. `AttendanceTracker.tsx` component on session detail.
+- **G5 — Recurring session generation:** "Generate Sessions" bulk action on cohort management. Inputs: recurrence (weekly/biweekly), day of week, time, timezone, count. Creates N sessions linked to sequential modules.
+- **G6 — Session notifications/reminders:** `send-session-reminder` edge function. Sends email 24h and 1h before session. Uses `create_notification` RPC for in-app. Triggered by pg_cron job.
+- **G7 — Session notes/recap:** Migration adds `cohort_sessions.recording_url`, `cohort_sessions.summary`, `cohort_sessions.action_items` (JSONB). Session recap section visible to participants after session. Instructor can edit notes.
+
 ## P0 Tier 1 — Content Delivery + CohortDashboard + Join Session (2026-02-18)
 
 Three features enabling live cohort program delivery end-to-end. Commit `6ab2ca5`, 16 files, 1,740 insertions.

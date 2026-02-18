@@ -167,11 +167,11 @@ Use `@/` path alias for all imports (maps to `src/`).
 
 ### Data Fetching
 - Use TanStack React Query hooks in `src/hooks/`
-- 65+ custom hooks — check if one already exists before creating a new one
+- 69+ custom hooks — check if one already exists before creating a new one
 - Server state: React Query. Auth state: React Context (`AuthContext`).
 
 ### Routing
-- 160 pages lazy-loaded in `src/App.tsx`
+- 164 pages lazy-loaded in `src/App.tsx`
 - 3 critical-path pages eagerly loaded: Index, Auth, NotFound
 - New pages MUST be lazy-loaded
 
@@ -185,6 +185,13 @@ Use `@/` path alias for all imports (maps to `src/`).
 ### Roles
 - 4 `app_role` values: `admin`, `client`, `coach`, `instructor`
 - `org_admin` and `org_manager` are separate org-level roles (in `organization_members.role`)
+
+### Development Profile (DP1-DP4) Patterns
+- `DevelopmentProfile.tsx` — 5-section unified page (StrengthsGapsMatrix, ActiveDevelopmentItems, AssessmentGoalProgress, SkillsEarned, GuidedPathProgress)
+- `GoalForm.tsx` — optional "Linked Assessment" collapsible section; `GoalCard.tsx` — assessment origin badge
+- `MilestoneGateStatus.tsx` — traffic-light indicators (🟢🟡🔴⚪) for advisory gates; gates never block milestone completion
+- `PathConfirmation.tsx` — pace selector + start date + estimated completion before instantiation
+- Coach/instructor views reuse same sub-components with `userId` prop for viewing client data
 
 ### Code Style
 - TypeScript strict mode (all flags including `strictNullChecks`)
@@ -202,7 +209,7 @@ Use `@/` path alias for all imports (maps to `src/`).
 - `src/hooks/` — Custom React hooks (data fetching, business logic)
 - `src/contexts/` — React contexts (AuthContext, ThemeContext)
 - `src/lib/` — Utility functions and helpers
-- `src/lib/__tests__/` — Unit tests (Vitest, 279 tests in 16 files)
+- `src/lib/__tests__/` — Unit tests (Vitest, 303 tests in 18 files)
 - `src/integrations/supabase/` — Supabase client, types, generated types
 - `supabase/functions/` — 61 Deno edge functions
 - `supabase/functions/_shared/` — Shared edge function utilities:
@@ -212,16 +219,21 @@ Use `@/` path alias for all imports (maps to `src/`).
   - `ai-input-limits.ts` — Prompt truncation helpers
   - `email-utils.ts` — Email sending helpers (staging override support)
   - `calcom-utils.ts` — Cal.com API helpers (booking cancellation)
-- `supabase/migrations/` — 402+ database migrations
+- `supabase/migrations/` — 420 database migrations
 
 ---
 
 ## Database
-- 369+ tables, 25 enum types, 402+ migrations
+- 380+ tables, 25 enum types, 420 migrations
 - RLS policies on ALL public tables (276 tables, all RLS enabled)
 - Two plan systems: Subscription plans (`plans` table, tier_level 0-4) + Program plans (`program_plans`, per-enrollment)
 - Dual credit system: individual (`user_credit_balances`) + org (`org_credit_balances`)
 - `useEntitlements` hook merges subscription + program plan + add-ons + tracks + org-sponsored access
+
+## Shared Services (`src/lib/`)
+- `guidedPathInstantiation.ts` — `instantiateTemplate()` creates goals/milestones/tasks from guided path templates with pace-adjusted dates. Used by both survey wizard and manual "Copy This Path" dialog. `estimateCompletionDate()` for preview before instantiation.
+- `assessmentScoring.ts` — `calculateDomainScore()` (simple + weighted averages), `calculateTypeScores()` (cross-domain type averages for radar charts), `parseQuestionTypes()`, `validateTypeWeights()`. 16 unit tests.
+- When tables are not yet in generated Supabase types, use `as string` cast on table names: `.from("table_name" as string)`
 
 ## Three Assessment Systems
 | System | Table | Scoring |
@@ -262,5 +274,7 @@ npm run sync:lovable        # import Lovable changes into live repo
 - `completed-work.md` — Detailed work history
 - `docs/ISSUES_AND_IMPROVEMENTS.md` — 11-part platform analysis + 9-phase roadmap
 - `docs/DATA_CONFIGURATION_GUIDE.md` — Data model reference
+- `docs/DEVELOPMENT_PROFILE_ANALYSIS.md` — 7-phase DP plan (DP1-DP4 ✅, DP5-DP7 pending)
+- `docs/COHORT_SCHEDULING_ANALYSIS.md` — G1-G10 cohort gaps (G1-G7 ✅, G8-G10 pending)
 - `docs/ENVIRONMENT_CONFIGURATION.md` — 41 env vars with per-environment values
 - `docs/ENTITLEMENTS_AND_FEATURE_ACCESS.md` — Entitlements system documentation

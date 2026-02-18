@@ -1,6 +1,6 @@
 # Development Profile & Assessment-Driven Guided Paths
 
-> **Status:** Approved for development (2026-02-18). Prioritised as high-value for existing and near-future customers.
+> **Status:** DP1-DP4 ✅ DONE (2026-02-19, commit `c6b2e11`). DP5-DP7 pending. Approved for development (2026-02-18).
 >
 > **Scope:** Connect the platform's three assessment systems, development items, goals, and guided paths into a unified development journey — so clients can identify gaps, track progress, and follow structured paths (e.g., CTA review board preparation) with realistic timelines.
 
@@ -84,9 +84,9 @@ The `development_items` table (types: reflection, resource, action_item, note) c
 - `guided_path_template_tasks` — template tasks per milestone
 - `guided_path_survey_responses` — user's survey answers + `selected_template_ids`
 
-**Critical bug:** `GuidedPathSurveyWizard` saves the survey response with `selected_template_ids` but **never instantiates** the template into real `goals` + `goal_milestones` + `tasks`. The toast says "Generating your personalized path..." but no goals are created. The user is navigated to `/goals` where their goal list remains unchanged.
+~~**Critical bug:** `GuidedPathSurveyWizard` saves the survey response with `selected_template_ids` but **never instantiates** the template into real `goals` + `goal_milestones` + `tasks`. The toast says "Generating your personalized path..." but no goals are created. The user is navigated to `/goals` where their goal list remains unchanged.~~ ✅ **Fixed in DP4** (2026-02-19): Survey wizard now shows `PathConfirmation` step with pace selector + start date → calls shared `instantiateTemplate()` service → creates goals/milestones/tasks with pace-adjusted dates.
 
-The standalone "Copy This Path" flow (from `GuidedPathTemplateDetail.tsx`) does properly create goals/milestones/tasks — but this bypasses the survey entirely.
+The standalone "Copy This Path" flow (from `GuidedPathTemplateDetail.tsx`) also refactored to use the shared `instantiateTemplate()` service.
 
 ### 2.5 Skills System
 
@@ -144,7 +144,7 @@ The standalone "Copy This Path" flow (from `GuidedPathTemplateDetail.tsx`) does 
 
 ## 4. 7-Phase Implementation Plan
 
-### Phase 1: Assessment ↔ Goal Traceability (1-2 days)
+### Phase 1: Assessment ↔ Goal Traceability (1-2 days) ✅ DONE
 
 **Why first:** Smallest change, highest immediate value. Coaches can see why a goal exists.
 
@@ -180,7 +180,7 @@ CREATE TABLE goal_assessment_links (
 
 ---
 
-### Phase 2: Development Profile Page (3-5 days)
+### Phase 2: Development Profile Page (3-5 days) ✅ DONE
 
 **Why:** The unified view that makes everything else meaningful. Coaches and clients need this to see the full picture.
 
@@ -213,7 +213,7 @@ CREATE TABLE goal_assessment_links (
 
 ---
 
-### Phase 3: Assessment-Gated Milestones (3-5 days)
+### Phase 3: Assessment-Gated Milestones (3-5 days) ✅ DONE
 
 **Why:** The feature that makes guided paths intelligent. Without it, milestones are just a checklist — with it, they reflect actual readiness.
 
@@ -262,7 +262,7 @@ CREATE TABLE milestone_gate_overrides (
 
 ---
 
-### Phase 4: Intake-Driven Path Recommendation (3-5 days)
+### Phase 4: Intake-Driven Path Recommendation (3-5 days) ✅ DONE
 
 **Why:** Fixes the critical survey instantiation bug AND ensures clients start on realistic paths.
 
@@ -399,16 +399,16 @@ CREATE TABLE psychometric_results (
 
 ## 5. Database Changes Summary
 
-| Phase | Tables Created/Modified | Effort |
-|-------|------------------------|--------|
-| 1 | `goal_assessment_links` (CREATE) | 1-2 days |
-| 2 | No schema changes (UI only, reads existing data) | 3-5 days |
-| 3 | `guided_path_milestone_gates` (CREATE), `milestone_gate_overrides` (CREATE) | 3-5 days |
-| 4 | `guided_path_instantiations` (CREATE), `goals.template_goal_id` + `goals.instantiation_id` (ALTER) | 3-5 days |
-| 5 | `module_domain_mappings` (CREATE) | 2-3 days |
-| 6 | `psychometric_result_schemas` (CREATE), `psychometric_results` (CREATE) | 2-3 days |
-| 7 | No schema changes (UI only, reads Phase 1-6 data) | 3-5 days |
-| **Total** | **6 new tables, 2 altered columns** | **~18-28 days** |
+| Phase | Tables Created/Modified | Effort | Status |
+|-------|------------------------|--------|--------|
+| 1 | `goal_assessment_links` (CREATE) | 1-2 days | ✅ DONE |
+| 2 | No schema changes (UI only, reads existing data) | 3-5 days | ✅ DONE |
+| 3 | `guided_path_milestone_gates` (CREATE), `milestone_gate_overrides` (CREATE) | 3-5 days | ✅ DONE |
+| 4 | `guided_path_instantiations` (CREATE), `goals.template_goal_id` + `goals.instantiation_id` (ALTER) | 3-5 days | ✅ DONE |
+| 5 | `module_domain_mappings` (CREATE) | 2-3 days | Pending |
+| 6 | `psychometric_result_schemas` (CREATE), `psychometric_results` (CREATE) | 2-3 days | Pending |
+| 7 | No schema changes (UI only, reads Phase 1-6 data) | 3-5 days | Pending |
+| **Total** | **6 new tables, 2 altered columns** | **~18-28 days** | **4/7 done** |
 
 ---
 
