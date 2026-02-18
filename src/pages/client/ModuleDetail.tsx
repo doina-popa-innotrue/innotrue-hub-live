@@ -140,6 +140,7 @@ export default function ModuleDetail() {
   const [loading, setLoading] = useState(true);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState("");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [modulePlanAccessGranted, setModulePlanAccessGranted] = useState<boolean | null>(null);
   const { loginToTalentLms, isLoading: isSSOLoading } = useTalentLmsSSO();
   const { progress: talentLmsProgress } = useTalentLmsProgress(user?.id);
@@ -313,6 +314,13 @@ export default function ModuleDetail() {
 
     fetchData();
   }, [user, moduleId, programId]);
+
+  // Get access token for content package iframe (iframes can't send Authorization headers)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setAccessToken(data.session?.access_token ?? null);
+    });
+  }, [user]);
 
   // Check module plan access
   useEffect(() => {
@@ -654,7 +662,7 @@ export default function ModuleDetail() {
         {!isLocked && <ModuleSectionsDisplay moduleId={module.id} />}
 
         {/* Embedded content package (Rise/web export) */}
-        {!isLocked && module.content_package_path && (
+        {!isLocked && module.content_package_path && accessToken && (
           <Card className="border-primary/50 bg-primary/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -667,11 +675,12 @@ export default function ModuleDetail() {
             </CardHeader>
             <CardContent>
               <iframe
-                src={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-content-package?module=${module.id}&path=index.html`}
+                src={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-content-package?module=${module.id}&path=index.html&token=${accessToken}`}
                 className="w-full border-0 rounded-lg"
                 style={{ minHeight: "75vh" }}
                 title={module.title}
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                allow="autoplay; fullscreen"
               />
             </CardContent>
           </Card>

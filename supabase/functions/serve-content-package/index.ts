@@ -78,9 +78,14 @@ Deno.serve(async (req: Request) => {
   }
 
   // --- Auth check ---
-  const authHeader = req.headers.get("Authorization");
+  // Support token via Authorization header OR query param (iframes can't send headers)
+  let authHeader = req.headers.get("Authorization");
+  const tokenParam = url.searchParams.get("token");
+  if (!authHeader && tokenParam) {
+    authHeader = `Bearer ${tokenParam}`;
+  }
   if (!authHeader) {
-    return errorResponse.unauthorized("Missing Authorization header", cors);
+    return errorResponse.unauthorized("Missing Authorization header or token param", cors);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -158,9 +163,10 @@ Deno.serve(async (req: Request) => {
     let html = await fileData.text();
 
     // Build base URL that points back to this edge function with the same module param
-    // All relative paths will resolve as: /serve-content-package?module=xxx&path={relative_path}
-    // We use a <base> with a special URL that gets intercepted by a service worker injected below
-    const baseHref = `${supabaseUrl}/functions/v1/serve-content-package?module=${moduleId}&path=`;
+    // All relative paths will resolve as: /serve-content-package?module=xxx&token=yyy&path={relative_path}
+    // Include the auth token so sub-resource requests (CSS, JS, images) are also authenticated
+    const tokenForSubResources = tokenParam || "";
+    const baseHref = `${supabaseUrl}/functions/v1/serve-content-package?module=${moduleId}&token=${tokenForSubResources}&path=`;
 
     // Inject <base> tag and a tiny script that rewrites relative resource URLs
     const baseTag = `<base href="${baseHref}">`;
@@ -178,6 +184,17 @@ Deno.serve(async (req: Request) => {
 })();
 </script>`;
 
+    // Strip any CSP meta tags from the Rise HTML that would block iframe embedding
+    // Rise exports sometimes include restrictive frame-ancestors or X-Frame-Options
+    html = html.replace(
+      /<meta\s+http-equiv=["']Content-Security-Policy["'][^>]*>/gi,
+      ""
+    );
+    html = html.replace(
+      /<meta\s+http-equiv=["']X-Frame-Options["'][^>]*>/gi,
+      ""
+    );
+
     if (html.includes("<head>")) {
       html = html.replace("<head>", `<head>${baseTag}${rewriteScript}`);
     } else if (html.includes("<HEAD>")) {
@@ -194,6 +211,9 @@ Deno.serve(async (req: Request) => {
         "Content-Type": contentType,
         "Cache-Control": "private, max-age=300", // 5 min cache for HTML
         "X-Content-Type-Options": "nosniff",
+        // Allow iframe embedding from the parent app
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL",
       },
     });
   }

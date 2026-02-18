@@ -93,6 +93,14 @@ export default function InstructorModuleDetail() {
   const [enrolledClients, setEnrolledClients] = useState<EnrolledClient[]>([]);
   const [selectedEnrollment, setSelectedEnrollment] = useState<EnrolledClient | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  // Get access token for content package iframe (iframes can't send Authorization headers)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setAccessToken(data.session?.access_token ?? null);
+    });
+  }, [user]);
 
   useEffect(() => {
     async function fetchData() {
@@ -347,13 +355,16 @@ export default function InstructorModuleDetail() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <iframe
-                  src={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-content-package?module=${module.id}&path=index.html`}
-                  className="w-full border-0 rounded-lg"
-                  style={{ minHeight: "75vh" }}
-                  title={module.title}
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                />
+                {accessToken && (
+                  <iframe
+                    src={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-content-package?module=${module.id}&path=index.html&token=${accessToken}`}
+                    className="w-full border-0 rounded-lg"
+                    style={{ minHeight: "75vh" }}
+                    title={module.title}
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                    allow="autoplay; fullscreen"
+                  />
+                )}
               </CardContent>
             </Card>
           )}
