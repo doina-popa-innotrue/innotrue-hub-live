@@ -85,7 +85,8 @@
 **Critical (C1-C4):** ~~All resolved~~ ✅
 **High (H1-H10):** ~~All resolved~~ ✅
 **Medium (remaining):** M2 (psychometric interest tracking), M9 (async notifications), M11 (console.log cleanup), M12 (resource ratings), M13 (Zod validation), M16 (assessment templates)
-**New roadmap items (R1-R7):** R1 assessment question types (Phase 2), R2 coach/instructor onboarding (Phase 1), R3 enhanced coach↔client interaction (Phases 1/4/6), R4 coaches invite own clients (Phase 5), R5 enhanced org management (Phase 6), R6 Sentry coverage (cross-cutting), R7 test coverage (continuous)
+**New roadmap items (R1-R7):** ~~R1 assessment question types~~ ✅ DONE (migration + scoring helper + admin UI + client form + snapshot view + evolution chart), R2 coach/instructor onboarding (Phase 1), R3 enhanced coach↔client interaction (Phases 1/4/6), R4 coaches invite own clients (Phase 5), R5 enhanced org management (Phase 6), R6 Sentry coverage (cross-cutting), R7 test coverage (continuous)
+**Coach-created development items:** ✅ DONE — "+" button per module row in StudentDetail opens DevelopmentItemDialog in instructor mode (uses existing edge function)
 
 **Priority 0 — Content Delivery + Coach Onboarding + Assignment Routing + Cohort Readiness (highest priority):**
 - Content: Tier 1 Web embed (3-5 days) → Tier 2 xAPI direct (1-2 weeks)
