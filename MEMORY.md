@@ -40,6 +40,7 @@
 | `docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md` | **Product strategy** — 6 parts: young professionals (12 ideas), AI learning (5 features), content delivery (skip SCORM → xAPI), cohort readiness (6 gaps), coach/instructor onboarding readiness (6 gaps), instructor/coach assignment & grading routing (6 gaps) |
 | `docs/PLATFORM_FUNCTIONAL_OVERVIEW.md` | **Platform functional overview** — human-readable guide to the entire platform: roles, architecture, 14 functional areas, staff assignment system, content delivery, integrations, admin tooling, key flows |
 | `docs/VALUE_PROPOSITION_CANVAS.md` | **Strategyzer Value Proposition Canvas** — 4 customer segments (coaching orgs, learners, coaches/instructors, corporate L&D), each with Customer Profile (jobs, pains, gains) + Value Map (products, pain relievers, gain creators), competitive differentiation, assumptions to validate |
+| `docs/BUSINESS_MODEL_CANVAS.md` | **Strategyzer Business Model Canvas** — 9 building blocks: customer segments (4, multi-sided platform), value propositions, channels (awareness/evaluation/delivery/support), customer relationships, revenue streams (subscriptions + credits + org billing), key resources, key activities, key partnerships (tech + business), cost structure. Includes cross-block analysis, assumptions/risks, business model patterns, current vs target state comparison |
 
 ## Key Source Files
 - Supabase client: `src/integrations/supabase/client.ts`
