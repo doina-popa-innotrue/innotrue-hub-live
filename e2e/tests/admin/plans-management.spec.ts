@@ -2,7 +2,7 @@ import { test, expect } from '../../fixtures/auth';
 import { dismissOverlays } from '../../helpers/dismiss-overlays';
 
 // Timeout for plans content after ToS/cookie dismissed (gate can delay first paint).
-const PLANS_PAGE_LOAD_TIMEOUT_MS = 12_000;
+const PLANS_PAGE_LOAD_TIMEOUT_MS = 15_000;
 
 test.describe('Admin Plans Management', () => {
   test('admin can open Plans Management, see plan list, edit plan and toggle is_purchasable then save', async ({
@@ -14,16 +14,21 @@ test.describe('Admin Plans Management', () => {
 
     await expect(adminPage).toHaveURL(/\/admin\/plans/, { timeout: 10_000 });
 
-    // Page content visible after cookie/ToS gate (dismissOverlays handles both)
+    // Wait for the page heading to appear
     await expect(
-      adminPage.getByRole('heading', { name: 'Plans Management' }).or(adminPage.getByText('No plans configured')),
+      adminPage.getByRole('heading', { name: 'Plans Management' }),
     ).toBeVisible({ timeout: PLANS_PAGE_LOAD_TIMEOUT_MS });
 
+    // Wait for data to load: either plan cards appear (Edit Plan button) or the empty state shows.
+    // The page shows a loading spinner while fetching, so we need to wait for the actual content.
     const firstEditBtn = adminPage.getByTitle('Edit Plan').first();
-    const hasPlans = await firstEditBtn.isVisible({ timeout: 5_000 }).catch(() => false);
+    const emptyState = adminPage.getByText('No plans configured');
+    await expect(firstEditBtn.or(emptyState)).toBeVisible({ timeout: PLANS_PAGE_LOAD_TIMEOUT_MS });
+
+    const hasPlans = await firstEditBtn.isVisible().catch(() => false);
 
     if (!hasPlans) {
-      await expect(adminPage.getByText('No plans configured')).toBeVisible();
+      await expect(emptyState).toBeVisible();
       return;
     }
 
