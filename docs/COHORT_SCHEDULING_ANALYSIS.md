@@ -244,6 +244,7 @@ No `enrollment_codes` table exists. Enrollment is purely admin-managed (insertin
 | # | Gap | Impact | Effort |
 |---|-----|--------|--------|
 | G7 | **No session notes/recap** — no way to add post-session summary, recording link, or action items. | Lost session value | 3 days |
+| **GT1** | **No instructor/coach teaching UI for cohorts** — G1-G7 built DB + admin/client UI but the teaching workflow was never implemented. Instructors and coaches cannot see cohort sessions on their dashboard, browse assigned cohorts, mark attendance, or edit recaps from the teaching interface. | Instructors need admin access to manage cohorts | **~1 week** |
 | G8 | **No enrollment codes** — self-enrollment via link/code doesn't exist. All enrollment is admin-managed. | Scaling friction | 2-3 days (Phase 5) |
 | G9 | **No cohort analytics** — no admin dashboard for attendance %, completion %, at-risk students. | Blind spots | 1 week |
 | G10 | **No session-linked homework** — can't tie assignments to specific sessions with deadlines. | Missed learning reinforcement | 3-5 days |
@@ -386,3 +387,42 @@ ALTER TABLE cohort_sessions
 | `process-email-queue` | All emails | Session reminder emails |
 | `_shared/email-utils.ts` | Email helpers | Reminder formatting |
 | `_shared/cors.ts` + `_shared/error-response.ts` | All functions | New functions |
+
+---
+
+## GT1: Instructor/Coach Cohort Teaching Workflow (HIGH PRIORITY)
+
+> **Added 2026-02-19.** G1-G7 built the database layer (migrations, RLS, tables) and admin + client UI, but the instructor/coach teaching workflow was never implemented. Instructors and coaches currently need admin access to manage attendance, edit recaps, or even see their cohort sessions. Full implementation plan in `.claude/plans/proud-jumping-fountain.md`.
+
+### Gaps (affects BOTH instructors AND coaches)
+
+| Area | Current State | Gap |
+|------|--------------|-----|
+| Teaching Dashboard | Upcoming sessions widget queries only `group_sessions` | Neither instructors nor coaches see cohort sessions |
+| Cohort browsing | No `/teaching/cohorts` route | Neither role can browse their assigned cohorts |
+| Attendance marking | `CohortSessionAttendance` component exists in admin only | Not exposed to teaching workflow for either role |
+| Recap editing | Admin-only via `CohortSessionsManager` | No UPDATE RLS on `cohort_sessions` for either role |
+| Coach program_cohorts access | Coach has NO SELECT policy on `program_cohorts` | Coach can't see cohorts at all (asymmetric with instructor) |
+| Coach attendance access | Coach has SELECT-only on `cohort_session_attendance` | Coach can view but can't mark (instructor has ALL) |
+| Student cohort info | `StudentDetail.tsx` shows no cohort assignment or attendance | Neither role sees cohort context for their students |
+
+### RLS Fixes Required (4 policies)
+
+| Table | Instructor | Coach | Action |
+|-------|-----------|-------|--------|
+| `program_cohorts` SELECT | ✅ Has | ❌ Missing | Add coach SELECT via `program_coaches` |
+| `cohort_sessions` UPDATE | ❌ Missing | ❌ Missing | Add UPDATE for both roles (recap editing) |
+| `cohort_session_attendance` | ✅ ALL | ⚠️ SELECT only | Upgrade coach to ALL |
+
+### Implementation Plan (6 phases, ~1 week)
+
+| Phase | Description | Files |
+|-------|-------------|-------|
+| 1. RLS Migration | 4 new policies: coach SELECT on `program_cohorts`, UPDATE on `cohort_sessions` for both roles, upgrade coach attendance to ALL | `supabase/migrations/` |
+| 2. Teaching Cohorts List | New `/teaching/cohorts` page following `Groups.tsx` pattern — card grid with cohort info, enrollment count, session count | `src/pages/instructor/Cohorts.tsx` (CREATE) |
+| 3. Cohort Detail Page | Main teaching interface — sessions list, expandable attendance panel (reuses `CohortSessionAttendance`), recap editor, enrolled clients list | `src/pages/instructor/CohortDetail.tsx` (CREATE) |
+| 4. Dashboard Integration | Merge cohort sessions into upcoming sessions widget — query program IDs from both `program_instructors` and `program_coaches`, fetch `cohort_sessions`, merge with group sessions | `src/pages/instructor/InstructorCoachDashboard.tsx` (MODIFY) |
+| 5. Sidebar + Routes | Add "Cohorts" to teaching sidebar, 2 lazy-loaded routes | `src/components/AppSidebar.tsx`, `src/App.tsx` (MODIFY) |
+| 6. StudentDetail Integration | Show cohort assignment card + attendance summary for enrolled students | `src/pages/instructor/StudentDetail.tsx` (MODIFY) |
+
+**Key reuse:** `CohortSessionAttendance` component imported directly from admin — no modifications needed (uses `useAuth()` for `marked_by`, role-agnostic). `notify_cohort_session_recap` RPC already exists as SECURITY DEFINER, granted to authenticated.

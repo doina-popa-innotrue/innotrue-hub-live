@@ -109,6 +109,7 @@
 - ~~G5: Recurring session generation~~ ✅ DONE — "Generate Sessions" bulk action, weekly/biweekly recurrence
 - ~~G6: Session notifications/reminders~~ ✅ DONE — `send-schedule-reminders` edge function, 24h + 1h before, `create_notification` RPC
 - ~~G7: Session notes/recap~~ ✅ DONE — `recording_url`, `summary`, `action_items` on `cohort_sessions`, recap section
+- **GT1: Instructor/Coach Teaching Workflow (HIGH PRIORITY, ~1 week)** — G1-G7 built DB + admin/client UI but NO teaching UI for instructors/coaches. Plan ready in `.claude/plans/proud-jumping-fountain.md`. Covers: RLS fixes (4 policies: coach SELECT on program_cohorts, UPDATE on cohort_sessions for both roles, upgrade coach attendance to ALL), new `/teaching/cohorts` list page, new `/teaching/cohorts/:cohortId` detail page (attendance marking + recap editing), dashboard cohort sessions widget, StudentDetail cohort/attendance card. 3 new files, 4 modified, 1 migration.
 - G8: Enrollment codes (2-3 days) — Phase 5
 - G9: Cohort analytics dashboard (1 week) — medium
 - G10: Session-linked homework (3-5 days) — medium

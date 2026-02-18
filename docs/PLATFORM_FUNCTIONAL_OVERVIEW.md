@@ -327,6 +327,8 @@ coaching, group_coaching, workshop, mastermind, review_board_mock, peer_coaching
 - **Gate waiver (DP3):** Coaches and instructors can waive assessment gates on guided path milestones via `WaiveGateDialog` with required reason. Gates are advisory (never blocking).
 - **Development Profile view:** Coaches and instructors can view a client's unified Development Profile (5 sections) via `/teaching/students/:enrollmentId/development-profile`.
 
+> ⚠️ **Gap (GT1):** The above cohort features (attendance marking, recap editing) are currently only accessible through admin UI. The instructor/coach **teaching workflow** for cohorts is not yet built — no `/teaching/cohorts` page, no cohort sessions on the teaching dashboard, and missing RLS policies for coach access to `program_cohorts`. Implementation plan ready: see `docs/COHORT_SCHEDULING_ANALYSIS.md` GT1 section and `.claude/plans/proud-jumping-fountain.md`.
+
 **Teaching Tools:**
 - Assignment grading with rubric support
 - Scenario evaluation with section-by-section scoring and revision requests

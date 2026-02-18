@@ -1382,6 +1382,7 @@ Organized by theme, drawing from Parts 2, 3, 5, 6, 9, and 10.
 - ~~G5: **Recurring session generation**~~ ✅ DONE (2026-02-19) — "Generate Sessions" bulk action on cohort management
 - ~~G6: **Session notifications/reminders**~~ ✅ DONE (2026-02-19) — `send-session-reminder` edge function, 24h + 1h before, `create_notification` RPC
 - ~~G7: **Session notes/recap**~~ ✅ DONE (2026-02-19) — `recording_url`, `summary`, `action_items` on `cohort_sessions`, recap section
+- **GT1: Instructor/Coach Cohort Teaching Workflow (HIGH PRIORITY, ~1 week)** — G1-G7 built DB + admin/client UI but NO teaching UI for instructors/coaches. Both roles need: RLS fixes (4 policies), `/teaching/cohorts` list page, `/teaching/cohorts/:cohortId` detail page (attendance + recap editing), dashboard cohort sessions widget, StudentDetail cohort card. Full plan in `.claude/plans/proud-jumping-fountain.md`. See also `docs/COHORT_SCHEDULING_ANALYSIS.md` GT1 section.
 - G8: **Enrollment codes** — self-enrollment via link/code. Part of Phase 5. (2-3 days) — deferred
 - G9: **Cohort analytics** — attendance %, completion %, at-risk students. (1 week) — medium
 - G10: **Session-linked homework** — assignments tied to specific sessions with deadlines. (3-5 days) — medium
@@ -1628,6 +1629,7 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 | ~~Priority 0 — Assignment Routing~~ | ~~6 items~~ | ✅ DONE (2026-02-18) |
 | ~~Priority 0 — Cohort Core~~ | ~~2 items~~ | ✅ DONE (2026-02-18) |
 | ~~Priority 0 — Cohort Scheduling Gaps (G1-G7)~~ | ~~7 items~~ | ✅ DONE (2026-02-19) |
+| **Priority 0 — Instructor/Coach Teaching Workflow (GT1)** | **1 item (6 phases)** | **HIGH PRIORITY ~1 week** |
 | **Priority 0 — Cohort Quality (G8-G10)** | **3 items remaining** | **~1 week** |
 | ~~Priority 0 — Development Profile (DP1-DP4)~~ | ~~4 phases~~ | ✅ DONE (2026-02-19) |
 | **Priority 0 — Development Profile (DP5-DP7)** | **3 phases remaining** | **~1-2 weeks** |
@@ -1650,13 +1652,14 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 5. ~~Priority 0 Cohort Core~~ ✅ — CohortDashboard + Join Session + calendar + dashboard widget
 6. ~~Priority 0 Cohort Scheduling Gaps (G1-G7)~~ ✅ — enrollment UI + Meet links + instructor + recurrence + attendance + notifications + session notes
 7. ~~Development Profile (DP1-DP4)~~ ✅ — assessment↔goal links, profile page, gated milestones, intake-driven paths. See `docs/DEVELOPMENT_PROFILE_ANALYSIS.md`.
-8. **Priority 0 Cohort Quality (G8-G10)** — enrollment codes + analytics + session-linked homework (~1 week)
-9. Quick medium wins (M2, M11) — interleaved, 2 days
-10. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
-11. **Development Profile (DP5-DP7)** — module↔domain mapping, psychometric structured results, readiness dashboard (~1-2 weeks)
-12. **Content Delivery Tier 2 (xAPI direct)** — auto-tracking, 1-2 weeks
-13. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
-14. Remaining phases based on business priorities
+8. **Instructor/Coach Teaching Workflow (GT1)** — RLS fixes (4 policies) + teaching cohorts list + cohort detail (attendance + recap) + dashboard widget + StudentDetail card. Plan in `.claude/plans/proud-jumping-fountain.md`. (~1 week)
+9. **Priority 0 Cohort Quality (G8-G10)** — enrollment codes + analytics + session-linked homework (~1 week)
+10. Quick medium wins (M2, M11) — interleaved, 2 days
+11. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
+12. **Development Profile (DP5-DP7)** — module↔domain mapping, psychometric structured results, readiness dashboard (~1-2 weeks)
+13. **Content Delivery Tier 2 (xAPI direct)** — auto-tracking, 1-2 weeks
+14. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
+15. Remaining phases based on business priorities
 
 ### 11.8 New Data Tables Required by Roadmap
 
@@ -1671,6 +1674,7 @@ Several roadmap items require new database tables or fields. These should be pla
 | ~~Priority 0~~ | ~~G3 Instructor on cohort~~ | ✅ DONE — `program_cohorts.lead_instructor_id`, `cohort_sessions.instructor_id` |
 | ~~Priority 0~~ | ~~G4 Attendance tracking~~ | ✅ DONE — `cohort_session_attendance` table + `AttendanceTracker.tsx` |
 | ~~Priority 0~~ | ~~G7 Session notes~~ | ✅ DONE — `cohort_sessions.recording_url`, `.summary`, `.action_items` |
+| Priority 0 | GT1 Teaching workflow RLS | 4 new RLS policies: coach SELECT on `program_cohorts`, UPDATE on `cohort_sessions` for both roles, upgrade coach attendance to ALL. 3 new files + 4 modified. |
 | Priority 0 | G8 Auto cohort enrollment | `enrollment_codes` table with `cohort_id` (UUID FK to program_cohorts) — deferred to Phase 5 |
 | ~~Priority 0~~ | ~~Assignment routing~~ | ✅ DONE — async via `create_notification` RPC, My Queue via `enrollment_module_staff` |
 | ~~Priority 0~~ | ~~Assignment transfer~~ | ✅ DONE — `TransferAssignmentDialog` component |
