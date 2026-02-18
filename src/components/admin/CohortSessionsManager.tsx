@@ -31,6 +31,9 @@ import {
   Loader2,
   UserCheck,
   CalendarPlus,
+  FileText,
+  Send,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, addWeeks, addMonths, parseISO } from "date-fns";
@@ -53,6 +56,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { CohortSessionAttendance } from "./CohortSessionAttendance";
 
 interface CohortSessionsManagerProps {
   cohortId: string;
@@ -87,6 +91,8 @@ interface CohortSession {
   location: string | null;
   meeting_link: string | null;
   notes: string | null;
+  recap: string | null;
+  recording_url: string | null;
   order_index: number;
   created_at: string;
   updated_at: string;
@@ -103,6 +109,8 @@ interface SessionFormData {
   module_id: string;
   instructor_id: string;
   notes: string;
+  recap: string;
+  recording_url: string;
 }
 
 const defaultFormData: SessionFormData = {
@@ -116,6 +124,8 @@ const defaultFormData: SessionFormData = {
   module_id: "",
   instructor_id: "",
   notes: "",
+  recap: "",
+  recording_url: "",
 };
 
 interface SortableSessionProps {
@@ -123,9 +133,12 @@ interface SortableSessionProps {
   onEdit: (session: CohortSession) => void;
   onDelete: (sessionId: string) => void;
   instructorName?: string | null;
+  onToggleAttendance?: (sessionId: string) => void;
+  attendanceStats?: { present: number; total: number } | null;
+  isAttendanceExpanded?: boolean;
 }
 
-function SortableSession({ session, onEdit, onDelete, instructorName }: SortableSessionProps) {
+function SortableSession({ session, onEdit, onDelete, instructorName, onToggleAttendance, attendanceStats, isAttendanceExpanded }: SortableSessionProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: session.id,
   });
@@ -192,13 +205,39 @@ function SortableSession({ session, onEdit, onDelete, instructorName }: Sortable
               Virtual
             </Badge>
           )}
+          {session.recap && (
+            <Badge variant="secondary" className="text-xs">
+              <FileText className="h-3 w-3 mr-1" />
+              Recap
+            </Badge>
+          )}
           {instructorName && (
             <span className="flex items-center gap-1">
               <UserCheck className="h-3 w-3" />
               {instructorName}
             </span>
           )}
+          {attendanceStats && (
+            <span className="flex items-center gap-1">
+              <Users className="h-3 w-3" />
+              {attendanceStats.present}/{attendanceStats.total}
+            </span>
+          )}
         </div>
+        {/* Attendance toggle button */}
+        {onToggleAttendance && (
+          <div className="mt-2">
+            <Button
+              variant={isAttendanceExpanded ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => onToggleAttendance(session.id)}
+              className="text-xs"
+            >
+              <Users className="h-3 w-3 mr-1" />
+              Attendance
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -228,6 +267,9 @@ export function CohortSessionsManager({
     sameModuleId: "",
     instructorId: cohortInstructorId || "",
   });
+
+  const [expandedAttendanceId, setExpandedAttendanceId] = useState<string | null>(null);
+  const [notifyingRecap, setNotifyingRecap] = useState(false);
 
   const [generatingMeetLink, setGeneratingMeetLink] = useState(false);
   const [bulkGenerating, setBulkGenerating] = useState(false);
@@ -292,6 +334,8 @@ export function CohortSessionsManager({
         module_id: data.module_id || null,
         instructor_id: data.instructor_id || null,
         notes: data.notes || null,
+        recap: data.recap || null,
+        recording_url: data.recording_url || null,
         order_index: editingSession?.order_index ?? (sessions?.length || 0),
         timezone: selectedTimezone || "UTC",
       };
@@ -368,6 +412,8 @@ export function CohortSessionsManager({
         module_id: session.module_id || "",
         instructor_id: session.instructor_id || "",
         notes: session.notes || "",
+        recap: session.recap || "",
+        recording_url: session.recording_url || "",
       });
     } else {
       setEditingSession(null);
@@ -613,6 +659,73 @@ export function CohortSessionsManager({
     generateMutation.mutate(generateForm);
   };
 
+  // Attendance stats per session (for badge display)
+  const { data: attendanceStats } = useQuery({
+    queryKey: ["attendance-stats", cohortId],
+    queryFn: async () => {
+      // Get all enrollments for this cohort
+      const { data: enrollments } = await supabase
+        .from("client_enrollments")
+        .select("id")
+        .eq("cohort_id" as string, cohortId)
+        .eq("status", "active");
+
+      const totalEnrolled = enrollments?.length || 0;
+      if (totalEnrolled === 0) return {};
+
+      // Get attendance records grouped by session
+      const { data: records } = await supabase
+        .from("cohort_session_attendance" as string)
+        .select("session_id, status")
+        .in(
+          "session_id",
+          (sessions || []).map((s) => s.id),
+        );
+
+      const stats: Record<string, { present: number; total: number }> = {};
+      (records as { session_id: string; status: string }[] || []).forEach((r) => {
+        if (!stats[r.session_id]) {
+          stats[r.session_id] = { present: 0, total: totalEnrolled };
+        }
+        if (r.status === "present") {
+          stats[r.session_id].present++;
+        }
+      });
+      return stats;
+    },
+    enabled: !!sessions && sessions.length > 0,
+  });
+
+  async function handleSaveAndNotifyRecap() {
+    if (!editingSession || !formData.recap?.trim()) {
+      toast.error("Write a recap before notifying");
+      return;
+    }
+    // First save
+    saveMutation.mutate(formData, {
+      onSuccess: async () => {
+        // Then notify
+        setNotifyingRecap(true);
+        try {
+          const { data, error } = await supabase.rpc("notify_cohort_session_recap", {
+            p_session_id: editingSession!.id,
+          });
+          if (error) throw error;
+          toast.success(`Recap saved & ${data} participants notified`);
+        } catch (err) {
+          console.error("Failed to send recap notifications:", err);
+          toast.error("Recap saved but notification failed");
+        } finally {
+          setNotifyingRecap(false);
+        }
+      },
+    });
+  }
+
+  const toggleAttendance = (sessionId: string) => {
+    setExpandedAttendanceId((prev) => (prev === sessionId ? null : sessionId));
+  };
+
   // Preview the dates that will be generated
   const previewDates = (() => {
     if (!generateForm.startDate) return [];
@@ -832,10 +945,53 @@ export function CohortSessionsManager({
                 />
               </div>
 
+              {/* Post-Session: Recap & Recording */}
+              {editingSession && (
+                <div className="space-y-4 border-t pt-4">
+                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    <FileText className="h-3.5 w-3.5" />
+                    Post-Session
+                  </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="recap">Session Recap (Markdown)</Label>
+                    <Textarea
+                      id="recap"
+                      placeholder="Write a recap of the session... (visible to participants, supports Markdown)"
+                      value={formData.recap}
+                      onChange={(e) => setFormData({ ...formData, recap: e.target.value })}
+                      rows={5}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="recording-url">Recording URL</Label>
+                    <Input
+                      id="recording-url"
+                      type="url"
+                      placeholder="https://..."
+                      value={formData.recording_url}
+                      onChange={(e) =>
+                        setFormData({ ...formData, recording_url: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>
                   Cancel
                 </Button>
+                {editingSession && formData.recap?.trim() && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleSaveAndNotifyRecap}
+                    disabled={saveMutation.isPending || notifyingRecap}
+                  >
+                    <Send className="mr-2 h-3.5 w-3.5" />
+                    {notifyingRecap ? "Notifying..." : "Save & Notify"}
+                  </Button>
+                )}
                 <Button type="submit" disabled={saveMutation.isPending}>
                   {saveMutation.isPending ? "Saving..." : editingSession ? "Update" : "Add"}
                 </Button>
@@ -1103,14 +1259,30 @@ export function CohortSessionsManager({
                 const instrName = instrId
                   ? programInstructors.find((i) => i.id === instrId)?.name
                   : null;
+                const sessionStats = attendanceStats?.[session.id] || null;
                 return (
-                  <SortableSession
-                    key={session.id}
-                    session={session}
-                    onEdit={handleOpenDialog}
-                    onDelete={handleDelete}
-                    instructorName={instrName}
-                  />
+                  <div key={session.id}>
+                    <SortableSession
+                      session={session}
+                      onEdit={handleOpenDialog}
+                      onDelete={handleDelete}
+                      instructorName={instrName}
+                      onToggleAttendance={toggleAttendance}
+                      attendanceStats={sessionStats}
+                      isAttendanceExpanded={expandedAttendanceId === session.id}
+                    />
+                    {expandedAttendanceId === session.id && (
+                      <CohortSessionAttendance
+                        sessionId={session.id}
+                        cohortId={cohortId}
+                        onStatsChange={() =>
+                          queryClient.invalidateQueries({
+                            queryKey: ["attendance-stats", cohortId],
+                          })
+                        }
+                      />
+                    )}
+                  </div>
                 );
               })}
             </div>

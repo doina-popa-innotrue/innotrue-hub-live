@@ -114,17 +114,29 @@ export default function CohortDashboard() {
         setProgram(programData as ProgramData);
       }
 
-      // 4. Load cohort sessions with module titles and instructor names
+      // 4. Load cohort sessions with module titles, instructor names, recap, recording
       const { data: sessionsData } = await supabase
         .from("cohort_sessions")
         .select(`
           id, title, description, session_date, start_time, end_time,
           location, meeting_link, module_id, notes, instructor_id,
+          recap, recording_url,
           program_modules ( title ),
           instructor:profiles!cohort_sessions_instructor_id_fkey ( name )
         `)
         .eq("cohort_id", enrollment.cohort_id)
         .order("order_index", { ascending: true });
+
+      // 4b. Load user's attendance records for this enrollment
+      const { data: attendanceData } = await supabase
+        .from("cohort_session_attendance" as string)
+        .select("session_id, status")
+        .eq("enrollment_id", enrollment.id);
+
+      const attendanceMap = new Map<string, string>();
+      (attendanceData as { session_id: string; status: string }[] || []).forEach(
+        (a) => attendanceMap.set(a.session_id, a.status),
+      );
 
       if (sessionsData) {
         const mapped: CohortSession[] = sessionsData.map((s: any) => ({
@@ -140,6 +152,9 @@ export default function CohortDashboard() {
           notes: s.notes,
           module_title: s.program_modules?.title || null,
           instructor_name: s.instructor?.name || leadInstructorName,
+          recap: s.recap,
+          recording_url: s.recording_url,
+          attendance_status: (attendanceMap.get(s.id) as CohortSession["attendance_status"]) || null,
         }));
         setSessions(mapped);
       }

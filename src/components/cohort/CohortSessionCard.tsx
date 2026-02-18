@@ -10,11 +10,20 @@ import {
   Download,
   BookOpen,
   UserCheck,
+  FileText,
+  PlayCircle,
+  CheckCircle2,
+  XCircle,
+  MinusCircle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import { useState } from "react";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { useSessionTimeStatus } from "@/hooks/useSessionTimeStatus";
 import { downloadICSFile, type ICSEvent } from "@/lib/icsGenerator";
+import ReactMarkdown from "react-markdown";
 
 export interface CohortSession {
   id: string;
@@ -29,6 +38,9 @@ export interface CohortSession {
   notes?: string | null;
   module_title?: string | null;
   instructor_name?: string | null;
+  recap?: string | null;
+  recording_url?: string | null;
+  attendance_status?: "present" | "absent" | "excused" | null;
 }
 
 interface CohortSessionCardProps {
@@ -58,6 +70,8 @@ export function CohortSessionCard({
   isHighlighted = false,
   showModuleLink = true,
 }: CohortSessionCardProps) {
+  const [recapExpanded, setRecapExpanded] = useState(false);
+
   const status = useSessionTimeStatus({
     sessionDate: session.session_date,
     startTime: session.start_time,
@@ -144,6 +158,25 @@ export function CohortSessionCard({
                   )}
                   {status.label}
                 </Badge>
+                {/* Attendance badge for past sessions */}
+                {isEnded && session.attendance_status === "present" && (
+                  <Badge variant="outline" className="text-green-600 border-green-300">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Attended
+                  </Badge>
+                )}
+                {isEnded && session.attendance_status === "excused" && (
+                  <Badge variant="outline" className="text-yellow-600 border-yellow-300">
+                    <MinusCircle className="h-3 w-3 mr-1" />
+                    Excused
+                  </Badge>
+                )}
+                {isEnded && session.attendance_status === "absent" && (
+                  <Badge variant="outline" className="text-red-600 border-red-300">
+                    <XCircle className="h-3 w-3 mr-1" />
+                    Absent
+                  </Badge>
+                )}
               </div>
 
               {session.description && !isEnded && (
@@ -233,7 +266,45 @@ export function CohortSessionCard({
                 Add to Calendar
               </Button>
             )}
+
+            {/* Watch Recording */}
+            {session.recording_url && isEnded && (
+              <Button size="sm" variant="outline" asChild>
+                <a
+                  href={session.recording_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <PlayCircle className="mr-2 h-3.5 w-3.5" />
+                  Watch Recording
+                </a>
+              </Button>
+            )}
+
+            {/* Recap toggle */}
+            {session.recap && isEnded && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setRecapExpanded(!recapExpanded)}
+              >
+                <FileText className="mr-2 h-3.5 w-3.5" />
+                Recap
+                {recapExpanded ? (
+                  <ChevronUp className="ml-1 h-3.5 w-3.5" />
+                ) : (
+                  <ChevronDown className="ml-1 h-3.5 w-3.5" />
+                )}
+              </Button>
+            )}
           </div>
+
+          {/* Recap content (collapsible) */}
+          {session.recap && isEnded && recapExpanded && (
+            <div className="border-t pt-3 mt-1 prose prose-sm dark:prose-invert max-w-none">
+              <ReactMarkdown>{session.recap}</ReactMarkdown>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

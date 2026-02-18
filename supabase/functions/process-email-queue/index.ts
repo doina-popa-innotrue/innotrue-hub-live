@@ -247,12 +247,23 @@ function generateEmailContent(templateKey: string, data: Record<string, any>): E
     }),
 
     session_reminder: () => ({
-      subject: 'Session Reminder',
+      subject: `Reminder: ${data.session_title || title || 'Upcoming Session'}`,
       html: wrapHtml(`
         <h2 style="margin-top: 0;">Hi ${userName}!</h2>
         <p>${title}</p>
         <p>${message}</p>
-        ${link ? `<p style="text-align: center; margin-top: 24px;"><a href="${link}" style="${buttonStyles}">View Session</a></p>` : ''}
+        ${data.meeting_link ? `<p style="text-align: center; margin-top: 24px;"><a href="${data.meeting_link}" style="${buttonStyles}">Join Meeting</a></p>` : ''}
+        ${link ? `<p style="text-align: center; margin-top: 12px;"><a href="${link}" style="color: #6366f1; text-decoration: underline;">View Session Details</a></p>` : ''}
+      `),
+    }),
+
+    session_recap_available: () => ({
+      subject: `Session Recap: ${data.session_title || 'Your Session'}`,
+      html: wrapHtml(`
+        <h2 style="margin-top: 0;">Hi ${userName}!</h2>
+        <p>${title}</p>
+        <p>${message}</p>
+        ${link ? `<p style="text-align: center; margin-top: 24px;"><a href="${link}" style="${buttonStyles}">View Session Recap</a></p>` : ''}
       `),
     }),
 
