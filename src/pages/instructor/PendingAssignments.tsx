@@ -486,10 +486,10 @@ export default function PendingAssignments() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (a) =>
-          a.client_name.toLowerCase().includes(query) ||
-          a.module_title.toLowerCase().includes(query) ||
-          a.program_name.toLowerCase().includes(query) ||
-          a.assignment_type_name.toLowerCase().includes(query),
+          a.client_name?.toLowerCase().includes(query) ||
+          a.module_title?.toLowerCase().includes(query) ||
+          a.program_name?.toLowerCase().includes(query) ||
+          a.assignment_type_name?.toLowerCase().includes(query),
       );
     }
 
