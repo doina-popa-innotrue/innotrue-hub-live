@@ -15,6 +15,7 @@ import {
   DollarSign,
   Zap,
   Calendar,
+  CalendarDays,
   ClipboardList,
   ClipboardCheck,
   FileText,
@@ -708,6 +709,12 @@ export function AppSidebar() {
       icon: BarChart3,
       tourId: "admin-user-behavior",
     },
+    {
+      title: "Cohort Analytics",
+      url: "/admin/cohort-analytics",
+      icon: CalendarDays,
+      tourId: "admin-cohort-analytics",
+    },
   ];
 
   // Plans & Monetization submenu items
@@ -822,6 +829,12 @@ export function AppSidebar() {
       url: "/teaching/groups",
       icon: UsersRound,
       tourId: "teaching-groups",
+    },
+    {
+      title: "Cohorts",
+      url: "/teaching/cohorts",
+      icon: CalendarDays,
+      tourId: "teaching-cohorts",
     },
     {
       title: "Shared Goals",

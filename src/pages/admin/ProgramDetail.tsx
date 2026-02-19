@@ -85,6 +85,7 @@ import ModuleClientContentManager from "@/components/admin/ModuleClientContentMa
 import ProgramBadgeManager from "@/components/admin/ProgramBadgeManager";
 import { ProgramCohortsManager } from "@/components/admin/ProgramCohortsManager";
 import { ProgramPlanConfig } from "@/components/admin/ProgramPlanConfig";
+import { ModuleDomainMapper } from "@/components/admin/ModuleDomainMapper";
 import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 
@@ -1402,12 +1403,13 @@ export default function ProgramDetail() {
               </DialogHeader>
               {editingModule && (
                 <Tabs defaultValue="details" className="w-full">
-                  <TabsList className="grid w-full grid-cols-5">
+                  <TabsList className="grid w-full grid-cols-6">
                     <TabsTrigger value="details">Details</TabsTrigger>
                     <TabsTrigger value="sections">Sections</TabsTrigger>
                     <TabsTrigger value="skills">Skills</TabsTrigger>
                     <TabsTrigger value="scenarios">Scenarios</TabsTrigger>
                     <TabsTrigger value="prerequisites">Prerequisites</TabsTrigger>
+                    <TabsTrigger value="domains">Domains</TabsTrigger>
                   </TabsList>
                   <TabsContent value="details" className="mt-4">
                     <ModuleForm
@@ -1456,6 +1458,12 @@ export default function ProgramDetail() {
                       moduleId={editingModule.id}
                       programId={editingModule.program_id}
                       currentModuleOrderIndex={editingModule.order_index}
+                    />
+                  </TabsContent>
+                  <TabsContent value="domains" className="mt-4">
+                    <ModuleDomainMapper
+                      moduleId={editingModule.id}
+                      moduleName={editingModule.title}
                     />
                   </TabsContent>
                 </Tabs>

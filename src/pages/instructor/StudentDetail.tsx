@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import {
   Circle,
   PlayCircle,
   Calendar,
+  CalendarDays,
   TrendingUp,
   Mail,
   User,
@@ -121,6 +122,15 @@ export default function StudentDetail() {
     open: boolean;
     moduleProgressId: string;
   }>({ open: false, moduleProgressId: "" });
+  const [cohortInfo, setCohortInfo] = useState<{
+    id: string;
+    name: string;
+    status: string;
+    start_date: string | null;
+    end_date: string | null;
+    sessions_present: number;
+    sessions_total: number;
+  } | null>(null);
 
   // Auto-open the reflections dialog if query params specify a module
   useEffect(() => {
@@ -173,6 +183,7 @@ export default function StudentDetail() {
           tier,
           start_date,
           end_date,
+          cohort_id,
           programs!inner(name, slug, tiers)
         `,
         )
@@ -205,6 +216,44 @@ export default function StudentDetail() {
         start_date: enrollment.start_date || "",
         end_date: enrollment.end_date || null,
       });
+
+      // Load cohort info if enrolled in a cohort
+      if ((enrollment as any).cohort_id) {
+        const cohortId = (enrollment as any).cohort_id;
+        const { data: cohortData } = await supabase
+          .from("program_cohorts")
+          .select("id, name, status, start_date, end_date")
+          .eq("id", cohortId)
+          .single();
+
+        if (cohortData) {
+          // Get attendance summary for this enrollment
+          const { data: attendanceData } = await supabase
+            .from("cohort_session_attendance" as string)
+            .select("status")
+            .eq("enrollment_id", enrollment.id ?? "");
+
+          const presentCount = ((attendanceData as { status: string }[]) || []).filter(
+            (a) => a.status === "present",
+          ).length;
+
+          // Get total sessions for this cohort
+          const { count: totalSessions } = await supabase
+            .from("cohort_sessions")
+            .select("*", { count: "exact", head: true })
+            .eq("cohort_id", cohortId);
+
+          setCohortInfo({
+            id: cohortData.id,
+            name: cohortData.name,
+            status: cohortData.status,
+            start_date: cohortData.start_date,
+            end_date: cohortData.end_date,
+            sessions_present: presentCount,
+            sessions_total: totalSessions || 0,
+          });
+        }
+      }
 
       // Get all modules for the program
       const { data: modules, error: modulesError } = await supabase
@@ -547,6 +596,57 @@ export default function StudentDetail() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Cohort Assignment */}
+      {cohortInfo && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CalendarDays className="h-5 w-5" />
+                Cohort Assignment
+              </CardTitle>
+              <Badge
+                variant={
+                  cohortInfo.status === "active"
+                    ? "default"
+                    : cohortInfo.status === "completed"
+                      ? "secondary"
+                      : "outline"
+                }
+              >
+                {cohortInfo.status}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="space-y-1">
+                <p className="font-medium">{cohortInfo.name}</p>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  {cohortInfo.start_date && cohortInfo.end_date && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {formatDate(cohortInfo.start_date)} – {formatDate(cohortInfo.end_date)}
+                    </span>
+                  )}
+                  {cohortInfo.sessions_total > 0 && (
+                    <span className="flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      {cohortInfo.sessions_present}/{cohortInfo.sessions_total} sessions attended
+                    </span>
+                  )}
+                </div>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link to={`/teaching/cohorts/${cohortInfo.id}`}>
+                  View Cohort
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Progress Summary */}
       <div className="grid gap-4 md:grid-cols-4">

@@ -100,40 +100,56 @@ const handler = async (req: Request): Promise<Response> => {
 
     const moduleTitle = moduleData?.title || "Unknown Module";
 
-    // Get instructors and coaches assigned to this module or program
+    // Get instructors and coaches to notify
+    // Priority: personal instructor (enrollment_module_staff) > module-level > program-level
     const recipientIds = new Set<string>();
 
-    // Module-level instructors
-    const { data: moduleInstructors } = await supabase
-      .from("module_instructors")
-      .select("instructor_id")
+    // Check for personal instructor first (highest priority)
+    const { data: personalStaff } = await supabase
+      .from("enrollment_module_staff")
+      .select("staff_user_id")
+      .eq("enrollment_id", moduleProgress.enrollment_id)
       .eq("module_id", moduleProgress.module_id);
 
-    moduleInstructors?.forEach((mi) => recipientIds.add(mi.instructor_id));
+    if (personalStaff && personalStaff.length > 0) {
+      // Personal instructor exists — only notify them
+      personalStaff.forEach((ps) => recipientIds.add(ps.staff_user_id));
+      console.log(`Routing notification to personal instructor(s): ${recipientIds.size}`);
+    } else {
+      // No personal instructor — fall back to module + program level broadcast
 
-    // Module-level coaches
-    const { data: moduleCoaches } = await supabase
-      .from("module_coaches")
-      .select("coach_id")
-      .eq("module_id", moduleProgress.module_id);
-
-    moduleCoaches?.forEach((mc) => recipientIds.add(mc.coach_id));
-
-    // Program-level instructors and coaches
-    if (programId) {
-      const { data: programInstructors } = await supabase
-        .from("program_instructors")
+      // Module-level instructors
+      const { data: moduleInstructors } = await supabase
+        .from("module_instructors")
         .select("instructor_id")
-        .eq("program_id", programId);
+        .eq("module_id", moduleProgress.module_id);
 
-      programInstructors?.forEach((pi) => recipientIds.add(pi.instructor_id));
+      moduleInstructors?.forEach((mi) => recipientIds.add(mi.instructor_id));
 
-      const { data: programCoaches } = await supabase
-        .from("program_coaches")
+      // Module-level coaches
+      const { data: moduleCoaches } = await supabase
+        .from("module_coaches")
         .select("coach_id")
-        .eq("program_id", programId);
+        .eq("module_id", moduleProgress.module_id);
 
-      programCoaches?.forEach((pc) => recipientIds.add(pc.coach_id));
+      moduleCoaches?.forEach((mc) => recipientIds.add(mc.coach_id));
+
+      // Program-level instructors and coaches
+      if (programId) {
+        const { data: programInstructors } = await supabase
+          .from("program_instructors")
+          .select("instructor_id")
+          .eq("program_id", programId);
+
+        programInstructors?.forEach((pi) => recipientIds.add(pi.instructor_id));
+
+        const { data: programCoaches } = await supabase
+          .from("program_coaches")
+          .select("coach_id")
+          .eq("program_id", programId);
+
+        programCoaches?.forEach((pc) => recipientIds.add(pc.coach_id));
+      }
     }
 
     if (recipientIds.size === 0) {

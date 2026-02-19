@@ -632,7 +632,7 @@ export default function ModuleDetail() {
               <Clock className="h-4 w-4" />
               <span>{module.estimated_minutes} minutes</span>
             </div>
-            <ModuleTeamContact moduleId={module.id} programId={programId!} />
+            <ModuleTeamContact moduleId={module.id} programId={programId!} enrollmentId={enrollment?.id} />
           </CardContent>
         </Card>
 

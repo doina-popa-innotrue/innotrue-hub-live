@@ -16,16 +16,41 @@ interface TeamMember {
 interface ModuleTeamContactProps {
   moduleId: string;
   programId: string;
+  enrollmentId?: string;
 }
 
-export function ModuleTeamContact({ moduleId, programId }: ModuleTeamContactProps) {
+export function ModuleTeamContact({ moduleId, programId, enrollmentId }: ModuleTeamContactProps) {
   const [loading, setLoading] = useState(true);
+  const [personalInstructor, setPersonalInstructor] = useState<TeamMember | null>(null);
   const [instructors, setInstructors] = useState<TeamMember[]>([]);
   const [coaches, setCoaches] = useState<TeamMember[]>([]);
 
   useEffect(() => {
     async function fetchTeamData() {
       setLoading(true);
+
+      // Check for personal instructor (enrollment-level assignment)
+      if (enrollmentId) {
+        const { data: personalStaff } = await supabase
+          .from("enrollment_module_staff")
+          .select(`
+            staff_user_id,
+            role,
+            profiles:staff_user_id (id, name, avatar_url)
+          `)
+          .eq("enrollment_id", enrollmentId)
+          .eq("module_id", moduleId)
+          .maybeSingle();
+
+        if (personalStaff && (personalStaff as any).profiles) {
+          setPersonalInstructor({
+            id: personalStaff.staff_user_id,
+            name: ((personalStaff as any).profiles as any)?.name || "Instructor",
+            avatar_url: ((personalStaff as any).profiles as any)?.avatar_url,
+            role: (personalStaff.role === "coach" ? "coach" : "instructor") as "instructor" | "coach",
+          });
+        }
+      }
 
       // First try to fetch module-specific instructors
       const { data: moduleInstructorsData } = await supabase
@@ -160,11 +185,19 @@ export function ModuleTeamContact({ moduleId, programId }: ModuleTeamContactProp
     );
   }
 
-  const hasTeam = instructors.length > 0 || coaches.length > 0;
+  const hasTeam = instructors.length > 0 || coaches.length > 0 || personalInstructor;
 
   if (!hasTeam) {
     return null;
   }
+
+  // Filter out the personal instructor from the general lists to avoid duplication
+  const filteredInstructors = instructors.filter(
+    (i) => !personalInstructor || i.id !== personalInstructor.id,
+  );
+  const filteredCoaches = coaches.filter(
+    (c) => !personalInstructor || c.id !== personalInstructor.id,
+  );
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-muted/50 rounded-lg">
@@ -173,7 +206,37 @@ export function ModuleTeamContact({ moduleId, programId }: ModuleTeamContactProp
         <span>Your Team:</span>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {instructors.map((member) => (
+        {personalInstructor && (
+          <div
+            className="flex items-center gap-2 bg-primary/10 rounded-full pl-1 pr-2 py-1 border border-primary/30"
+          >
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={personalInstructor.avatar_url || undefined} />
+              <AvatarFallback className="text-xs">
+                <User className="h-3 w-3" />
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-sm font-medium">{personalInstructor.name}</span>
+            <Badge className="text-xs px-1.5 py-0 bg-primary/20 text-primary border-primary/30" variant="outline">
+              Your {personalInstructor.role === "coach" ? "Coach" : "Instructor"}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={() =>
+                handleContact(
+                  personalInstructor.id,
+                  personalInstructor.name,
+                  personalInstructor.role === "coach" ? "Coach" : "Instructor",
+                )
+              }
+            >
+              <Mail className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+        {filteredInstructors.map((member) => (
           <div
             key={member.id}
             className="flex items-center gap-2 bg-background rounded-full pl-1 pr-2 py-1 border"
@@ -198,7 +261,7 @@ export function ModuleTeamContact({ moduleId, programId }: ModuleTeamContactProp
             </Button>
           </div>
         ))}
-        {coaches.map((member) => (
+        {filteredCoaches.map((member) => (
           <div
             key={member.id}
             className="flex items-center gap-2 bg-background rounded-full pl-1 pr-2 py-1 border"

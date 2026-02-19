@@ -114,6 +114,7 @@ const AnnouncementCategoriesManagement = lazy(
   () => import("./pages/admin/AnnouncementCategoriesManagement"),
 );
 const UserBehaviorAnalytics = lazy(() => import("./pages/admin/UserBehaviorAnalytics"));
+const CohortAnalytics = lazy(() => import("./pages/admin/CohortAnalytics"));
 const AuthContexts = lazy(() => import("./pages/admin/AuthContexts"));
 
 // Lazy-loaded pages — Instructor / Coach
@@ -124,6 +125,8 @@ const StudentProgress = lazy(() => import("./pages/instructor/StudentProgress"))
 const StudentDetail = lazy(() => import("./pages/instructor/StudentDetail"));
 const SharedGoals = lazy(() => import("./pages/instructor/SharedGoals"));
 const InstructorGroups = lazy(() => import("./pages/instructor/Groups"));
+const InstructorCohorts = lazy(() => import("./pages/instructor/Cohorts"));
+const TeachingCohortDetail = lazy(() => import("./pages/instructor/CohortDetail"));
 const CoachingDecisions = lazy(() => import("./pages/instructor/CoachingDecisions"));
 const CoachingDecisionDetail = lazy(() => import("./pages/instructor/CoachingDecisionDetail"));
 const CoachingTasks = lazy(() => import("./pages/instructor/CoachingTasks"));
@@ -1094,6 +1097,16 @@ const App = () => (
                     }
                   />
                   <Route
+                    path="/admin/cohort-analytics"
+                    element={
+                      <ProtectedRoute requireRole="admin">
+                        <DashboardLayout>
+                          <CohortAnalytics />
+                        </DashboardLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
                     path="/teaching"
                     element={
                       <ProtectedRoute>
@@ -1159,6 +1172,26 @@ const App = () => (
                       <ProtectedRoute>
                         <DashboardLayout>
                           <InstructorGroups />
+                        </DashboardLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/teaching/cohorts"
+                    element={
+                      <ProtectedRoute>
+                        <DashboardLayout>
+                          <InstructorCohorts />
+                        </DashboardLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/teaching/cohorts/:cohortId"
+                    element={
+                      <ProtectedRoute>
+                        <DashboardLayout>
+                          <TeachingCohortDetail />
                         </DashboardLayout>
                       </ProtectedRoute>
                     }

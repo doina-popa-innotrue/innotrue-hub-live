@@ -15,6 +15,7 @@ import {
   CheckSquare,
   Award,
   UsersRound,
+  CalendarDays,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -89,8 +90,10 @@ interface UpcomingSession {
   id: string;
   title: string;
   session_date: string;
-  group_id: string;
+  group_id: string | null;
   group_name: string;
+  source: "group" | "cohort";
+  cohort_id?: string;
 }
 
 interface PendingBadge {
@@ -113,6 +116,7 @@ export default function InstructorCoachDashboard() {
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[]>([]);
   const [pendingBadges, setPendingBadges] = useState<PendingBadge[]>([]);
   const [groupCount, setGroupCount] = useState(0);
+  const [cohortCount, setCohortCount] = useState(0);
 
   // Staff welcome card state
   const [staffProfileName, setStaffProfileName] = useState("");
@@ -255,6 +259,8 @@ export default function InstructorCoachDashboard() {
     const groupIds = memberships?.map((m) => m.group_id) || [];
     setGroupCount(groupIds.length);
 
+    // Build group sessions list
+    let groupSessions: UpcomingSession[] = [];
     if (groupIds.length > 0) {
       const { data: sessionsData } = await supabase
         .from("group_sessions")
@@ -274,17 +280,68 @@ export default function InstructorCoachDashboard() {
         .limit(5);
 
       if (sessionsData) {
-        setUpcomingSessions(
-          sessionsData.map((s: any) => ({
-            id: s.id,
-            title: s.title,
-            session_date: s.session_date,
-            group_id: s.group_id,
-            group_name: s.groups?.name || "",
-          })),
-        );
+        groupSessions = sessionsData.map((s: any) => ({
+          id: s.id,
+          title: s.title,
+          session_date: s.session_date,
+          group_id: s.group_id,
+          group_name: s.groups?.name || "",
+          source: "group" as const,
+        }));
       }
     }
+
+    // Build cohort sessions list — fetch program IDs from both roles
+    let cohortSessions: UpcomingSession[] = [];
+    const [instrProgramsForCohort, coachProgramsForCohort] = await Promise.all([
+      supabase.from("program_instructors").select("program_id").eq("instructor_id", user.id),
+      supabase.from("program_coaches").select("program_id").eq("coach_id", user.id),
+    ]);
+
+    const cohortProgramIds = new Set([
+      ...(instrProgramsForCohort.data || []).map((p) => p.program_id),
+      ...(coachProgramsForCohort.data || []).map((p) => p.program_id),
+    ]);
+
+    if (cohortProgramIds.size > 0) {
+      const today = new Date().toISOString().split("T")[0];
+      const { data: cohortSessionsData } = await supabase
+        .from("cohort_sessions")
+        .select(`
+          id, title, session_date,
+          cohort_id,
+          program_cohorts!inner ( id, name, program_id )
+        `)
+        .in("program_cohorts.program_id", Array.from(cohortProgramIds))
+        .gte("session_date", today)
+        .order("session_date", { ascending: true })
+        .limit(5);
+
+      if (cohortSessionsData) {
+        cohortSessions = cohortSessionsData.map((s: any) => ({
+          id: s.id,
+          title: s.title,
+          session_date: s.session_date,
+          group_id: null,
+          group_name: s.program_cohorts?.name || "",
+          source: "cohort" as const,
+          cohort_id: s.cohort_id,
+        }));
+      }
+
+      // Set cohort count
+      const { count: cCount } = await supabase
+        .from("program_cohorts")
+        .select("*", { count: "exact", head: true })
+        .in("program_id", Array.from(cohortProgramIds));
+      setCohortCount(cCount || 0);
+    }
+
+    // Merge group + cohort sessions, sort by date, take top 5
+    const allSessions = [...groupSessions, ...cohortSessions]
+      .sort((a, b) => new Date(a.session_date).getTime() - new Date(b.session_date).getTime())
+      .slice(0, 5);
+    setUpcomingSessions(allSessions);
 
     // Load pending badge approvals
     const { data: badgesData } = await supabase
@@ -572,7 +629,7 @@ export default function InstructorCoachDashboard() {
       />
 
       {/* Stats Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
         <Card
           className="cursor-pointer hover:border-primary transition-colors"
           onClick={() => navigate("/teaching")}
@@ -614,6 +671,20 @@ export default function InstructorCoachDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{groupCount}</div>
             <p className="text-xs text-muted-foreground mt-1">Active memberships</p>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="cursor-pointer hover:border-primary transition-colors"
+          onClick={() => navigate("/teaching/cohorts")}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cohorts</CardTitle>
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{cohortCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Across programs</p>
           </CardContent>
         </Card>
 
@@ -667,22 +738,33 @@ export default function InstructorCoachDashboard() {
                 variant="inline"
                 icon={Calendar}
                 title="No upcoming sessions"
-                description="Group sessions you facilitate will appear here"
+                description="Sessions you facilitate will appear here"
               />
             ) : (
               <div className="space-y-3">
                 {upcomingSessions.slice(0, 3).map((session) => (
                   <div
-                    key={session.id}
+                    key={`${session.source}-${session.id}`}
                     className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/groups/${session.group_id}`)}
+                    onClick={() =>
+                      session.source === "cohort"
+                        ? navigate(`/teaching/cohorts/${session.cohort_id}`)
+                        : navigate(`/groups/${session.group_id}`)
+                    }
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{session.title}</p>
-                      <p className="text-xs text-muted-foreground">{session.group_name}</p>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        {session.source === "cohort" ? (
+                          <CalendarDays className="h-3 w-3" />
+                        ) : (
+                          <UsersRound className="h-3 w-3" />
+                        )}
+                        <span>{session.group_name}</span>
+                      </div>
                     </div>
-                    <Badge variant="outline" className="text-xs">
-                      {format(new Date(session.session_date), "MMM d, h:mm a")}
+                    <Badge variant="outline" className="text-xs shrink-0">
+                      {format(new Date(session.session_date), "MMM d")}
                     </Badge>
                   </div>
                 ))}
