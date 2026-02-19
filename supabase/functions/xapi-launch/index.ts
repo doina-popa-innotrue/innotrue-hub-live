@@ -1,16 +1,24 @@
 /**
- * xapi-launch — Creates an xAPI session and returns the launch URL
+ * xapi-launch — Creates an xAPI session and returns xAPI config for the frontend
  *
  * POST /xapi-launch
  *   Body: { moduleId: string }
  *   Auth: Bearer JWT (user must be enrolled or staff)
  *
  * Creates an xapi_sessions record with a unique auth token, then returns:
- *   { launchUrl: "https://storage.../indexapi.html?endpoint=...&auth=...&actor=..." }
+ *   {
+ *     sessionId: string,
+ *     xapiConfig: {
+ *       endpoint: string,   // LRS statements endpoint URL
+ *       auth: string,       // Authorization header value (Basic <base64>)
+ *       actor: object,      // xAPI Agent identifying the learner
+ *       activityId: string  // IRI identifying this activity/module
+ *     }
+ *   }
  *
- * The launchUrl is what the frontend loads in an iframe or new window.
- * Rise xAPI content will send statements to our xapi-statements endpoint
- * using the provided auth token.
+ * The frontend installs an LMS API mock on the parent window using xapiConfig.
+ * Rise content in the blob iframe calls window.parent.IsLmsPresent() etc.
+ * xAPI statements are sent from the parent window (app origin) to avoid CORS.
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -147,15 +155,9 @@ Deno.serve(async (req: Request) => {
         return errorResponse.serverError("xapi-launch-session", sessionError, cors);
       }
 
-      const launchUrl = buildLaunchUrl(
-        supabaseUrl,
-        moduleData.content_package_path,
-        authToken,
-        user,
-        moduleId,
-      );
+      const xapiConfig = buildXapiConfig(supabaseUrl, authToken, user, moduleId);
 
-      return successResponse.ok({ launchUrl, sessionId: session.id }, cors);
+      return successResponse.ok({ sessionId: session.id, xapiConfig }, cors);
     }
   }
 
@@ -190,16 +192,10 @@ Deno.serve(async (req: Request) => {
       { onConflict: "enrollment_id,module_id", ignoreDuplicates: true },
     );
 
-  // ─── Build launch URL ─────────────────────────────────────────
-  const launchUrl = buildLaunchUrl(
-    supabaseUrl,
-    moduleData.content_package_path,
-    authToken,
-    user,
-    moduleId,
-  );
+  // ─── Build xAPI config for the frontend ─────────────────────
+  const xapiConfig = buildXapiConfig(supabaseUrl, authToken, user, moduleId);
 
-  return successResponse.ok({ launchUrl, sessionId: session.id }, cors);
+  return successResponse.ok({ sessionId: session.id, xapiConfig }, cors);
 });
 
 /**
@@ -216,56 +212,41 @@ function generateToken(): string {
 }
 
 /**
- * Build the Rise xAPI launch URL with required query parameters.
+ * Build the xAPI configuration object for the frontend.
  *
- * Rise xAPI (Tin Can) exports expect:
- *   - endpoint: LRS statements endpoint URL
- *   - auth: Authorization header value (Basic <base64>)
- *   - actor: JSON-encoded xAPI Agent object
- *   - activity_id: (optional) IRI identifying this activity
+ * The frontend installs an LMS API mock on window using these values.
+ * Rise content in the blob iframe calls window.parent.IsLmsPresent() etc.
+ * xAPI statements are sent from the app origin to avoid CORS issues.
  */
-function buildLaunchUrl(
+function buildXapiConfig(
   supabaseUrl: string,
-  contentPackagePath: string,
   authToken: string,
   user: { id: string; email?: string; user_metadata?: { full_name?: string } },
   moduleId: string,
-): string {
+): {
+  endpoint: string;
+  auth: string;
+  actor: { objectType: string; account: { homePage: string; name: string }; name: string };
+  activityId: string;
+} {
   // The xAPI statements endpoint on our edge function
   const endpoint = `${supabaseUrl}/functions/v1/xapi-statements`;
 
-  // Rise sends this value in the Authorization header of xAPI requests.
-  // We use Basic auth format: "Basic <base64(token:)>"
-  const basicAuth = `Basic ${btoa(authToken + ":")}`;
+  // Authorization header value — Basic auth format: "Basic <base64(token:)>"
+  const auth = `Basic ${btoa(authToken + ":")}`;
 
   // xAPI Actor — identifies the learner
-  const actor = JSON.stringify({
+  const actor = {
     objectType: "Agent",
     account: {
       homePage: supabaseUrl,
       name: user.id,
     },
     name: user.user_metadata?.full_name || user.email || user.id,
-  });
+  };
 
   // Activity ID — unique IRI for this module
   const activityId = `${supabaseUrl}/modules/${moduleId}`;
 
-  // Content is served from private storage via serve-content-package proxy.
-  // We bypass the Rustici scormdriver (it requires full browser navigation and
-  // nested iframes that don't work inside a sandboxed blob URL iframe) and
-  // instead serve the Rise content directly from scormcontent/index.html.
-  // The xAPI completion tracking is handled by an injected script rather
-  // than by the scormdriver.
-  const contentUrl = `${supabaseUrl}/functions/v1/serve-content-package?module=${moduleId}&path=scormcontent/index.html`;
-
-  // Build the launch URL with all xAPI query params
-  const params = new URLSearchParams({
-    endpoint: endpoint,
-    auth: basicAuth,
-    actor: actor,
-    activity_id: activityId,
-  });
-
-  return `${contentUrl}&${params.toString()}`;
+  return { endpoint, auth, actor, activityId };
 }

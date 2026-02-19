@@ -13,6 +13,172 @@ interface ContentPackageViewerProps {
 }
 
 /**
+ * Send an xAPI statement to our LRS endpoint.
+ * Runs from the parent window (app origin) so no CORS issues.
+ */
+function sendXapiStatement(
+  endpoint: string,
+  auth: string,
+  actor: object,
+  activityId: string,
+  verbId: string,
+  verbDisplay: string,
+  result?: Record<string, unknown>,
+) {
+  const stmt: Record<string, unknown> = {
+    actor,
+    verb: { id: verbId, display: { "en-US": verbDisplay } },
+    object: {
+      objectType: "Activity",
+      id: activityId,
+      definition: { type: "http://adlnet.gov/expapi/activities/lesson" },
+    },
+    timestamp: new Date().toISOString(),
+  };
+  if (result) stmt.result = result;
+
+  fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: auth,
+      "Content-Type": "application/json",
+      "X-Experience-API-Version": "1.0.3",
+    },
+    body: JSON.stringify(stmt),
+  }).catch((e) => console.warn("[xAPI] Statement send failed:", e));
+}
+
+/**
+ * Install the LMS API mock on the parent window so Rise content in the
+ * blob-URL iframe can find it via window.parent.IsLmsPresent(), etc.
+ *
+ * Rise's scormcontent/index.html walks up the frame hierarchy checking
+ * window.parent, window.parent.parent, etc. for these global functions.
+ * Since our iframe is a blob: URL, window.parent is the React app's window.
+ *
+ * Returns a cleanup function that removes all the globals.
+ */
+function installLmsApiOnWindow(
+  endpoint: string,
+  auth: string,
+  actor: object,
+  activityId: string,
+): () => void {
+  const win = window as Record<string, unknown>;
+  const installedKeys: string[] = [];
+
+  function install(name: string, fn: (...args: unknown[]) => unknown) {
+    win[name] = fn;
+    installedKeys.push(name);
+  }
+
+  const send = (
+    verbId: string,
+    verbDisplay: string,
+    result?: Record<string, unknown>,
+  ) => sendXapiStatement(endpoint, auth, actor, activityId, verbId, verbDisplay, result);
+
+  // Send "initialized" on install
+  send("http://adlnet.gov/expapi/verbs/initialized", "initialized");
+
+  // ── Core SCORM/xAPI driver API that Rise expects ──
+  install("IsLmsPresent", () => true);
+  install("GetBookmark", () => "");
+  install("SetBookmark", () => "true");
+  install("GetDataChunk", () => "");
+  install("SetDataChunk", () => "true");
+  install("CommitData", () => "true");
+  install("Finish", () => {
+    send("http://adlnet.gov/expapi/verbs/terminated", "terminated");
+    return "true";
+  });
+  install("SetReachedEnd", () => {
+    send("http://adlnet.gov/expapi/verbs/completed", "completed", {
+      completion: true,
+      duration: "PT0S",
+    });
+    return "true";
+  });
+  install("SetFailed", () => {
+    send("http://adlnet.gov/expapi/verbs/failed", "failed", { success: false });
+    return "true";
+  });
+  install("SetPassed", () => {
+    send("http://adlnet.gov/expapi/verbs/passed", "passed", { success: true });
+    return "true";
+  });
+  install("SetScore", () => "true");
+  install("GetScore", () => "");
+  install("GetStatus", () => "incomplete");
+  install("SetStatus", () => "true");
+  install("GetProgressMeasure", () => "");
+  install("SetProgressMeasure", (val: unknown) => {
+    if (parseFloat(String(val)) >= 1) {
+      send("http://adlnet.gov/expapi/verbs/completed", "completed", {
+        completion: true,
+      });
+    }
+    return "true";
+  });
+  install("GetMaxTimeAllowed", () => "");
+  install("GetTimeLimitAction", () => "");
+  install("SetSessionTime", () => "true");
+  install("GetEntryMode", () => "ab-initio");
+  install("GetLessonMode", () => "normal");
+  install("GetTakingForCredit", () => "credit");
+  install("FlushData", () => "true");
+  install("ConcedeControl", () => {
+    send("http://adlnet.gov/expapi/verbs/terminated", "terminated");
+    return "true";
+  });
+
+  // ── Additional functions Rise xAPI exports look for ──
+  install("GetStudentID", () => "");
+  install("SetLanguagePreference", () => "true");
+  install("SetObjectiveStatus", () => "true");
+  install("CreateResponseIdentifier", () => "");
+  install("MatchingResponse", () => "");
+  install("RecordFillInInteraction", () => "true");
+  install("RecordMatchingInteraction", () => "true");
+  install("RecordMultipleChoiceInteraction", () => "true");
+  install("WriteToDebug", () => "");
+
+  // ── xAPI-specific TCAPI functions ──
+  install("TCAPI_SetCompleted", () => {
+    send("http://adlnet.gov/expapi/verbs/completed", "completed", {
+      completion: true,
+    });
+    return "true";
+  });
+  install("TCAPI_SetProgressMeasure", (val: unknown) => {
+    if (parseFloat(String(val)) >= 1) {
+      send("http://adlnet.gov/expapi/verbs/completed", "completed", {
+        completion: true,
+      });
+    }
+    return "true";
+  });
+
+  // Handle page unload — send terminated
+  let terminated = false;
+  const onBeforeUnload = () => {
+    if (!terminated) {
+      terminated = true;
+      send("http://adlnet.gov/expapi/verbs/terminated", "terminated");
+    }
+  };
+  window.addEventListener("beforeunload", onBeforeUnload);
+
+  // Return cleanup function
+  return () => {
+    window.removeEventListener("beforeunload", onBeforeUnload);
+    for (const key of installedKeys) {
+      delete win[key];
+    }
+  };
+}
+
+/**
  * Renders a Rise content package inside an iframe.
  *
  * Supports two modes:
@@ -21,10 +187,9 @@ interface ContentPackageViewerProps {
  *    creates a Blob URL to bypass Supabase's text/html → text/plain rewrite.
  *
  * 2. **xAPI mode**: Calls xapi-launch to get a launch URL with embedded LRS
- *    credentials. Rise xAPI content sends completion statements to our
- *    xapi-statements endpoint, which auto-updates module_progress.
- *    The Blob URL workaround is used here too because the launch URL still
- *    goes through serve-content-package for auth-gated access.
+ *    credentials. The LMS API mock is installed on the parent window (this window)
+ *    so Rise content in the blob iframe can find it via window.parent.XXX().
+ *    xAPI statements are sent from the parent window (app origin) to avoid CORS.
  */
 export function ContentPackageViewer({
   moduleId,
@@ -40,6 +205,7 @@ export function ContentPackageViewer({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const sessionIdRef = useRef<string | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lmsCleanupRef = useRef<(() => void) | null>(null);
 
   // ─── xAPI completion polling ──────────────────────────────────
   const startCompletionPolling = useCallback(
@@ -105,18 +271,35 @@ export function ContentPackageViewer({
             );
           }
 
-          const { launchUrl, sessionId } = (await launchResp.json()) as {
+          const launchData = (await launchResp.json()) as {
             launchUrl: string;
             sessionId: string;
+            xapiConfig: {
+              endpoint: string;
+              auth: string;
+              actor: object;
+              activityId: string;
+            };
           };
-          sessionIdRef.current = sessionId;
+          sessionIdRef.current = launchData.sessionId;
 
-          // Fetch the xAPI HTML through the launch URL (which goes through
-          // serve-content-package with xAPI query params appended).
-          // We need the blob URL workaround here too for text/plain bypass.
-          const htmlResp = await fetch(
-            launchUrl + `&token=${accessToken}`,
+          // Install the LMS API mock on THIS window (the parent of the iframe).
+          // Rise content in the blob iframe calls window.parent.IsLmsPresent() etc.
+          // xAPI statements are sent from here (app origin) — no CORS issues.
+          if (lmsCleanupRef.current) lmsCleanupRef.current();
+          lmsCleanupRef.current = installLmsApiOnWindow(
+            launchData.xapiConfig.endpoint,
+            launchData.xapiConfig.auth,
+            launchData.xapiConfig.actor,
+            launchData.xapiConfig.activityId,
           );
+
+          // Fetch the content HTML (without xAPI query params — those are no longer needed
+          // since the LMS mock lives on the parent window, not injected into the HTML).
+          const contentUrl =
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-content-package` +
+            `?module=${moduleId}&path=scormcontent/index.html&token=${accessToken}`;
+          const htmlResp = await fetch(contentUrl);
           if (!htmlResp.ok) {
             const errText = await htmlResp.text();
             throw new Error(errText || `HTTP ${htmlResp.status}`);
@@ -127,7 +310,7 @@ export function ContentPackageViewer({
             const blob = new Blob([html], { type: "text/html" });
             objectUrl = URL.createObjectURL(blob);
             setBlobUrl(objectUrl);
-            startCompletionPolling(sessionId);
+            startCompletionPolling(launchData.sessionId);
           }
         } else {
           // ── Web mode: direct blob URL proxy ──
@@ -178,11 +361,15 @@ export function ContentPackageViewer({
     };
   }, [blobUrl]);
 
-  // Clean up polling on unmount
+  // Clean up polling and LMS API on unmount
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
+      }
+      if (lmsCleanupRef.current) {
+        lmsCleanupRef.current();
+        lmsCleanupRef.current = null;
       }
     };
   }, []);

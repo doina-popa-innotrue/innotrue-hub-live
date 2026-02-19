@@ -78,8 +78,23 @@ Deno.serve(async (req: Request) => {
     return errorResponse.unauthorized("Missing Authorization header", cors);
   }
 
-  // Rise sends the token exactly as provided (Basic or Bearer)
-  const token = authHeader.replace(/^(Bearer|Basic)\s+/i, "").trim();
+  // Extract the raw auth token from the Authorization header.
+  // The frontend sends "Basic <base64(rawToken:)>" (standard Basic auth format).
+  // We need to decode the base64 to get the raw token that matches xapi_sessions.auth_token.
+  let token = "";
+  if (authHeader.toLowerCase().startsWith("basic ")) {
+    const base64Part = authHeader.substring(6).trim();
+    try {
+      const decoded = atob(base64Part); // "rawToken:"
+      token = decoded.replace(/:$/, ""); // strip trailing colon
+    } catch {
+      return errorResponse.unauthorized("Invalid Basic auth encoding", cors);
+    }
+  } else if (authHeader.toLowerCase().startsWith("bearer ")) {
+    token = authHeader.substring(7).trim();
+  } else {
+    token = authHeader.trim();
+  }
   if (!token) {
     return errorResponse.unauthorized("Invalid Authorization token", cors);
   }

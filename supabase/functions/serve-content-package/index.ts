@@ -226,132 +226,13 @@ Deno.serve(async (req: Request) => {
       }
     );
 
-    // For xAPI content (scormcontent/index.html served directly, bypassing scormdriver),
-    // inject a lightweight xAPI reporter that:
-    // 1. Mocks the LMS API that Rise expects (IsLmsPresent, SetReachedEnd, etc.)
-    // 2. Sends completion/progress xAPI statements to our xapi-statements endpoint
-    const xapiEndpoint = url.searchParams.get("endpoint") || "";
-    const xapiAuth = url.searchParams.get("auth") || "";
-    const xapiActor = url.searchParams.get("actor") || "";
-    const xapiActivityId = url.searchParams.get("activity_id") || "";
-
-    let xapiParamScript = "";
-    if (xapiEndpoint) {
-      xapiParamScript = `<script>
-(function() {
-  // xAPI configuration injected by serve-content-package
-  var XAPI_ENDPOINT = ${JSON.stringify(xapiEndpoint)};
-  var XAPI_AUTH = ${JSON.stringify(xapiAuth)};
-  var XAPI_ACTOR = ${JSON.stringify(xapiActor)};
-  var XAPI_ACTIVITY_ID = ${JSON.stringify(xapiActivityId)};
-
-  // Parse actor JSON
-  var actor;
-  try { actor = JSON.parse(XAPI_ACTOR); } catch(e) { actor = { name: "Unknown" }; }
-
-  // Send an xAPI statement to our LRS endpoint
-  function sendStatement(verbId, verbDisplay, result) {
-    var stmt = {
-      actor: actor,
-      verb: { id: verbId, display: { "en-US": verbDisplay } },
-      object: {
-        objectType: "Activity",
-        id: XAPI_ACTIVITY_ID,
-        definition: { type: "http://adlnet.gov/expapi/activities/lesson" }
-      },
-      timestamp: new Date().toISOString()
-    };
-    if (result) stmt.result = result;
-
-    fetch(XAPI_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Authorization": XAPI_AUTH,
-        "Content-Type": "application/json",
-        "X-Experience-API-Version": "1.0.3"
-      },
-      body: JSON.stringify(stmt)
-    }).catch(function(e) { console.warn("[xAPI] Statement send failed:", e); });
-  }
-
-  // Send "initialized" statement
-  sendStatement("http://adlnet.gov/expapi/verbs/initialized", "initialized");
-
-  // Mock the Rustici SCORM driver API that Rise content expects
-  // Rise checks window.parent.IsLmsPresent to determine if it's in an LMS
-  window.IsLmsPresent = function() { return true; };
-  window.GetBookmark = function() { return ""; };
-  window.SetBookmark = function() { return "true"; };
-  window.GetDataChunk = function() { return ""; };
-  window.SetDataChunk = function() { return "true"; };
-  window.SetReachedEnd = function() {
-    // Rise calls this when the learner reaches the end of the content
-    sendStatement(
-      "http://adlnet.gov/expapi/verbs/completed",
-      "completed",
-      { completion: true, duration: "PT0S" }
-    );
-    return "true";
-  };
-  window.SetFailed = function() {
-    sendStatement(
-      "http://adlnet.gov/expapi/verbs/failed",
-      "failed",
-      { success: false }
-    );
-    return "true";
-  };
-  window.SetPassed = function() {
-    sendStatement(
-      "http://adlnet.gov/expapi/verbs/passed",
-      "passed",
-      { success: true }
-    );
-    return "true";
-  };
-  window.SetScore = function() { return "true"; };
-  window.GetScore = function() { return ""; };
-  window.GetStatus = function() { return "incomplete"; };
-  window.SetStatus = function() { return "true"; };
-  window.GetProgressMeasure = function() { return ""; };
-  window.SetProgressMeasure = function(val) {
-    // Rise calls this with progress 0-1
-    if (parseFloat(val) >= 1) {
-      sendStatement(
-        "http://adlnet.gov/expapi/verbs/completed",
-        "completed",
-        { completion: true }
-      );
-    }
-    return "true";
-  };
-  window.GetMaxTimeAllowed = function() { return ""; };
-  window.GetTimeLimitAction = function() { return ""; };
-  window.SetSessionTime = function() { return "true"; };
-  window.GetEntryMode = function() { return "ab-initio"; };
-  window.GetLessonMode = function() { return "normal"; };
-  window.GetTakingForCredit = function() { return "credit"; };
-  window.FlushData = function() { return "true"; };
-  window.ConcedeControl = function() {
-    // Rise calls this when exiting
-    sendStatement("http://adlnet.gov/expapi/verbs/terminated", "terminated");
-    return "true";
-  };
-
-  // Handle page unload — send terminated if not already sent
-  var terminated = false;
-  window.addEventListener('beforeunload', function() {
-    if (!terminated) {
-      terminated = true;
-      sendStatement("http://adlnet.gov/expapi/verbs/terminated", "terminated");
-    }
-  });
-})();
-</script>`;
-    }
+    // NOTE: The LMS API mock (IsLmsPresent, SetReachedEnd, etc.) is NOT injected here.
+    // It lives on the parent window (the React app) installed by ContentPackageViewer.
+    // Rise content in the blob iframe calls window.parent.IsLmsPresent() etc.
+    // xAPI statements are sent from the parent window (app origin) to avoid CORS issues.
 
     // Inject a script that intercepts dynamic resource loading (fetch, XHR, dynamic imports)
-    const rewriteScript = `${xapiParamScript}<script>
+    const rewriteScript = `<script>
 (function() {
   var BASE = ${JSON.stringify(proxyBase)};
 
