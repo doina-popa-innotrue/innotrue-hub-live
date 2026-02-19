@@ -226,48 +226,126 @@ Deno.serve(async (req: Request) => {
       }
     );
 
-    // For xAPI content (indexapi.html), inject the xAPI launch params into the page.
-    // When served via blob URL, window.location.search is empty, so Rise can't read
-    // the endpoint/auth/actor params. We simulate them by overriding URLSearchParams.
-    const isXapi = filePath.toLowerCase() === "indexapi.html" ||
-                   filePath.toLowerCase().endsWith("/indexapi.html");
+    // For xAPI content (scormcontent/index.html served directly, bypassing scormdriver),
+    // inject a lightweight xAPI reporter that:
+    // 1. Mocks the LMS API that Rise expects (IsLmsPresent, SetReachedEnd, etc.)
+    // 2. Sends completion/progress xAPI statements to our xapi-statements endpoint
     const xapiEndpoint = url.searchParams.get("endpoint") || "";
     const xapiAuth = url.searchParams.get("auth") || "";
     const xapiActor = url.searchParams.get("actor") || "";
     const xapiActivityId = url.searchParams.get("activity_id") || "";
 
     let xapiParamScript = "";
-    if (isXapi && xapiEndpoint) {
-      // Inject xAPI params so Rise JS can read them from the URL
-      // Rise reads params via new URLSearchParams(window.location.search)
-      // Since blob URL has no query string, we override the search property
+    if (xapiEndpoint) {
       xapiParamScript = `<script>
 (function() {
-  var params = new URLSearchParams();
-  params.set('endpoint', ${JSON.stringify(xapiEndpoint)});
-  params.set('auth', ${JSON.stringify(xapiAuth)});
-  params.set('actor', ${JSON.stringify(xapiActor)});
-  params.set('activity_id', ${JSON.stringify(xapiActivityId)});
-  // Override location.search so Rise xAPI code can read the params
-  Object.defineProperty(window, '__xapi_params', { value: params.toString() });
-  // Rise uses URLSearchParams on location.search — patch it
-  var origSearch = Object.getOwnPropertyDescriptor(Location.prototype, 'search') ||
-                   Object.getOwnPropertyDescriptor(window.location, 'search');
-  if (origSearch) {
-    Object.defineProperty(window.location, 'search', {
-      get: function() { return '?' + window.__xapi_params; },
-      configurable: true
-    });
+  // xAPI configuration injected by serve-content-package
+  var XAPI_ENDPOINT = ${JSON.stringify(xapiEndpoint)};
+  var XAPI_AUTH = ${JSON.stringify(xapiAuth)};
+  var XAPI_ACTOR = ${JSON.stringify(xapiActor)};
+  var XAPI_ACTIVITY_ID = ${JSON.stringify(xapiActivityId)};
+
+  // Parse actor JSON
+  var actor;
+  try { actor = JSON.parse(XAPI_ACTOR); } catch(e) { actor = { name: "Unknown" }; }
+
+  // Send an xAPI statement to our LRS endpoint
+  function sendStatement(verbId, verbDisplay, result) {
+    var stmt = {
+      actor: actor,
+      verb: { id: verbId, display: { "en-US": verbDisplay } },
+      object: {
+        objectType: "Activity",
+        id: XAPI_ACTIVITY_ID,
+        definition: { type: "http://adlnet.gov/expapi/activities/lesson" }
+      },
+      timestamp: new Date().toISOString()
+    };
+    if (result) stmt.result = result;
+
+    fetch(XAPI_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Authorization": XAPI_AUTH,
+        "Content-Type": "application/json",
+        "X-Experience-API-Version": "1.0.3"
+      },
+      body: JSON.stringify(stmt)
+    }).catch(function(e) { console.warn("[xAPI] Statement send failed:", e); });
   }
-  // Also patch URL constructor for Rise builds that parse the full URL
-  var origURL = window.URL;
-  window.URL = function(url, base) {
-    var u = new origURL(url, base);
-    return u;
+
+  // Send "initialized" statement
+  sendStatement("http://adlnet.gov/expapi/verbs/initialized", "initialized");
+
+  // Mock the Rustici SCORM driver API that Rise content expects
+  // Rise checks window.parent.IsLmsPresent to determine if it's in an LMS
+  window.IsLmsPresent = function() { return true; };
+  window.GetBookmark = function() { return ""; };
+  window.SetBookmark = function() { return "true"; };
+  window.GetDataChunk = function() { return ""; };
+  window.SetDataChunk = function() { return "true"; };
+  window.SetReachedEnd = function() {
+    // Rise calls this when the learner reaches the end of the content
+    sendStatement(
+      "http://adlnet.gov/expapi/verbs/completed",
+      "completed",
+      { completion: true, duration: "PT0S" }
+    );
+    return "true";
   };
-  window.URL.prototype = origURL.prototype;
-  window.URL.createObjectURL = origURL.createObjectURL;
-  window.URL.revokeObjectURL = origURL.revokeObjectURL;
+  window.SetFailed = function() {
+    sendStatement(
+      "http://adlnet.gov/expapi/verbs/failed",
+      "failed",
+      { success: false }
+    );
+    return "true";
+  };
+  window.SetPassed = function() {
+    sendStatement(
+      "http://adlnet.gov/expapi/verbs/passed",
+      "passed",
+      { success: true }
+    );
+    return "true";
+  };
+  window.SetScore = function() { return "true"; };
+  window.GetScore = function() { return ""; };
+  window.GetStatus = function() { return "incomplete"; };
+  window.SetStatus = function() { return "true"; };
+  window.GetProgressMeasure = function() { return ""; };
+  window.SetProgressMeasure = function(val) {
+    // Rise calls this with progress 0-1
+    if (parseFloat(val) >= 1) {
+      sendStatement(
+        "http://adlnet.gov/expapi/verbs/completed",
+        "completed",
+        { completion: true }
+      );
+    }
+    return "true";
+  };
+  window.GetMaxTimeAllowed = function() { return ""; };
+  window.GetTimeLimitAction = function() { return ""; };
+  window.SetSessionTime = function() { return "true"; };
+  window.GetEntryMode = function() { return "ab-initio"; };
+  window.GetLessonMode = function() { return "normal"; };
+  window.GetTakingForCredit = function() { return "credit"; };
+  window.FlushData = function() { return "true"; };
+  window.ConcedeControl = function() {
+    // Rise calls this when exiting
+    sendStatement("http://adlnet.gov/expapi/verbs/terminated", "terminated");
+    return "true";
+  };
+
+  // Handle page unload — send terminated if not already sent
+  var terminated = false;
+  window.addEventListener('beforeunload', function() {
+    if (!terminated) {
+      terminated = true;
+      sendStatement("http://adlnet.gov/expapi/verbs/terminated", "terminated");
+    }
+  });
 })();
 </script>`;
     }
