@@ -107,7 +107,7 @@ Deno.serve(async (req: Request) => {
     return errorResponse.badRequest("Failed to read ZIP file — ensure it's a valid ZIP archive", cors);
   }
 
-  // Check for index.html
+  // Check for index.html (required for all Rise exports)
   const fileNames = Object.keys(zip.files);
   const hasIndexHtml = fileNames.some(
     (name) => name === "index.html" || name.endsWith("/index.html"),
@@ -115,10 +115,16 @@ Deno.serve(async (req: Request) => {
 
   if (!hasIndexHtml) {
     return errorResponse.badRequest(
-      "ZIP must contain index.html at the root level. This is required for Rise web exports.",
+      "ZIP must contain index.html at the root level. This is required for Rise exports.",
       cors,
     );
   }
+
+  // Detect xAPI export: Rise xAPI exports contain "indexapi.html" at the same level as index.html
+  const hasIndexApiHtml = fileNames.some(
+    (name) => name === "indexapi.html" || name.endsWith("/indexapi.html"),
+  );
+  const contentPackageType = hasIndexApiHtml ? "xapi" : "web";
 
   // Determine the root prefix (Rise exports sometimes have a wrapper folder)
   let rootPrefix = "";
@@ -199,10 +205,13 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // --- Update module with new content package path ---
+  // --- Update module with new content package path and type ---
   const { error: updateError } = await serviceClient
     .from("program_modules")
-    .update({ content_package_path: folderPath })
+    .update({
+      content_package_path: folderPath,
+      content_package_type: contentPackageType,
+    })
     .eq("id", moduleId);
 
   if (updateError) {
@@ -215,6 +224,7 @@ Deno.serve(async (req: Request) => {
   return successResponse.ok(
     {
       content_package_path: folderPath,
+      content_package_type: contentPackageType,
       files_uploaded: uploadCount,
       errors: uploadErrors.length > 0 ? uploadErrors : undefined,
     },

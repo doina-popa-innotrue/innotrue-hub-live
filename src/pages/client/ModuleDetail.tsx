@@ -79,6 +79,7 @@ interface Module {
   plan_id?: string | null;
   min_plan_tier?: number;
   content_package_path?: string | null;
+  content_package_type?: "web" | "xapi" | null;
   progress?: {
     id: string;
     status: string;
@@ -186,7 +187,7 @@ export default function ModuleDetail() {
 
       const { data: moduleData } = await supabase
         .from("program_modules")
-        .select("*, plan_id, min_plan_tier, content_package_path")
+        .select("*, plan_id, min_plan_tier, content_package_path, content_package_type")
         .eq("id", moduleId)
         .single();
 
@@ -679,6 +680,11 @@ export default function ModuleDetail() {
                 moduleId={module.id}
                 accessToken={accessToken}
                 title={module.title}
+                contentPackageType={module.content_package_type === "xapi" ? "xapi" : "web"}
+                onXapiComplete={() => {
+                  // Refresh module data to reflect auto-completed progress
+                  window.location.reload();
+                }}
               />
             </CardContent>
           </Card>

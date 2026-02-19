@@ -226,8 +226,53 @@ Deno.serve(async (req: Request) => {
       }
     );
 
+    // For xAPI content (indexapi.html), inject the xAPI launch params into the page.
+    // When served via blob URL, window.location.search is empty, so Rise can't read
+    // the endpoint/auth/actor params. We simulate them by overriding URLSearchParams.
+    const isXapi = filePath === "indexapi.html" || filePath.endsWith("/indexapi.html");
+    const xapiEndpoint = url.searchParams.get("endpoint") || "";
+    const xapiAuth = url.searchParams.get("auth") || "";
+    const xapiActor = url.searchParams.get("actor") || "";
+    const xapiActivityId = url.searchParams.get("activity_id") || "";
+
+    let xapiParamScript = "";
+    if (isXapi && xapiEndpoint) {
+      // Inject xAPI params so Rise JS can read them from the URL
+      // Rise reads params via new URLSearchParams(window.location.search)
+      // Since blob URL has no query string, we override the search property
+      xapiParamScript = `<script>
+(function() {
+  var params = new URLSearchParams();
+  params.set('endpoint', ${JSON.stringify(xapiEndpoint)});
+  params.set('auth', ${JSON.stringify(xapiAuth)});
+  params.set('actor', ${JSON.stringify(xapiActor)});
+  params.set('activity_id', ${JSON.stringify(xapiActivityId)});
+  // Override location.search so Rise xAPI code can read the params
+  Object.defineProperty(window, '__xapi_params', { value: params.toString() });
+  // Rise uses URLSearchParams on location.search — patch it
+  var origSearch = Object.getOwnPropertyDescriptor(Location.prototype, 'search') ||
+                   Object.getOwnPropertyDescriptor(window.location, 'search');
+  if (origSearch) {
+    Object.defineProperty(window.location, 'search', {
+      get: function() { return '?' + window.__xapi_params; },
+      configurable: true
+    });
+  }
+  // Also patch URL constructor for Rise builds that parse the full URL
+  var origURL = window.URL;
+  window.URL = function(url, base) {
+    var u = new origURL(url, base);
+    return u;
+  };
+  window.URL.prototype = origURL.prototype;
+  window.URL.createObjectURL = origURL.createObjectURL;
+  window.URL.revokeObjectURL = origURL.revokeObjectURL;
+})();
+</script>`;
+    }
+
     // Inject a script that intercepts dynamic resource loading (fetch, XHR, dynamic imports)
-    const rewriteScript = `<script>
+    const rewriteScript = `${xapiParamScript}<script>
 (function() {
   var BASE = ${JSON.stringify(proxyBase)};
 

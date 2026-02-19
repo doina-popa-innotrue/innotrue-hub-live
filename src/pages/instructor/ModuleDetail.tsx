@@ -54,6 +54,7 @@ interface Module {
   program_id: string;
   order_index: number;
   content_package_path?: string | null;
+  content_package_type?: "web" | "xapi" | null;
 }
 
 interface EnrolledClient {
@@ -361,6 +362,7 @@ export default function InstructorModuleDetail() {
                     moduleId={module.id}
                     accessToken={accessToken}
                     title={module.title}
+                    contentPackageType={module.content_package_type === "xapi" ? "xapi" : "web"}
                   />
                 )}
               </CardContent>
