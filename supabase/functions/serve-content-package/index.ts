@@ -259,18 +259,18 @@ Deno.serve(async (req: Request) => {
       html = `${rewriteScript}${html}`;
     }
 
-    return new Response(html, {
-      status: 200,
-      headers: {
-        ...cors,
-        "Content-Type": contentType,
-        "Cache-Control": "private, max-age=300", // 5 min cache for HTML
-        "X-Content-Type-Options": "nosniff",
-        // Allow iframe embedding from the parent app
-        "Content-Security-Policy": "frame-ancestors *",
-        "X-Frame-Options": "ALLOWALL",
-      },
-    });
+    // Encode as bytes — Supabase Edge Runtime overrides Content-Type to
+    // text/plain when the Response body is a string. Using Uint8Array avoids
+    // the automatic content-type detection entirely.
+    const htmlBytes = new TextEncoder().encode(html);
+    const htmlHeaders = new Headers(cors);
+    htmlHeaders.set("Content-Type", contentType);
+    htmlHeaders.set("Cache-Control", "private, max-age=300");
+    htmlHeaders.set("X-Content-Type-Options", "nosniff");
+    htmlHeaders.set("Content-Security-Policy", "frame-ancestors *");
+    htmlHeaders.set("X-Frame-Options", "ALLOWALL");
+
+    return new Response(htmlBytes, { status: 200, headers: htmlHeaders });
   }
 
   // For CSS files, rewrite url() references to route through this proxy
@@ -289,25 +289,20 @@ Deno.serve(async (req: Request) => {
       }
     );
 
-    return new Response(css, {
-      status: 200,
-      headers: {
-        ...cors,
-        "Content-Type": contentType,
-        "Cache-Control": "public, max-age=86400, immutable",
-        "X-Content-Type-Options": "nosniff",
-      },
-    });
+    const cssBytes = new TextEncoder().encode(css);
+    const cssHeaders = new Headers(cors);
+    cssHeaders.set("Content-Type", contentType);
+    cssHeaders.set("Cache-Control", "public, max-age=86400, immutable");
+    cssHeaders.set("X-Content-Type-Options", "nosniff");
+
+    return new Response(cssBytes, { status: 200, headers: cssHeaders });
   }
 
   // For all other assets (JS, images, fonts, etc.), serve with aggressive caching
-  return new Response(fileData, {
-    status: 200,
-    headers: {
-      ...cors,
-      "Content-Type": contentType,
-      "Cache-Control": "public, max-age=86400, immutable", // 24h cache for assets
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
+  const assetHeaders = new Headers(cors);
+  assetHeaders.set("Content-Type", contentType);
+  assetHeaders.set("Cache-Control", "public, max-age=86400, immutable");
+  assetHeaders.set("X-Content-Type-Options", "nosniff");
+
+  return new Response(fileData, { status: 200, headers: assetHeaders });
 });

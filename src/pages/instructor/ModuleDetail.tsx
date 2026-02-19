@@ -33,6 +33,7 @@ import ModuleClientContentManager from "@/components/admin/ModuleClientContentMa
 import { InlineClientContentEditor } from "@/components/modules/InlineClientContentEditor";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { ContentPackageViewer } from "@/components/modules/ContentPackageViewer";
 
 interface ModuleLink {
   name: string;
@@ -356,13 +357,10 @@ export default function InstructorModuleDetail() {
               </CardHeader>
               <CardContent>
                 {accessToken && (
-                  <iframe
-                    src={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-content-package?module=${module.id}&path=index.html&token=${accessToken}`}
-                    className="w-full border-0 rounded-lg"
-                    style={{ minHeight: "75vh" }}
+                  <ContentPackageViewer
+                    moduleId={module.id}
+                    accessToken={accessToken}
                     title={module.title}
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                    allow="autoplay; fullscreen"
                   />
                 )}
               </CardContent>

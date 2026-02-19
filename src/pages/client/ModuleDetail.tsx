@@ -35,6 +35,7 @@ import { ModuleSelfAssessment } from "@/components/modules/ModuleSelfAssessment"
 import { ModuleSessionDisplay } from "@/components/modules/ModuleSessionDisplay";
 import { ModuleScenariosSection } from "@/components/modules/ModuleScenariosSection";
 import { AssignedScenarioItem } from "@/components/modules/AssignedScenarioItem";
+import { ContentPackageViewer } from "@/components/modules/ContentPackageViewer";
 
 import {
   Breadcrumb,
@@ -674,13 +675,10 @@ export default function ModuleDetail() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <iframe
-                src={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-content-package?module=${module.id}&path=index.html&token=${accessToken}`}
-                className="w-full border-0 rounded-lg"
-                style={{ minHeight: "75vh" }}
+              <ContentPackageViewer
+                moduleId={module.id}
+                accessToken={accessToken}
                 title={module.title}
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                allow="autoplay; fullscreen"
               />
             </CardContent>
           </Card>
