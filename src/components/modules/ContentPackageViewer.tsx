@@ -10,25 +10,31 @@ interface ContentPackageViewerProps {
 /**
  * Renders a Rise/web content package inside an iframe.
  *
- * Supabase Edge Functions rewrite `Content-Type: text/html` to `text/plain`
- * on the default domain (gateway-level enforcement). To work around this we
- * fetch the HTML via JS (where Content-Type doesn't affect rendering) and
- * inject it into the iframe via `srcdoc`.
+ * Supabase Edge Functions rewrite Content-Type: text/html → text/plain
+ * on the default domain (gateway-level enforcement). Direct iframe src
+ * to the edge function renders raw HTML source as text.
+ *
+ * Workaround: fetch the HTML via JS, create a Blob URL with the correct
+ * MIME type, and use that as the iframe src. The Blob URL:
+ *  - Has its own origin (not subject to parent CSP)
+ *  - Correctly serves text/html so the browser renders it
+ *  - Allows the Rise JS to load sub-resources from the proxy
  */
 export function ContentPackageViewer({
   moduleId,
   accessToken,
   title,
 }: ContentPackageViewerProps) {
-  const [html, setHtml] = useState<string | null>(null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     let cancelled = false;
+    let objectUrl: string | null = null;
 
-    const fetchHtml = async () => {
+    const fetchContent = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -41,9 +47,12 @@ export function ContentPackageViewer({
           throw new Error(errText || `HTTP ${resp.status}`);
         }
 
-        const text = await resp.text();
+        const html = await resp.text();
+
         if (!cancelled) {
-          setHtml(text);
+          const blob = new Blob([html], { type: "text/html" });
+          objectUrl = URL.createObjectURL(blob);
+          setBlobUrl(objectUrl);
         }
       } catch (err: unknown) {
         if (!cancelled) {
@@ -58,12 +67,24 @@ export function ContentPackageViewer({
       }
     };
 
-    fetchHtml();
+    fetchContent();
 
     return () => {
       cancelled = true;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
     };
   }, [moduleId, accessToken]);
+
+  // Clean up blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [blobUrl]);
 
   if (loading) {
     return (
@@ -85,12 +106,12 @@ export function ContentPackageViewer({
     );
   }
 
-  if (!html) return null;
+  if (!blobUrl) return null;
 
   return (
     <iframe
       ref={iframeRef}
-      srcDoc={html}
+      src={blobUrl}
       className="w-full border-0 rounded-lg"
       style={{ minHeight: "75vh" }}
       title={title}
