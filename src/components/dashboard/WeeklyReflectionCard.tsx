@@ -12,8 +12,12 @@ import {
   PenLine,
   Clock,
   FileText,
+  AlertCircle,
+  Zap,
 } from "lucide-react";
 import { useReflectionPrompt } from "@/hooks/useReflectionPrompt";
+import { useConsumableFeature } from "@/hooks/useConsumableFeature";
+import { useIsMaxPlan } from "@/hooks/useIsMaxPlan";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -23,6 +27,15 @@ import { differenceInDays, format } from "date-fns";
 export function WeeklyReflectionCard() {
   const { prompt, isLoading, isGenerating, error, generatePrompt, answerPrompt } =
     useReflectionPrompt();
+  const {
+    canConsume,
+    consume,
+    remaining,
+    isConsuming,
+    effectiveCost,
+    isLoading: creditsLoading,
+  } = useConsumableFeature("ai_insights");
+  const { isMaxPlan } = useIsMaxPlan();
   const [isExpanded, setIsExpanded] = useState(false);
   const [reflectionContent, setReflectionContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -45,6 +58,10 @@ export function WeeklyReflectionCard() {
   }, [user]);
 
   const handleGeneratePrompt = async () => {
+    // Consume a credit before generating
+    const success = await consume();
+    if (!success) return;
+
     await generatePrompt("weekly", true); // Force generate new prompt
   };
 
@@ -107,15 +124,39 @@ export function WeeklyReflectionCard() {
 
   // Error state
   if (error) {
+    const isCreditsError =
+      error.toLowerCase().includes("credit") || error.toLowerCase().includes("usage limit");
+    const isRateLimit =
+      error.toLowerCase().includes("busy") || error.toLowerCase().includes("rate");
+
     return (
       <Card className="border-dashed border-destructive/30 bg-destructive/5">
         <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-destructive">{error}</span>
-            <Button variant="ghost" size="sm" onClick={handleGeneratePrompt}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry
-            </Button>
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-2">
+              <p className="text-sm text-destructive">{error}</p>
+              <div className="flex gap-2">
+                {isRateLimit && (
+                  <Button variant="outline" size="sm" onClick={handleGeneratePrompt} disabled={isGenerating || isConsuming}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
+                )}
+                {isCreditsError && !isMaxPlan && (
+                  <Button variant="outline" size="sm" onClick={() => navigate("/subscription")}>
+                    <Zap className="h-4 w-4 mr-2" />
+                    Upgrade Plan
+                  </Button>
+                )}
+                {!isRateLimit && !isCreditsError && (
+                  <Button variant="outline" size="sm" onClick={handleGeneratePrompt} disabled={isGenerating || isConsuming}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -140,6 +181,8 @@ export function WeeklyReflectionCard() {
 
   // No prompt yet - offer to generate one
   if (!prompt) {
+    const generateDisabled = isGenerating || isConsuming || !canConsume;
+
     return (
       <Card className="border-dashed border-secondary/30 dark:border-secondary/20 bg-gradient-to-br from-secondary/5 to-secondary/10 dark:from-secondary/10 dark:to-secondary/15 hover:border-secondary/50 transition-colors">
         <CardContent className="pt-6 space-y-4">
@@ -153,25 +196,44 @@ export function WeeklyReflectionCard() {
                 <p className="text-sm text-muted-foreground">
                   Get a personalized prompt based on your recent activity
                 </p>
+                {!canConsume && !creditsLoading && (
+                  <p className="text-xs text-destructive mt-1">
+                    {isMaxPlan
+                      ? "No credits remaining. Contact your administrator."
+                      : "No credits remaining."}
+                    {!isMaxPlan && (
+                      <Link to="/subscription" className="ml-1 underline font-medium">
+                        Upgrade
+                      </Link>
+                    )}
+                  </p>
+                )}
               </div>
             </div>
-            <Button
-              onClick={handleGeneratePrompt}
-              disabled={isGenerating}
-              className="gap-2 w-full sm:w-auto bg-secondary hover:bg-secondary/90 text-secondary-foreground shrink-0"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  Generate Prompt
-                </>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <Button
+                onClick={handleGeneratePrompt}
+                disabled={generateDisabled}
+                className="gap-2 w-full sm:w-auto bg-secondary hover:bg-secondary/90 text-secondary-foreground"
+              >
+                {isGenerating || isConsuming ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Generate Prompt
+                  </>
+                )}
+              </Button>
+              {remaining !== null && canConsume && (
+                <span className="text-xs text-muted-foreground">
+                  {remaining} credit{remaining !== 1 ? "s" : ""} remaining
+                </span>
               )}
-            </Button>
+            </div>
           </div>
           <ReflectionSummary />
         </CardContent>
@@ -224,11 +286,11 @@ export function WeeklyReflectionCard() {
             </Button>
             <Button
               onClick={handleGeneratePrompt}
-              disabled={isGenerating}
+              disabled={isGenerating || isConsuming || !canConsume}
               variant="outline"
               className="flex-1 gap-2"
             >
-              {isGenerating ? (
+              {isGenerating || isConsuming ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Generating...

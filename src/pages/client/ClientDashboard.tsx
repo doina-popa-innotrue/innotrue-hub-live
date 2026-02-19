@@ -998,7 +998,7 @@ export default function ClientDashboard() {
       )}
 
       {/* Section 10: Weekly Reflection */}
-      <WeeklyReflectionCard />
+      {hasFeature("ai_insights") && <WeeklyReflectionCard />}
 
       {/* Section 11: Recently Graded Assignments */}
       <RecentGradedAssignmentsWidget />

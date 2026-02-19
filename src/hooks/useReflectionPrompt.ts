@@ -99,7 +99,26 @@ export function useReflectionPrompt(): UseReflectionPromptReturn {
 
       if (invokeError) {
         console.error("Error generating prompt:", invokeError);
-        setError("Failed to generate reflection prompt");
+        // Parse the error context for a specific message from the edge function
+        const errorMessage =
+          (invokeError as any)?.context?.body
+            ? await (invokeError as any).context.body.text?.().catch(() => null)
+            : null;
+
+        let parsed: { error?: string } | null = null;
+        try {
+          parsed = errorMessage ? JSON.parse(errorMessage) : null;
+        } catch {
+          // not JSON
+        }
+
+        setError(parsed?.error || "Failed to generate reflection prompt. Please try again.");
+        return;
+      }
+
+      if (data?.error) {
+        // Edge function returned a structured error in the body (e.g. rate limit, credits)
+        setError(data.error);
         return;
       }
 
@@ -108,7 +127,7 @@ export function useReflectionPrompt(): UseReflectionPromptReturn {
       }
     } catch (err) {
       console.error("Error in generatePrompt:", err);
-      setError("Failed to generate reflection prompt");
+      setError("Failed to generate reflection prompt. Please try again.");
     } finally {
       setIsGenerating(false);
     }

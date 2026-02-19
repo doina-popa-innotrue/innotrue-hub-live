@@ -220,7 +220,15 @@ ${context.recentReflections.map(r => `- "${r.content}"`).join('\n') || 'No recen
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('AI API error:', errorText);
+      console.error('AI API error:', aiResponse.status, errorText);
+
+      if (aiResponse.status === 429) {
+        return errorResponse.rateLimit("AI service is temporarily busy. Please try again in a few minutes.", cors);
+      }
+      if (aiResponse.status === 402) {
+        return errorResponse.badRequest("AI credits exhausted. Please upgrade your plan or purchase additional credits.", cors);
+      }
+
       throw new Error(`AI API error: ${aiResponse.status}`);
     }
 
