@@ -62,7 +62,7 @@ export function TransferAssignmentDialog({
   const [loadingStaff, setLoadingStaff] = useState(false);
 
   const isBulk = assignments.length > 1;
-  const firstAssignment = assignments[0];
+  const firstAssignment = assignments[0] as TransferAssignment | undefined;
 
   useEffect(() => {
     if (open && firstAssignment) {
@@ -211,10 +211,10 @@ export function TransferAssignmentDialog({
           p_type_key: "assignment_submitted",
           p_title: isBulk
             ? `${assignments.length} assignments transferred to you`
-            : `Assignment transferred: ${firstAssignment.assignment_type_name}`,
+            : `Assignment transferred: ${firstAssignment?.assignment_type_name || "Assignment"}`,
           p_message: isBulk
             ? `${assignments.length} pending assignments have been transferred to your queue.${note ? ` Note: ${note}` : ""}`
-            : `${firstAssignment.client_name}'s ${firstAssignment.assignment_type_name} (${firstAssignment.module_title}) has been transferred to you.${note ? ` Note: ${note}` : ""}`,
+            : `${firstAssignment?.client_name || "Client"}'s ${firstAssignment?.assignment_type_name || "assignment"} (${firstAssignment?.module_title || "module"}) has been transferred to you.${note ? ` Note: ${note}` : ""}`,
           p_link: "/teaching/assignments",
           p_metadata: {
             transfer: true,
@@ -272,7 +272,7 @@ export function TransferAssignmentDialog({
                   From {[...new Set(assignments.map((a) => a.program_name))].join(", ")}
                 </p>
               </div>
-            ) : (
+            ) : firstAssignment ? (
               <>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{firstAssignment.assignment_type_name}</Badge>
@@ -285,7 +285,7 @@ export function TransferAssignmentDialog({
                   </span>
                 </p>
               </>
-            )}
+            ) : null}
           </div>
 
           {/* Target staff selection */}
