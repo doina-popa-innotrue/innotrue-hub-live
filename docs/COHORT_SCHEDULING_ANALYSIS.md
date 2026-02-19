@@ -244,10 +244,10 @@ No `enrollment_codes` table exists. Enrollment is purely admin-managed (insertin
 | # | Gap | Impact | Effort |
 |---|-----|--------|--------|
 | G7 | **No session notes/recap** — no way to add post-session summary, recording link, or action items. | Lost session value | 3 days |
-| **GT1** | **No instructor/coach teaching UI for cohorts** — G1-G7 built DB + admin/client UI but the teaching workflow was never implemented. Instructors and coaches cannot see cohort sessions on their dashboard, browse assigned cohorts, mark attendance, or edit recaps from the teaching interface. | Instructors need admin access to manage cohorts | **~1 week** |
+| ~~**GT1**~~ | ~~**No instructor/coach teaching UI for cohorts**~~ ✅ DONE (2026-02-23) — `/teaching/cohorts` list + detail page, RLS fixes, dashboard integration, StudentDetail cohort card | ~~Instructors need admin access~~ | ~~**~1 week**~~ |
 | G8 | **No enrollment codes** — self-enrollment via link/code doesn't exist. All enrollment is admin-managed. | Scaling friction | 2-3 days (Phase 5) |
-| G9 | **No cohort analytics** — no admin dashboard for attendance %, completion %, at-risk students. | Blind spots | 1 week |
-| G10 | **No session-linked homework** — can't tie assignments to specific sessions with deadlines. | Missed learning reinforcement | 3-5 days |
+| ~~G9~~ | ~~**No cohort analytics**~~ ✅ DONE (2026-02-23) — `CohortAnalytics.tsx` admin dashboard | ~~Blind spots~~ | ~~1 week~~ |
+| ~~G10~~ | ~~**No session-linked homework**~~ ✅ DONE (2026-02-23) — `cohort_session_id` on `development_items`, `SessionHomework.tsx` | ~~Missed reinforcement~~ | ~~3-5 days~~ |
 
 ---
 
@@ -390,9 +390,9 @@ ALTER TABLE cohort_sessions
 
 ---
 
-## GT1: Instructor/Coach Cohort Teaching Workflow (HIGH PRIORITY)
+## GT1: Instructor/Coach Cohort Teaching Workflow — ✅ DONE (2026-02-23)
 
-> **Added 2026-02-19.** G1-G7 built the database layer (migrations, RLS, tables) and admin + client UI, but the instructor/coach teaching workflow was never implemented. Instructors and coaches currently need admin access to manage attendance, edit recaps, or even see their cohort sessions. Full implementation plan in `.claude/plans/proud-jumping-fountain.md`.
+> **Added 2026-02-19. Completed 2026-02-23 (commit `ed0254b`).** All 6 phases implemented: RLS migration (4 policies), `/teaching/cohorts` list page, `/teaching/cohorts/:cohortId` detail page (attendance + recap + homework), dashboard integration, sidebar + routes, StudentDetail cohort card. Both instructors and coaches have full symmetric access.
 
 ### Gaps (affects BOTH instructors AND coaches)
 

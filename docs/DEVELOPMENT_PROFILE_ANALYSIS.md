@@ -1,6 +1,6 @@
 # Development Profile & Assessment-Driven Guided Paths
 
-> **Status:** DP1-DP4 ✅ DONE (2026-02-19, commit `c6b2e11`). DP5-DP7 pending. Approved for development (2026-02-18).
+> **Status:** DP1-DP4 ✅ DONE (2026-02-19, commit `c6b2e11`). DP5 ✅ DONE (2026-02-23, commit `ed0254b`). DP6-DP7 pending. Approved for development (2026-02-18).
 >
 > **Scope:** Connect the platform's three assessment systems, development items, goals, and guided paths into a unified development journey — so clients can identify gaps, track progress, and follow structured paths (e.g., CTA review board preparation) with realistic timelines.
 
@@ -317,12 +317,14 @@ ALTER TABLE goals ADD COLUMN instantiation_id UUID REFERENCES guided_path_instan
 
 ---
 
-### Phase 5: Module ↔ Assessment Domain Mapping (2-3 days)
+### Phase 5: Module ↔ Assessment Domain Mapping (2-3 days) — ✅ DONE (2026-02-23)
+
+> **Implemented:** Migration `20260223100002_module_domain_mapping.sql` + `ModuleDomainMapper.tsx` admin component + "Domains" tab in admin module editor. Commit `ed0254b`.
 
 **Why:** Completing a module should inform the development profile. "You completed Coaching Ethics → your Ethical Practice domain is likely improving."
 
 **What:**
-- Admin can tag modules with capability assessment domains
+- ✅ Admin can tag modules with capability assessment domains (via "Domains" tab in module editor)
 - When a module is completed, the Development Profile shows it as evidence for the mapped domain
 - Does NOT auto-update assessment scores (that requires re-assessment) — but shows "Module completed, re-assessment recommended"
 
@@ -338,9 +340,9 @@ CREATE TABLE module_domain_mappings (
 ```
 
 **UI changes:**
-- Admin module form: multi-select "Related Assessment Domains" dropdown
-- Development Profile: "Evidence" column showing completed modules per domain
-- Module completion: toast/badge "This module relates to [Domain]. Consider re-assessing."
+- ✅ Admin module form: `ModuleDomainMapper` component with domain badges, add/remove, relevance selector (primary/secondary)
+- Development Profile: "Evidence" column showing completed modules per domain (future enhancement)
+- Module completion: toast/badge "This module relates to [Domain]. Consider re-assessing." (future enhancement)
 
 ---
 
