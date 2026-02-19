@@ -252,8 +252,8 @@ function buildLaunchUrl(
   const activityId = `${supabaseUrl}/modules/${moduleId}`;
 
   // Content is served from private storage via serve-content-package proxy
-  // The xAPI export uses indexapi.html as its entry point
-  const contentUrl = `${supabaseUrl}/functions/v1/serve-content-package?module=${moduleId}&path=indexapi.html`;
+  // Rise xAPI (Tin Can) exports use scormdriver/indexAPI.html as the launch file
+  const contentUrl = `${supabaseUrl}/functions/v1/serve-content-package?module=${moduleId}&path=scormdriver/indexAPI.html`;
 
   // Build the launch URL with all xAPI query params
   const params = new URLSearchParams({

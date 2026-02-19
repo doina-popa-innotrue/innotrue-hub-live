@@ -229,7 +229,8 @@ Deno.serve(async (req: Request) => {
     // For xAPI content (indexapi.html), inject the xAPI launch params into the page.
     // When served via blob URL, window.location.search is empty, so Rise can't read
     // the endpoint/auth/actor params. We simulate them by overriding URLSearchParams.
-    const isXapi = filePath === "indexapi.html" || filePath.endsWith("/indexapi.html");
+    const isXapi = filePath.toLowerCase() === "indexapi.html" ||
+                   filePath.toLowerCase().endsWith("/indexapi.html");
     const xapiEndpoint = url.searchParams.get("endpoint") || "";
     const xapiAuth = url.searchParams.get("auth") || "";
     const xapiActor = url.searchParams.get("actor") || "";

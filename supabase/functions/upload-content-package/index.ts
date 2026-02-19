@@ -107,32 +107,49 @@ Deno.serve(async (req: Request) => {
     return errorResponse.badRequest("Failed to read ZIP file — ensure it's a valid ZIP archive", cors);
   }
 
-  // Check for index.html (required for all Rise exports)
+  // Detect export type and find entry point
   const fileNames = Object.keys(zip.files);
+
+  // xAPI (Tin Can) exports have scormdriver/indexAPI.html + tincan.xml
+  const hasIndexApiHtml = fileNames.some(
+    (name) => name.endsWith("/indexAPI.html") || name === "indexAPI.html" ||
+              name.endsWith("/indexapi.html") || name === "indexapi.html",
+  );
+  const hasTincanXml = fileNames.some(
+    (name) => name === "tincan.xml" || name.endsWith("/tincan.xml"),
+  );
+  const contentPackageType = (hasIndexApiHtml && hasTincanXml) ? "xapi" : "web";
+
+  // Web exports require index.html at the root; xAPI exports have it inside scormcontent/
   const hasIndexHtml = fileNames.some(
     (name) => name === "index.html" || name.endsWith("/index.html"),
   );
 
-  if (!hasIndexHtml) {
+  if (!hasIndexHtml && !hasIndexApiHtml) {
     return errorResponse.badRequest(
-      "ZIP must contain index.html at the root level. This is required for Rise exports.",
+      "ZIP must contain index.html (Web export) or scormdriver/indexAPI.html (xAPI export).",
       cors,
     );
   }
 
-  // Detect xAPI export: Rise xAPI exports contain "indexapi.html" at the same level as index.html
-  const hasIndexApiHtml = fileNames.some(
-    (name) => name === "indexapi.html" || name.endsWith("/indexapi.html"),
-  );
-  const contentPackageType = hasIndexApiHtml ? "xapi" : "web";
-
-  // Determine the root prefix (Rise exports sometimes have a wrapper folder)
+  // Determine the root prefix (Rise exports have a wrapper folder like "course-name-xapi-hAVi70LN/")
+  // For xAPI: use tincan.xml location as the root marker (it sits at the package root)
+  // For Web: use index.html location
   let rootPrefix = "";
-  const indexPath = fileNames.find(
-    (name) => name === "index.html" || name.endsWith("/index.html"),
-  )!;
-  if (indexPath !== "index.html") {
-    rootPrefix = indexPath.substring(0, indexPath.lastIndexOf("/") + 1);
+  if (contentPackageType === "xapi") {
+    const tincanPath = fileNames.find(
+      (name) => name === "tincan.xml" || name.endsWith("/tincan.xml"),
+    );
+    if (tincanPath && tincanPath !== "tincan.xml") {
+      rootPrefix = tincanPath.substring(0, tincanPath.lastIndexOf("/") + 1);
+    }
+  } else {
+    const indexPath = fileNames.find(
+      (name) => name === "index.html" || name.endsWith("/index.html"),
+    )!;
+    if (indexPath !== "index.html") {
+      rootPrefix = indexPath.substring(0, indexPath.lastIndexOf("/") + 1);
+    }
   }
 
   // Generate unique folder path
