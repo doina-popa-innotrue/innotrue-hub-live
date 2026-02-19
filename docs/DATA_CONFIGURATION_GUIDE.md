@@ -1347,6 +1347,8 @@ In addition to the 3-tier module hierarchy, instructors can be assigned at the *
 - `cohort_sessions.instructor_id` — instructor for a specific session (FK to `auth.users`, overrides cohort lead)
 - Instructor names are displayed on `CohortSessionCard` components
 - Instructors and coaches can mark attendance via `cohort_session_attendance` (G4) and edit session recaps (G7)
+- **GT1 RLS (2026-02-23):** Symmetric instructor/coach access — coach SELECT on `program_cohorts`, UPDATE on `cohort_sessions` for both roles, coach ALL on `cohort_session_attendance`. Teaching UI: `/teaching/cohorts` list + `/teaching/cohorts/:cohortId` detail page.
+- **Smart notification routing (NTH-2):** `notify-assignment-submitted` checks `enrollment_module_staff` first (personal instructor priority); falls back to broadcast to all module + program instructors/coaches
 
 **Key resolution hook:** `useModuleSchedulingUrl` resolves Cal.com booking URLs by walking the 3-tier hierarchy (enrollment_module_staff → module_instructors → program_instructors) to find the correct instructor's Cal.com link for session booking.
 
@@ -1635,3 +1637,7 @@ These tables will be needed as the enhancement roadmap (ISSUES_AND_IMPROVEMENTS.
 | xAPI sessions | `xapi_sessions` table | Per-launch session with auth token, status lifecycle, bookmark, suspend_data |
 | xAPI statements | `xapi_statements` table | Stored xAPI statements with verb/object/result fields + raw JSONB |
 | xAPI resume | `xapi_sessions.bookmark`, `xapi_sessions.suspend_data` | Saved learner position and course state for Rise content resume |
+| GT1 Teaching RLS | 4 RLS policies on `program_cohorts`, `cohort_sessions`, `cohort_session_attendance` | Symmetric instructor/coach access for cohort teaching workflow |
+| G10 Session homework | `development_items.cohort_session_id` (UUID FK to `cohort_sessions`) | Links development items to specific cohort sessions as homework |
+| DP5 Module↔domain mapping | `module_domain_mappings` table (module_id, capability_domain_id, relevance) | Maps modules to assessment domains for evidence tracking |
+| NTH-4 Personal instructor | (no schema change — queries `enrollment_module_staff`) | `ModuleTeamContact` shows personal instructor to clients with highlighted styling |
