@@ -1,5 +1,27 @@
 # Completed Work — Detailed History
 
+## AI Reflection Prompt — Credit Gating & Error Handling Fix (2026-02-19)
+
+Fixed AI reflection prompt failing silently for clients. Root cause: no feature gating, no credit consumption, generic error messages. Commit `96a2409`, 4 files, 117 insertions, 28 deletions. Edge function deployed to prod + preprod.
+
+**Edge function (`generate-reflection-prompt/index.ts`):**
+- Added specific HTTP responses for AI API rate limits (429 → `errorResponse.rateLimit()`) and credit exhaustion (402 → `errorResponse.badRequest()`) instead of throwing a generic server error
+
+**Hook (`useReflectionPrompt.ts`):**
+- Parses error response body from edge function via `invokeError.context.body.text()` to extract specific error messages
+- Checks `data.error` for structured error responses returned in non-error HTTP status
+- Shows specific messages (rate limit, credits, etc.) instead of generic "Failed to generate reflection prompt"
+
+**Card component (`WeeklyReflectionCard.tsx`):**
+- Added `useConsumableFeature("ai_insights")` — calls `consume()` before `generatePrompt()`, matching `DecisionInsights` pattern
+- Generate buttons disabled when `canConsume` is false (no credits remaining)
+- Shows "X credits remaining" below generate button when credits are available
+- No-credits state: "No credits remaining" with Upgrade link (or "Contact your administrator" for max-plan users via `useIsMaxPlan`)
+- Error state: icon + specific message + context-appropriate action (Retry for rate limits, Upgrade Plan for credit exhaustion, Retry for generic errors)
+
+**Dashboard (`ClientDashboard.tsx`):**
+- `WeeklyReflectionCard` gated behind `hasFeature("ai_insights")` — hidden entirely when user's plan lacks the feature
+
 ## Content Delivery Tier 2 — Rise xAPI Integration (2026-02-22)
 
 Full Rise xAPI content integration with session management, auto-completion, and resume support. Three commits: `79738a5` (CSP fix + LMS mock), `f948be9` + `0f259bd` (URL rewriting + webpack chunk fix), `4422aac` (iframe stability fix), `6235bf4` (resume support). Deployed to prod + preprod.

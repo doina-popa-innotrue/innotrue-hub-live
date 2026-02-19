@@ -466,7 +466,10 @@ Organizations allow companies to manage groups of users:
 | `analytics-ai-insights` | Admin-facing analytics insights from platform usage data |
 
 **AI safeguards:**
-- Credit-based consumption (each AI call costs credits)
+- Feature gating: all AI features gated behind `ai_insights` feature key (hidden from dashboard if plan lacks access)
+- Credit-based consumption via `useConsumableFeature("ai_insights")` — credits deducted before each AI call
+- Plan-based credit limits (free=5, base=50, pro=100, advanced=200, elite=300 uses/month)
+- Specific error handling: rate limit (retry), credit exhaustion (upgrade prompt), and generic errors distinguished in UI
 - Explicit consent gating (user must opt in)
 - Input truncation limits (arrays capped at 20 items, strings at 500 chars, total prompts at 8K chars)
 - Provider-agnostic architecture (can switch from Vertex AI to another provider)
