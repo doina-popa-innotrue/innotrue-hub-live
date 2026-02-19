@@ -204,27 +204,76 @@ Deno.serve(async (req: Request) => {
     // Remove any existing <base> tags (Rise might set its own)
     html = html.replace(/<base\s[^>]*>/gi, "");
 
-    // Rewrite relative URLs in HTML attributes (src, href, action, poster, data)
-    // Matches relative paths — skips absolute URLs (http/https/data/blob/mailto/javascript/#)
-    html = html.replace(
-      /((?:src|href|action|poster|data)\s*=\s*["'])(?!https?:\/\/|data:|blob:|mailto:|javascript:|#)([^"']+)(["'])/gi,
-      (_match, prefix, relPath, suffix) => {
-        // Resolve the relative path against the current file's directory
-        const currentDir = filePath.includes("/") ? filePath.substring(0, filePath.lastIndexOf("/") + 1) : "";
-        const resolvedPath = resolvePath(currentDir, relPath);
-        return `${prefix}${proxyBase}${resolvedPath}${suffix}`;
-      }
-    );
+    // Rewrite relative URLs in HTML attributes and CSS url() references.
+    // IMPORTANT: We must skip <script>...</script> blocks so we don't accidentally
+    // rewrite JavaScript string literals that happen to match `src = '...'`.
+    const currentDir = filePath.includes("/") ? filePath.substring(0, filePath.lastIndexOf("/") + 1) : "";
 
-    // Rewrite url() references in inline styles and <style> blocks
-    html = html.replace(
-      /url\(\s*["']?(?!https?:\/\/|data:|blob:)([^"')]+)["']?\s*\)/gi,
-      (_match, relPath) => {
-        const currentDir = filePath.includes("/") ? filePath.substring(0, filePath.lastIndexOf("/") + 1) : "";
-        const resolvedPath = resolvePath(currentDir, relPath);
-        return `url("${proxyBase}${resolvedPath}")`;
+    const attrRegex = /((?:src|href|action|poster|data)\s*=\s*["'])(?!https?:\/\/|data:|blob:|mailto:|javascript:|#)([^"']+)(["'])/gi;
+    const urlRegex = /url\(\s*["']?(?!https?:\/\/|data:|blob:)([^"')]+)["']?\s*\)/gi;
+
+    function rewriteHtmlChunk(chunk: string): string {
+      let result = chunk.replace(
+        attrRegex,
+        (_match: string, prefix: string, relPath: string, suffix: string) => {
+          const resolvedPath = resolvePath(currentDir, relPath);
+          return `${prefix}${proxyBase}${resolvedPath}${suffix}`;
+        }
+      );
+      result = result.replace(
+        urlRegex,
+        (_match: string, relPath: string) => {
+          const resolvedPath = resolvePath(currentDir, relPath);
+          return `url("${proxyBase}${resolvedPath}")`;
+        }
+      );
+      return result;
+    }
+
+    // Split on <script...>...</script> blocks.
+    // Rewrite the opening <script ...> tag's attributes (e.g. src="...") but skip
+    // the JS content between > and </script> to avoid rewriting JS string literals.
+    {
+      const parts: string[] = [];
+      let pos = 0;
+      const scriptOpenRe = /<script([\s>])/gi;
+      let openMatch: RegExpExecArray | null;
+      while ((openMatch = scriptOpenRe.exec(html)) !== null) {
+        // Everything before this <script> tag is HTML — rewrite it
+        if (openMatch.index > pos) {
+          parts.push(rewriteHtmlChunk(html.substring(pos, openMatch.index)));
+        }
+        // Find the closing > of the opening tag
+        const tagStart = openMatch.index;
+        const tagContentStart = html.indexOf(">", tagStart);
+        if (tagContentStart === -1) {
+          parts.push(html.substring(tagStart));
+          pos = html.length;
+          break;
+        }
+        // Rewrite the opening <script ...> tag (may contain src="...")
+        const openingTag = html.substring(tagStart, tagContentStart + 1);
+        parts.push(rewriteHtmlChunk(openingTag));
+
+        // Find the matching </script>
+        const closeIdx = html.indexOf("</script>", tagContentStart + 1);
+        if (closeIdx === -1) {
+          // No closing tag — push rest unchanged
+          parts.push(html.substring(tagContentStart + 1));
+          pos = html.length;
+          break;
+        }
+        // Push the script content UNCHANGED (between > and </script>)
+        parts.push(html.substring(tagContentStart + 1, closeIdx + "</script>".length));
+        pos = closeIdx + "</script>".length;
+        scriptOpenRe.lastIndex = pos;
       }
-    );
+      // Remaining HTML after the last </script>
+      if (pos < html.length) {
+        parts.push(rewriteHtmlChunk(html.substring(pos)));
+      }
+      html = parts.join("");
+    }
 
     // Rise content discovers LMS API functions by checking both window and window.parent.
     // The real xAPI-capable mock lives on window.parent (installed by ContentPackageViewer).
@@ -282,27 +331,86 @@ Deno.serve(async (req: Request) => {
 })();
 </script>`;
 
-    // Inject a script that intercepts dynamic resource loading (fetch, XHR, dynamic imports)
+    // Inject a script that intercepts dynamic resource loading (fetch, XHR, dynamic elements)
+    // BASE includes the current HTML file's directory so relative paths resolve correctly.
+    // e.g. if serving scormcontent/index.html, BASE ends with "&path=scormcontent/"
+    // so "lib/rise/c7972c8d.js" becomes "&path=scormcontent/lib/rise/c7972c8d.js"
     const rewriteScript = `${lmsMockScript}<script>
 (function() {
-  var BASE = ${JSON.stringify(proxyBase)};
+  var PROXY_BASE = ${JSON.stringify(proxyBase)};
+  var CURRENT_DIR = ${JSON.stringify(currentDir)};
+
+  function needsRewrite(url) {
+    return typeof url === 'string' && url.length > 0
+      && !url.startsWith('http') && !url.startsWith('data:')
+      && !url.startsWith('blob:') && !url.startsWith('javascript:')
+      && !url.startsWith('#') && !url.startsWith('mailto:');
+  }
+
+  // Resolve a relative path against the current HTML file's directory.
+  // Handles ./ and ../ prefixes. E.g. resolvePath("scormcontent/", "../tc-config.js") => "tc-config.js"
+  function resolvePath(rel) {
+    var parts = CURRENT_DIR.split('/').filter(Boolean);
+    var relClean = rel.split('?')[0].split('#')[0];
+    var suffix = rel.substring(relClean.length);
+    var segs = relClean.split('/');
+    for (var i = 0; i < segs.length; i++) {
+      if (segs[i] === '.' || segs[i] === '') continue;
+      if (segs[i] === '..') parts.pop();
+      else parts.push(segs[i]);
+    }
+    return parts.join('/') + suffix;
+  }
+
+  function rewriteUrl(url) {
+    if (!needsRewrite(url)) return url;
+    return PROXY_BASE + resolvePath(url);
+  }
 
   // Rewrite fetch()
   var origFetch = window.fetch;
   window.fetch = function(input, init) {
-    if (typeof input === 'string' && !input.startsWith('http') && !input.startsWith('data:') && !input.startsWith('blob:')) {
-      input = BASE + input;
-    }
+    if (needsRewrite(input)) input = rewriteUrl(input);
     return origFetch.call(this, input, init);
   };
 
   // Rewrite XMLHttpRequest.open()
   var origOpen = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function(method, url) {
-    if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith('data:') && !url.startsWith('blob:')) {
-      url = BASE + url;
-    }
+    if (needsRewrite(url)) url = rewriteUrl(url);
     return origOpen.apply(this, [method, url].concat(Array.prototype.slice.call(arguments, 2)));
+  };
+
+  // Intercept dynamic element creation: script.src, link.href, img.src, etc.
+  // Rise creates <script> and <link> elements via JS and sets .src / .href
+  function wrapProp(proto, prop) {
+    var desc = Object.getOwnPropertyDescriptor(proto, prop);
+    if (!desc || !desc.set) return;
+    var origSet = desc.set;
+    Object.defineProperty(proto, prop, {
+      get: desc.get,
+      set: function(val) {
+        if (needsRewrite(val)) val = rewriteUrl(val);
+        return origSet.call(this, val);
+      },
+      enumerable: desc.enumerable,
+      configurable: desc.configurable
+    });
+  }
+
+  // Override .src on HTMLScriptElement and HTMLImageElement
+  wrapProp(HTMLScriptElement.prototype, 'src');
+  wrapProp(HTMLImageElement.prototype, 'src');
+  // Override .href on HTMLLinkElement (for stylesheets)
+  wrapProp(HTMLLinkElement.prototype, 'href');
+
+  // Also intercept setAttribute for these properties
+  var origSetAttr = Element.prototype.setAttribute;
+  Element.prototype.setAttribute = function(name, value) {
+    if ((name === 'src' || name === 'href') && needsRewrite(value)) {
+      value = rewriteUrl(value);
+    }
+    return origSetAttr.call(this, name, value);
   };
 })();
 </script>`;
