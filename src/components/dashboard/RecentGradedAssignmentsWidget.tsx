@@ -81,7 +81,7 @@ export function RecentGradedAssignmentsWidget() {
           scored_at,
           scored_by,
           module_progress_id,
-          assignment_types!inner(name)
+          module_assignment_types!inner(name)
         `,
         )
         .in("module_progress_id", progressIds)
@@ -136,7 +136,7 @@ export function RecentGradedAssignmentsWidget() {
 
         enrichedAssignments.push({
           id: assignment.id,
-          assignment_type_name: (assignment.assignment_types as any)?.name || "Assignment",
+          assignment_type_name: (assignment.module_assignment_types as any)?.name || "Assignment",
           scored_at: assignment.scored_at!,
           scorer_name: scorerName,
           module_id: progress.module_id,
