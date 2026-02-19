@@ -137,7 +137,17 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 - DP7: Readiness dashboard (3-5 days) — capstone coach + client view combining all data
 - ~~**Known bug:** `GuidedPathSurveyWizard` saves survey response but never instantiates template goals/milestones~~ ✅ Fixed in DP4
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → 5-Self-Registration (G8) → Development Profile (DP6-DP7) → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
+**Priority 0 — Content Delivery Tier 3: Shared Content Packages & Cross-Program Completion (CT3)**
+Two problems, one solution: (1) same Rise course must be uploaded per-module — no content reuse across programs; (2) if a user completes a course in one program, they must redo it in another — no cross-program completion propagation (was handled in TalentLMS via canonical IDs).
+
+- **CT3a: Shared Content Library** — new `content_packages` table (title, storage_path, package_type, uploaded_by). `program_modules.content_package_id` FK replaces storing path directly. Upload once → assign to many modules. `serve-content-package` resolves via FK. Admin UI: content library picker in module form.
+- **CT3b: Cross-Program Completion** — new `content_completions` table (user_id, content_package_id, completed_at, source_module_id, source_enrollment_id). When xAPI auto-completes a module → also writes `content_completions` row. When client opens same content in different program → checks `content_completions` → auto-marks module as completed.
+- **`canonical_code` override** — existing `program_modules.canonical_code` column (already has index) kept as manual override for cases where different content files should count as equivalent (e.g., different Rise versions of same course).
+- **Existing infrastructure:** `content_package_path`, `content_package_type`, `canonical_code` columns on `program_modules`; `module_external_mappings` + `external_progress` tables for TalentLMS sync; `xapi-statements` auto-completion logic.
+- **Effort:** ~3-5 days (1 migration, 2 edge function modifications, admin UI content library picker, auto-completion check on module load)
+- **Priority:** HIGH — eliminates daily operational friction + preserves TalentLMS cross-program completion behavior
+
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → **CT3 Shared Content** → 5-Self-Registration (G8) → Development Profile (DP6-DP7) → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
@@ -172,12 +182,13 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 9. ~~**GT1 Teaching Cohort Workflow**~~ ✅ — instructor/coach cohort UI, attendance, recap, homework, dashboard integration
 10. ~~**Cohort Quality (G9-G10)**~~ ✅ — analytics dashboard + session-linked homework
 11. ~~**DP5 Module↔Domain Mapping**~~ ✅ — `module_domain_mappings` table, admin UI, "Domains" tab
-12. Quick medium wins (M2, M11) — interleaved (2 days)
-13. **G8 Self-Enrollment Codes** — `enrollment_codes` table, self-enrollment via link (~2-3 days)
-14. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
-15. **Development Profile (DP6-DP7)** — psychometric structured results, readiness dashboard (~1-2 weeks)
-16. Phase 3 AI — system prompt hardening first (2-3 days), then AI Learning Companion
-15. Remaining phases by business priority
+12. **CT3 Shared Content Packages & Cross-Program Completion** — `content_packages` table, `content_completions` table, content library picker, xAPI propagation (~3-5 days)
+13. Quick medium wins (M2, M11) — interleaved (2 days)
+14. **G8 Self-Enrollment Codes** — `enrollment_codes` table, self-enrollment via link (~2-3 days)
+15. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
+16. **Development Profile (DP6-DP7)** — psychometric structured results, readiness dashboard (~1 week)
+17. Phase 3 AI — system prompt hardening first (2-3 days), then AI Learning Companion
+18. Remaining phases by business priority
 
 ## Known Issues
 - (none currently — all critical/high items documented in roadmap above)
