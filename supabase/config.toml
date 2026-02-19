@@ -182,3 +182,15 @@ verify_jwt = false
 
 [functions.verify-signup]
 verify_jwt = false
+
+[functions.serve-content-package]
+verify_jwt = false
+
+[functions.upload-content-package]
+verify_jwt = false
+
+[functions.xapi-launch]
+verify_jwt = false
+
+[functions.xapi-statements]
+verify_jwt = false

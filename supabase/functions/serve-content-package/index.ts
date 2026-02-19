@@ -226,13 +226,64 @@ Deno.serve(async (req: Request) => {
       }
     );
 
-    // NOTE: The LMS API mock (IsLmsPresent, SetReachedEnd, etc.) is NOT injected here.
-    // It lives on the parent window (the React app) installed by ContentPackageViewer.
-    // Rise content in the blob iframe calls window.parent.IsLmsPresent() etc.
-    // xAPI statements are sent from the parent window (app origin) to avoid CORS issues.
+    // Rise content discovers LMS API functions by checking both window and window.parent.
+    // The real xAPI-capable mock lives on window.parent (installed by ContentPackageViewer).
+    // But some Rise functions also check the current window, so we install lightweight
+    // stubs here that delegate to window.parent when available, and also work standalone.
+    const lmsMockScript = `<script>
+(function() {
+  // List of all LMS API functions Rise expects.
+  // If parent has the real implementation (xAPI mode), delegate to it.
+  // Otherwise provide no-op stubs so Rise doesn't error out.
+  var fns = [
+    "IsLmsPresent","GetBookmark","SetBookmark","GetDataChunk","SetDataChunk",
+    "CommitData","Finish","SetReachedEnd","SetFailed","SetPassed",
+    "SetScore","GetScore","GetStatus","SetStatus","GetProgressMeasure",
+    "SetProgressMeasure","GetMaxTimeAllowed","GetTimeLimitAction",
+    "SetSessionTime","GetEntryMode","GetLessonMode","GetTakingForCredit",
+    "FlushData","ConcedeControl","GetStudentID","SetLanguagePreference",
+    "SetObjectiveStatus","CreateResponseIdentifier","MatchingResponse",
+    "RecordFillInInteraction","RecordMatchingInteraction",
+    "RecordMultipleChoiceInteraction","WriteToDebug",
+    "TCAPI_SetCompleted","TCAPI_SetProgressMeasure"
+  ];
+  var defaults = {
+    "IsLmsPresent": function() { return true; },
+    "GetBookmark": function() { return ""; },
+    "GetDataChunk": function() { return ""; },
+    "GetScore": function() { return ""; },
+    "GetStatus": function() { return "incomplete"; },
+    "GetProgressMeasure": function() { return ""; },
+    "GetMaxTimeAllowed": function() { return ""; },
+    "GetTimeLimitAction": function() { return ""; },
+    "GetEntryMode": function() { return "ab-initio"; },
+    "GetLessonMode": function() { return "normal"; },
+    "GetTakingForCredit": function() { return "credit"; },
+    "GetStudentID": function() { return ""; },
+    "CreateResponseIdentifier": function() { return ""; },
+    "MatchingResponse": function() { return ""; }
+  };
+  for (var i = 0; i < fns.length; i++) {
+    (function(name) {
+      if (typeof window[name] === "function") return; // already defined
+      window[name] = function() {
+        // Delegate to parent if available (parent has the real xAPI implementation)
+        try {
+          if (window.parent && typeof window.parent[name] === "function") {
+            return window.parent[name].apply(window.parent, arguments);
+          }
+        } catch(e) {}
+        // Fallback: return default or "true"
+        if (defaults[name]) return defaults[name].apply(this, arguments);
+        return "true";
+      };
+    })(fns[i]);
+  }
+})();
+</script>`;
 
     // Inject a script that intercepts dynamic resource loading (fetch, XHR, dynamic imports)
-    const rewriteScript = `<script>
+    const rewriteScript = `${lmsMockScript}<script>
 (function() {
   var BASE = ${JSON.stringify(proxyBase)};
 
