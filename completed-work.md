@@ -1,5 +1,41 @@
 # Completed Work — Detailed History
 
+## GT1, G9, G10, DP5, NTH-2, NTH-3, NTH-4 — Teaching Cohort Workflow & Enhancements (2026-02-23)
+
+Full instructor/coach cohort teaching workflow, cohort analytics, session-linked homework, module↔domain mapping, smart notification routing, and client personal instructor visibility. Commit `ed0254b`, 3 migrations, 4 new pages/components, 8 modified files. Deployed to prod + preprod + Lovable.
+
+**GT1 — Teaching Cohort Workflow (6 phases):**
+
+- **Phase 1 — RLS Migration (`20260223100000_teaching_cohort_rls.sql`):** 4 policies for symmetric instructor/coach access: coach SELECT on `program_cohorts`, instructor+coach UPDATE on `cohort_sessions` (with WITH CHECK), upgrade coach attendance from SELECT-only to ALL on `cohort_session_attendance`.
+- **Phase 2 — Cohorts List (`src/pages/instructor/Cohorts.tsx`):** Teaching cohorts list page following `Groups.tsx` pattern. Fetches program IDs from both `program_instructors` + `program_coaches`. Card grid with status badge, name, program, lead instructor, dates, enrolled/capacity, session count.
+- **Phase 3 — Cohort Detail (`src/pages/instructor/CohortDetail.tsx`):** Main teaching cohort management page for both roles. Expandable session panels with: `CohortSessionAttendance` component (reused as-is), `SessionHomework` component (G10), recap editor (textarea + recording URL), Save/Save & Notify buttons via `notify_cohort_session_recap` RPC. Enrolled clients list with attendance summaries.
+- **Phase 4 — Dashboard Integration (`InstructorCoachDashboard.tsx`):** Extended `UpcomingSession` interface with `source: "group" | "cohort"`, `cohort_id?`, nullable `group_id`. Added cohort sessions query in `loadAdditionalData` (merges with group sessions, sorts by date). Added Cohorts stat card. Updated session card navigation for cohort vs group.
+- **Phase 5 — Sidebar + Routes:** Added `CalendarDays` icon Cohorts item to `teachingItems` in `AppSidebar.tsx`. Added lazy-loaded routes `/teaching/cohorts` and `/teaching/cohorts/:cohortId` in `App.tsx`.
+- **Phase 6 — StudentDetail Integration:** Added cohort assignment card to `StudentDetail.tsx` — loads cohort info + attendance summary when enrollment has `cohort_id`. Shows cohort name, status badge, date range, attendance stats, link to cohort detail.
+
+**G9 — Cohort Analytics Dashboard (`src/pages/admin/CohortAnalytics.tsx`):**
+- Cross-program admin analytics: active cohorts, total enrolled, avg attendance %, avg completion %, at-risk count
+- Per-cohort breakdown cards with attendance/completion progress bars
+- At-risk client identification (<60% attendance OR <30% completion)
+- Added to admin sidebar monitoring section + lazy-loaded route `/admin/cohort-analytics`
+
+**G10 — Session-Linked Homework:**
+- **Migration (`20260223100001_session_linked_homework.sql`):** Added `cohort_session_id UUID` to `development_items` with FK to `cohort_sessions`, partial index
+- **Component (`src/components/cohort/SessionHomework.tsx`):** Bulk homework assignment for all enrolled clients per session. De-duplicated display by title, completion progress tracking per item. Integrated into CohortDetail expanded session view.
+
+**DP5 — Module ↔ Domain Mapping:**
+- **Migration (`20260223100002_module_domain_mapping.sql`):** `module_domain_mappings` table (module_id, capability_domain_id, relevance primary/secondary). RLS: admin ALL, staff SELECT, client SELECT. Indexes on both FKs.
+- **Component (`src/components/admin/ModuleDomainMapper.tsx`):** Admin UI for tagging modules with assessment domains. Add/remove mappings with relevance selector, badge display. Added as "Domains" tab in admin `ProgramDetail.tsx` module editor.
+
+**NTH-2 — Smart Notification Routing (`notify-assignment-submitted/index.ts`):**
+- Added personal instructor priority check: queries `enrollment_module_staff` for the specific enrollment+module. If personal staff exists, only notifies them. Otherwise falls back to broadcast (module instructors/coaches → program instructors/coaches).
+
+**NTH-3 — assessor_id Review:** Reviewed `assessor_id` on capability snapshots — correctly tracks who created the assessment while `scored_by` tracks the grader. No code change needed.
+
+**NTH-4 — Client Sees Personal Instructor:**
+- **`ModuleTeamContact.tsx`:** Added `enrollmentId` prop, queries `enrollment_module_staff` for personal instructor. Shows personal instructor with highlighted styling (primary color background, "Your Instructor/Coach" badge). Filters duplicates from general lists.
+- **`ModuleDetail.tsx` (client):** Passes `enrollmentId={enrollment?.id}` to `ModuleTeamContact`.
+
 ## AI Reflection Prompt — Credit Gating & Error Handling Fix (2026-02-19)
 
 Fixed AI reflection prompt failing silently for clients. Root cause: no feature gating, no credit consumption, generic error messages. Commit `96a2409`, 4 files, 117 insertions, 28 deletions. Edge function deployed to prod + preprod.

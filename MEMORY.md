@@ -132,18 +132,19 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 - ~~DP2: Development Profile page~~ ✅ DONE — unified 5-section page (StrengthsGapsMatrix, ActiveDevelopmentItems, AssessmentGoalProgress, SkillsEarned, GuidedPathProgress) + coach/instructor StudentDevelopmentProfile view + sidebar nav + routes
 - ~~DP3: Assessment-gated milestones~~ ✅ DONE — `guided_path_milestone_gates` + `milestone_gate_overrides` tables, admin gate config on template milestones, traffic-light indicators (🟢🟡🔴⚪), coach/instructor waive with reason
 - ~~DP4: Intake-driven path recommendation~~ ✅ DONE — `guided_path_instantiations` table, shared `instantiateTemplate()` service, PathConfirmation with pace selector, survey wizard bug fix, GuidedPathDetail refactored to shared service
-- DP5: Module ↔ domain mapping (2-3 days) — modules tagged to assessment domains
+- ~~DP5: Module ↔ domain mapping~~ ✅ DONE — `module_domain_mappings` table, `ModuleDomainMapper` component, "Domains" tab in admin module editor
 - DP6: Psychometric structured results (2-3 days) — manual score entry for DISC/VIA/etc.
 - DP7: Readiness dashboard (3-5 days) — capstone coach + client view combining all data
 - ~~**Known bug:** `GuidedPathSurveyWizard` saves survey response but never instantiates template goals/milestones~~ ✅ Fixed in DP4
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → Cohort quality (G8-G10) → 5-Self-Registration → Development Profile (DP5-DP7) → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → 5-Self-Registration (G8) → Development Profile (DP6-DP7) → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
 
 ## Coach/Instructor Readiness
-- **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, client progress, notes)
+- **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
+- **Cohort teaching workflow (GT1) ✅ DONE:** Instructors AND coaches can browse cohorts (`/teaching/cohorts`), view cohort detail with sessions, mark attendance (reuses `CohortSessionAttendance`), edit recap + recording URL, notify clients via RPC, see homework assignments per session, view enrolled clients with attendance summary. Dashboard widget shows upcoming cohort sessions merged with group sessions. StudentDetail shows cohort assignment card. Symmetric RLS for both roles.
 - **Onboarding:** ✅ DONE — Staff Welcome Card with 4-step checklist, Staff Profile setup (bio, specializations, company), enhanced empty states on teaching pages, role-specific welcome emails
 - **Admin creates coaches** via `/admin/users` — no self-registration needed currently
-- **Key pages:** `/teaching` (dashboard), `/teaching/students` (clients), `/teaching/assignments`, `/teaching/scenarios`, `/teaching/badges`, `/teaching/assessments`, `/teaching/groups`
+- **Key pages:** `/teaching` (dashboard), `/teaching/students` (clients), `/teaching/assignments`, `/teaching/scenarios`, `/teaching/badges`, `/teaching/assessments`, `/teaching/groups`, `/teaching/cohorts`
 - **Remaining:** Teaching FAQ/quick guide page (nice to have)
 
 ## Instructor/Coach Assignment & Grading
@@ -151,8 +152,9 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 - **Assignment grading:** Full rubric support, scored_by tracking, email notifications, PendingAssignments page scoped by module/program
 - **What works:** Assign instructor to module (everyone sees same), personal instructor per client (ALL modules — individualized filter removed 2026-02-18), grading with rubric + development items, **"My Queue" filtering** on PendingAssignments, **assignment transfer dialog** between staff members
 - **Session scheduling:** Already enrollment-aware via `useModuleSchedulingUrl` hook — resolves Cal.com booking URL using 3-tier hierarchy (enrollment_module_staff → module_instructors → program_instructors). No changes needed.
-- **Notification behavior:** `notify-assignment-submitted` and `notify-assignment-graded` now use async `create_notification` RPC (non-blocking). Broadcasts to ALL instructors/coaches at module + program level — intentionally kept for partner instructors in small teams.
-- **Remaining gaps:** Configurable notification routing (nice to have), `assessor_id` cleanup (nice to have), client doesn't see personal instructor (nice to have)
+- **Notification behavior:** `notify-assignment-submitted` now uses smart routing — personal instructor (`enrollment_module_staff`) gets priority; falls back to broadcast to ALL instructors/coaches at module + program level. `notify-assignment-graded` notifies client.
+- **Client sees personal instructor:** ✅ `ModuleTeamContact` checks `enrollment_module_staff` and highlights personal instructor with distinct styling
+- **Remaining gaps:** `assessor_id` field is working correctly (tracks who created assessment, `scored_by` tracks grader)
 - **Key components:** `InstructorCoachAssignment` (module/program), `EnrollmentModuleStaffManager` (per-client per-module), `InstructorAssignmentScoring` (grading), `PendingAssignments` (queue), `TransferAssignmentDialog` (transfer)
 - **Key hooks:** `useModuleSchedulingUrl` (3-tier Cal.com URL resolution, enrollment-aware)
 - **Key edge functions:** `notify-assignment-submitted` (async, broadcasts), `notify-assignment-graded` (async, notifies client)
@@ -162,17 +164,19 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 1. ~~C1-C4~~ ✅ → ~~H1-H10~~ ✅
 2. ~~Priority 0 Content Delivery Tier 1~~ ✅ — Rise Web embed via iframe
 3. ~~Priority 0 Coach Onboarding~~ ✅ — welcome card + profile setup + empty states + welcome email
-4. ~~Priority 0 Assignment Routing~~ ✅ — individualized filter + My Queue + assignment transfer + async notifications
+4. ~~Priority 0 Assignment Routing~~ ✅ — individualized filter + My Queue + assignment transfer + async notifications + smart routing
 5. ~~Priority 0 Cohort Core~~ ✅ — CohortDashboard + Join Session one-click + calendar + dashboard widget
 6. ~~Priority 0 Cohort Scheduling Gaps (G1-G7)~~ ✅ — enrollment UI + Meet links + instructor + recurrence + attendance + notifications + session notes
 7. ~~**Development Profile (DP1-DP4)**~~ ✅ — assessment↔goal links, profile page, gated milestones, intake-driven paths
 8. ~~**Content Delivery Tier 2**~~ ✅ — Rise xAPI integration with session management, auto-completion, resume
-9. **GT1 Teaching Cohort Workflow** — instructor/coach cohort UI (plan ready in `.claude/plans/proud-jumping-fountain.md`)
-10. **Priority 0 Cohort Quality (G8-G10)** — enrollment codes + analytics + session-linked homework (~1 week)
-11. Quick medium wins (M2, M11) — interleaved (2 days)
-12. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
-13. **Development Profile (DP5-DP7)** — module↔domain mapping, psychometric structured results, readiness dashboard (~1-2 weeks)
-14. Phase 3 AI — system prompt hardening first (2-3 days), then AI Learning Companion
+9. ~~**GT1 Teaching Cohort Workflow**~~ ✅ — instructor/coach cohort UI, attendance, recap, homework, dashboard integration
+10. ~~**Cohort Quality (G9-G10)**~~ ✅ — analytics dashboard + session-linked homework
+11. ~~**DP5 Module↔Domain Mapping**~~ ✅ — `module_domain_mappings` table, admin UI, "Domains" tab
+12. Quick medium wins (M2, M11) — interleaved (2 days)
+13. **G8 Self-Enrollment Codes** — `enrollment_codes` table, self-enrollment via link (~2-3 days)
+14. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
+15. **Development Profile (DP6-DP7)** — psychometric structured results, readiness dashboard (~1-2 weeks)
+16. Phase 3 AI — system prompt hardening first (2-3 days), then AI Learning Companion
 15. Remaining phases by business priority
 
 ## Known Issues
