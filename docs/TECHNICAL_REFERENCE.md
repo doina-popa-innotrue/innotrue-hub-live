@@ -45,8 +45,8 @@
 │  │ RLS on all │  │ Email/Pass   │  │   Wheel PDFs       │   │
 │  └────────────┘  └──────────────┘  └───────────────────┘   │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │              63 Edge Functions (Deno)                 │   │
-│  │  Email (13) │ AI (5+) │ Stripe │ Cal.com │ Cron     │   │
+│  │              65 Edge Functions (Deno)                 │   │
+│  │  Email (13) │ AI (5+) │ xAPI (3) │ Stripe │ Cal.com │   │
 │  └──────────────────────────────────────────────────────┘   │
 └──────────────────┬───────────────────────────────────────────┘
                    │
@@ -111,7 +111,7 @@ fi && npm run build
 Both preprod and prod have:
 - 420 database migrations applied
 - Seed data loaded (`supabase/seed.sql`)
-- 63 edge functions deployed
+- 65 edge functions deployed
 - Google OAuth configured
 - Auth email hook pointing to `send-auth-email` edge function
 
@@ -199,7 +199,7 @@ All INSERTs use `ON CONFLICT` for idempotency.
 
 ### Overview
 
-63 Deno/TypeScript edge functions in `supabase/functions/`.
+65 Deno/TypeScript edge functions in `supabase/functions/`.
 
 All functions have `verify_jwt = false` in `supabase/config.toml` — they implement custom auth checks internally (checking the `Authorization` header via `supabase.auth.getUser()`).
 
@@ -595,7 +595,8 @@ Origin-aware CORS in `_shared/cors.ts` — only `app.innotrue.com`, configured `
 
 ### Content Security Policy
 
-CSP includes `https://*.sentry.io` in `connect-src` for error reporting.
+- Main app CSP includes `https://*.sentry.io` in `connect-src` for error reporting
+- Rise content served via `serve-content-package` has its own CSP allowing `blob:` URIs, inline scripts/styles (`unsafe-inline`, `unsafe-eval`), and Supabase domain connections for xAPI statement submission
 
 ### Secrets management
 
@@ -603,6 +604,69 @@ CSP includes `https://*.sentry.io` in `connect-src` for error reporting.
 - Edge functions: `SITE_URL`, `STRIPE_SECRET_KEY`, `RESEND_API_KEY`, `GCP_SERVICE_ACCOUNT_KEY`, `GCP_PROJECT_ID`, `GCP_LOCATION`, `OAUTH_ENCRYPTION_KEY`, `CALENDAR_HMAC_SECRET`
 - Staging: `APP_ENV`, `STAGING_EMAIL_OVERRIDE`
 - Supabase Dashboard: Google OAuth Client ID/Secret, Auth Email Hook → `send-auth-email`
+
+---
+
+## 15b. Rise xAPI Content Delivery Architecture
+
+### Overview
+
+Rise content packages (exported as xAPI/Tin Can from Articulate Rise) are served inline within the platform using a blob URL iframe approach with a parent-window LMS mock.
+
+### Content Flow
+
+```
+Rise xAPI ZIP → Admin upload (upload-content-package) → Supabase Storage (private bucket)
+                                                            │
+Client opens module → xapi-launch (session create/resume) → serve-content-package (auth proxy)
+                                                            │
+                                         HTML fetched → URLs rewritten → blob URL iframe rendered
+                                                            │
+                                         Rise calls window.parent.* → LMS mock on parent window
+                                                            │
+                                         Mock sends xAPI statements → xapi-statements edge function
+                                                            │
+                                         Auto-completion on completed/passed/mastered verbs
+```
+
+### Key Technical Decisions
+
+1. **Blob URL iframe (not direct iframe):** Rise content uses relative paths (`lib/`, `assets/`). Direct iframe from edge function would require full URL rewriting of all JS/CSS/media. Instead, HTML is fetched, script/link URLs are rewritten to absolute URLs pointing at the edge function, and the modified HTML is rendered as a `blob:` URL. This lets Rise JS execute in a sandboxed origin while still loading assets from the real server.
+
+2. **Parent-window LMS mock (not postMessage):** Rise expects SCORM/xAPI LMS functions on `window.parent` (e.g., `window.parent.GetBookmark()`). The frontend installs these functions on the parent window before loading the iframe. This avoids cross-origin postMessage complexity and works because the blob iframe's scripts can access the parent window's functions.
+
+3. **Basic auth for xAPI (not Bearer JWT):** Rise xAPI runtime sends statements using Basic auth (`Authorization: Basic <base64(token:)>`). The `xapi-statements` edge function decodes this to extract the raw auth token matching `xapi_sessions.auth_token`. This is standard xAPI 1.0.3 behavior.
+
+4. **Session resume via bookmark/suspend_data:** Rise uses SCORM-compatible `SetBookmark()`/`GetBookmark()` for scroll position and `SetDataChunk()`/`GetDataChunk()` for full course state. These are persisted to `xapi_sessions` columns via `PUT ?stateId=bookmark|suspend_data` on the xapi-statements endpoint.
+
+5. **Ref-based dependency stabilization:** `ContentPackageViewer.tsx` stores `accessToken` and `onXapiComplete` in React refs to prevent Supabase JWT token refresh events from destroying the iframe. Without this, every ~60-minute token refresh would reload the content.
+
+### Edge Functions
+
+| Function | Auth | Purpose |
+|----------|------|---------|
+| `serve-content-package` | Bearer JWT (user must be enrolled or staff) | Serves Rise files from private storage, injects `<base>` tag + URL rewrite scripts into HTML |
+| `xapi-launch` | Bearer JWT | Creates new xAPI session or resumes existing one. Returns session ID, auth token, xAPI config, saved bookmark/suspendData |
+| `xapi-statements` | Basic auth (session token) | POST: stores statements, auto-completes on completion verbs. PUT with `?stateId=`: saves bookmark/suspend_data. GET: retrieves statements |
+
+### Database Tables
+
+| Table | Indexes | Purpose |
+|-------|---------|---------|
+| `xapi_sessions` | `auth_token` (unique), `user_id+module_id`, `status` (partial) | Session lifecycle + resume state |
+| `xapi_statements` | `session_id`, `user_id+module_id`, `verb_id` | Statement storage + query |
+
+### CSP Configuration
+
+Content served via `serve-content-package` includes a Content-Security-Policy header allowing `blob:` URIs, inline scripts/styles (required by Rise), and connections to the Supabase domain for xAPI statement submission.
+
+### Content Package Upload
+
+1. Admin uploads ZIP via `upload-content-package` edge function
+2. ZIP extracted with JSZip, files uploaded to `module-content-packages/{moduleId}/{uuid}/`
+3. Previous package files cleaned up
+4. `program_modules.content_package_path` updated
+5. Admin sets `content_package_type` to `web` or `xapi`
 
 ---
 

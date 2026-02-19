@@ -1363,7 +1363,7 @@ Organized by theme, drawing from Parts 2, 3, 5, 6, 9, and 10.
 
 **Content Delivery (eliminate TalentLMS friction):**
 - ~~Tier 1: Rise Web export → Supabase Storage → iframe embed~~ ✅ DONE (2026-02-18) — private storage bucket + `serve-content-package` auth-gated proxy + `upload-content-package` ZIP extraction + iframe embed in client/instructor ModuleDetail
-- Tier 2: Rise xAPI export → `xapi-statement-receiver` edge function → `external_progress` table → auto-complete modules (1-2 weeks) — **skip SCORM, go direct to xAPI**
+- ~~Tier 2: Rise xAPI export → xAPI session management + statement storage → auto-complete modules~~ ✅ DONE (2026-02-22) — `xapi-launch` (session create/resume), `xapi-statements` (LRS endpoint + state persistence), `ContentPackageViewer.tsx` LMS mock with resume support (bookmark + suspend_data). 2 migrations, 3 edge functions, deployed to prod + preprod.
 - TalentLMS transition: keep for active programs, no new programs on TalentLMS
 
 **Cohort Experience (required for live/hybrid programs):**
@@ -1526,10 +1526,9 @@ Connects 3 assessment systems + development items + goals + guided paths into a 
 ### 11.5 Dependency Map
 
 ```
-Priority 0 (Content Delivery):
-  Tier 1 (Web embed) → no dependencies, can start immediately
-  Tier 2 (xAPI) → depends on Tier 1 (same iframe approach, adds tracking endpoint)
-  Tier 2 → reuses existing talentlms-webhook xAPI parsing logic
+Priority 0 (Content Delivery): ✅ ALL DONE
+  ~~Tier 1 (Web embed)~~ ✅ DONE (2026-02-18)
+  ~~Tier 2 (xAPI)~~ ✅ DONE (2026-02-22) — xapi-launch + xapi-statements + LMS mock + resume
   xAPI data → feeds Phase 3 AI Learning Companion (optional but high value)
 
 Priority 0 (Cohort Readiness):
@@ -1633,7 +1632,7 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 | **Priority 0 — Cohort Quality (G8-G10)** | **3 items remaining** | **~1 week** |
 | ~~Priority 0 — Development Profile (DP1-DP4)~~ | ~~4 phases~~ | ✅ DONE (2026-02-19) |
 | **Priority 0 — Development Profile (DP5-DP7)** | **3 phases remaining** | **~1-2 weeks** |
-| Priority 0 — Content Delivery Tier 2 | xAPI direct | 1-2 weeks |
+| ~~Priority 0 — Content Delivery Tier 2~~ | ~~xAPI direct~~ | ✅ DONE (2026-02-22) |
 | Phase 1 — Onboarding/UX | 8 items | 2-3 weeks |
 | Phase 2 — Assessment Intelligence | 7 items | 3-4 weeks |
 | Phase 3 — AI & Engagement | 8 items | 3-4 weeks |
@@ -1657,7 +1656,7 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 10. Quick medium wins (M2, M11) — interleaved, 2 days
 11. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
 12. **Development Profile (DP5-DP7)** — module↔domain mapping, psychometric structured results, readiness dashboard (~1-2 weeks)
-13. **Content Delivery Tier 2 (xAPI direct)** — auto-tracking, 1-2 weeks
+13. ~~Content Delivery Tier 2 (xAPI direct)~~ ✅ DONE (2026-02-22) — xapi-launch + xapi-statements + LMS mock + resume support
 14. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
 15. Remaining phases based on business priorities
 
@@ -1668,7 +1667,7 @@ Several roadmap items require new database tables or fields. These should be pla
 | Phase | Feature | New Tables / Fields |
 |-------|---------|-------------------|
 | ~~Priority 0~~ | ~~Content delivery Tier 1~~ | ✅ DONE — `program_modules.content_package_path` (TEXT), `module-content-packages` private storage bucket |
-| Priority 0 | xAPI receiver (Tier 2) | Edge function `xapi-statement-receiver`, extends `external_progress.external_metadata` for xAPI statement storage |
+| ~~Priority 0~~ | ~~xAPI content delivery (Tier 2)~~ | ✅ DONE — `program_modules.content_package_type` (`web`/`xapi`), `xapi_sessions` table (auth_token, status, bookmark, suspend_data), `xapi_statements` table (verb/object/result + raw JSONB), 2 new edge functions (`xapi-launch`, `xapi-statements`) |
 | ~~Priority 0~~ | ~~Cohort dashboard~~ | ✅ DONE — uses existing tables, no new migrations needed |
 | ~~Priority 0~~ | ~~G1 Cohort enrollment UI~~ | ✅ DONE — `enroll_with_credits` RPC accepts `p_cohort_id`, cohort dropdown on enrollment form |
 | ~~Priority 0~~ | ~~G3 Instructor on cohort~~ | ✅ DONE — `program_cohorts.lead_instructor_id`, `cohort_sessions.instructor_id` |

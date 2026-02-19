@@ -1,5 +1,36 @@
 # Completed Work — Detailed History
 
+## Content Delivery Tier 2 — Rise xAPI Integration (2026-02-22)
+
+Full Rise xAPI content integration with session management, auto-completion, and resume support. Three commits: `79738a5` (CSP fix + LMS mock), `f948be9` + `0f259bd` (URL rewriting + webpack chunk fix), `4422aac` (iframe stability fix), `6235bf4` (resume support). Deployed to prod + preprod.
+
+**Rise xAPI Content Delivery:**
+- **`xapi-launch` edge function:** Creates or resumes xAPI sessions. Validates JWT, checks enrollment/staff access, generates unique auth token per session. Returns xAPI config (endpoint, auth, actor, activityId) for frontend. Resume: finds existing active session (status `launched`/`initialized`), returns saved bookmark + suspend_data + reuses auth token.
+- **`xapi-statements` edge function:** Lightweight LRS endpoint. POST stores xAPI statements with verb/object/result extraction. Auto-updates `module_progress` to `completed` on completion/passed/mastered verbs. PUT with `?stateId=bookmark|suspend_data` saves learner position. GET retrieves session statements. Session lifecycle: `launched` → `initialized` → `completed`/`terminated`.
+- **`serve-content-package` edge function (enhanced):** Added CSP headers for blob URLs, inline scripts/styles, and Supabase domain connections. Injects `<script>` block that rewrites Rise's relative URLs (in `<script src>`, `<link href>`, CSS `url()`, dynamic `fetch()`, webpack chunk loading) to absolute URLs pointing at the edge function.
+- **Migration `20260222100000_xapi_integration.sql`:** `program_modules.content_package_type` column (`web`/`xapi`), `xapi_sessions` table (auth_token, status lifecycle, FK to users/modules/enrollments, indexes), `xapi_statements` table (verb/object/result fields, raw_statement JSONB, indexes), RLS policies (users SELECT own, service role manages), auto-updated timestamps.
+- **Migration `20260222200000_xapi_session_resume.sql`:** Added `bookmark` (TEXT) and `suspend_data` (TEXT) columns to `xapi_sessions` for Rise content resume support.
+
+**ContentPackageViewer.tsx — Major Rewrite:**
+- **LMS mock (`installLmsApiOnWindow()`):** Installs SCORM-compatible API functions on parent window: `IsLmsPresent`, `LMSIsInitialized`, `GetStudentName`, `GetBookmark`/`SetBookmark`, `GetDataChunk`/`SetDataChunk`, `GetEntryMode` (returns `resume`/`ab-initio`), `SetReachedEnd`, `SetPassed`, `SetProgressMeasure`, `SetFailed`, `Terminate`, `Finish`. Each setter persists state to backend via `saveState()` helper.
+- **`saveState()` helper:** Sends `PUT ?stateId=bookmark|suspend_data` to xapi-statements endpoint with Basic auth. Fire-and-forget with error logging.
+- **Resume data flow:** `xapi-launch` response includes `resumed`, `bookmark`, `suspendData`. Passed to `installLmsApiOnWindow()` which initializes mock state from saved values.
+- **Completion polling:** 10-second interval checks `xapi_sessions.status` via Supabase query. On `completed`/`terminated`, sets `xapiCompleted` state and calls `onXapiComplete` callback.
+
+**Iframe Stability Fixes (commit `4422aac`):**
+- **JWT token refresh fix:** `accessToken` stored in `useRef` to prevent Supabase `TOKEN_REFRESHED` events from re-triggering content-loading useEffect and destroying iframe.
+- **Callback stability:** `onXapiComplete` stored in ref (`onXapiCompleteRef`), `startCompletionPolling` made dependency-free with empty dependency array. Breaks the chain: inline arrow → callback recreated → useEffect re-runs → iframe destroyed.
+- **Completion handler fix:** `src/pages/client/ModuleDetail.tsx` — replaced `window.location.reload()` with React state update (`setModule()`) + `toast.success("Module completed! 🎉")`.
+
+**URL Rewriting for Rise Content:**
+- Rise xAPI exports use relative paths (`lib/main.bundle.js`, `assets/...`, CSS `url(...)`)
+- `serve-content-package` injects a script that:
+  - Intercepts `<script>` and `<link>` tags, rewrites `src`/`href` to absolute edge function URLs
+  - Overrides `window.fetch` to rewrite relative fetch URLs
+  - Patches `Object.defineProperty` to intercept webpack's `__webpack_require__.p` (public path) and set it to the edge function base URL
+  - Handles CSS `url()` references by rewriting `<style>` blocks
+- Webpack chunk loading fixed by intercepting the property descriptor for the public path variable
+
 ## DP1-DP4 Development Profile (2026-02-19)
 
 Assessment ↔ goal traceability, unified Development Profile page, assessment-gated milestones, and intake-driven path instantiation. Commit `c6b2e11`, 26 files, 3,519 insertions, 182 deletions. 3 migrations, 15 new files, 12 modified files.

@@ -178,12 +178,59 @@ Edge functions are stored in Git (`supabase/functions/`). To redeploy after reco
 # Deploy a single function
 supabase functions deploy <function-name> --project-ref <ref>
 
-# Deploy all functions
+# Deploy all functions (uses npm script)
+npm run deploy:functions
+
+# Deploy to a specific environment
+npm run deploy:functions -- preprod
+
+# Deploy specific functions only
+npm run deploy:functions -- --only xapi-launch,xapi-statements,serve-content-package
+
+# Manual deploy loop (alternative)
 for dir in supabase/functions/*/; do
   fname=$(basename "$dir")
   [[ "$fname" == "_shared" ]] && continue
   supabase functions deploy "$fname" --project-ref <ref>
 done
+```
+
+### xAPI Edge Functions (critical for Rise content)
+
+The xAPI content delivery system uses 3 edge functions that must be deployed together and to all environments:
+
+| Function | Purpose | Impact if missing |
+|----------|---------|------------------|
+| `serve-content-package` | Auth-gated Rise content proxy | Rise content won't load at all |
+| `xapi-launch` | Session creation/resume | xAPI tracking won't start, no resume |
+| `xapi-statements` | Statement storage + state persistence | No progress tracking, no auto-completion, no resume data saved |
+
+**Deploy xAPI functions to all environments:**
+```bash
+# Deploy to production (default — must be linked to prod)
+npm run deploy:functions -- --only xapi-launch,xapi-statements,serve-content-package
+
+# Deploy to preprod
+npm run deploy:functions -- preprod --only xapi-launch,xapi-statements,serve-content-package
+```
+
+### Multi-Environment Deployment
+
+Edge functions must be deployed separately to each Supabase project. Database migrations are pushed via `supabase db push`:
+
+```bash
+# Push migrations to all environments
+npm run push:migrations -- all
+
+# Push to preprod only
+npm run push:migrations -- preprod
+
+# Deploy functions to preprod (link, deploy, link back)
+supabase link --project-ref jtzcrirqflfnagceendt
+supabase functions deploy xapi-launch
+supabase functions deploy xapi-statements
+supabase functions deploy serve-content-package
+supabase link --project-ref qfdztdgublwlmewobxmx  # link back to prod
 ```
 
 ## 5. Emergency Recovery Playbook

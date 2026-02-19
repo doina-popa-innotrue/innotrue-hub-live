@@ -530,12 +530,18 @@ The individual learning units within a program.
 | `feature_key` | Required feature (optional) | `session_coaching` |
 | `min_plan_tier` | Min tier for this module (optional) | 2 |
 | `capability_assessment_id` | Linked assessment (optional) | → assessment.id |
+| `content_package_path` | Storage path for Rise content package | `{moduleId}/{uuid}/` |
+| `content_package_type` | Content package type: `web` or `xapi` | `xapi` |
 
 **Module type determines behavior:**
 - `session` → links to session scheduling (Cal.com)
 - `assignment` → has submission + grading workflow
 - `reflection` → self-guided journaling
 - `resource` → static content (file/link)
+
+**Content package types (for modules with uploaded Rise content):**
+- `web` — Rise Web export, served via `serve-content-package` edge function, manual "Mark as Complete"
+- `xapi` — Rise xAPI export, served via same proxy + xAPI session management (`xapi-launch`, `xapi-statements`), auto-completion on xAPI verbs
 
 **Admin UI:** Programs Management → Edit Program → Modules tab
 **Depends on:** programs, module_types, features (feature_key), capability_assessments (optional)
@@ -925,6 +931,67 @@ Additionally, **scenarios** can be linked to any module via `scenario_assignment
 
 ---
 
+## Feature Area: Rise xAPI Content Delivery
+
+### xAPI Session & Statement Tables
+
+The xAPI integration enables Rise content to auto-track learner progress and support content resume. Two main tables:
+
+**`xapi_sessions`** — Per-launch session with auth tokens:
+
+| Field | Purpose |
+|-------|---------|
+| `user_id` | The learner |
+| `module_id` | Which module's content |
+| `enrollment_id` | Client enrollment (placeholder UUID for staff) |
+| `auth_token` | Unique token for xAPI Authorization header |
+| `status` | `launched` → `initialized` → `completed` / `terminated` / `abandoned` |
+| `bookmark` | SCORM `cmi.core.lesson_location` — Rise scroll/page position |
+| `suspend_data` | SCORM `cmi.suspend_data` — full course state (completed lessons, quiz answers) |
+| `launched_at` / `initialized_at` / `completed_at` / `terminated_at` | Lifecycle timestamps |
+
+**`xapi_statements`** — Stored xAPI statements (lightweight LRS):
+
+| Field | Purpose |
+|-------|---------|
+| `session_id` | Link to xAPI session |
+| `user_id` / `module_id` | Denormalized for fast queries |
+| `statement_id` | xAPI statement UUID from Rise |
+| `verb_id` | Full verb IRI (e.g., `http://adlnet.gov/expapi/verbs/completed`) |
+| `verb_display` | Human-readable verb name |
+| `object_id` / `object_name` | Activity IRI and name |
+| `result_completion` / `result_success` | Boolean result fields |
+| `result_score_scaled` / `result_score_raw` | Score fields |
+| `result_duration` | ISO 8601 duration |
+| `raw_statement` | Full xAPI statement JSON (JSONB) for audit |
+
+**RLS:** Users can SELECT their own sessions/statements. Edge functions use service role for INSERT/UPDATE.
+
+### xAPI Edge Functions
+
+| Function | Method | Purpose |
+|----------|--------|---------|
+| `xapi-launch` | POST | Creates or resumes xAPI session. Returns auth token, xAPI config, saved bookmark/suspendData. Checks enrollment or staff access. |
+| `xapi-statements` | POST/PUT/GET | **POST:** Stores xAPI statements, auto-completes `module_progress` on completion verbs. **PUT with `?stateId=`:** Saves bookmark or suspend_data. **GET:** Retrieves statements for a session. |
+| `serve-content-package` | GET | Auth-gated content proxy (shared with Tier 1 web). Serves Rise files from private storage, injects base URL + URL rewrite scripts. |
+
+### xAPI Auto-Completion
+
+When `xapi-statements` receives a statement with a completion verb (`completed`, `passed`, `mastered`) or `result.completion = true`:
+1. Session status updated to `completed`
+2. `module_progress` upserted to `status = 'completed'` via `enrollment_id + module_id`
+3. Frontend polls session status every 10 seconds; on completion, shows toast + updates UI
+
+### Content Resume Flow
+
+1. `xapi-launch` checks for existing active session (status `launched` or `initialized`) for user + module
+2. If found: reuses session + auth token, returns saved `bookmark` and `suspend_data`
+3. Frontend LMS mock restores state: `GetBookmark()` returns saved position, `GetEntryMode()` returns `"resume"`
+4. Rise content resumes from saved position
+5. Bookmark/suspend_data saved to backend on every `SetBookmark()` / `SetDataChunk()` call
+
+---
+
 ## Storage Buckets Reference
 
 | Bucket | Feature Area | MIME Category | Size Limit | Purpose |
@@ -970,7 +1037,7 @@ Additionally, **scenarios** can be linked to any module via `scenario_assignment
 
 ### Edge Function Shared Utilities
 
-All 63 edge functions use six shared utility libraries (mandatory for new functions):
+All 65 edge functions use six shared utility libraries (mandatory for new functions):
 
 | Utility | Import Path | Purpose |
 |---------|-------------|---------|
@@ -1017,6 +1084,9 @@ Missing milestone_gates config → Guided path milestones have no readiness sign
 Missing gate_overrides         → Coaches can't waive gates → clients blocked by advisory gates (DP3)
 Missing instantiations record  → Template-to-goal creation not tracked → no pace/date/status metadata (DP4)
 Missing template_goal_id col   → Goals created from templates not traceable → Development Profile can't show path progress (DP4)
+Missing xapi_sessions          → xAPI launch fails → Rise xAPI content can't start or resume
+Missing xapi auth_token        → xAPI statements rejected → no progress tracking for Rise content
+Missing bookmark/suspend_data  → Rise content can't resume → learner starts from beginning each time
 ```
 
 ---
@@ -1561,3 +1631,7 @@ These tables will be needed as the enhancement roadmap (ISSUES_AND_IMPROVEMENTS.
 | DP3 Gate overrides | `milestone_gate_overrides` table | Coach/instructor waiver of assessment gates with required reason |
 | DP4 Instantiations | `guided_path_instantiations` table | Tracks template-to-goal creation lifecycle (pace, dates, status) |
 | DP4 Goal traceability | `goals.template_goal_id`, `goals.instantiation_id` | Links goals back to source template and instantiation record |
+| xAPI content type | `program_modules.content_package_type` (TEXT, `web`/`xapi`) | Distinguishes Rise Web exports from Rise xAPI exports |
+| xAPI sessions | `xapi_sessions` table | Per-launch session with auth token, status lifecycle, bookmark, suspend_data |
+| xAPI statements | `xapi_statements` table | Stored xAPI statements with verb/object/result fields + raw JSONB |
+| xAPI resume | `xapi_sessions.bookmark`, `xapi_sessions.suspend_data` | Saved learner position and course state for Rise content resume |

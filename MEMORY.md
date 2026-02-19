@@ -48,7 +48,8 @@
 - Supabase client: `src/integrations/supabase/client.ts`
 - Auth: `src/pages/Auth.tsx`, `src/contexts/AuthContext.tsx`
 - Routes: `src/App.tsx` | Sentry: `src/main.tsx` | Error boundary: `src/components/ErrorBoundary.tsx`
-- Edge functions: `supabase/functions/` (63 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`, `error-response.ts`, `ai-input-limits.ts`, `calcom-utils.ts`
+- Edge functions: `supabase/functions/` (65 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`, `error-response.ts`, `ai-input-limits.ts`, `calcom-utils.ts`
+- xAPI: `supabase/functions/xapi-launch/` (session create/resume), `supabase/functions/xapi-statements/` (LRS endpoint + state persistence)
 - Assessment scoring: `src/lib/assessmentScoring.ts` (weighted question type scoring for capability assessments)
 - Guided path instantiation: `src/lib/guidedPathInstantiation.ts` (shared template→goals service with pace/date logic)
 - Tests: `src/lib/__tests__/` (18 files, 303 tests) | CI: `.github/workflows/ci.yml`
@@ -82,8 +83,19 @@
 - **Current flow (TalentLMS):** Rise → SCORM → TalentLMS → linked from Hub (5-7 clicks, 2 context switches — poor UX)
 - **Existing integration:** `talentlms-sso` (SSO), `talentlms-webhook` (xAPI parsing), `sync-talentlms-progress` (manual sync)
 - **Existing framework:** `external_sources` + `module_external_mappings` + `external_progress` (generic, any LMS)
-- **Strategy (decided):** Skip SCORM entirely. Go: Tier 1 (Rise Web embed via iframe, 3-5 days) → Tier 2 (Rise xAPI direct to Hub, 1-2 weeks). TalentLMS kept for active programs only, no new programs added to it.
+- **Strategy (decided):** Skip SCORM entirely. Go: ~~Tier 1 (Rise Web embed via iframe)~~ ✅ → ~~Tier 2 (Rise xAPI direct to Hub)~~ ✅. TalentLMS kept for active programs only, no new programs added to it.
 - **Why skip SCORM:** Rise exports xAPI natively; `talentlms-webhook` already parses xAPI; SCORM only tracks completion/score while xAPI tracks everything; xAPI data feeds AI coaching features
+
+### Content Delivery Tier 2 — Rise xAPI Integration (✅ DONE 2026-02-22)
+- **Architecture:** Rise xAPI ZIP → Supabase Storage → `serve-content-package` edge function (auth-gated proxy) → rendered in blob URL iframe on parent window → parent installs SCORM/LMS mock API → Rise calls parent window's mock → mock forwards xAPI statements to `xapi-statements` edge function
+- **Session management:** `xapi-launch` edge function creates/resumes xAPI sessions with auth tokens. Resumes existing active sessions automatically (returns saved bookmark + suspend_data).
+- **Statement processing:** `xapi-statements` edge function stores xAPI statements, auto-completes `module_progress` on completion/passed/mastered verbs, manages session lifecycle (initialized → completed → terminated)
+- **Resume support:** Rise bookmark (scroll position) and suspend_data (full course state) saved via `PUT ?stateId=bookmark|suspend_data` on `xapi-statements`. On resume, saved state returned to frontend, LMS mock restores position.
+- **Content rendering:** `ContentPackageViewer.tsx` — blob URL iframe approach. Fetches HTML from `serve-content-package`, rewrites relative URLs to absolute, renders in blob iframe. Installs LMS mock on parent window with `installLmsApiOnWindow()`. Supports both `web` (manual completion) and `xapi` (auto-tracking) content types.
+- **Key stability fixes:** JWT token refresh no longer destroys iframe (accessToken stored in ref), xAPI completion no longer reloads page (React state update instead of `window.location.reload()`)
+- **Database tables:** `xapi_sessions` (auth_token, status, bookmark, suspend_data), `xapi_statements` (verb_id, object_id, result fields, raw_statement JSONB)
+- **Edge functions (3):** `xapi-launch` (session create/resume), `xapi-statements` (statement storage + state persistence), `serve-content-package` (content proxy — shared with Tier 1)
+- **Module type:** `program_modules.content_package_type` enum: `web` (Tier 1 manual) or `xapi` (Tier 2 auto-tracking)
 
 ## Priority Roadmap (from ISSUES_AND_IMPROVEMENTS.md Part 11)
 **Critical (C1-C4):** ~~All resolved~~ ✅
@@ -98,7 +110,7 @@
 - ~~Assignment routing~~ ✅ DONE — individualized filter removed, My Queue filtering, assignment transfer dialog, async notifications
 - ~~CohortDashboard~~ ✅ DONE — participant view with schedule, next session highlight, ICS, progress, group section
 - ~~Join Session one-click~~ ✅ DONE — time-aware status hook, pulsing join button, dashboard widget
-- Content Tier 2 xAPI direct — not started (1-2 weeks)
+- ~~Content Tier 2 xAPI direct~~ ✅ DONE — Rise xAPI session management + statement storage + auto-completion + resume support
 - Cohort scheduling gaps — see below
 
 **Priority 0 — Cohort Scheduling Gaps (see `docs/COHORT_SCHEDULING_ANALYSIS.md` for full analysis):**
@@ -125,7 +137,7 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 - DP7: Readiness dashboard (3-5 days) — capstone coach + client view combining all data
 - ~~**Known bug:** `GuidedPathSurveyWizard` saves survey response but never instantiates template goals/milestones~~ ✅ Fixed in DP4
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → Cohort quality (G8-G10) → 5-Self-Registration → Development Profile (DP5-DP7) → Content Tier 2 xAPI → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → Cohort quality (G8-G10) → 5-Self-Registration → Development Profile (DP5-DP7) → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, client progress, notes)
@@ -154,13 +166,14 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 5. ~~Priority 0 Cohort Core~~ ✅ — CohortDashboard + Join Session one-click + calendar + dashboard widget
 6. ~~Priority 0 Cohort Scheduling Gaps (G1-G7)~~ ✅ — enrollment UI + Meet links + instructor + recurrence + attendance + notifications + session notes
 7. ~~**Development Profile (DP1-DP4)**~~ ✅ — assessment↔goal links, profile page, gated milestones, intake-driven paths
-8. **Priority 0 Cohort Quality (G8-G10)** — enrollment codes + analytics + session-linked homework (~1 week)
-9. Quick medium wins (M2, M11) — interleaved (2 days)
-10. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
-11. **Development Profile (DP5-DP7)** — module↔domain mapping, psychometric structured results, readiness dashboard (~1-2 weeks)
-12. **Content Delivery Tier 2** — xAPI direct (1-2 weeks)
-13. Phase 3 AI — system prompt hardening first (2-3 days), then AI Learning Companion
-14. Remaining phases by business priority
+8. ~~**Content Delivery Tier 2**~~ ✅ — Rise xAPI integration with session management, auto-completion, resume
+9. **GT1 Teaching Cohort Workflow** — instructor/coach cohort UI (plan ready in `.claude/plans/proud-jumping-fountain.md`)
+10. **Priority 0 Cohort Quality (G8-G10)** — enrollment codes + analytics + session-linked homework (~1 week)
+11. Quick medium wins (M2, M11) — interleaved (2 days)
+12. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
+13. **Development Profile (DP5-DP7)** — module↔domain mapping, psychometric structured results, readiness dashboard (~1-2 weeks)
+14. Phase 3 AI — system prompt hardening first (2-3 days), then AI Learning Companion
+15. Remaining phases by business priority
 
 ## Known Issues
 - (none currently — all critical/high items documented in roadmap above)
@@ -193,7 +206,7 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 - **Phase 5 plan complete** (`docs/PHASE5_PLAN.md`) — 14 steps covering self-registration, role applications, enrollment codes, bulk import, org invite flow. Not yet implemented.
 - **AI infrastructure:** 4 edge functions (decision-insights, course-recommendations, generate-reflection-prompt, analytics-ai-insights), Vertex AI Gemini 3 Flash (EU/Frankfurt), input truncation, credit-based consumption, explicit consent gating, provider-agnostic architecture
 - **Product strategy documented** (`docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md`): 6 parts — young professionals (12 ideas), AI learning (5 features), content delivery (skip SCORM → xAPI), cohort readiness (6 gaps), coach/instructor onboarding (6 gaps), instructor/coach assignment & grading routing (6 gaps)
-- **Content delivery Tier 1 DONE:** Rise ZIP upload + auth-gated edge function proxy + iframe embed in ModuleDetail. Private storage bucket, JWT + enrollment check on every request. TalentLMS kept for active programs only. Tier 2 (xAPI direct) not started.
+- **Content delivery Tier 1 + Tier 2 DONE:** Tier 1: Rise ZIP upload + auth-gated edge function proxy + iframe embed in ModuleDetail. Private storage bucket, JWT + enrollment check on every request. Tier 2: Rise xAPI integration with session management (`xapi-launch`), statement storage (`xapi-statements`), auto-completion on xAPI verbs, resume support (bookmark + suspend_data persistence). TalentLMS kept for active programs only.
 - **Cohort core experience + G1-G7 DONE:** CohortDashboard (schedule timeline, next session, ICS, progress), CohortSessionCard (time-aware status, pulsing join, ICS), Calendar integration, ClientDashboard widget. G1-G7 gaps resolved: cohort assignment on enrollment (`enroll_with_credits` RPC with `p_cohort_id`), Google Meet automation, instructor assignment on cohorts (`lead_instructor_id`) and sessions (`instructor_id`), attendance tracking (`cohort_session_attendance` — instructors/coaches mark, clients read own), bulk session generation, session reminders (`send-schedule-reminders` edge function), session notes/recap (instructors edit, participants view). **Remaining:** G8 (session quality/feedback), G9 (cohort analytics), G10 (multi-cohort management). See `docs/COHORT_SCHEDULING_ANALYSIS.md`.
 - **Coach/instructor onboarding DONE:** Staff Welcome Card, profile setup (bio, specializations, company), enhanced empty states, role-specific welcome emails.
 - **Assignment routing DONE:** My Queue filtering, assignment transfer dialog, async notifications via create_notification RPC. Remaining: configurable notification routing (nice to have), assessor_id cleanup.
@@ -208,7 +221,12 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
   - `src/components/guided-paths/WaiveGateDialog.tsx` — coach/instructor gate waiver
   - `src/hooks/useGoalAssessmentLinks.ts` — goal↔assessment CRUD
   - `src/hooks/useMilestoneGates.ts` — gates CRUD, batch fetch, status computation, overrides
-- **Next steps:** Phase 5 Self-Registration → DP5-DP7 → Content Tier 2 xAPI → Phase 3 AI
+- **Content delivery Tier 2 xAPI DONE** (2026-02-22): 3 new edge functions (`xapi-launch`, `xapi-statements`, plus modified `serve-content-package`), 2 new DB tables (`xapi_sessions`, `xapi_statements`), `ContentPackageViewer.tsx` rewritten with LMS mock + resume support. Deployed to prod + preprod.
+- **Key xAPI components:**
+  - `src/components/modules/ContentPackageViewer.tsx` — blob URL iframe rendering, LMS mock installation, xAPI launch/resume, bookmark/suspend_data persistence
+  - `supabase/functions/xapi-launch/index.ts` — session create/resume, auth token generation, enrollment/staff access checks
+  - `supabase/functions/xapi-statements/index.ts` — statement storage, session lifecycle, auto-completion, state persistence
+- **Next steps:** GT1 Teaching Cohort Workflow → Phase 5 Self-Registration → DP5-DP7 → Phase 3 AI
 
 ## npm Scripts
 ```

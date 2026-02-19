@@ -47,7 +47,7 @@ Edge functions deployed separately via `npm run deploy:functions`.
 
 ## Edge Function Patterns (MANDATORY)
 
-All 63 edge functions in `supabase/functions/` follow these standardized patterns. **New edge functions MUST follow them too.**
+All 65 edge functions in `supabase/functions/` follow these standardized patterns. **New edge functions MUST follow them too.**
 
 ### 1. CORS — Use `getCorsHeaders(req)` from shared utility
 
@@ -193,6 +193,16 @@ Use `@/` path alias for all imports (maps to `src/`).
 - `PathConfirmation.tsx` — pace selector + start date + estimated completion before instantiation
 - Coach/instructor views reuse same sub-components with `userId` prop for viewing client data
 
+### Rise xAPI Content Delivery Patterns
+- `ContentPackageViewer.tsx` — renders Rise content in blob URL iframe on parent window. Installs LMS mock API via `installLmsApiOnWindow()`.
+- **Content types:** `program_modules.content_package_type` — `web` (manual completion only) or `xapi` (auto-tracking via xAPI)
+- **LMS mock:** Parent window exposes SCORM-like API (`GetBookmark`, `SetBookmark`, `GetDataChunk`, `SetDataChunk`, `GetEntryMode`, etc.) that Rise calls via `window.parent.*`
+- **xAPI flow:** `xapi-launch` (create/resume session) → Rise content sends xAPI statements → `xapi-statements` (store + auto-complete)
+- **Resume pattern:** `xapi-launch` returns `resumed: true` + saved `bookmark` + `suspendData` when active session exists. LMS mock restores state.
+- **State persistence:** `saveState()` helper sends `PUT ?stateId=bookmark|suspend_data` to `xapi-statements` endpoint
+- **Stability:** `accessToken` stored in ref to prevent JWT refresh from destroying iframe. `onXapiComplete` uses ref to break dependency chain.
+- **Auth:** xAPI uses Basic auth (`Basic base64(token:)`) decoded in `xapi-statements`. Session token issued by `xapi-launch` (Bearer JWT).
+
 ### Code Style
 - TypeScript strict mode (all flags including `strictNullChecks`)
 - Functional React components with hooks
@@ -211,7 +221,7 @@ Use `@/` path alias for all imports (maps to `src/`).
 - `src/lib/` — Utility functions and helpers
 - `src/lib/__tests__/` — Unit tests (Vitest, 303 tests in 18 files)
 - `src/integrations/supabase/` — Supabase client, types, generated types
-- `supabase/functions/` — 63 Deno edge functions
+- `supabase/functions/` — 65 Deno edge functions
 - `supabase/functions/_shared/` — Shared edge function utilities:
   - `cors.ts` — Origin-aware CORS headers (`getCorsHeaders(req)`)
   - `error-response.ts` — Typed error/success response helpers

@@ -1,6 +1,6 @@
 # InnoTrue Hub — Platform Functional Overview
 
-> Last updated: 2026-02-19
+> Last updated: 2026-02-22
 > This document describes the InnoTrue Hub platform from a functional perspective: what it does, who uses it, how the pieces connect, and how things flow. It is intended for platform administrators, partner instructors, developers joining the project, and stakeholders evaluating platform capabilities.
 
 ---
@@ -135,7 +135,7 @@ Manages their organization's members and program access within the platform.
 │                    Supabase Backend                      │
 │  ┌─────────┐ ┌──────────┐ ┌─────────┐ ┌─────────────┐  │
 │  │  Auth    │ │ Database │ │ Storage │ │ Edge Funcs   │  │
-│  │  (OAuth) │ │ (Postgres│ │ (16     │ │ (63          │  │
+│  │  (OAuth) │ │ (Postgres│ │ (16     │ │ (65          │  │
 │  │         │ │  380+    │ │ buckets)│ │  functions)  │  │
 │  │         │ │  tables) │ │         │ │              │  │
 │  └─────────┘ └──────────┘ └─────────┘ └─────────────┘  │
@@ -348,9 +348,8 @@ coaching, group_coaching, workshop, mastermind, review_board_mock, peer_coaching
 - Credit-based unlocking for premium resources
 
 **Learning Content Delivery:**
-- Currently: Rise content via TalentLMS (SSO, SCORM, xAPI webhooks)
-- Strategy: Transitioning to direct embedding (Rise Web export in iframe) and xAPI for auto-tracking
-- See Section 6 for full content delivery details
+- **Current (primary):** Rise content embedded directly in Hub — xAPI mode (auto-tracking, resume) or web mode (manual completion). See Section 6 for details.
+- **Legacy:** TalentLMS (SSO, SCORM, xAPI webhooks) — kept for active programs only, being sunset
 
 ---
 
@@ -528,31 +527,51 @@ This is one of the platform's most sophisticated systems. It controls who teache
 
 ## 6. Content Delivery
 
-### Current Flow (via TalentLMS)
+### Legacy Flow (via TalentLMS — being sunset)
 
 ```
 Rise (authoring) → SCORM export → TalentLMS (hosting) → Link from Hub
 ```
 
-Client experience: Hub → Program → Module → Click link → SSO to TalentLMS → Navigate UI → Resume course → Rise content in popup. That's 5-7 clicks and 2 context switches.
+Client experience: Hub → Program → Module → Click link → SSO to TalentLMS → Navigate UI → Resume course → Rise content in popup. That's 5-7 clicks and 2 context switches. Kept for active legacy programs only.
 
-### Planned Flow (direct embedding)
+### Current Flow (direct embedding — Tier 1 + Tier 2 ✅ DONE)
 
 ```
-Rise (authoring) → Web/xAPI export → Supabase Storage → Embedded in Hub
+Rise (authoring) → Web or xAPI export → ZIP upload → Supabase Storage → Embedded in Hub
 ```
 
-Client experience: Hub → Program → Module → Content loads inline. Zero clicks, zero context switches.
+Client experience: Hub → Program → Module → Content loads inline. Zero clicks, zero context switches. Progress auto-tracked (xAPI mode) or manually marked (web mode).
 
-### Transition Strategy
+### Two Content Modes
 
-| Phase | What | Effort |
-|-------|------|--------|
-| ~~**Tier 1**~~ ✅ DONE | Embed Rise Web export directly in iframe. Auth-gated `serve-content-package` edge function. Manual "Mark as Complete." | ~~3-5 days~~ |
-| **Tier 2 (after)** | Rise xAPI export with lightweight LRS endpoint. Auto-tracking of progress, time, interactions. | 1-2 weeks |
-| **TalentLMS** | Keep for active programs. No new programs added. Sunset when current programs end. | Ongoing |
+| Mode | `content_package_type` | Completion | Resume | Tracking |
+|------|----------------------|------------|--------|----------|
+| **Web** (Tier 1) ✅ | `web` | Manual "Mark as Complete" button | No | None |
+| **xAPI** (Tier 2) ✅ | `xapi` | Auto-complete on Rise completion/passed/mastered signals | Yes (bookmark + suspend_data) | Full xAPI statements stored |
 
-### Infrastructure Already Built
+### How xAPI Content Works (Tier 2)
+
+1. **Launch:** Client opens module → frontend calls `xapi-launch` edge function → creates or resumes xAPI session → returns auth token + xAPI config + saved resume data
+2. **Render:** Frontend fetches Rise HTML from `serve-content-package`, rewrites relative URLs, renders in blob URL iframe. Installs SCORM-compatible LMS mock on parent window.
+3. **Track:** As learner progresses, Rise calls mock functions (`SetBookmark`, `SetDataChunk`, etc.). Mock forwards xAPI statements to `xapi-statements` edge function.
+4. **Complete:** When Rise sends completion/passed/mastered verbs, backend auto-updates `module_progress` to `completed`. Frontend polls and shows toast.
+5. **Resume:** On next visit, `xapi-launch` finds existing active session, returns saved bookmark + suspend_data. LMS mock restores learner's position.
+
+### Content Delivery Infrastructure
+
+| Component | Purpose |
+|-----------|---------|
+| `serve-content-package` edge function | Auth-gated file proxy from private storage (JWT + enrollment/staff check) |
+| `upload-content-package` edge function | Admin ZIP upload, extraction, storage |
+| `xapi-launch` edge function | Session create/resume, auth token generation |
+| `xapi-statements` edge function | xAPI statement storage, state persistence, auto-completion |
+| `ContentPackageViewer.tsx` | Frontend component: blob URL iframe, LMS mock, xAPI launch/resume |
+| `xapi_sessions` table | Session lifecycle, auth tokens, bookmark, suspend_data |
+| `xapi_statements` table | Stored xAPI statements with verb/object/result fields |
+| `module-content-packages` bucket | Private storage for Rise ZIP content (500MB limit) |
+
+### Legacy TalentLMS Infrastructure (kept for active programs)
 
 - `talentlms-sso` edge function for seamless SSO
 - `talentlms-webhook` edge function that already parses xAPI statements
@@ -611,7 +630,7 @@ Consumption analytics, user behavior analytics, program completions, system sett
 | Database tables | 380+ |
 | Database enums | 25 |
 | Database migrations | 420 |
-| Edge functions | 63 |
+| Edge functions | 65 |
 | Frontend pages | 164+ (71 admin, 58 client, 13 teaching, 9 org-admin, 13+ shared) |
 | React hooks | 69 |
 | Storage buckets | 16 |
