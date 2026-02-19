@@ -207,6 +207,13 @@ export function ContentPackageViewer({
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lmsCleanupRef = useRef<(() => void) | null>(null);
 
+  // Keep a stable ref to the onXapiComplete callback so polling
+  // doesn't trigger content-loading effect re-runs.
+  const onXapiCompleteRef = useRef(onXapiComplete);
+  useEffect(() => {
+    onXapiCompleteRef.current = onXapiComplete;
+  }, [onXapiComplete]);
+
   // ─── xAPI completion polling ──────────────────────────────────
   const startCompletionPolling = useCallback(
     (sessionId: string) => {
@@ -221,7 +228,7 @@ export function ContentPackageViewer({
 
           if (data?.status === "completed" || data?.status === "terminated") {
             setXapiCompleted(true);
-            onXapiComplete?.();
+            onXapiCompleteRef.current?.();
             if (pollIntervalRef.current) {
               clearInterval(pollIntervalRef.current);
               pollIntervalRef.current = null;
@@ -232,11 +239,25 @@ export function ContentPackageViewer({
         }
       }, 10_000);
     },
-    [onXapiComplete],
+    [], // stable — no external dependencies; uses ref for callback
   );
+
+  // Store the initial accessToken in a ref so JWT refreshes don't
+  // cause the content-loading effect to re-run and destroy the iframe.
+  const accessTokenRef = useRef(accessToken);
+  useEffect(() => {
+    // Only capture the first non-null token. Subsequent refreshes
+    // shouldn't tear down the running Rise content.
+    if (accessToken && !accessTokenRef.current) {
+      accessTokenRef.current = accessToken;
+    }
+  }, [accessToken]);
 
   // ─── Load content ─────────────────────────────────────────────
   useEffect(() => {
+    const token = accessTokenRef.current || accessToken;
+    if (!token) return; // wait until we have an access token
+
     let cancelled = false;
     let objectUrl: string | null = null;
 
@@ -298,7 +319,7 @@ export function ContentPackageViewer({
           // since the LMS mock lives on the parent window, not injected into the HTML).
           const contentUrl =
             `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-content-package` +
-            `?module=${moduleId}&path=scormcontent/index.html&token=${accessToken}`;
+            `?module=${moduleId}&path=scormcontent/index.html&token=${token}`;
           const htmlResp = await fetch(contentUrl);
           if (!htmlResp.ok) {
             const errText = await htmlResp.text();
@@ -314,7 +335,7 @@ export function ContentPackageViewer({
           }
         } else {
           // ── Web mode: direct blob URL proxy ──
-          const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-content-package?module=${moduleId}&path=index.html&token=${accessToken}`;
+          const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-content-package?module=${moduleId}&path=index.html&token=${token}`;
           const resp = await fetch(url);
 
           if (!resp.ok) {
@@ -352,7 +373,11 @@ export function ContentPackageViewer({
         pollIntervalRef.current = null;
       }
     };
-  }, [moduleId, accessToken, contentPackageType, startCompletionPolling]);
+    // Only re-load if the module changes or package type changes.
+    // accessToken is captured via ref to prevent JWT refresh from tearing down the iframe.
+    // startCompletionPolling is stable (no deps) so won't cause re-runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moduleId, contentPackageType, startCompletionPolling]);
 
   // Clean up blob URL on unmount
   useEffect(() => {

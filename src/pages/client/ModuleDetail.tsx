@@ -682,8 +682,19 @@ export default function ModuleDetail() {
                 title={module.title}
                 contentPackageType={module.content_package_type === "xapi" ? "xapi" : "web"}
                 onXapiComplete={() => {
-                  // Refresh module data to reflect auto-completed progress
-                  window.location.reload();
+                  // Update local state to reflect auto-completed progress
+                  // without reloading the page (which would destroy the iframe).
+                  setModule((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          progress: prev.progress
+                            ? { ...prev.progress, status: "completed" }
+                            : prev.progress,
+                        }
+                      : prev,
+                  );
+                  toast.success("Module completed! 🎉");
                 }}
               />
             </CardContent>
