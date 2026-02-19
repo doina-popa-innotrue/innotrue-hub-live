@@ -381,8 +381,30 @@ Deno.serve(async (req: Request) => {
     return origOpen.apply(this, [method, url].concat(Array.prototype.slice.call(arguments, 2)));
   };
 
+  // Webpack chunk URL detection: webpack derives __webpack_public_path__ from
+  // the loading script's URL pathname, producing URLs like:
+  //   https://xxx.supabase.co/functions/v1/cff2e6f1.css
+  // instead of routing through serve-content-package. We detect and fix these.
+  var SUPABASE_FN_BASE = PROXY_BASE.split('?')[0];
+  var SUPABASE_ORIGIN = SUPABASE_FN_BASE.substring(0, SUPABASE_FN_BASE.indexOf('/functions/'));
+  var BAD_PREFIX = SUPABASE_ORIGIN + '/functions/v1/';
+
+  function fixWebpackChunkUrl(url) {
+    if (typeof url !== 'string') return url;
+    if (url.startsWith(BAD_PREFIX) && !url.includes('serve-content-package')) {
+      var filename = url.substring(BAD_PREFIX.length);
+      return PROXY_BASE + resolvePath('lib/rise/' + filename);
+    }
+    return url;
+  }
+
+  // Master rewrite: handles relative paths, and fixes webpack absolute URLs
+  function masterRewrite(url) {
+    if (needsRewrite(url)) return rewriteUrl(url);
+    return fixWebpackChunkUrl(url);
+  }
+
   // Intercept dynamic element creation: script.src, link.href, img.src, etc.
-  // Rise creates <script> and <link> elements via JS and sets .src / .href
   function wrapProp(proto, prop) {
     var desc = Object.getOwnPropertyDescriptor(proto, prop);
     if (!desc || !desc.set) return;
@@ -390,7 +412,7 @@ Deno.serve(async (req: Request) => {
     Object.defineProperty(proto, prop, {
       get: desc.get,
       set: function(val) {
-        if (needsRewrite(val)) val = rewriteUrl(val);
+        val = masterRewrite(val);
         return origSet.call(this, val);
       },
       enumerable: desc.enumerable,
@@ -398,20 +420,18 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // Override .src on HTMLScriptElement and HTMLImageElement
   wrapProp(HTMLScriptElement.prototype, 'src');
   wrapProp(HTMLImageElement.prototype, 'src');
-  // Override .href on HTMLLinkElement (for stylesheets)
   wrapProp(HTMLLinkElement.prototype, 'href');
 
-  // Also intercept setAttribute for these properties
   var origSetAttr = Element.prototype.setAttribute;
   Element.prototype.setAttribute = function(name, value) {
-    if ((name === 'src' || name === 'href') && needsRewrite(value)) {
-      value = rewriteUrl(value);
-    }
+    if (name === 'src' || name === 'href') value = masterRewrite(value);
     return origSetAttr.call(this, name, value);
   };
+
+  // Set webpack public path before webpack initializes
+  window.__webpack_public_path__ = PROXY_BASE + resolvePath('lib/rise/');
 })();
 </script>`;
 
