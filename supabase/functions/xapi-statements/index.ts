@@ -122,6 +122,46 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  // ─── PUT with stateId: Save session state (bookmark / suspend_data) ──
+  const requestUrl = new URL(req.url);
+  const stateId = requestUrl.searchParams.get("stateId");
+
+  if (req.method === "PUT" && stateId) {
+    let stateBody: { value?: string };
+    try {
+      stateBody = await req.json();
+    } catch {
+      return errorResponse.badRequest("Invalid JSON body", cors);
+    }
+
+    const value = stateBody.value ?? "";
+    const updateFields: Record<string, string> = {};
+
+    if (stateId === "bookmark") {
+      updateFields.bookmark = value;
+    } else if (stateId === "suspend_data") {
+      updateFields.suspend_data = value;
+    } else {
+      return errorResponse.badRequest(`Unknown stateId: ${stateId}`, cors);
+    }
+
+    const { error: updateError } = await serviceClient
+      .from("xapi_sessions")
+      .update(updateFields)
+      .eq("id", session.id);
+
+    if (updateError) {
+      console.error(`[xapi-statements] State update error (${stateId}):`, updateError);
+      return errorResponse.serverError("xapi-statements-state", updateError, cors);
+    }
+
+    const responseHeaders = { ...cors, "X-Experience-API-Version": "1.0.3" };
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...responseHeaders },
+    });
+  }
+
   // ─── POST: Store statement(s) ─────────────────────────────────
   if (req.method === "POST" || req.method === "PUT") {
     let body: unknown;

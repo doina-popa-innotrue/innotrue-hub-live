@@ -1,18 +1,25 @@
 /**
- * xapi-launch — Creates an xAPI session and returns xAPI config for the frontend
+ * xapi-launch — Creates or resumes an xAPI session and returns xAPI config for the frontend
  *
  * POST /xapi-launch
  *   Body: { moduleId: string }
  *   Auth: Bearer JWT (user must be enrolled or staff)
  *
- * Creates an xapi_sessions record with a unique auth token, then returns:
+ * If an active (non-terminated, non-completed) session exists for this user+module,
+ * it is resumed — returning the saved bookmark and suspend_data so Rise can restore
+ * the learner's position. Otherwise, a new session is created.
+ *
+ * Returns:
  *   {
  *     sessionId: string,
+ *     resumed: boolean,         // true if resuming an existing session
+ *     bookmark: string,         // saved scroll/page position (empty if new)
+ *     suspendData: string,      // saved course state (empty if new)
  *     xapiConfig: {
- *       endpoint: string,   // LRS statements endpoint URL
- *       auth: string,       // Authorization header value (Basic <base64>)
- *       actor: object,      // xAPI Agent identifying the learner
- *       activityId: string  // IRI identifying this activity/module
+ *       endpoint: string,       // LRS statements endpoint URL
+ *       auth: string,           // Authorization header value (Basic <base64>)
+ *       actor: object,          // xAPI Agent identifying the learner
+ *       activityId: string      // IRI identifying this activity/module
  *     }
  *   }
  *
@@ -137,6 +144,13 @@ Deno.serve(async (req: Request) => {
 
     // Staff without enrollment — skip progress tracking but still allow launch
     if (!enrollmentId) {
+      // Try to resume an existing active session for staff
+      const { resumed, response } = await tryResumeSession(
+        serviceClient, supabaseUrl, user, moduleId,
+        "00000000-0000-0000-0000-000000000000", cors,
+      );
+      if (resumed) return response!;
+
       // Create a minimal session without enrollment
       const authToken = generateToken();
       const { data: session, error: sessionError } = await serviceClient
@@ -157,11 +171,19 @@ Deno.serve(async (req: Request) => {
 
       const xapiConfig = buildXapiConfig(supabaseUrl, authToken, user, moduleId);
 
-      return successResponse.ok({ sessionId: session.id, xapiConfig }, cors);
+      return successResponse.ok({
+        sessionId: session.id, resumed: false, bookmark: "", suspendData: "", xapiConfig,
+      }, cors);
     }
   }
 
-  // ─── Create xAPI session ──────────────────────────────────────
+  // ─── Try to resume an existing active session ──────────────────
+  const { resumed, response } = await tryResumeSession(
+    serviceClient, supabaseUrl, user, moduleId, enrollmentId!, cors,
+  );
+  if (resumed) return response!;
+
+  // ─── Create new xAPI session ──────────────────────────────────
   const authToken = generateToken();
 
   const { data: session, error: sessionError } = await serviceClient
@@ -195,8 +217,58 @@ Deno.serve(async (req: Request) => {
   // ─── Build xAPI config for the frontend ─────────────────────
   const xapiConfig = buildXapiConfig(supabaseUrl, authToken, user, moduleId);
 
-  return successResponse.ok({ sessionId: session.id, xapiConfig }, cors);
+  return successResponse.ok({
+    sessionId: session.id, resumed: false, bookmark: "", suspendData: "", xapiConfig,
+  }, cors);
 });
+
+/**
+ * Try to find and resume an existing active session for this user + module.
+ * Returns { resumed: true, response } if a session was found, or { resumed: false }.
+ *
+ * An active session is one with status in ('launched', 'initialized') — i.e. not
+ * completed, terminated, or abandoned. We reuse its auth_token and return the
+ * saved bookmark/suspend_data so the frontend can restore the learner's position.
+ */
+async function tryResumeSession(
+  serviceClient: ReturnType<typeof createClient>,
+  supabaseUrl: string,
+  user: { id: string; email?: string; user_metadata?: { full_name?: string } },
+  moduleId: string,
+  enrollmentId: string,
+  cors: Record<string, string>,
+): Promise<{ resumed: boolean; response?: Response }> {
+  const { data: existingSession } = await serviceClient
+    .from("xapi_sessions")
+    .select("id, auth_token, bookmark, suspend_data, status")
+    .eq("user_id", user.id)
+    .eq("module_id", moduleId)
+    .in("status", ["launched", "initialized"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!existingSession) return { resumed: false };
+
+  // Reuse the existing session — reset status to initialized for the new page load
+  await serviceClient
+    .from("xapi_sessions")
+    .update({ status: "initialized", initialized_at: new Date().toISOString() })
+    .eq("id", existingSession.id);
+
+  const xapiConfig = buildXapiConfig(supabaseUrl, existingSession.auth_token, user, moduleId);
+
+  return {
+    resumed: true,
+    response: successResponse.ok({
+      sessionId: existingSession.id,
+      resumed: true,
+      bookmark: existingSession.bookmark || "",
+      suspendData: existingSession.suspend_data || "",
+      xapiConfig,
+    }, cors),
+  };
+}
 
 /**
  * Generate a secure random auth token for xAPI session.

@@ -49,12 +49,36 @@ function sendXapiStatement(
 }
 
 /**
+ * Save a state value (bookmark or suspend_data) to the xAPI session.
+ * Uses the xapi-statements endpoint with ?stateId= parameter.
+ */
+function saveState(
+  endpoint: string,
+  auth: string,
+  stateId: "bookmark" | "suspend_data",
+  value: string,
+) {
+  fetch(`${endpoint}?stateId=${stateId}`, {
+    method: "PUT",
+    headers: {
+      Authorization: auth,
+      "Content-Type": "application/json",
+      "X-Experience-API-Version": "1.0.3",
+    },
+    body: JSON.stringify({ value }),
+  }).catch((e) => console.warn(`[xAPI] State save (${stateId}) failed:`, e));
+}
+
+/**
  * Install the LMS API mock on the parent window so Rise content in the
  * blob-URL iframe can find it via window.parent.IsLmsPresent(), etc.
  *
  * Rise's scormcontent/index.html walks up the frame hierarchy checking
  * window.parent, window.parent.parent, etc. for these global functions.
  * Since our iframe is a blob: URL, window.parent is the React app's window.
+ *
+ * When resuming a session, savedBookmark and savedSuspendData contain the
+ * learner's previous position so Rise can restore where they left off.
  *
  * Returns a cleanup function that removes all the globals.
  */
@@ -63,9 +87,17 @@ function installLmsApiOnWindow(
   auth: string,
   actor: object,
   activityId: string,
+  savedBookmark = "",
+  savedSuspendData = "",
+  isResume = false,
 ): () => void {
   const win = window as Record<string, unknown>;
   const installedKeys: string[] = [];
+
+  // In-memory cache of bookmark and suspend_data.
+  // Initialized from saved values (if resuming) and updated by Set calls.
+  let currentBookmark = savedBookmark;
+  let currentSuspendData = savedSuspendData;
 
   function install(name: string, fn: (...args: unknown[]) => unknown) {
     win[name] = fn;
@@ -78,15 +110,32 @@ function installLmsApiOnWindow(
     result?: Record<string, unknown>,
   ) => sendXapiStatement(endpoint, auth, actor, activityId, verbId, verbDisplay, result);
 
-  // Send "initialized" on install
-  send("http://adlnet.gov/expapi/verbs/initialized", "initialized");
+  // Send "initialized" (or "resumed") on install
+  if (isResume) {
+    send("http://adlnet.gov/expapi/verbs/resumed", "resumed");
+  } else {
+    send("http://adlnet.gov/expapi/verbs/initialized", "initialized");
+  }
 
   // ── Core SCORM/xAPI driver API that Rise expects ──
   install("IsLmsPresent", () => true);
-  install("GetBookmark", () => "");
-  install("SetBookmark", () => "true");
-  install("GetDataChunk", () => "");
-  install("SetDataChunk", () => "true");
+
+  // Bookmark = scroll/page position (cmi.core.lesson_location)
+  install("GetBookmark", () => currentBookmark);
+  install("SetBookmark", (val: unknown) => {
+    currentBookmark = String(val ?? "");
+    saveState(endpoint, auth, "bookmark", currentBookmark);
+    return "true";
+  });
+
+  // DataChunk = full suspend data blob (cmi.suspend_data)
+  install("GetDataChunk", () => currentSuspendData);
+  install("SetDataChunk", (val: unknown) => {
+    currentSuspendData = String(val ?? "");
+    saveState(endpoint, auth, "suspend_data", currentSuspendData);
+    return "true";
+  });
+
   install("CommitData", () => "true");
   install("Finish", () => {
     send("http://adlnet.gov/expapi/verbs/terminated", "terminated");
@@ -123,7 +172,8 @@ function installLmsApiOnWindow(
   install("GetMaxTimeAllowed", () => "");
   install("GetTimeLimitAction", () => "");
   install("SetSessionTime", () => "true");
-  install("GetEntryMode", () => "ab-initio");
+  // "resume" tells Rise to restore from bookmark/suspend_data; "ab-initio" means fresh start
+  install("GetEntryMode", () => (isResume ? "resume" : "ab-initio"));
   install("GetLessonMode", () => "normal");
   install("GetTakingForCredit", () => "credit");
   install("FlushData", () => "true");
@@ -293,8 +343,10 @@ export function ContentPackageViewer({
           }
 
           const launchData = (await launchResp.json()) as {
-            launchUrl: string;
             sessionId: string;
+            resumed: boolean;
+            bookmark: string;
+            suspendData: string;
             xapiConfig: {
               endpoint: string;
               auth: string;
@@ -304,15 +356,23 @@ export function ContentPackageViewer({
           };
           sessionIdRef.current = launchData.sessionId;
 
+          if (launchData.resumed) {
+            console.log("[xAPI] Resuming session — bookmark:", launchData.bookmark ? "yes" : "none");
+          }
+
           // Install the LMS API mock on THIS window (the parent of the iframe).
           // Rise content in the blob iframe calls window.parent.IsLmsPresent() etc.
           // xAPI statements are sent from here (app origin) — no CORS issues.
+          // Pass saved bookmark/suspendData for resume support.
           if (lmsCleanupRef.current) lmsCleanupRef.current();
           lmsCleanupRef.current = installLmsApiOnWindow(
             launchData.xapiConfig.endpoint,
             launchData.xapiConfig.auth,
             launchData.xapiConfig.actor,
             launchData.xapiConfig.activityId,
+            launchData.bookmark || "",
+            launchData.suspendData || "",
+            launchData.resumed || false,
           );
 
           // Fetch the content HTML (without xAPI query params — those are no longer needed
