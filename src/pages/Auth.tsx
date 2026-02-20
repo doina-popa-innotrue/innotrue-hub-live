@@ -128,7 +128,6 @@ export default function Auth() {
       if (session) {
         // User has a valid session from the recovery link
         setIsRecoverySession(true);
-        console.log("Recovery session detected");
       } else {
         // User is in reset mode but no session - wait for auth state change
         const {
@@ -136,7 +135,7 @@ export default function Auth() {
         } = supabase.auth.onAuthStateChange((event, session) => {
           if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
             setIsRecoverySession(true);
-            console.log("Recovery session established via auth state change");
+
             if (timeoutId) clearTimeout(timeoutId);
           }
         });
@@ -145,7 +144,7 @@ export default function Auth() {
 
         // Timeout fallback - if no recovery session after 5 seconds, redirect to login
         timeoutId = setTimeout(() => {
-          console.warn("Recovery session timeout - redirecting to login");
+
           setRecoveryTimedOut(true);
         }, 5000);
       }

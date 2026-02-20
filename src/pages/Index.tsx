@@ -9,24 +9,17 @@ const Index = () => {
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    console.log("Index: Auth state changed", { user: !!user, userRole, userRoles, loading });
-
     // Wait until loading is complete AND we have either no user or a determined role
     if (loading) return;
 
     if (!user) {
-      console.log("Index: Redirecting to /auth (no user)");
       navigate("/auth", { replace: true });
     } else if (userRole) {
-      // Only redirect once userRole is determined
       if (userRole === "admin") {
-        console.log("Index: Redirecting to /admin");
         navigate("/admin", { replace: true });
       } else if (userRole === "instructor" || userRole === "coach") {
-        console.log("Index: Redirecting to /teaching");
         navigate("/teaching", { replace: true });
       } else {
-        console.log("Index: Redirecting to /dashboard");
         navigate("/dashboard", { replace: true });
       }
     }
@@ -43,7 +36,6 @@ const Index = () => {
 
     if (!loading && user && !userRole) {
       fallbackTimerRef.current = setTimeout(() => {
-        console.warn("Index: Role unresolved after timeout; redirecting to /dashboard fallback");
         navigate("/dashboard", { replace: true });
       }, 6000);
     }

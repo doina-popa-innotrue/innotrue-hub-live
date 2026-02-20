@@ -78,12 +78,7 @@ export function useModuleSchedulingUrl({
                 };
               }
 
-              // Log if event type not found (allows fallback to profile URL)
-              if (urlResult?.error === "event_type_not_found") {
-                console.warn(
-                  `Cal.com event type ${instructorEventType.child_event_type_id} not found, falling back to profile URL`,
-                );
-              }
+              // If event type not found, fall through to profile URL fallback
             } catch (err) {
               console.error("Error fetching booking URL from Cal.com:", err);
             }
@@ -218,13 +213,7 @@ export function useModuleSchedulingUrl({
             };
           }
 
-          if (urlResult?.error === "event_type_not_found") {
-            console.warn(
-              `Cal.com event type ${mapping.calcom_event_type_id} not found in global mapping, falling back`,
-            );
-          } else {
-            console.log("Cal.com API did not return booking URL, falling back to profile URLs");
-          }
+          // Cal.com API did not return booking URL — fall back to profile URLs
         } catch (err) {
           console.error("Error fetching booking URL from Cal.com:", err);
         }

@@ -39,7 +39,6 @@ export function useAdminRefreshSignal(isAuthenticated: boolean = true) {
 
         // If server timestamp is newer than our last check, trigger refresh
         if (serverTimestamp > lastCheckedTime && lastCheckedTime > 0) {
-          console.log("Detected missed refresh signal, reloading...");
           toast.info("Updating application...", {
             description: "Loading the latest platform updates.",
             duration: 2000,
@@ -60,13 +59,9 @@ export function useAdminRefreshSignal(isAuthenticated: boolean = true) {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    console.log("Setting up admin refresh signal listener...");
-
     const channel = supabase
       .channel("admin-refresh-signal")
       .on("broadcast", { event: "force-refresh" }, (payload) => {
-        console.log("Received admin refresh signal:", payload);
-
         // Update local timestamp so we don't trigger again on next mount
         localStorage.setItem(LAST_REFRESH_KEY, Date.now().toString());
 
@@ -93,12 +88,9 @@ export function useAdminRefreshSignal(isAuthenticated: boolean = true) {
           }, 1500);
         }
       })
-      .subscribe((status) => {
-        console.log("Admin refresh channel status:", status);
-      });
+      .subscribe();
 
     return () => {
-      console.log("Cleaning up admin refresh signal listener...");
       supabase.removeChannel(channel);
     };
   }, [queryClient, isAuthenticated]);

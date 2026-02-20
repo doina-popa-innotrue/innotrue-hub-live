@@ -40,9 +40,6 @@ export function hasTierAccess(
 
   // If tiers not found in program definition, be permissive
   if (userTierIndex === -1 || moduleTierIndex === -1) {
-    console.warn(
-      `Tier not found in program definition. User: ${userTier}, Module: ${moduleRequiredTier}, Program tiers: ${programTiers}`,
-    );
     return true;
   }
 

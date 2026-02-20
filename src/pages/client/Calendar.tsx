@@ -162,7 +162,6 @@ export default function ClientCalendar() {
           table: "module_sessions",
         },
         () => {
-          console.log("[Calendar Realtime] Module session changed, refreshing events");
           loadEvents();
         },
       )

@@ -48,7 +48,6 @@ export function useAuditLog() {
     newValues,
   }: AuditLogParams) => {
     if (!user) {
-      console.warn("Cannot log audit action: no user logged in");
       return;
     }
 

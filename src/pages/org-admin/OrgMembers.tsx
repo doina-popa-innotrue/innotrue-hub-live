@@ -526,7 +526,6 @@ export default function OrgMembers() {
             })
             .then(({ error }) => {
               if (error) console.error("Failed to send seat limit alert:", error);
-              else console.log(`Sent ${alertType} email alert`);
             });
         }
       }

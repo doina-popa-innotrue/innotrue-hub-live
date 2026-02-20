@@ -506,14 +506,6 @@ export default function GroupDetail() {
                   members?.filter((m: any) => m.status === "active").map((m: any) => m.user_id) ||
                   [];
 
-                console.log("Creating Google Calendar event with:", {
-                  summary: formData.title,
-                  startTime: sessionDateTime.toISOString(),
-                  endTime: endDateTime.toISOString(),
-                  memberUserIdsCount: memberUserIds.length,
-                  sessionId: masterSession.id,
-                });
-
                 const { data: calendarResult, error: calendarError } =
                   await supabase.functions.invoke("google-calendar-create-event", {
                     body: {
@@ -532,8 +524,6 @@ export default function GroupDetail() {
                         : undefined,
                     },
                   });
-
-                console.log("Google Calendar result:", calendarResult, "error:", calendarError);
 
                 if (calendarError) {
                   console.error("Google Calendar error:", calendarError);

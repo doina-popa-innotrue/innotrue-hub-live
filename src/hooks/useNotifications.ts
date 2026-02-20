@@ -169,8 +169,6 @@ export function useNotifications() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          console.log("[Notifications Realtime] Event received:", payload.eventType);
-
           // Invalidate cache to refetch notifications
           queryClient.invalidateQueries({ queryKey: ["notifications"] });
 
@@ -184,9 +182,7 @@ export function useNotifications() {
           }
         },
       )
-      .subscribe((status) => {
-        console.log("[Notifications Realtime] Subscription status:", status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);

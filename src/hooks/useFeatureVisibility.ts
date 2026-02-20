@@ -61,7 +61,6 @@ export function useFeatureVisibility(
         .maybeSingle();
 
       if (featureError || !feature) {
-        console.warn(`Feature not found: ${featureKey}`);
         return null;
       }
 

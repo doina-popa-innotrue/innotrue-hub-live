@@ -524,7 +524,6 @@ export function ModuleSessionManager({
         }
 
         if (attendees.length > 0) {
-          console.log("Creating Cal.com booking via API...");
           const { data: bookingResult, error: bookingError } = await supabase.functions.invoke(
             "calcom-create-booking",
             {
@@ -548,8 +547,6 @@ export function ModuleSessionManager({
           if (bookingError) {
             console.error("Cal.com booking creation failed:", bookingError);
             // Don't fail the whole operation - session is created, just without Cal.com booking
-          } else {
-            console.log("Cal.com booking created:", bookingResult);
           }
         }
       }

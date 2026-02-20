@@ -172,17 +172,9 @@ export default function AccountSettings() {
   const isStaff = userRoles.includes("instructor") || userRoles.includes("coach");
 
   useEffect(() => {
-    console.log("[AccountSettings] Auth state:", {
-      user: !!user,
-      userId: user?.id,
-      authLoading,
-      isUpdatingEmail,
-    });
     if (user && !isUpdatingEmail && !authLoading) {
-      console.log("[AccountSettings] Loading account data for user:", user.id);
       loadAccountData();
     } else if (!authLoading && !user) {
-      console.log("[AccountSettings] No user found after auth loading completed");
       setLoading(false);
       setLoadError("No authenticated user found");
     }

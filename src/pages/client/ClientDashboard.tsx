@@ -103,6 +103,17 @@ interface ProgramInterest {
   };
 }
 
+interface AssessmentInterest {
+  id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  psychometric_assessments: {
+    name: string;
+    provider: string | null;
+  };
+}
+
 interface UpcomingSession {
   id: string;
   title: string;
@@ -203,6 +214,7 @@ export default function ClientDashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [programInterests, setProgramInterests] = useState<ProgramInterest[]>([]);
+  const [assessmentInterests, setAssessmentInterests] = useState<AssessmentInterest[]>([]);
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[]>([]);
   const [groups, setGroups] = useState<GroupMembership[]>([]);
   const [skillsSummary, setSkillsSummary] = useState<SkillsSummary>({ total: 0, acquired: 0 });
@@ -338,7 +350,7 @@ export default function ClientDashboard() {
         .limit(5);
       setTasks((tasksData as Task[]) || []);
 
-      // Fetch pending registrations
+      // Fetch AC interest registrations (all statuses for tracking)
       const { data: registrationsData } = await supabase
         .from("ac_interest_registrations")
         .select(
@@ -354,8 +366,27 @@ export default function ClientDashboard() {
         `,
         )
         .eq("user_id", user.id)
-        .eq("status", "pending");
+        .order("created_at", { ascending: false });
       setRegistrations((registrationsData as Registration[]) || []);
+
+      // Fetch assessment (psychometric) interest registrations (M2)
+      const { data: assessmentInterestData } = await supabase
+        .from("assessment_interest_registrations")
+        .select(
+          `
+          id,
+          status,
+          created_at,
+          updated_at,
+          psychometric_assessments:assessment_id (
+            name,
+            provider
+          )
+        `,
+        )
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      setAssessmentInterests((assessmentInterestData as AssessmentInterest[]) || []);
 
       // Fetch program interest registrations (all statuses for status tracking)
       const { data: programInterestData } = await supabase
@@ -648,9 +679,6 @@ export default function ClientDashboard() {
             const session = (payload.new || payload.old) as any;
             // Only refresh if the session is for one of the user's enrollments
             if (session?.enrollment_id && enrollmentIds.includes(session.enrollment_id)) {
-              console.log(
-                "[Dashboard Realtime] Module session changed, refreshing upcoming sessions",
-              );
               // Trigger refetch by incrementing the trigger state
               setRefetchTrigger((prev) => prev + 1);
             }
@@ -905,7 +933,7 @@ export default function ClientDashboard() {
       {hasFeature("groups") && groups.length > 0 && <MyGroupsSection groups={groups} />}
 
       {/* Section 9: Interest Registrations (Programs + Assessments) */}
-      {(programInterests.length > 0 || registrations.length > 0) && (
+      {(programInterests.length > 0 || registrations.length > 0 || assessmentInterests.length > 0) && (
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -972,27 +1000,107 @@ export default function ClientDashboard() {
                 </Card>
               );
             })}
-            {registrations.map((registration) => (
-              <Card key={registration.id} className="hover:shadow-sm transition-shadow">
-                <CardContent className="pt-5 pb-4">
-                  <div className="flex items-start gap-3">
-                    <Clock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{registration.programs.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Assessment interest
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Registered {format(new Date(registration.created_at), "MMM d, yyyy")}
-                      </p>
-                      <Badge variant="secondary" className="text-xs mt-2 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
-                        Pending
-                      </Badge>
+            {registrations.map((registration) => {
+              const regStatusConfig = {
+                pending: {
+                  icon: Clock,
+                  label: "Pending",
+                  className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+                },
+                contacted: {
+                  icon: MessageSquare,
+                  label: "Contacted",
+                  className: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+                },
+                enrolled: {
+                  icon: CheckCircle,
+                  label: "Enrolled",
+                  className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+                },
+                declined: {
+                  icon: XCircle,
+                  label: "Declined",
+                  className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+                },
+              };
+              const regConfig = regStatusConfig[registration.status as keyof typeof regStatusConfig] || regStatusConfig.pending;
+              const RegIcon = regConfig.icon;
+              return (
+                <Card key={registration.id} className="hover:shadow-sm transition-shadow">
+                  <CardContent className="pt-5 pb-4">
+                    <div className="flex items-start gap-3">
+                      <RegIcon className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{registration.programs.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Assessment-based interest
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Registered {format(new Date(registration.created_at), "MMM d, yyyy")}
+                        </p>
+                        <Badge variant="secondary" className={`text-xs mt-2 ${regConfig.className}`}>
+                          {regConfig.label}
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {assessmentInterests.map((ai) => {
+              const aiStatusConfig = {
+                pending: {
+                  icon: Clock,
+                  label: "Pending",
+                  className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+                },
+                contacted: {
+                  icon: MessageSquare,
+                  label: "Contacted",
+                  className: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+                },
+                completed: {
+                  icon: CheckCircle,
+                  label: "Completed",
+                  className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+                },
+                declined: {
+                  icon: XCircle,
+                  label: "Declined",
+                  className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+                },
+              };
+              const aiConfig = aiStatusConfig[ai.status as keyof typeof aiStatusConfig] || aiStatusConfig.pending;
+              const AiIcon = aiConfig.icon;
+              return (
+                <Card key={ai.id} className="hover:shadow-sm transition-shadow">
+                  <CardContent className="pt-5 pb-4">
+                    <div className="flex items-start gap-3">
+                      <AiIcon className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{ai.psychometric_assessments.name}</p>
+                        {ai.psychometric_assessments.provider && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Provider: {ai.psychometric_assessments.provider}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Registered {format(new Date(ai.created_at), "MMM d, yyyy")}
+                        </p>
+                        {ai.status !== "pending" && ai.updated_at !== ai.created_at && (
+                          <p className="text-xs text-muted-foreground">
+                            Updated {format(new Date(ai.updated_at), "MMM d, yyyy")}
+                          </p>
+                        )}
+                        <Badge variant="secondary" className={`text-xs mt-2 ${aiConfig.className}`}>
+                          {aiConfig.label}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}

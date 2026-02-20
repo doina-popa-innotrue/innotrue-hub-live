@@ -159,7 +159,7 @@ export default function GroupSessionDetail() {
               entityLink: window.location.href,
             },
           });
-          console.log("RSVP confirmation email sent");
+
         } catch (emailErr) {
           console.error("Failed to send RSVP confirmation email:", emailErr);
           // Don't show error to user - email is secondary

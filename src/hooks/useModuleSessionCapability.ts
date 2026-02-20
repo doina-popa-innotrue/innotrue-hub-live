@@ -45,7 +45,6 @@ export function useModuleSessionCapability({
 
       // Strategy 1: Try edge function first (same-origin, ETP-safe)
       try {
-        console.log("[Session Capability] Trying edge function...");
         const { data: edgeData, error: edgeError } = await supabase.functions.invoke(
           "check-module-capability",
           {
@@ -54,21 +53,14 @@ export function useModuleSessionCapability({
         );
 
         if (!edgeError && edgeData && typeof edgeData.hasMapping === "boolean") {
-          console.log("[Session Capability] Edge function succeeded:", edgeData.hasMapping);
           return { hasMapping: edgeData.hasMapping };
         }
-
-        if (edgeError) {
-          console.warn("[Session Capability] Edge function failed:", edgeError);
-        }
-      } catch (edgeFetchError) {
-        console.warn("[Session Capability] Edge function network error:", edgeFetchError);
+      } catch {
+        // Edge function failed — fall back to direct RPC
       }
 
       // Strategy 2: Fall back to direct RPC (works when not blocked)
       try {
-        console.log("[Session Capability] Falling back to direct RPC...");
-
         let resolvedModuleType = moduleType;
 
         // If we only have moduleId, fetch the module type first
@@ -80,7 +72,6 @@ export function useModuleSessionCapability({
             .single();
 
           if (moduleError) {
-            console.warn("[Session Capability] Failed to fetch module type:", moduleError);
             throw new Error("Failed to fetch module type");
           }
 
@@ -97,11 +88,9 @@ export function useModuleSessionCapability({
         );
 
         if (rpcError) {
-          console.warn("[Session Capability] Direct RPC failed:", rpcError);
           throw new Error(`RPC failed: ${rpcError.message}`);
         }
 
-        console.log("[Session Capability] Direct RPC succeeded:", !!rpcData);
         return { hasMapping: !!rpcData };
       } catch (rpcFetchError) {
         console.error("[Session Capability] All strategies failed:", rpcFetchError);

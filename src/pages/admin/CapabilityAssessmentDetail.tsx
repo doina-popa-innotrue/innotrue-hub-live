@@ -229,7 +229,6 @@ export default function CapabilityAssessmentDetail() {
         console.error("Error fetching user snapshots:", error);
         throw error;
       }
-      console.log("Fetched user snapshots:", data?.length, "records");
       return data;
     },
     enabled: !!id,

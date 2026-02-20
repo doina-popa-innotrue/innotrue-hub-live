@@ -53,9 +53,8 @@ export const generateLearningTranscript = (
   try {
     doc.addImage(INNOTRUE_LOGO_BASE64, "PNG", pageWidth / 2 - 25, yPosition - 10, 50, 20);
     yPosition += 20;
-  } catch (e) {
+  } catch {
     // If logo fails to load, continue without it
-    console.warn("Could not add logo to PDF");
   }
 
   // Title

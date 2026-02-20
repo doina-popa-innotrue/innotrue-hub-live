@@ -357,7 +357,7 @@ export function ContentPackageViewer({
           sessionIdRef.current = launchData.sessionId;
 
           if (launchData.resumed) {
-            console.log("[xAPI] Resuming session — bookmark:", launchData.bookmark ? "yes" : "none");
+            // Session resumed with bookmark data
           }
 
           // Install the LMS API mock on THIS window (the parent of the iframe).
