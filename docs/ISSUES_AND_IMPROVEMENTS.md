@@ -49,21 +49,9 @@
 
 ### Medium — Improve over time
 
-#### 1.7 Console Statements in Production (164 files)
-**Problem:** ~26 files have console.log/warn/debug (~54 statements). Leaks internal data to browser DevTools.
-
-**Cursor prompt:**
-```
-Remove all console.log, console.warn, and console.debug statements from src/ files. Keep console.error only where Sentry isn't already capturing the error.
-
-Rules:
-- In src/ files: replace console.error with Sentry.captureException where not already done
-- In supabase/functions/ files: console.error is OK (server-side logging), but remove console.log
-- Don't touch test files (src/lib/__tests__/)
-- Don't touch node_modules
-
-Run npm run lint after to verify no issues introduced.
-```
+#### 1.7 Console Statements in Production — ✅ RESOLVED 2026-02-20
+**Problem:** ~36 console.log and ~22 console.warn statements across 20+ files leaked debug info to DevTools.
+**Resolution:** Removed 49 console.log/warn statements across 20 files. Kept only: console.error (legitimate error handling), web vitals reporting (vitals.ts), error boundary logging (ErrorBoundary.tsx), and critical warnings (localStorage failures in AuthContext, xAPI in ContentPackageViewer, auth context in useAuthContext, file validation in fileValidation.ts, survey operator in GuidedPathSurveyWizard).
 
 #### 1.8 Notification Sending Is Synchronous
 **Problem:** Edge functions send notifications to all participants synchronously before returning. Group sessions with many participants could timeout.
@@ -1153,8 +1141,8 @@ Create src/components/assessments/PsychometricResultsChart.tsx:
 3. Reuse existing Recharts library (already used for capability charts)
 ```
 
-**10.2.3 Interest Registration Status Tracking**
-Same fix as program interest (Part 8, Journey C) — add client-facing status view.
+**10.2.3 Interest Registration Status Tracking** — ✅ RESOLVED 2026-02-20
+Added assessment interest registration cards to ClientDashboard with status-aware rendering (pending/contacted/completed/declined badges). Also fixed AC interest cards to display actual status instead of hardcoded "Pending".
 
 #### Tier 2 — Medium Effort (2-4 weeks each)
 
@@ -1336,7 +1324,7 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | # | Issue | Source | Effort | Description |
 |---|-------|--------|--------|-------------|
 | ~~M1~~ | ~~No unified feedback inbox~~ — **RESOLVED 2026-02-16** | Part 9 (9.7) | ~~1 week~~ | Created `MyFeedback.tsx` with tabbed UI aggregating feedback from scenarios, modules, assignments, and goal comments. Hook `useFeedbackInbox.ts` fetches from 4 sources in parallel. Route at `/feedback`. |
-| M2 | Psychometric interest status tracking | Part 10 (10.2.3) | 4 hours | Same status-tracking gap as program interest |
+| ~~M2~~ | ~~Psychometric interest status tracking~~ — **RESOLVED 2026-02-20** | Part 10 (10.2.3) | ~~4 hours~~ | Added assessment interest cards to ClientDashboard with status badges (pending/contacted/completed/declined). Also fixed AC interest cards to show actual status instead of hardcoded "Pending". |
 | ~~M3~~ | ~~Scenario evaluation has no rubrics~~ — **RESOLVED 2026-02-16** | Part 9 (9.6.1) | ~~3 days~~ | Added `rubric_text` column to `paragraph_question_links`. Admin can create/edit rubrics in ScenarioTemplateDetail. Instructors see rubrics during evaluation for scoring guidance. |
 | ~~M4~~ | ~~No assessment → goal connection~~ — **RESOLVED 2026-02-17** | Part 9 (9.5.3) | ~~3 days~~ | Added "Suggested Goals" section to CapabilitySnapshotView for both self and evaluator assessments. Uses assessment's `pass_fail_threshold` for pass/fail assessments; bottom 2 domains for non-pass/fail. "Create Goal" button navigates to Goals page with pre-filled title/description via URL params. GoalForm accepts `defaultTitle`/`defaultDescription` props. |
 | ~~M5~~ | ~~No scenario re-submission~~ — **RESOLVED 2026-02-17** | Part 9 (9.6.3) | ~~2 days~~ | Added `allows_resubmission` template toggle, "Request Revision" button on evaluation page, new attempt model with `parent_assignment_id` + `attempt_number`, response pre-copying, revision banners on client pages |
@@ -1345,7 +1333,7 @@ This section synthesizes all findings from Parts 1–10 into a single prioritize
 | ~~M8~~ | ~~Locked sidebar items confusing UX~~ — **RESOLVED (already implemented)** | Part 8 (8.6) | ~~4 hours~~ | Lock icon + tooltip + toast with plan name already in place. Items stay in natural position. |
 | ~~M9~~ | ~~Notification sending is synchronous~~ — **RESOLVED 2026-02-18** | Part 1 (1.8) | ~~1 day~~ | Refactored `notify-assignment-submitted` and `notify-assignment-graded` to async delivery via `create_notification` RPC (non-blocking). Email queue (`process-email-queue`) already handles batch sending. |
 | ~~M10~~ | ~~Dual plans admin UX confusion~~ — **RESOLVED 2026-02-17** | Part 1 (1.12) | ~~2 hours~~ | Added info banners to both plan pages with cross-links explaining when to use each |
-| M11 | Console statements in production | Part 1 (1.7) | 4 hours | ~26 files have console.log (~54 statements). Replace with Sentry or remove |
+| ~~M11~~ | ~~Console statements in production~~ — **RESOLVED 2026-02-20** | Part 1 (1.7) | ~~4 hours~~ | Removed 49 console.log/warn from 20 files. Kept console.error, web vitals, error boundary, and critical warnings. |
 | M12 | No resource ratings or feedback | Part 9 (9.8.3) | 3 days | No quality signal on resources. Add 1-5 star rating |
 | M13 | No Zod form validation | Part 1 (1.13) | 1-2 weeks | Forms use manual validation. Adopt Zod starting with critical forms |
 | M14 | Loading/error states inconsistent | Part 1 (1.14) | 1 week | ✅ RESOLVED 2026-02-16 — PageLoadingState + ErrorState components, 5 pages migrated |
@@ -1623,7 +1611,7 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 |----------|-------|--------|
 | ~~Critical fixes (C1-C4)~~ | ~~4~~ | ✅ ALL RESOLVED |
 | ~~High priority (H1-H10)~~ | ~~10~~ | ✅ ALL RESOLVED |
-| Medium priority (M1-M17) | 5 remaining (12 resolved) | M2, M11, M12, M13, M16 |
+| Medium priority (M1-M17) | 3 remaining (14 resolved) | M12, M13, M16 |
 | ~~Priority 0 — Content Delivery Tier 1~~ | ~~3 items~~ | ✅ DONE (2026-02-18) |
 | ~~Priority 0 — Coach Onboarding~~ | ~~6 items~~ | ✅ DONE (2026-02-18) |
 | ~~Priority 0 — Assignment Routing~~ | ~~6 items~~ | ✅ DONE (2026-02-18) |
@@ -1659,7 +1647,7 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 10. ~~Cohort Quality (G9-G10)~~ ✅ DONE (2026-02-23) — analytics dashboard + session-linked homework
 11. ~~DP5 Module↔Domain Mapping~~ ✅ DONE (2026-02-23) — `module_domain_mappings` table, admin UI
 12. ~~CT3 Shared Content Packages & Cross-Program Completion~~ ✅ DONE (2026-02-20) — `content_packages` + `content_completions` tables, content library picker, xAPI propagation, cross-program auto-accept
-13. Quick medium wins (M2, M11) — interleaved, 2 days
+13. ~~Quick medium wins (M2, M11)~~ ✅ DONE (2026-02-20) — assessment interest tracking on dashboard, console cleanup across 20 files
 14. **G8 Self-Enrollment Codes** — `enrollment_codes` table, self-enrollment via link (~2-3 days)
 15. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
 16. **Development Profile (DP6-DP7)** — psychometric structured results, readiness dashboard (~1 week)

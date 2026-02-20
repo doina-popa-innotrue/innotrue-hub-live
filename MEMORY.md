@@ -101,7 +101,7 @@
 ## Priority Roadmap (from ISSUES_AND_IMPROVEMENTS.md Part 11)
 **Critical (C1-C4):** ~~All resolved~~ ✅
 **High (H1-H10):** ~~All resolved~~ ✅
-**Medium (remaining):** M2 (psychometric interest tracking), ~~M9 (async notifications)~~ ✅ DONE, M11 (console.log cleanup), M12 (resource ratings), M13 (Zod validation), M16 (assessment templates)
+**Medium (remaining):** ~~M2 (psychometric interest tracking)~~ ✅ DONE, ~~M9 (async notifications)~~ ✅ DONE, ~~M11 (console.log cleanup)~~ ✅ DONE, M12 (resource ratings), M13 (Zod validation), M16 (assessment templates)
 **New roadmap items (R1-R7):** ~~R1 assessment question types~~ ✅ DONE, R2 coach/instructor onboarding (Phase 1), R3 enhanced coach↔client interaction (Phases 1/4/6), R4 coaches invite own clients (Phase 5), R5 enhanced org management (Phase 6), R6 Sentry coverage (cross-cutting), R7 test coverage (continuous)
 **Coach-created development items:** ✅ DONE
 
@@ -181,7 +181,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 10. ~~**Cohort Quality (G9-G10)**~~ ✅ — analytics dashboard + session-linked homework
 11. ~~**DP5 Module↔Domain Mapping**~~ ✅ — `module_domain_mappings` table, admin UI, "Domains" tab
 12. **CT3 Shared Content Packages & Cross-Program Completion** — `content_packages` table, `content_completions` table, content library picker, xAPI propagation (~3-5 days)
-13. Quick medium wins (M2, M11) — interleaved (2 days)
+13. ~~Quick medium wins (M2, M11)~~ ✅ — assessment interest tracking on dashboard, console cleanup across 20 files
 14. **G8 Self-Enrollment Codes** — `enrollment_codes` table, self-enrollment via link (~2-3 days)
 15. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
 16. **Development Profile (DP6-DP7)** — psychometric structured results, readiness dashboard (~1 week)
@@ -215,7 +215,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - Lovable sync pipeline operational (bidirectional)
 - Supabase ops scripts operational (deploy, push, sync data/storage)
 - Comprehensive analysis complete: 11-part issues doc + data config guide deployed
-- **All C1-C4 critical and H1-H10 high items resolved.** 5 medium items remain (M2, M11, M12, M13, M16). M9 resolved.
+- **All C1-C4 critical and H1-H10 high items resolved.** 3 medium items remain (M12, M13, M16). M2, M9, M11 resolved.
 - **Phase 5 plan complete** (`docs/PHASE5_PLAN.md`) — 14 steps covering self-registration, role applications, enrollment codes, bulk import, org invite flow. Not yet implemented.
 - **AI infrastructure:** 4 edge functions (decision-insights, course-recommendations, generate-reflection-prompt, analytics-ai-insights), Vertex AI Gemini 3 Flash (EU/Frankfurt), input truncation, credit-based consumption (`useConsumableFeature("ai_insights")` pattern), explicit consent gating, provider-agnostic architecture. All AI features gated behind `ai_insights` feature key with plan-based credit limits (free=5, base=50, pro=100, advanced=200, elite=300).
 - **Product strategy documented** (`docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md`): 6 parts — young professionals (12 ideas), AI learning (5 features), content delivery (skip SCORM → xAPI), cohort readiness (6 gaps), coach/instructor onboarding (6 gaps), instructor/coach assignment & grading routing (6 gaps)

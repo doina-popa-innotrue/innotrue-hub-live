@@ -1,5 +1,21 @@
 # Completed Work — Detailed History
 
+## M2 + M11 — Quick Medium Wins (2026-02-20)
+
+**M2 — Assessment Interest Status Tracking:**
+- Added `AssessmentInterest` interface and state to `ClientDashboard.tsx`
+- Fetch `assessment_interest_registrations` with `psychometric_assessments` join (name, provider)
+- Added assessment interest cards with status badges (pending/contacted/completed/declined) matching existing program interest pattern
+- Fixed AC interest cards: replaced hardcoded "Pending" badge with actual status from database
+- Changed `ac_interest_registrations` query to fetch all statuses (removed `.eq("status", "pending")`)
+
+**M11 — Console Statement Cleanup:**
+- Removed 49 `console.log` and `console.warn` statements across 20 files
+- **Files cleaned:** GroupSessionDetail, ClientDashboard, GroupDetail (client+admin), Auth, Calendar, Index, AccountSettings, OrgMembers, CapabilityAssessmentDetail, ModuleSessionManager, ContentPackageViewer, useAdminRefreshSignal, useAuditLog, useFeatureVisibility, useModuleSchedulingUrl, useModuleSessionCapability, useNotifications, tierUtils, pdfExport, feedbackPdfExport
+- **Kept intentionally:** `console.error` (all), `vitals.ts` (web vitals), `ErrorBoundary.tsx` (error ID), `AuthContext.tsx` (localStorage warnings), `useAuthContext.ts` (auth context warning), `fileValidation.ts` (unknown bucket), `GuidedPathSurveyWizard.tsx` (unknown operator), `ContentPackageViewer.tsx` (xAPI warnings)
+- Replaced empty catch variables with bare `catch {}` for unused error params
+- Added descriptive comments where console statements were removed
+
 ## CT3 — Shared Content Packages & Cross-Program Completion (2026-02-20)
 
 Shared content library and cross-program completion propagation. Upload Rise/xAPI packages once, assign to modules across programs. Completing content in one program auto-completes it in others. 1 migration, 4 edge functions modified, 3 new files, 5 modified files. Deployed to all 3 environments (prod + preprod + sandbox).
