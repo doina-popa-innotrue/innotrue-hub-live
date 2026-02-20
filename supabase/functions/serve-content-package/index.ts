@@ -130,10 +130,10 @@ Deno.serve(async (req: Request) => {
   // --- Access check: enrolled in program OR admin/instructor/coach ---
   const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
-  // Get the module's program_id and content_package_path
+  // Get the module's program_id and content path (shared or legacy)
   const { data: moduleData, error: moduleError } = await serviceClient
     .from("program_modules")
-    .select("program_id, content_package_path")
+    .select("program_id, content_package_path, content_package_id, content_packages(storage_path)")
     .eq("id", moduleId)
     .single();
 
@@ -141,7 +141,12 @@ Deno.serve(async (req: Request) => {
     return errorResponse.notFound("Module not found", cors);
   }
 
-  if (!moduleData.content_package_path) {
+  // Resolve effective content path: content_package_id (shared) takes precedence over legacy
+  const effectiveContentPath = (moduleData.content_package_id && moduleData.content_packages?.storage_path)
+    ? moduleData.content_packages.storage_path
+    : moduleData.content_package_path;
+
+  if (!effectiveContentPath) {
     return errorResponse.notFound("No content package for this module", cors);
   }
 
@@ -170,7 +175,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // --- Serve the file from private storage ---
-  const storagePath = `${moduleData.content_package_path}/${filePath}`;
+  const storagePath = `${effectiveContentPath}/${filePath}`;
 
   const { data: fileData, error: storageError } = await serviceClient.storage
     .from("module-content-packages")

@@ -78,6 +78,7 @@ const SkillCategoriesManagement = lazy(() => import("./pages/admin/SkillCategori
 const ProgramPlansManagement = lazy(() => import("./pages/admin/ProgramPlansManagement"));
 const AdminFAQ = lazy(() => import("./pages/admin/AdminFAQ"));
 const CanonicalCodesManagement = lazy(() => import("./pages/admin/CanonicalCodesManagement"));
+const ContentLibrary = lazy(() => import("./pages/admin/ContentLibrary"));
 const DiscountCodesManagement = lazy(() => import("./pages/admin/DiscountCodesManagement"));
 const CapabilityAssessmentsManagement = lazy(
   () => import("./pages/admin/CapabilityAssessmentsManagement"),
@@ -834,6 +835,16 @@ const App = () => (
                       <ProtectedRoute requireRole="admin">
                         <DashboardLayout>
                           <CanonicalCodesManagement />
+                        </DashboardLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/content-library"
+                    element={
+                      <ProtectedRoute requireRole="admin">
+                        <DashboardLayout>
+                          <ContentLibrary />
                         </DashboardLayout>
                       </ProtectedRoute>
                     }

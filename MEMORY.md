@@ -56,7 +56,8 @@
 - Seed: `supabase/seed.sql` | Cursor rules: `.cursorrules`
 
 ## Database Schema
-- 380+ tables, 25 enums, 420 migrations
+- 380+ tables, 25 enums, 421 migrations
+- Key tables (CT3): `content_packages` (shared content library), `content_completions` (cross-program completion tracking), `program_modules.content_package_id` FK
 - Key enums: `app_role` (admin, client, coach, instructor), `module_type`, `enrollment_status`
 - **Two plan systems:** Subscription plans (`plans` table, tier 0-4) + Program plans (`program_plans`, per-enrollment features)
 - `useEntitlements` merges 5 sources: subscription, program plan, add-ons, tracks, org-sponsored (highest wins)
@@ -137,17 +138,14 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 - DP7: Readiness dashboard (3-5 days) — capstone coach + client view combining all data
 - ~~**Known bug:** `GuidedPathSurveyWizard` saves survey response but never instantiates template goals/milestones~~ ✅ Fixed in DP4
 
-**Priority 0 — Content Delivery Tier 3: Shared Content Packages & Cross-Program Completion (CT3)**
-Two problems, one solution: (1) same Rise course must be uploaded per-module — no content reuse across programs; (2) if a user completes a course in one program, they must redo it in another — no cross-program completion propagation (was handled in TalentLMS via canonical IDs).
+~~**Priority 0 — Content Delivery Tier 3: Shared Content Packages & Cross-Program Completion (CT3)**~~ ✅
+Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 edge functions modified, new Content Library admin page, ModuleForm library picker, cross-program completion hook + auto-accept, CanonicalCodes extended with content packages tab. Deployed to all 3 environments.
 
-- **CT3a: Shared Content Library** — new `content_packages` table (title, storage_path, package_type, uploaded_by). `program_modules.content_package_id` FK replaces storing path directly. Upload once → assign to many modules. `serve-content-package` resolves via FK. Admin UI: content library picker in module form.
-- **CT3b: Cross-Program Completion** — new `content_completions` table (user_id, content_package_id, completed_at, source_module_id, source_enrollment_id). When xAPI auto-completes a module → also writes `content_completions` row. When client opens same content in different program → checks `content_completions` → auto-marks module as completed.
-- **`canonical_code` override** — existing `program_modules.canonical_code` column (already has index) kept as manual override for cases where different content files should count as equivalent (e.g., different Rise versions of same course).
-- **Existing infrastructure:** `content_package_path`, `content_package_type`, `canonical_code` columns on `program_modules`; `module_external_mappings` + `external_progress` tables for TalentLMS sync; `xapi-statements` auto-completion logic.
-- **Effort:** ~3-5 days (1 migration, 2 edge function modifications, admin UI content library picker, auto-completion check on module load)
-- **Priority:** HIGH — eliminates daily operational friction + preserves TalentLMS cross-program completion behavior
+- ~~**CT3a: Shared Content Library**~~ ✅ — `content_packages` table + `program_modules.content_package_id` FK. 3-mode upload (shared/replace/legacy). Admin Content Library page at `/admin/content-library`. ModuleForm two-tab picker (From Library / Upload New) with migrate-to-library button.
+- ~~**CT3b: Cross-Program Completion**~~ ✅ — `content_completions` table. `xapi-statements` writes completion on xAPI verb. `useCrossProgramCompletion` extended with 3rd data source. Client `ModuleDetail` auto-accepts completion from shared content. `CanonicalCodesManagement` now shows content packages tab.
+- **`canonical_code` override** — kept as manual override for different content that should count as equivalent.
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → **CT3 Shared Content** → 5-Self-Registration (G8) → Development Profile (DP6-DP7) → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → 5-Self-Registration (G8) → Development Profile (DP6-DP7) → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)

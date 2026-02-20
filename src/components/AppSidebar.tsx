@@ -448,6 +448,12 @@ export function AppSidebar() {
   // Resources submenu items
   const adminResourceItems = [
     {
+      title: "Content Library",
+      url: "/admin/content-library",
+      icon: Package,
+      tourId: "admin-content-library",
+    },
+    {
       title: "Resource Library",
       url: "/admin/resource-library",
       icon: FileText,

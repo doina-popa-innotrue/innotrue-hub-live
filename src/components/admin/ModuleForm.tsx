@@ -13,10 +13,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
-import { X, Plus, Package, Trash2, Upload, CheckCircle2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { X, Plus, Package, Trash2, Upload, CheckCircle2, Library, FileArchive } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useContentPackagesList } from "@/hooks/useContentPackages";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ModuleType {
   id: string;
@@ -54,6 +57,7 @@ interface ModuleFormProps {
     featureKey?: string | null;
     capabilityAssessmentId?: string | null;
     contentPackagePath?: string | null;
+    contentPackageId?: string | null;
   };
   onSubmit: (data: {
     title: string;
@@ -67,6 +71,7 @@ interface ModuleFormProps {
     code: string;
     featureKey: string | null;
     capabilityAssessmentId: string | null;
+    contentPackageId: string | null;
   }) => Promise<void>;
   onCancel: () => void;
   submitLabel: string;
@@ -98,12 +103,27 @@ export default function ModuleForm({
   const [moduleTypes, setModuleTypes] = useState<ModuleType[]>([]);
   const [consumableFeatures, setConsumableFeatures] = useState<Feature[]>([]);
   const [capabilityAssessments, setCapabilityAssessments] = useState<CapabilityAssessment[]>([]);
+
+  // Content package state
   const [contentPackagePath, setContentPackagePath] = useState<string | null>(
     initialData?.contentPackagePath || null,
   );
+  const [contentPackageId, setContentPackageId] = useState<string | null>(
+    initialData?.contentPackageId || null,
+  );
   const [uploadingPackage, setUploadingPackage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [newUploadTitle, setNewUploadTitle] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const newUploadFileRef = useRef<HTMLInputElement>(null);
+
+  const { data: contentPackagesList } = useContentPackagesList();
+  const queryClient = useQueryClient();
+
+  // Find the selected package name for display
+  const selectedPackageName = contentPackageId
+    ? contentPackagesList?.find((p) => p.id === contentPackageId)?.title
+    : null;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -146,7 +166,8 @@ export default function ModuleForm({
     setLinks(links.filter((_, i) => i !== index));
   };
 
-  const handlePackageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Legacy upload (per-module, for modules not yet migrated)
+  const handleLegacyUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !initialData?.id) return;
 
@@ -181,15 +202,12 @@ export default function ModuleForm({
         `${supabaseUrl}/functions/v1/upload-content-package`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
+          headers: { Authorization: `Bearer ${session.access_token}` },
           body: formData,
         },
       );
 
       setUploadProgress(80);
-
       const result = await response.json();
 
       if (!response.ok) {
@@ -206,25 +224,132 @@ export default function ModuleForm({
     } finally {
       setUploadingPackage(false);
       setUploadProgress(0);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  // New shared upload: creates a content_packages row AND assigns to this module
+  const handleNewSharedUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith(".zip")) {
+      toast.error("Please upload a ZIP file");
+      return;
+    }
+
+    if (!newUploadTitle.trim()) {
+      toast.error("Please enter a title for the content package");
+      return;
+    }
+
+    setUploadingPackage(true);
+    setUploadProgress(10);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error("Authentication required");
+        return;
       }
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("title", newUploadTitle.trim());
+
+      setUploadProgress(30);
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/upload-content-package`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          body: formData,
+        },
+      );
+
+      setUploadProgress(80);
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast.error(result.error || "Upload failed");
+        return;
+      }
+
+      setContentPackageId(result.content_package_id);
+      setContentPackagePath(null); // Clear legacy path
+      setNewUploadTitle("");
+      setUploadProgress(100);
+      toast.success(`Content package created and assigned (${result.files_uploaded} files)`);
+      queryClient.invalidateQueries({ queryKey: ["content-packages-list"] });
+      queryClient.invalidateQueries({ queryKey: ["content-packages"] });
+    } catch (err) {
+      toast.error("Upload failed — check your connection");
+      console.error("Shared content package upload error:", err);
+    } finally {
+      setUploadingPackage(false);
+      setUploadProgress(0);
+      if (newUploadFileRef.current) newUploadFileRef.current.value = "";
     }
   };
 
   const handleRemovePackage = async () => {
     if (!initialData?.id) return;
 
+    const updateFields: Record<string, null> = {};
+    if (contentPackageId) updateFields.content_package_id = null;
+    if (contentPackagePath) updateFields.content_package_path = null;
+
     const { error } = await supabase
       .from("program_modules")
-      .update({ content_package_path: null })
+      .update(updateFields)
       .eq("id", initialData.id);
 
     if (error) {
       toast.error("Failed to remove content package");
     } else {
+      setContentPackageId(null);
       setContentPackagePath(null);
-      toast.success("Content package removed");
+      toast.success("Content package removed from module");
+    }
+  };
+
+  // Migrate legacy per-module content to shared library
+  const handleMigrateToLibrary = async () => {
+    if (!initialData?.id || !contentPackagePath) return;
+
+    try {
+      // Create a content_packages row pointing to the existing storage path
+      const { data: newPkg, error: insertError } = await supabase
+        .from("content_packages" as string)
+        .insert({
+          title: title || "Migrated content",
+          storage_path: contentPackagePath,
+          package_type: "web", // Default; will be overridden by serve-content-package detection
+          file_count: 0, // Unknown for migrated content
+          uploaded_by: null,
+        })
+        .select("id")
+        .single();
+
+      if (insertError) throw insertError;
+
+      // Update the module to point to the new content package
+      const { error: updateError } = await supabase
+        .from("program_modules")
+        .update({ content_package_id: newPkg.id })
+        .eq("id", initialData.id);
+
+      if (updateError) throw updateError;
+
+      setContentPackageId(newPkg.id);
+      toast.success("Content migrated to shared library");
+      queryClient.invalidateQueries({ queryKey: ["content-packages-list"] });
+      queryClient.invalidateQueries({ queryKey: ["content-packages"] });
+    } catch (err) {
+      toast.error("Migration failed");
+      console.error("Migration error:", err);
     }
   };
 
@@ -236,14 +361,17 @@ export default function ModuleForm({
       content,
       moduleType,
       estimatedMinutes,
-      links: links.filter((link) => link.name && link.url), // Only include complete links
+      links: links.filter((link) => link.name && link.url),
       tierRequired,
       isIndividualized,
       code: code.trim(),
       featureKey,
       capabilityAssessmentId,
+      contentPackageId,
     });
   };
+
+  const hasContent = !!contentPackageId || !!contentPackagePath;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -404,66 +532,145 @@ export default function ModuleForm({
               Content Package
             </CardTitle>
             <CardDescription>
-              Upload a Rise/web export ZIP to embed interactive learning content directly in the module.
+              Assign shared Rise content from the library, or upload a new package.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {contentPackagePath ? (
-              <div className="flex items-center justify-between p-3 border rounded-lg bg-green-50 dark:bg-green-950/20">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="text-sm font-medium">Content package uploaded</p>
-                    <p className="text-xs text-muted-foreground">{contentPackagePath}</p>
+            {hasContent ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-green-50 dark:bg-green-950/20">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <div>
+                      {contentPackageId ? (
+                        <>
+                          <p className="text-sm font-medium">
+                            {selectedPackageName || "Shared content package"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            From content library
+                            {contentPackagePath && " (also has legacy path)"}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm font-medium">Legacy content package</p>
+                          <p className="text-xs text-muted-foreground">{contentPackagePath}</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {contentPackagePath && !contentPackageId && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={handleMigrateToLibrary}
+                      >
+                        <Library className="mr-2 h-4 w-4" />
+                        Migrate to Library
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleRemovePackage}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Remove
+                    </Button>
                   </div>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleRemovePackage}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Remove
-                </Button>
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingPackage}
-                  >
+              <Tabs defaultValue="library" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="library">
+                    <Library className="mr-2 h-4 w-4" />
+                    From Library
+                  </TabsTrigger>
+                  <TabsTrigger value="upload">
                     <Upload className="mr-2 h-4 w-4" />
-                    {uploadingPackage ? "Uploading..." : "Upload ZIP"}
-                  </Button>
+                    Upload New
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="library" className="space-y-3 pt-2">
                   <p className="text-xs text-muted-foreground">
-                    ZIP archive up to 500 MB. Must contain an index.html file.
+                    Select a content package from the shared library. Changes to the package will
+                    apply to all modules using it.
                   </p>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".zip"
-                  className="hidden"
-                  onChange={handlePackageUpload}
-                />
-                {uploadingPackage && (
-                  <div className="space-y-1">
-                    <Progress value={uploadProgress} />
-                    <p className="text-xs text-muted-foreground text-center">
-                      {uploadProgress < 30
-                        ? "Preparing upload..."
-                        : uploadProgress < 80
-                          ? "Uploading and extracting..."
-                          : "Finalizing..."}
+                  <Select
+                    value={contentPackageId || "none"}
+                    onValueChange={(v) => setContentPackageId(v === "none" ? null : v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select content package..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {(contentPackagesList || []).map((pkg) => (
+                        <SelectItem key={pkg.id} value={pkg.id}>
+                          {pkg.title}
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            {pkg.package_type}
+                          </Badge>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TabsContent>
+
+                <TabsContent value="upload" className="space-y-3 pt-2">
+                  <p className="text-xs text-muted-foreground">
+                    Upload a new Rise ZIP to the shared library and assign it to this module.
+                  </p>
+                  <div className="space-y-2">
+                    <Label>Package Title</Label>
+                    <Input
+                      value={newUploadTitle}
+                      onChange={(e) => setNewUploadTitle(e.target.value)}
+                      placeholder="e.g., Leadership Fundamentals"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => newUploadFileRef.current?.click()}
+                      disabled={uploadingPackage || !newUploadTitle.trim()}
+                    >
+                      <FileArchive className="mr-2 h-4 w-4" />
+                      {uploadingPackage ? "Uploading..." : "Select ZIP"}
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      Rise Web or xAPI export, up to 500 MB
                     </p>
                   </div>
-                )}
-              </div>
+                  <input
+                    ref={newUploadFileRef}
+                    type="file"
+                    accept=".zip"
+                    className="hidden"
+                    onChange={handleNewSharedUpload}
+                  />
+                  {uploadingPackage && (
+                    <div className="space-y-1">
+                      <Progress value={uploadProgress} />
+                      <p className="text-xs text-muted-foreground text-center">
+                        {uploadProgress < 30
+                          ? "Preparing..."
+                          : uploadProgress < 80
+                            ? "Uploading and extracting..."
+                            : "Finalizing..."}
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             )}
           </CardContent>
         </Card>

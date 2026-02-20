@@ -83,7 +83,7 @@ Deno.serve(async (req: Request) => {
   // ─── Get module + verify content package ──────────────────────
   const { data: moduleData, error: moduleError } = await serviceClient
     .from("program_modules")
-    .select("id, program_id, title, content_package_path, content_package_type")
+    .select("id, program_id, title, content_package_path, content_package_type, content_package_id, content_packages(storage_path, package_type)")
     .eq("id", moduleId)
     .single();
 
@@ -91,11 +91,20 @@ Deno.serve(async (req: Request) => {
     return errorResponse.notFound("Module not found", cors);
   }
 
-  if (!moduleData.content_package_path) {
+  // Resolve effective content path: content_package_id (shared) takes precedence over legacy
+  const effectiveContentPath = (moduleData.content_package_id && moduleData.content_packages?.storage_path)
+    ? moduleData.content_packages.storage_path
+    : moduleData.content_package_path;
+
+  const effectivePackageType = (moduleData.content_package_id && moduleData.content_packages?.package_type)
+    ? moduleData.content_packages.package_type
+    : moduleData.content_package_type;
+
+  if (!effectiveContentPath) {
     return errorResponse.badRequest("Module has no content package", cors);
   }
 
-  if (moduleData.content_package_type !== "xapi") {
+  if (effectivePackageType !== "xapi") {
     return errorResponse.badRequest(
       "Module is not configured for xAPI launch (content_package_type must be 'xapi')",
       cors,

@@ -1,5 +1,27 @@
 # Completed Work — Detailed History
 
+## CT3 — Shared Content Packages & Cross-Program Completion (2026-02-20)
+
+Shared content library and cross-program completion propagation. Upload Rise/xAPI packages once, assign to modules across programs. Completing content in one program auto-completes it in others. 1 migration, 4 edge functions modified, 3 new files, 5 modified files. Deployed to all 3 environments (prod + preprod + sandbox).
+
+**CT3a — Shared Content Library:**
+
+- **Migration (`20260224100000_ct3_shared_content_packages.sql`):** `content_packages` table (id, title, description, storage_path, package_type, file_count, original_filename, uploaded_by, is_active). `content_completions` table (user_id, content_package_id, completed_at, source_module_id, source_enrollment_id, result_score_scaled; UNIQUE on user_id+content_package_id). `program_modules.content_package_id` FK. RLS: admin ALL, staff SELECT, clients SELECT. Indexes, triggers, comments.
+- **Upload edge function (`upload-content-package`):** 3 modes — Shared (title+file → `shared/{uuid}/`, creates `content_packages` row), Replace (contentPackageId+file → replaces ZIP in existing package), Legacy (moduleId+file → unchanged per-module). Extracted `cleanupStoragePath()` helper.
+- **Serve edge function (`serve-content-package`):** Module query includes `content_package_id, content_packages(storage_path)`. Resolves `effectiveContentPath` from shared FK or legacy path.
+- **xAPI Launch (`xapi-launch`):** Same FK resolution for `effectiveContentPath` and `effectivePackageType`.
+- **Content Library Admin Page (`/admin/content-library`):** Stats cards (total, web, xAPI, modules using shared). Search/filter. Table with title, type badge, files, module count, date, uploader. Upload dialog (title+ZIP → shared mode). Replace dialog. Delete confirmation (blocks if modules reference). Detail dialog showing modules using package. Added to sidebar as first item in Resources section.
+- **ModuleForm Integration:** Two-tab content package card (From Library / Upload New). Combobox picker from `useContentPackagesList()`. Upload New creates shared package and auto-assigns. "Migrate to Library" button for legacy modules. Removal clears both `content_package_id` and `content_package_path`.
+- **ProgramDetail Integration:** Passes `contentPackageId` in `initialData` to ModuleForm. Saves `content_package_id` in add/update module functions.
+- **Hook (`useContentPackages.ts`):** `useContentPackages()` (list all with counts), `useContentPackage(id)` (single with modules), `useContentPackagesList()` (simple list for picker), `useDeleteContentPackage()`, `useAssignContentPackage()`.
+
+**CT3b — Cross-Program Completion:**
+
+- **xAPI Statements edge function (`xapi-statements`):** After existing `module_progress` upsert on completion verb, looks up module's `content_package_id`. If set, upserts `content_completions(user_id, content_package_id, source_module_id, source_enrollment_id, result_score_scaled)`.
+- **`useCrossProgramCompletion` hook:** Extended with `content_completions` as 3rd data source (alongside canonical_code and TalentLMS). Fetches user's content completions, resolves source module details, adds `completedVia: "content_package"` entries.
+- **Client ModuleDetail auto-accept:** New `useEffect` checks if module has `content_package_id` and user has `content_completions` row. If found, auto-upserts `module_progress` to "completed" with toast notification. Also updated content package viewer condition to show for `content_package_id` (not just legacy path).
+- **CanonicalCodesManagement page:** Renamed to "Cross-Program Linking". Added 3-tab layout: Canonical Codes (unchanged), Content Packages (new — shows packages assigned to modules across programs with "shared across N programs" badges), Unlinked (modules without codes). Stats row expanded with "Shared Content Packages" count.
+
 ## GT1, G9, G10, DP5, NTH-2, NTH-3, NTH-4 — Teaching Cohort Workflow & Enhancements (2026-02-23)
 
 Full instructor/coach cohort teaching workflow, cohort analytics, session-linked homework, module↔domain mapping, smart notification routing, and client personal instructor visibility. Commit `ed0254b`, 3 migrations, 4 new pages/components, 8 modified files. Deployed to prod + preprod + Lovable.

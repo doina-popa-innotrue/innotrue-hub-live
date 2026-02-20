@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       ac_assessment_results: {
@@ -1392,6 +1367,7 @@ export type Database = {
           pass_fail_mode: string | null
           pass_fail_threshold: number | null
           program_id: string | null
+          question_types: Json | null
           rating_scale: number
           slug: string
           updated_at: string
@@ -1416,6 +1392,7 @@ export type Database = {
           pass_fail_mode?: string | null
           pass_fail_threshold?: number | null
           program_id?: string | null
+          question_types?: Json | null
           rating_scale?: number
           slug: string
           updated_at?: string
@@ -1440,6 +1417,7 @@ export type Database = {
           pass_fail_mode?: string | null
           pass_fail_threshold?: number | null
           program_id?: string | null
+          question_types?: Json | null
           rating_scale?: number
           slug?: string
           updated_at?: string
@@ -1520,6 +1498,8 @@ export type Database = {
           options: Json | null
           order_index: number
           question_text: string
+          question_type: string | null
+          type_weight: number | null
         }
         Insert: {
           created_at?: string
@@ -1530,6 +1510,8 @@ export type Database = {
           options?: Json | null
           order_index?: number
           question_text: string
+          question_type?: string | null
+          type_weight?: number | null
         }
         Update: {
           created_at?: string
@@ -1540,6 +1522,8 @@ export type Database = {
           options?: Json | null
           order_index?: number
           question_text?: string
+          question_type?: string | null
+          type_weight?: number | null
         }
         Relationships: [
           {
@@ -2468,6 +2452,96 @@ export type Database = {
         }
         Relationships: []
       }
+      cohort_session_attendance: {
+        Row: {
+          created_at: string | null
+          enrollment_id: string
+          id: string
+          marked_at: string | null
+          marked_by: string | null
+          notes: string | null
+          session_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          enrollment_id: string
+          id?: string
+          marked_at?: string | null
+          marked_by?: string | null
+          notes?: string | null
+          session_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          enrollment_id?: string
+          id?: string
+          marked_at?: string | null
+          marked_by?: string | null
+          notes?: string | null
+          session_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cohort_session_attendance_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "client_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cohort_session_attendance_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "staff_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cohort_session_attendance_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cohort_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cohort_session_reminder_log: {
+        Row: {
+          id: string
+          recipients_count: number | null
+          reminder_type: string
+          sent_at: string | null
+          session_id: string
+        }
+        Insert: {
+          id?: string
+          recipients_count?: number | null
+          reminder_type: string
+          sent_at?: string | null
+          session_id: string
+        }
+        Update: {
+          id?: string
+          recipients_count?: number | null
+          reminder_type?: string
+          sent_at?: string | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cohort_session_reminder_log_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cohort_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cohort_sessions: {
         Row: {
           cohort_id: string
@@ -2475,11 +2549,14 @@ export type Database = {
           description: string | null
           end_time: string | null
           id: string
+          instructor_id: string | null
           location: string | null
           meeting_link: string | null
           module_id: string | null
           notes: string | null
           order_index: number
+          recap: string | null
+          recording_url: string | null
           session_date: string
           start_time: string | null
           timezone: string | null
@@ -2492,11 +2569,14 @@ export type Database = {
           description?: string | null
           end_time?: string | null
           id?: string
+          instructor_id?: string | null
           location?: string | null
           meeting_link?: string | null
           module_id?: string | null
           notes?: string | null
           order_index?: number
+          recap?: string | null
+          recording_url?: string | null
           session_date: string
           start_time?: string | null
           timezone?: string | null
@@ -2509,11 +2589,14 @@ export type Database = {
           description?: string | null
           end_time?: string | null
           id?: string
+          instructor_id?: string | null
           location?: string | null
           meeting_link?: string | null
           module_id?: string | null
           notes?: string | null
           order_index?: number
+          recap?: string | null
+          recording_url?: string | null
           session_date?: string
           start_time?: string | null
           timezone?: string | null
@@ -2536,6 +2619,110 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      content_completions: {
+        Row: {
+          completed_at: string
+          content_package_id: string
+          created_at: string
+          id: string
+          result_score_scaled: number | null
+          source_enrollment_id: string | null
+          source_module_id: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          content_package_id: string
+          created_at?: string
+          id?: string
+          result_score_scaled?: number | null
+          source_enrollment_id?: string | null
+          source_module_id?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          content_package_id?: string
+          created_at?: string
+          id?: string
+          result_score_scaled?: number | null
+          source_enrollment_id?: string | null
+          source_module_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_completions_content_package_id_fkey"
+            columns: ["content_package_id"]
+            isOneToOne: false
+            referencedRelation: "content_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_completions_source_enrollment_id_fkey"
+            columns: ["source_enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "client_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_completions_source_enrollment_id_fkey"
+            columns: ["source_enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "staff_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_completions_source_module_id_fkey"
+            columns: ["source_module_id"]
+            isOneToOne: false
+            referencedRelation: "program_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_packages: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_count: number | null
+          id: string
+          is_active: boolean | null
+          original_filename: string | null
+          package_type: string
+          storage_path: string
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          original_filename?: string | null
+          package_type?: string
+          storage_path: string
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          original_filename?: string | null
+          package_type?: string
+          storage_path?: string
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
       }
       cookie_consent: {
         Row: {
@@ -3740,6 +3927,7 @@ export type Database = {
       development_items: {
         Row: {
           author_id: string | null
+          cohort_session_id: string | null
           completed_at: string | null
           content: string | null
           created_at: string
@@ -3761,6 +3949,7 @@ export type Database = {
         }
         Insert: {
           author_id?: string | null
+          cohort_session_id?: string | null
           completed_at?: string | null
           content?: string | null
           created_at?: string
@@ -3782,6 +3971,7 @@ export type Database = {
         }
         Update: {
           author_id?: string | null
+          cohort_session_id?: string | null
           completed_at?: string | null
           content?: string | null
           created_at?: string
@@ -3802,6 +3992,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "development_items_cohort_session_id_fkey"
+            columns: ["cohort_session_id"]
+            isOneToOne: false
+            referencedRelation: "cohort_sessions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "development_items_library_resource_id_fkey"
             columns: ["library_resource_id"]
@@ -4788,6 +4985,91 @@ export type Database = {
           },
         ]
       }
+      goal_assessment_links: {
+        Row: {
+          assessment_definition_id: string | null
+          capability_assessment_id: string | null
+          capability_domain_id: string | null
+          capability_snapshot_id: string | null
+          created_at: string
+          goal_id: string
+          id: string
+          notes: string | null
+          psychometric_assessment_id: string | null
+          score_at_creation: number | null
+          target_score: number | null
+        }
+        Insert: {
+          assessment_definition_id?: string | null
+          capability_assessment_id?: string | null
+          capability_domain_id?: string | null
+          capability_snapshot_id?: string | null
+          created_at?: string
+          goal_id: string
+          id?: string
+          notes?: string | null
+          psychometric_assessment_id?: string | null
+          score_at_creation?: number | null
+          target_score?: number | null
+        }
+        Update: {
+          assessment_definition_id?: string | null
+          capability_assessment_id?: string | null
+          capability_domain_id?: string | null
+          capability_snapshot_id?: string | null
+          created_at?: string
+          goal_id?: string
+          id?: string
+          notes?: string | null
+          psychometric_assessment_id?: string | null
+          score_at_creation?: number | null
+          target_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_assessment_links_assessment_definition_id_fkey"
+            columns: ["assessment_definition_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_assessment_links_capability_assessment_id_fkey"
+            columns: ["capability_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "capability_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_assessment_links_capability_domain_id_fkey"
+            columns: ["capability_domain_id"]
+            isOneToOne: false
+            referencedRelation: "capability_domains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_assessment_links_capability_snapshot_id_fkey"
+            columns: ["capability_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "capability_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_assessment_links_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_assessment_links_psychometric_assessment_id_fkey"
+            columns: ["psychometric_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "psychometric_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goal_comments: {
         Row: {
           comment: string
@@ -4990,12 +5272,14 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          instantiation_id: string | null
           is_private: boolean
           is_public: boolean
           priority: string
           progress_percentage: number
           status: string
           target_date: string | null
+          template_goal_id: string | null
           timeframe_type: string
           title: string
           updated_at: string
@@ -5006,12 +5290,14 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          instantiation_id?: string | null
           is_private?: boolean
           is_public?: boolean
           priority?: string
           progress_percentage?: number
           status?: string
           target_date?: string | null
+          template_goal_id?: string | null
           timeframe_type: string
           title: string
           updated_at?: string
@@ -5022,18 +5308,35 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          instantiation_id?: string | null
           is_private?: boolean
           is_public?: boolean
           priority?: string
           progress_percentage?: number
           status?: string
           target_date?: string | null
+          template_goal_id?: string | null
           timeframe_type?: string
           title?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "goals_instantiation_id_fkey"
+            columns: ["instantiation_id"]
+            isOneToOne: false
+            referencedRelation: "guided_path_instantiations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goals_template_goal_id_fkey"
+            columns: ["template_goal_id"]
+            isOneToOne: false
+            referencedRelation: "guided_path_template_goals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       google_drive_users: {
         Row: {
@@ -5646,6 +5949,132 @@ export type Database = {
           },
         ]
       }
+      guided_path_instantiations: {
+        Row: {
+          actual_completion_date: string | null
+          created_at: string
+          estimated_completion_date: string | null
+          id: string
+          pace_multiplier: number
+          started_at: string
+          status: string
+          survey_response_id: string | null
+          template_id: string
+          user_id: string
+        }
+        Insert: {
+          actual_completion_date?: string | null
+          created_at?: string
+          estimated_completion_date?: string | null
+          id?: string
+          pace_multiplier?: number
+          started_at?: string
+          status?: string
+          survey_response_id?: string | null
+          template_id: string
+          user_id: string
+        }
+        Update: {
+          actual_completion_date?: string | null
+          created_at?: string
+          estimated_completion_date?: string | null
+          id?: string
+          pace_multiplier?: number
+          started_at?: string
+          status?: string
+          survey_response_id?: string | null
+          template_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guided_path_instantiations_survey_response_id_fkey"
+            columns: ["survey_response_id"]
+            isOneToOne: false
+            referencedRelation: "guided_path_survey_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guided_path_instantiations_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "guided_path_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guided_path_milestone_gates: {
+        Row: {
+          assessment_definition_id: string | null
+          assessment_dimension_id: string | null
+          capability_assessment_id: string | null
+          capability_domain_id: string | null
+          created_at: string
+          gate_label: string | null
+          id: string
+          min_score: number
+          template_milestone_id: string
+        }
+        Insert: {
+          assessment_definition_id?: string | null
+          assessment_dimension_id?: string | null
+          capability_assessment_id?: string | null
+          capability_domain_id?: string | null
+          created_at?: string
+          gate_label?: string | null
+          id?: string
+          min_score: number
+          template_milestone_id: string
+        }
+        Update: {
+          assessment_definition_id?: string | null
+          assessment_dimension_id?: string | null
+          capability_assessment_id?: string | null
+          capability_domain_id?: string | null
+          created_at?: string
+          gate_label?: string | null
+          id?: string
+          min_score?: number
+          template_milestone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guided_path_milestone_gates_assessment_definition_id_fkey"
+            columns: ["assessment_definition_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guided_path_milestone_gates_assessment_dimension_id_fkey"
+            columns: ["assessment_dimension_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_dimensions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guided_path_milestone_gates_capability_assessment_id_fkey"
+            columns: ["capability_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "capability_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guided_path_milestone_gates_capability_domain_id_fkey"
+            columns: ["capability_domain_id"]
+            isOneToOne: false
+            referencedRelation: "capability_domains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guided_path_milestone_gates_template_milestone_id_fkey"
+            columns: ["template_milestone_id"]
+            isOneToOne: false
+            referencedRelation: "guided_path_template_milestones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guided_path_survey_responses: {
         Row: {
           completed_at: string | null
@@ -6109,6 +6538,48 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      milestone_gate_overrides: {
+        Row: {
+          created_at: string
+          gate_id: string
+          goal_milestone_id: string
+          id: string
+          overridden_by: string
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          gate_id: string
+          goal_milestone_id: string
+          id?: string
+          overridden_by: string
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          gate_id?: string
+          goal_milestone_id?: string
+          id?: string
+          overridden_by?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestone_gate_overrides_gate_id_fkey"
+            columns: ["gate_id"]
+            isOneToOne: false
+            referencedRelation: "guided_path_milestone_gates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milestone_gate_overrides_goal_milestone_id_fkey"
+            columns: ["goal_milestone_id"]
+            isOneToOne: false
+            referencedRelation: "goal_milestones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       miro_users: {
         Row: {
@@ -6590,6 +7061,45 @@ export type Database = {
           },
           {
             foreignKeyName: "module_collection_links_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "program_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      module_domain_mappings: {
+        Row: {
+          capability_domain_id: string
+          created_at: string
+          id: string
+          module_id: string
+          relevance: string
+        }
+        Insert: {
+          capability_domain_id: string
+          created_at?: string
+          id?: string
+          module_id: string
+          relevance?: string
+        }
+        Update: {
+          capability_domain_id?: string
+          created_at?: string
+          id?: string
+          module_id?: string
+          relevance?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_domain_mappings_capability_domain_id_fkey"
+            columns: ["capability_domain_id"]
+            isOneToOne: false
+            referencedRelation: "capability_domains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_domain_mappings_module_id_fkey"
             columns: ["module_id"]
             isOneToOne: false
             referencedRelation: "program_modules"
@@ -9084,6 +9594,7 @@ export type Database = {
           description: string | null
           end_date: string | null
           id: string
+          lead_instructor_id: string | null
           name: string
           program_id: string
           start_date: string | null
@@ -9096,6 +9607,7 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          lead_instructor_id?: string | null
           name: string
           program_id: string
           start_date?: string | null
@@ -9108,6 +9620,7 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          lead_instructor_id?: string | null
           name?: string
           program_id?: string
           start_date?: string | null
@@ -9329,6 +9842,9 @@ export type Database = {
           capability_tags: string[] | null
           code: string | null
           content: string | null
+          content_package_id: string | null
+          content_package_path: string | null
+          content_package_type: string | null
           created_at: string | null
           description: string | null
           domain: string | null
@@ -9355,6 +9871,9 @@ export type Database = {
           capability_tags?: string[] | null
           code?: string | null
           content?: string | null
+          content_package_id?: string | null
+          content_package_path?: string | null
+          content_package_type?: string | null
           created_at?: string | null
           description?: string | null
           domain?: string | null
@@ -9381,6 +9900,9 @@ export type Database = {
           capability_tags?: string[] | null
           code?: string | null
           content?: string | null
+          content_package_id?: string | null
+          content_package_path?: string | null
+          content_package_type?: string | null
           created_at?: string | null
           description?: string | null
           domain?: string | null
@@ -9406,6 +9928,13 @@ export type Database = {
             columns: ["capability_assessment_id"]
             isOneToOne: false
             referencedRelation: "capability_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_modules_content_package_id_fkey"
+            columns: ["content_package_id"]
+            isOneToOne: false
+            referencedRelation: "content_packages"
             referencedColumns: ["id"]
           },
           {
@@ -12832,6 +13361,157 @@ export type Database = {
         }
         Relationships: []
       }
+      xapi_sessions: {
+        Row: {
+          auth_token: string
+          bookmark: string | null
+          completed_at: string | null
+          created_at: string | null
+          enrollment_id: string
+          id: string
+          initialized_at: string | null
+          launched_at: string | null
+          module_id: string
+          status: string | null
+          suspend_data: string | null
+          terminated_at: string | null
+          token_consumed: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auth_token: string
+          bookmark?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          enrollment_id: string
+          id?: string
+          initialized_at?: string | null
+          launched_at?: string | null
+          module_id: string
+          status?: string | null
+          suspend_data?: string | null
+          terminated_at?: string | null
+          token_consumed?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auth_token?: string
+          bookmark?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          enrollment_id?: string
+          id?: string
+          initialized_at?: string | null
+          launched_at?: string | null
+          module_id?: string
+          status?: string | null
+          suspend_data?: string | null
+          terminated_at?: string | null
+          token_consumed?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xapi_sessions_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "client_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xapi_sessions_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "staff_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xapi_sessions_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "program_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      xapi_statements: {
+        Row: {
+          created_at: string | null
+          id: string
+          module_id: string
+          object_id: string
+          object_name: string | null
+          raw_statement: Json
+          result_completion: boolean | null
+          result_duration: string | null
+          result_score_raw: number | null
+          result_score_scaled: number | null
+          result_success: boolean | null
+          session_id: string
+          statement_id: string | null
+          statement_timestamp: string | null
+          user_id: string
+          verb_display: string | null
+          verb_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          module_id: string
+          object_id: string
+          object_name?: string | null
+          raw_statement: Json
+          result_completion?: boolean | null
+          result_duration?: string | null
+          result_score_raw?: number | null
+          result_score_scaled?: number | null
+          result_success?: boolean | null
+          session_id: string
+          statement_id?: string | null
+          statement_timestamp?: string | null
+          user_id: string
+          verb_display?: string | null
+          verb_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          module_id?: string
+          object_id?: string
+          object_name?: string | null
+          raw_statement?: Json
+          result_completion?: boolean | null
+          result_duration?: string | null
+          result_score_raw?: number | null
+          result_score_scaled?: number | null
+          result_success?: boolean | null
+          session_id?: string
+          statement_id?: string | null
+          statement_timestamp?: string | null
+          user_id?: string
+          verb_display?: string | null
+          verb_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xapi_statements_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "program_modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xapi_statements_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "xapi_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       auth_contexts_public: {
@@ -13529,6 +14209,7 @@ export type Database = {
       enroll_with_credits: {
         Args: {
           p_client_user_id: string
+          p_cohort_id?: string
           p_description?: string
           p_discount_percent?: number
           p_final_credit_cost?: number
@@ -13727,6 +14408,10 @@ export type Database = {
         Args: { _module_type: string }
         Returns: boolean
       }
+      notify_cohort_session_recap: {
+        Args: { p_session_id: string }
+        Returns: number
+      }
       owns_ac_assessment_result: {
         Args: { _result_id: string; _user_id: string }
         Returns: boolean
@@ -13746,6 +14431,7 @@ export type Database = {
       process_monthly_credit_rollovers: { Args: never; Returns: Json }
       process_monthly_rollover: { Args: never; Returns: undefined }
       purge_expired_terms_acceptances: { Args: never; Returns: number }
+      send_cohort_session_reminders: { Args: never; Returns: Json }
       staff_has_client_relationship: {
         Args: { _client_user_id: string; _staff_id: string }
         Returns: boolean
@@ -13765,6 +14451,10 @@ export type Database = {
       }
       user_has_feature: {
         Args: { _feature_key: string; _user_id: string }
+        Returns: boolean
+      }
+      user_is_enrolled_in_program: {
+        Args: { _program_id: string; _user_id: string }
         Returns: boolean
       }
       validate_discount_code: {
@@ -13962,9 +14652,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       app_role: ["admin", "coach", "client", "instructor"],

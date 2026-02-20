@@ -274,6 +274,37 @@ Deno.serve(async (req: Request) => {
             `[xapi-statements] Module ${session.module_id} auto-completed for user ${session.user_id}`,
           );
         }
+
+        // ── CT3: Write content-level completion for cross-program tracking ──
+        const { data: moduleInfo } = await serviceClient
+          .from("program_modules")
+          .select("content_package_id")
+          .eq("id", session.module_id)
+          .single();
+
+        if (moduleInfo?.content_package_id) {
+          const { error: contentCompletionError } = await serviceClient
+            .from("content_completions")
+            .upsert(
+              {
+                user_id: session.user_id,
+                content_package_id: moduleInfo.content_package_id,
+                completed_at: new Date().toISOString(),
+                source_module_id: session.module_id,
+                source_enrollment_id: session.enrollment_id,
+                result_score_scaled: stmt.result?.score?.scaled ?? null,
+              },
+              { onConflict: "user_id,content_package_id" },
+            );
+
+          if (contentCompletionError) {
+            console.error("[xapi-statements] Content completion insert error:", contentCompletionError);
+          } else {
+            console.log(
+              `[xapi-statements] Content completion recorded for package ${moduleInfo.content_package_id}, user ${session.user_id}`,
+            );
+          }
+        }
       }
     }
 

@@ -80,6 +80,7 @@ interface Module {
   min_plan_tier?: number;
   content_package_path?: string | null;
   content_package_type?: "web" | "xapi" | null;
+  content_package_id?: string | null;
   progress?: {
     id: string;
     status: string;
@@ -187,7 +188,7 @@ export default function ModuleDetail() {
 
       const { data: moduleData } = await supabase
         .from("program_modules")
-        .select("*, plan_id, min_plan_tier, content_package_path, content_package_type")
+        .select("*, plan_id, min_plan_tier, content_package_path, content_package_type, content_package_id")
         .eq("id", moduleId)
         .single();
 
@@ -340,6 +341,59 @@ export default function ModuleDetail() {
 
     checkAccess();
   }, [planAccessLoading, module, programId, checkModulePlanAccess]);
+
+  // ── CT3: Auto-accept completion from shared content package ──
+  // If this module uses a shared content package and the user has already completed
+  // that content via another module/program, auto-mark this module as completed.
+  useEffect(() => {
+    if (!module || !enrollment || !user) return;
+    if (module.progress?.status === "completed") return; // Already completed
+    const cpId = module.content_package_id;
+    if (!cpId) return;
+
+    (async () => {
+      try {
+        const { data: cc } = await supabase
+          .from("content_completions")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("content_package_id", cpId)
+          .maybeSingle();
+
+        if (!cc) return; // No cross-program completion found
+
+        // Auto-upsert module_progress to completed
+        const { error } = await supabase.from("module_progress").upsert(
+          {
+            enrollment_id: enrollment.id,
+            module_id: module.id,
+            status: "completed",
+            completed_at: new Date().toISOString(),
+          },
+          { onConflict: "enrollment_id,module_id" },
+        );
+
+        if (!error) {
+          // Update local state without full page reload
+          setModule((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  progress: prev.progress
+                    ? { ...prev.progress, status: "completed" }
+                    : prev.progress,
+                }
+              : prev,
+          );
+          toast.success("Auto-completed! You already finished this content in another program.", {
+            duration: 5000,
+          });
+        }
+      } catch (err) {
+        console.error("CT3 auto-accept check failed:", err);
+      }
+    })();
+  }, [module?.id, module?.content_package_id, module?.progress?.status, enrollment?.id, user?.id]);
 
   async function toggleModuleStatus() {
     if (!enrollment || !module || !user) return;
@@ -663,8 +717,8 @@ export default function ModuleDetail() {
         {/* New module sections */}
         {!isLocked && <ModuleSectionsDisplay moduleId={module.id} />}
 
-        {/* Embedded content package (Rise/web export) */}
-        {!isLocked && module.content_package_path && accessToken && (
+        {/* Embedded content package (Rise/web export) — shown for legacy path OR shared content_package_id */}
+        {!isLocked && (module.content_package_path || module.content_package_id) && accessToken && (
           <Card className="border-primary/50 bg-primary/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

@@ -7,7 +7,7 @@ interface CrossProgramModule {
   programId: string;
   programName: string;
   completedAt: string;
-  completedVia: "canonical_code" | "talentlms";
+  completedVia: "canonical_code" | "talentlms" | "content_package";
 }
 
 interface CrossProgramCompletion {
@@ -16,8 +16,11 @@ interface CrossProgramCompletion {
 }
 
 /**
- * Hook to check if modules have been completed through other programs
- * Uses canonical_code for linked modules and talentlms_course_id for TalentLMS courses
+ * Hook to check if modules have been completed through other programs.
+ * Uses three sources:
+ *   1. canonical_code — manual cross-program linking
+ *   2. talentlms_course_id — TalentLMS course completion
+ *   3. content_package_id — shared content package completion (CT3)
  */
 export function useCrossProgramCompletion(userId?: string, programId?: string) {
   const [crossProgramCompletions, setCrossProgramCompletions] = useState<
@@ -35,10 +38,10 @@ export function useCrossProgramCompletion(userId?: string, programId?: string) {
       setLoading(true);
       const completionsMap = new Map<string, CrossProgramModule[]>();
 
-      // Get all modules for the current program with their canonical codes and talentlms links
+      // Get all modules for the current program with their canonical codes, content package IDs, and talentlms links
       const { data: programModules, error: modulesError } = await supabase
         .from("program_modules")
-        .select("id, title, canonical_code, links")
+        .select("id, title, canonical_code, content_package_id, links")
         .eq("program_id", programId)
         .eq("is_active", true);
 
@@ -59,29 +62,34 @@ export function useCrossProgramCompletion(userId?: string, programId?: string) {
         talentLmsProgress?.map((p) => [p.talentlms_course_id, p.completed_at]) || [],
       );
 
-      // Get all user's completed module progress across ALL programs (not current one)
-      const { data: allCompletedProgress } = await supabase
-        .from("module_progress")
-        .select(
-          `
-          module_id,
-          completed_at,
-          client_enrollments!inner (
-            program_id,
-            programs!inner (
-              name
-            )
-          ),
-          program_modules!inner (
-            title,
-            canonical_code
-          )
-        `,
-        )
-        .eq("status", "completed")
-        .neq("client_enrollments.program_id", programId);
+      // ── CT3: Get user's content-level completions ──
+      const contentPackageIds = programModules
+        .map((m) => m.content_package_id)
+        .filter(Boolean) as string[];
 
-      // Filter to only get completions for this user
+      const contentCompletionsMap = new Map<
+        string,
+        { completedAt: string; sourceModuleId: string | null }
+      >();
+
+      if (contentPackageIds.length > 0) {
+        const { data: contentCompletions } = await supabase
+          .from("content_completions")
+          .select("content_package_id, completed_at, source_module_id")
+          .eq("user_id", userId)
+          .in("content_package_id", contentPackageIds);
+
+        if (contentCompletions) {
+          for (const cc of contentCompletions as any[]) {
+            contentCompletionsMap.set(cc.content_package_id, {
+              completedAt: cc.completed_at,
+              sourceModuleId: cc.source_module_id,
+            });
+          }
+        }
+      }
+
+      // Get all user's completed module progress across ALL programs (not current one)
       const { data: userEnrollments } = await supabase
         .from("client_enrollments")
         .select("id")
@@ -137,6 +145,34 @@ export function useCrossProgramCompletion(userId?: string, programId?: string) {
         }
       }
 
+      // ── CT3: Build source module lookup for content completions ──
+      // We need to look up the source module details to show where content was completed
+      const sourceModuleIds = [...contentCompletionsMap.values()]
+        .map((v) => v.sourceModuleId)
+        .filter(Boolean) as string[];
+
+      const sourceModulesMap = new Map<
+        string,
+        { title: string; programId: string; programName: string }
+      >();
+
+      if (sourceModuleIds.length > 0) {
+        const { data: sourceModules } = await supabase
+          .from("program_modules")
+          .select("id, title, program_id, programs!inner(id, name)")
+          .in("id", sourceModuleIds);
+
+        if (sourceModules) {
+          for (const sm of sourceModules as any[]) {
+            sourceModulesMap.set(sm.id, {
+              title: sm.title,
+              programId: sm.programs.id,
+              programName: sm.programs.name,
+            });
+          }
+        }
+      }
+
       // For each module in current program, check for cross-completions
       for (const module of programModules) {
         const crossCompletions: CrossProgramModule[] = [];
@@ -144,6 +180,26 @@ export function useCrossProgramCompletion(userId?: string, programId?: string) {
         // Check canonical code matches
         if (module.canonical_code && canonicalCodeCompletions.has(module.canonical_code)) {
           crossCompletions.push(...canonicalCodeCompletions.get(module.canonical_code)!);
+        }
+
+        // ── CT3: Check content package completion ──
+        const cpId = module.content_package_id;
+        if (cpId && contentCompletionsMap.has(cpId)) {
+          const cc = contentCompletionsMap.get(cpId)!;
+          // Only count as cross-completion if the source module is in a different program
+          if (cc.sourceModuleId && cc.sourceModuleId !== module.id) {
+            const source = sourceModulesMap.get(cc.sourceModuleId);
+            if (source && source.programId !== programId) {
+              crossCompletions.push({
+                moduleId: cc.sourceModuleId,
+                moduleTitle: source.title,
+                programId: source.programId,
+                programName: source.programName,
+                completedAt: cc.completedAt,
+                completedVia: "content_package",
+              });
+            }
+          }
         }
 
         // Check TalentLMS course matches

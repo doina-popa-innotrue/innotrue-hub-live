@@ -439,6 +439,7 @@ export default function ProgramDetail() {
       code: data.code || null,
       feature_key: data.featureKey || null,
       capability_assessment_id: data.capabilityAssessmentId || null,
+      content_package_id: data.contentPackageId || null,
     });
 
     if (error) {
@@ -471,6 +472,7 @@ export default function ProgramDetail() {
         code: data.code || null,
         feature_key: data.featureKey || null,
         capability_assessment_id: data.capabilityAssessmentId || null,
+        content_package_id: data.contentPackageId || null,
       })
       .eq("id", editingModule.id);
 
@@ -1427,6 +1429,7 @@ export default function ProgramDetail() {
                         featureKey: editingModule.feature_key || null,
                         capabilityAssessmentId: editingModule.capability_assessment_id || null,
                         contentPackagePath: editingModule.content_package_path || null,
+                        contentPackageId: editingModule.content_package_id || null,
                       }}
                       onSubmit={updateModule}
                       onCancel={() => {

@@ -1364,11 +1364,7 @@ Organized by theme, drawing from Parts 2, 3, 5, 6, 9, and 10.
 **Content Delivery (eliminate TalentLMS friction):**
 - ~~Tier 1: Rise Web export → Supabase Storage → iframe embed~~ ✅ DONE (2026-02-18) — private storage bucket + `serve-content-package` auth-gated proxy + `upload-content-package` ZIP extraction + iframe embed in client/instructor ModuleDetail
 - ~~Tier 2: Rise xAPI export → xAPI session management + statement storage → auto-complete modules~~ ✅ DONE (2026-02-22) — `xapi-launch` (session create/resume), `xapi-statements` (LRS endpoint + state persistence), `ContentPackageViewer.tsx` LMS mock with resume support (bookmark + suspend_data). 2 migrations, 3 edge functions, deployed to prod + preprod.
-- **CT3: Shared Content Packages & Cross-Program Completion (3-5 days, HIGH)** — Two problems: (1) same Rise course must be uploaded per-module, no content reuse across programs; (2) completing a course in one program doesn't carry over to another (was handled in TalentLMS via canonical IDs, lost in migration). Solution:
-  - **CT3a: Shared Content Library** — new `content_packages` table (title, storage_path, package_type, uploaded_by, file_size_bytes). `program_modules.content_package_id` FK replaces direct `content_package_path`. Upload once → assign to many modules. Admin UI: content library picker in module form. `serve-content-package` resolves via FK.
-  - **CT3b: Cross-Program Completion** — new `content_completions` table (user_id, content_package_id, completed_at, source_module_id, source_enrollment_id). xAPI auto-completion also writes `content_completions` row. Module load checks `content_completions` → auto-marks module as completed if user already completed same content elsewhere.
-  - **`canonical_code` override** — existing `program_modules.canonical_code` column (already indexed) kept as manual override for different content files that should count as equivalent (e.g., different Rise versions of same course).
-  - **Existing infrastructure:** `content_package_path`/`content_package_type` on `program_modules`; `canonical_code` column with index; `module_external_mappings` + `external_progress` for TalentLMS sync; `xapi-statements` auto-completion.
+- ~~CT3: Shared Content Packages & Cross-Program Completion~~ ✅ DONE (2026-02-20) — 1 migration (`20260224100000_ct3_shared_content_packages.sql`), `content_packages` + `content_completions` tables, `program_modules.content_package_id` FK. 4 edge functions modified (upload/serve/xapi-launch/xapi-statements), new Content Library admin page (`/admin/content-library`), ModuleForm two-tab library picker, `useCrossProgramCompletion` extended with content_completions, client auto-accept on module load, CanonicalCodes page extended with content packages tab. Deployed to all 3 environments.
 - TalentLMS transition: keep for active programs, no new programs on TalentLMS
 
 **Cohort Experience (required for live/hybrid programs):**
@@ -1639,7 +1635,7 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 | ~~Priority 0 — Development Profile (DP1-DP5)~~ | ~~5 phases~~ | ✅ DONE (DP1-4: 2026-02-19, DP5: 2026-02-23) |
 | **Priority 0 — Development Profile (DP6-DP7)** | **2 phases remaining** | **~1 week** |
 | ~~Priority 0 — Content Delivery Tier 2~~ | ~~xAPI direct~~ | ✅ DONE (2026-02-22) |
-| **Priority 0 — Content Delivery Tier 3 (CT3)** | **Shared content packages + cross-program completion** | **HIGH ~3-5 days** |
+| ~~**Priority 0 — Content Delivery Tier 3 (CT3)**~~ ✅ | ~~Shared content packages + cross-program completion~~ | ~~HIGH~~ DONE |
 | Phase 1 — Onboarding/UX | 8 items | 2-3 weeks |
 | Phase 2 — Assessment Intelligence | 7 items | 3-4 weeks |
 | Phase 3 — AI & Engagement | 8 items | 3-4 weeks |
@@ -1662,7 +1658,7 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 9. ~~Instructor/Coach Teaching Workflow (GT1)~~ ✅ DONE (2026-02-23) — RLS fixes + teaching cohorts list + cohort detail + dashboard widget + StudentDetail card
 10. ~~Cohort Quality (G9-G10)~~ ✅ DONE (2026-02-23) — analytics dashboard + session-linked homework
 11. ~~DP5 Module↔Domain Mapping~~ ✅ DONE (2026-02-23) — `module_domain_mappings` table, admin UI
-12. **CT3 Shared Content Packages & Cross-Program Completion** — `content_packages` table, `content_completions` table, content library picker, xAPI propagation (~3-5 days)
+12. ~~CT3 Shared Content Packages & Cross-Program Completion~~ ✅ DONE (2026-02-20) — `content_packages` + `content_completions` tables, content library picker, xAPI propagation, cross-program auto-accept
 13. Quick medium wins (M2, M11) — interleaved, 2 days
 14. **G8 Self-Enrollment Codes** — `enrollment_codes` table, self-enrollment via link (~2-3 days)
 15. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
@@ -1684,8 +1680,8 @@ Several roadmap items require new database tables or fields. These should be pla
 | ~~Priority 0~~ | ~~G4 Attendance tracking~~ | ✅ DONE — `cohort_session_attendance` table + `AttendanceTracker.tsx` |
 | ~~Priority 0~~ | ~~G7 Session notes~~ | ✅ DONE — `cohort_sessions.recording_url`, `.summary`, `.action_items` |
 | ~~Priority 0~~ | ~~GT1 Teaching workflow RLS~~ | ✅ DONE — 4 RLS policies (coach SELECT on `program_cohorts`, UPDATE on `cohort_sessions` for both roles, upgrade coach attendance to ALL) + 3 new pages + 4 modified files |
-| Priority 0 | CT3a Shared content library | `content_packages` table (title, storage_path, package_type, uploaded_by, file_size_bytes), `program_modules.content_package_id` FK |
-| Priority 0 | CT3b Cross-program completion | `content_completions` table (user_id, content_package_id, completed_at, source_module_id, source_enrollment_id) |
+| ~~Priority 0~~ | ~~CT3a Shared content library~~ | ✅ DONE — `content_packages` table, `program_modules.content_package_id` FK, Content Library admin page, ModuleForm picker |
+| ~~Priority 0~~ | ~~CT3b Cross-program completion~~ | ✅ DONE — `content_completions` table, xAPI propagation, `useCrossProgramCompletion` extended, client auto-accept |
 | Priority 0 | G8 Auto cohort enrollment | `enrollment_codes` table with `cohort_id` (UUID FK to program_cohorts) — deferred to Phase 5 |
 | ~~Priority 0~~ | ~~Assignment routing~~ | ✅ DONE — async via `create_notification` RPC, My Queue via `enrollment_module_staff` |
 | ~~Priority 0~~ | ~~Assignment transfer~~ | ✅ DONE — `TransferAssignmentDialog` component |

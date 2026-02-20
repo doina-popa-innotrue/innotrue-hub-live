@@ -1,13 +1,22 @@
 /**
  * upload-content-package — Admin-only ZIP upload + extraction for Rise content
  *
- * POST with multipart form data:
- *   - file: ZIP file containing Rise web export
- *   - moduleId: UUID of the target program_module
+ * Supports two modes:
+ *
+ * 1. SHARED MODE (new — CT3): POST with { file, title, description? }
+ *    Creates a content_packages row and stores files at shared/{uuid}/...
+ *    Returns { content_package_id, storage_path, package_type, files_uploaded }
+ *
+ * 2. LEGACY MODE: POST with { file, moduleId }
+ *    Existing per-module behavior — stores at {moduleId}/{uuid}/...
+ *    Updates program_modules.content_package_path. Unchanged from before.
+ *
+ * 3. REPLACE MODE: POST with { file, contentPackageId }
+ *    Replaces files in an existing shared content package.
+ *    Cleans up old storage files and updates the content_packages row.
  *
  * Extracts ZIP contents to module-content-packages bucket,
- * verifies index.html exists, updates program_modules.content_package_path.
- * Cleans up any previous content package for the module.
+ * verifies index.html exists, detects web vs xAPI package type.
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -69,12 +78,24 @@ Deno.serve(async (req: Request) => {
 
   const file = formData.get("file") as File | null;
   const moduleId = formData.get("moduleId") as string | null;
+  const title = formData.get("title") as string | null;
+  const description = formData.get("description") as string | null;
+  const contentPackageId = formData.get("contentPackageId") as string | null;
 
   if (!file) {
     return errorResponse.badRequest("Missing 'file' field (ZIP)", cors);
   }
-  if (!moduleId) {
-    return errorResponse.badRequest("Missing 'moduleId' field", cors);
+
+  // Determine mode
+  const isSharedMode = !moduleId && !!title;
+  const isReplaceMode = !moduleId && !!contentPackageId;
+  const isLegacyMode = !!moduleId;
+
+  if (!isSharedMode && !isReplaceMode && !isLegacyMode) {
+    return errorResponse.badRequest(
+      "Provide either 'moduleId' (legacy mode), 'title' (shared mode), or 'contentPackageId' (replace mode)",
+      cors,
+    );
   }
 
   // Validate file type
@@ -87,15 +108,34 @@ Deno.serve(async (req: Request) => {
     return errorResponse.badRequest("File size exceeds 500 MB limit", cors);
   }
 
-  // --- Verify module exists ---
-  const { data: moduleData, error: moduleError } = await serviceClient
-    .from("program_modules")
-    .select("id, content_package_path")
-    .eq("id", moduleId)
-    .single();
+  // --- Legacy mode: verify module exists ---
+  let previousModulePath: string | null = null;
+  if (isLegacyMode) {
+    const { data: moduleData, error: moduleError } = await serviceClient
+      .from("program_modules")
+      .select("id, content_package_path")
+      .eq("id", moduleId!)
+      .single();
 
-  if (moduleError || !moduleData) {
-    return errorResponse.notFound("Module not found", cors);
+    if (moduleError || !moduleData) {
+      return errorResponse.notFound("Module not found", cors);
+    }
+    previousModulePath = moduleData.content_package_path;
+  }
+
+  // --- Replace mode: verify content package exists ---
+  let previousPackagePath: string | null = null;
+  if (isReplaceMode) {
+    const { data: pkgData, error: pkgError } = await serviceClient
+      .from("content_packages")
+      .select("id, storage_path")
+      .eq("id", contentPackageId!)
+      .single();
+
+    if (pkgError || !pkgData) {
+      return errorResponse.notFound("Content package not found", cors);
+    }
+    previousPackagePath = pkgData.storage_path;
   }
 
   // --- Extract ZIP ---
@@ -133,8 +173,6 @@ Deno.serve(async (req: Request) => {
   }
 
   // Determine the root prefix (Rise exports have a wrapper folder like "course-name-xapi-hAVi70LN/")
-  // For xAPI: use tincan.xml location as the root marker (it sits at the package root)
-  // For Web: use index.html location
   let rootPrefix = "";
   if (contentPackageType === "xapi") {
     const tincanPath = fileNames.find(
@@ -154,7 +192,7 @@ Deno.serve(async (req: Request) => {
 
   // Generate unique folder path
   const uuid = crypto.randomUUID();
-  const folderPath = `${moduleId}/${uuid}`;
+  const folderPath = isLegacyMode ? `${moduleId}/${uuid}` : `shared/${uuid}`;
 
   // --- Upload extracted files to storage ---
   const uploadErrors: string[] = [];
@@ -201,35 +239,88 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // --- Clean up previous content package (if any) ---
-  const previousPath = moduleData.content_package_path;
-  if (previousPath && previousPath !== folderPath) {
-    try {
-      // List all files under the old path
-      const { data: oldFiles } = await serviceClient.storage
-        .from("module-content-packages")
-        .list(previousPath, { limit: 1000 });
-
-      if (oldFiles && oldFiles.length > 0) {
-        const filesToDelete = oldFiles.map((f: any) => `${previousPath}/${f.name}`);
-        await serviceClient.storage
-          .from("module-content-packages")
-          .remove(filesToDelete);
-      }
-    } catch {
-      // Non-critical: old files may remain orphaned
-      console.warn(`Failed to clean up old content package at ${previousPath}`);
-    }
+  // --- Clean up previous storage files (if any) ---
+  const pathToClean = isLegacyMode ? previousModulePath : (isReplaceMode ? previousPackagePath : null);
+  if (pathToClean && pathToClean !== folderPath) {
+    await cleanupStoragePath(serviceClient, pathToClean);
   }
 
-  // --- Update module with new content package path and type ---
+  // --- Mode-specific database updates ---
+
+  if (isSharedMode) {
+    // Create new content_packages row
+    const { data: newPackage, error: insertError } = await serviceClient
+      .from("content_packages")
+      .insert({
+        title: title!,
+        description: description || null,
+        storage_path: folderPath,
+        package_type: contentPackageType,
+        file_count: uploadCount,
+        original_filename: file.name,
+        uploaded_by: user.id,
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      return errorResponse.serverError(
+        `Files uploaded but failed to create content package: ${insertError.message}`,
+        cors,
+      );
+    }
+
+    return successResponse.ok(
+      {
+        content_package_id: newPackage.id,
+        storage_path: folderPath,
+        package_type: contentPackageType,
+        files_uploaded: uploadCount,
+        errors: uploadErrors.length > 0 ? uploadErrors : undefined,
+      },
+      cors,
+    );
+  }
+
+  if (isReplaceMode) {
+    // Update existing content_packages row
+    const { error: updateError } = await serviceClient
+      .from("content_packages")
+      .update({
+        storage_path: folderPath,
+        package_type: contentPackageType,
+        file_count: uploadCount,
+        original_filename: file.name,
+      })
+      .eq("id", contentPackageId!);
+
+    if (updateError) {
+      return errorResponse.serverError(
+        `Files uploaded but failed to update content package: ${updateError.message}`,
+        cors,
+      );
+    }
+
+    return successResponse.ok(
+      {
+        content_package_id: contentPackageId,
+        storage_path: folderPath,
+        package_type: contentPackageType,
+        files_uploaded: uploadCount,
+        errors: uploadErrors.length > 0 ? uploadErrors : undefined,
+      },
+      cors,
+    );
+  }
+
+  // --- Legacy mode: update module ---
   const { error: updateError } = await serviceClient
     .from("program_modules")
     .update({
       content_package_path: folderPath,
       content_package_type: contentPackageType,
     })
-    .eq("id", moduleId);
+    .eq("id", moduleId!);
 
   if (updateError) {
     return errorResponse.serverError(
@@ -248,6 +339,30 @@ Deno.serve(async (req: Request) => {
     cors,
   );
 });
+
+/**
+ * Delete all files under a storage path (non-critical — failures are logged).
+ * Handles nested directories by listing recursively.
+ */
+async function cleanupStoragePath(
+  serviceClient: ReturnType<typeof createClient>,
+  storagePath: string,
+): Promise<void> {
+  try {
+    const { data: oldFiles } = await serviceClient.storage
+      .from("module-content-packages")
+      .list(storagePath, { limit: 1000 });
+
+    if (oldFiles && oldFiles.length > 0) {
+      const filesToDelete = oldFiles.map((f: any) => `${storagePath}/${f.name}`);
+      await serviceClient.storage
+        .from("module-content-packages")
+        .remove(filesToDelete);
+    }
+  } catch {
+    console.warn(`Failed to clean up old content package at ${storagePath}`);
+  }
+}
 
 // Simple MIME type guesser for storage uploads
 function guessMimeType(filePath: string): string {
