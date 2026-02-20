@@ -1,8 +1,9 @@
 import { lazy, Suspense } from "react";
+import * as Sentry from "@sentry/react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, MutationCache, QueryCache } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AdminRefreshListener } from "@/components/AdminRefreshListener";
@@ -224,7 +225,30 @@ const WheelAssessment = lazy(() => import("./pages/public/WheelAssessment"));
 const PublicAssessment = lazy(() => import("./pages/public/PublicAssessment"));
 const EnrollWithCode = lazy(() => import("./pages/public/EnrollWithCode"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      // Report failed queries to Sentry (only unexpected errors, not 404s)
+      Sentry.captureException(error, {
+        tags: { context: "react_query", query_key: JSON.stringify(query.queryKey).slice(0, 200) },
+        level: "warning",
+      });
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error, _variables, _context, mutation) => {
+      // Report failed mutations to Sentry
+      Sentry.captureException(error, {
+        tags: {
+          context: "react_mutation",
+          mutation_key: mutation.options.mutationKey
+            ? JSON.stringify(mutation.options.mutationKey).slice(0, 200)
+            : "unnamed",
+        },
+      });
+    },
+  }),
+});
 
 const App = () => (
   <ErrorBoundary>

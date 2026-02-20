@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
+import * as Sentry from "@sentry/react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
@@ -145,7 +146,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Check for saved role preference
     const savedRole = safeLocalStorageGet("selectedRole");
-    setUserRole(determineRole(roles, savedRole));
+    const activeRole = determineRole(roles, savedRole);
+    setUserRole(activeRole);
+
+    // Set Sentry user context for error correlation
+    Sentry.setUser({ id: userId });
+    Sentry.setTag("user.role", activeRole || "none");
+    if (orgMembership) {
+      Sentry.setTag("user.org_role", orgMembership.role);
+      Sentry.setTag("org.id", orgMembership.organization_id);
+    }
 
     return { roles, orgMembership };
   };
@@ -205,6 +215,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             );
           } catch (error) {
             console.error("Error fetching user roles:", error);
+            Sentry.captureException(error, {
+              tags: { context: "auth_state_change" },
+            });
             // Only set authError if roles haven't been successfully loaded yet —
             // don't blank the screen if the user is already using the app
             setAuthError(
@@ -220,6 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserRole(null);
         setUserRoles([]);
         setOrganizationMembership(null);
+        Sentry.setUser(null);
         setLoading(false);
       }
     });
@@ -244,6 +258,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error("Error initializing session:", error);
+        Sentry.captureException(error, {
+          tags: { context: "session_init" },
+        });
         if (sessionUser) {
           setAuthError(
             error instanceof Error
@@ -331,6 +348,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthError(null);
       setUser(null);
       setSession(null);
+      Sentry.setUser(null);
       navigate("/auth");
     }
   }, [navigate]);
@@ -338,6 +356,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const switchRole = (role: UserRoleType) => {
     if (userRoles.includes(role)) {
       setUserRole(role);
+      Sentry.setTag("user.role", role);
       // Save the selected role to localStorage so it persists across page loads
       safeLocalStorageSet("selectedRole", role);
 
