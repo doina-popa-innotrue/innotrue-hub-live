@@ -123,7 +123,7 @@
 - ~~G6: Session notifications/reminders~~ ✅ DONE — `send-schedule-reminders` edge function, 24h + 1h before, `create_notification` RPC
 - ~~G7: Session notes/recap~~ ✅ DONE — `recording_url`, `summary`, `action_items` on `cohort_sessions`, recap section
 - **GT1: Instructor/Coach Teaching Workflow (HIGH PRIORITY, ~1 week)** — G1-G7 built DB + admin/client UI but NO teaching UI for instructors/coaches. Plan ready in `.claude/plans/proud-jumping-fountain.md`. Covers: RLS fixes (4 policies: coach SELECT on program_cohorts, UPDATE on cohort_sessions for both roles, upgrade coach attendance to ALL), new `/teaching/cohorts` list page, new `/teaching/cohorts/:cohortId` detail page (attendance marking + recap editing), dashboard cohort sessions widget, StudentDetail cohort/attendance card. 3 new files, 4 modified, 1 migration.
-- G8: Enrollment codes (2-3 days) — Phase 5
+- ~~G8: Enrollment codes~~ ✅ DONE — `enrollment_codes` table, `redeem-enrollment-code` edge function, admin management page, public `/enroll` page, `validate_enrollment_code` RPC
 - G9: Cohort analytics dashboard (1 week) — medium
 - G10: Session-linked homework (3-5 days) — medium
 
@@ -145,7 +145,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - ~~**CT3b: Cross-Program Completion**~~ ✅ — `content_completions` table. `xapi-statements` writes completion on xAPI verb. `useCrossProgramCompletion` extended with 3rd data source. Client `ModuleDetail` auto-accepts completion from shared content. `CanonicalCodesManagement` now shows content packages tab.
 - **`canonical_code` override** — kept as manual override for different content that should count as equivalent.
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → 5-Self-Registration (G8) → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → 5-Self-Registration (Phase 5) → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
@@ -182,7 +182,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 11. ~~**DP5 Module↔Domain Mapping**~~ ✅ — `module_domain_mappings` table, admin UI, "Domains" tab
 12. **CT3 Shared Content Packages & Cross-Program Completion** — `content_packages` table, `content_completions` table, content library picker, xAPI propagation (~3-5 days)
 13. ~~Quick medium wins (M2, M11)~~ ✅ — assessment interest tracking on dashboard, console cleanup across 20 files
-14. **G8 Self-Enrollment Codes** — `enrollment_codes` table, self-enrollment via link (~2-3 days)
+14. ~~G8 Self-Enrollment Codes~~ ✅ DONE (2026-02-25) — `enrollment_codes` table, `redeem-enrollment-code` edge function, admin EnrollmentCodesManagement page (quick generator + CRUD), public `/enroll` page (code validation + redemption), `validate_enrollment_code` RPC, notification on redemption
 15. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
 16. ~~Development Profile (DP6-DP7)~~ ✅ DONE (2026-02-24) — psychometric structured results, readiness dashboard
 17. Phase 3 AI — system prompt hardening first (2-3 days), then AI Learning Companion
@@ -240,7 +240,8 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - `supabase/functions/xapi-launch/index.ts` — session create/resume, auth token generation, enrollment/staff access checks
   - `supabase/functions/xapi-statements/index.ts` — statement storage, session lifecycle, auto-completion, state persistence
 - **AI reflection prompt fix (2026-02-19):** `WeeklyReflectionCard` now gated behind `hasFeature("ai_insights")`, consumes credits via `useConsumableFeature("ai_insights")` before generating, shows remaining credits + specific error messages (rate limit vs credit exhaustion vs generic). Edge function returns specific 429/402 responses. Hook parses error body for user-friendly messages.
-- **Next steps:** G8 Self-Enrollment Codes → Phase 5 Self-Registration → Phase 3 AI
+- **G8 Self-Enrollment Codes (2026-02-25):** `enrollment_codes` table with RLS, `validate_enrollment_code` SECURITY DEFINER RPC, `redeem-enrollment-code` edge function (free enrollments only for G8 scope), admin EnrollmentCodesManagement page with quick code generator + full CRUD dialog, public `/enroll` page with code validation → program info → auth redirect → enrollment flow. Notification type `enrollment_code_redeemed` notifies code creator. Shareable links: `{origin}/enroll?code={CODE}`.
+- **Next steps:** Phase 5 Self-Registration → Phase 3 AI
 
 ## npm Scripts
 ```
