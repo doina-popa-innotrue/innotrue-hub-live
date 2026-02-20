@@ -236,8 +236,8 @@ export default function EnrollmentCodesManagement() {
       };
 
       const { error } = await supabase
-        .from("enrollment_codes" as any)
-        .insert(insertData as any);
+        .from("enrollment_codes")
+        .insert(insertData);
       if (error) throw error;
       return generatedCode;
     },
@@ -282,7 +282,7 @@ export default function EnrollmentCodesManagement() {
       };
 
       const { error } = await supabase
-        .from("enrollment_codes" as any)
+        .from("enrollment_codes")
         .insert(insertData);
       if (error) throw error;
     },
@@ -320,7 +320,7 @@ export default function EnrollmentCodesManagement() {
       };
 
       const { error } = await supabase
-        .from("enrollment_codes" as any)
+        .from("enrollment_codes")
         .update(updateData)
         .eq("id", editingItem.id);
       if (error) throw error;
@@ -339,7 +339,7 @@ export default function EnrollmentCodesManagement() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("enrollment_codes" as any)
+        .from("enrollment_codes")
         .delete()
         .eq("id", id);
       if (error) throw error;

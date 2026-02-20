@@ -1973,6 +1973,7 @@ export type Database = {
           discount_code_id: string | null
           discount_percent: number | null
           end_date: string | null
+          enrollment_code_id: string | null
           enrollment_number: number | null
           final_credit_cost: number | null
           id: string
@@ -1995,6 +1996,7 @@ export type Database = {
           discount_code_id?: string | null
           discount_percent?: number | null
           end_date?: string | null
+          enrollment_code_id?: string | null
           enrollment_number?: number | null
           final_credit_cost?: number | null
           id?: string
@@ -2017,6 +2019,7 @@ export type Database = {
           discount_code_id?: string | null
           discount_percent?: number | null
           end_date?: string | null
+          enrollment_code_id?: string | null
           enrollment_number?: number | null
           final_credit_cost?: number | null
           id?: string
@@ -2045,6 +2048,13 @@ export type Database = {
             columns: ["discount_code_id"]
             isOneToOne: false
             referencedRelation: "discount_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_enrollments_enrollment_code_id_fkey"
+            columns: ["enrollment_code_id"]
+            isOneToOne: false
+            referencedRelation: "enrollment_codes"
             referencedColumns: ["id"]
           },
           {
@@ -4506,6 +4516,82 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      enrollment_codes: {
+        Row: {
+          code: string
+          code_type: string
+          cohort_id: string | null
+          created_at: string
+          created_by: string
+          current_uses: number
+          discount_percent: number | null
+          expires_at: string | null
+          grants_plan_id: string | null
+          grants_tier: string | null
+          id: string
+          is_active: boolean
+          is_free: boolean
+          max_uses: number | null
+          program_id: string
+        }
+        Insert: {
+          code: string
+          code_type?: string
+          cohort_id?: string | null
+          created_at?: string
+          created_by: string
+          current_uses?: number
+          discount_percent?: number | null
+          expires_at?: string | null
+          grants_plan_id?: string | null
+          grants_tier?: string | null
+          id?: string
+          is_active?: boolean
+          is_free?: boolean
+          max_uses?: number | null
+          program_id: string
+        }
+        Update: {
+          code?: string
+          code_type?: string
+          cohort_id?: string | null
+          created_at?: string
+          created_by?: string
+          current_uses?: number
+          discount_percent?: number | null
+          expires_at?: string | null
+          grants_plan_id?: string | null
+          grants_tier?: string | null
+          id?: string
+          is_active?: boolean
+          is_free?: boolean
+          max_uses?: number | null
+          program_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollment_codes_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "program_cohorts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_codes_grants_plan_id_fkey"
+            columns: ["grants_plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_codes_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       enrollment_module_staff: {
         Row: {
@@ -14574,6 +14660,7 @@ export type Database = {
           is_valid: boolean
         }[]
       }
+      validate_enrollment_code: { Args: { p_code: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "coach" | "client" | "instructor"
