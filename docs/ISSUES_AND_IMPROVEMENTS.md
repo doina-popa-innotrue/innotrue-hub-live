@@ -1431,8 +1431,8 @@ Connects 3 assessment systems + development items + goals + guided paths into a 
 - ~~DP3: **Assessment-gated milestones**~~ ✅ DONE (2026-02-19) — `guided_path_milestone_gates` + `milestone_gate_overrides`, traffic-light indicators (🟢🟡🔴⚪), coach/instructor waive with reason, admin gate config on template milestones
 - ~~DP4: **Intake-driven path recommendation**~~ ✅ DONE (2026-02-19) — `guided_path_instantiations` table, shared `instantiateTemplate()` service, PathConfirmation with pace selector, survey wizard bug fixed, GuidedPathDetail refactored
 - ~~DP5: **Module ↔ domain mapping**~~ ✅ DONE (2026-02-23) — `module_domain_mappings` table, `ModuleDomainMapper` admin component, "Domains" tab in module editor
-- DP6: **Psychometric structured results** — manual score entry for DISC/VIA/MBTI, result schemas per assessment type. (2-3 days)
-- DP7: **Readiness dashboard** — coach view of all clients on guided paths with readiness scores, attention signals, batch actions. Client "My Readiness" widget. (3-5 days)
+- ~~DP6: **Psychometric structured results**~~ ✅ DONE (2026-02-24) — `psychometric_result_schemas` + `psychometric_results` tables, admin dimension schema UI (key/label/min/max), PsychometricScoreEntryDialog with sliders, PsychometricScores card on Development Profile with color-coded bars and trend arrows
+- ~~DP7: **Readiness dashboard**~~ ✅ DONE (2026-02-24) — Coach ReadinessDashboard at `/teaching/readiness` with stats cards + sortable client table (alert levels: green/amber/red/stalled), MyReadiness client widget on Development Profile with per-path gate status breakdown, sidebar nav link added
 - ~~**Known bug:** `GuidedPathSurveyWizard` saves survey response + `selected_template_ids` but never instantiates template into real goals/milestones.~~ ✅ Fixed in DP4 (2026-02-19).
 - **Key design decisions:** Gates advisory not blocking (coach override), intake-driven recommendation not backward planning (clients set unrealistic timelines), manual-first for psychometrics (AI parsing deferred), strengths matter too (not just gap-filling).
 
@@ -1621,7 +1621,7 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 | ~~Priority 0 — Cohort Quality (G9-G10)~~ | ~~2 items~~ | ✅ DONE (2026-02-23) |
 | Priority 0 — G8 Enrollment Codes | 1 item | Deferred to Phase 5 |
 | ~~Priority 0 — Development Profile (DP1-DP5)~~ | ~~5 phases~~ | ✅ DONE (DP1-4: 2026-02-19, DP5: 2026-02-23) |
-| **Priority 0 — Development Profile (DP6-DP7)** | **2 phases remaining** | **~1 week** |
+| ~~Priority 0 — Development Profile (DP6-DP7)~~ | ~~2 phases~~ | ✅ DONE (2026-02-24) |
 | ~~Priority 0 — Content Delivery Tier 2~~ | ~~xAPI direct~~ | ✅ DONE (2026-02-22) |
 | ~~**Priority 0 — Content Delivery Tier 3 (CT3)**~~ ✅ | ~~Shared content packages + cross-program completion~~ | ~~HIGH~~ DONE |
 | Phase 1 — Onboarding/UX | 8 items | 2-3 weeks |
@@ -1650,7 +1650,7 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 13. ~~Quick medium wins (M2, M11)~~ ✅ DONE (2026-02-20) — assessment interest tracking on dashboard, console cleanup across 20 files
 14. **G8 Self-Enrollment Codes** — `enrollment_codes` table, self-enrollment via link (~2-3 days)
 15. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
-16. **Development Profile (DP6-DP7)** — psychometric structured results, readiness dashboard (~1 week)
+16. ~~Development Profile (DP6-DP7)~~ ✅ DONE (2026-02-24) — psychometric structured results (schema definition + score entry + profile card), readiness dashboard (coach view + client widget)
 17. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
 18. Remaining phases based on business priorities
 
@@ -1691,6 +1691,6 @@ Several roadmap items require new database tables or fields. These should be pla
 | ~~Dev Profile DP3~~ | ~~Assessment-gated milestones~~ | ✅ DONE — `guided_path_milestone_gates` + `milestone_gate_overrides` |
 | ~~Dev Profile DP4~~ | ~~Intake-driven path recommendation~~ | ✅ DONE — `guided_path_instantiations` + `goals.template_goal_id` + `goals.instantiation_id` |
 | ~~Dev Profile DP5~~ | ~~Module ↔ domain mapping~~ | ✅ DONE — `module_domain_mappings` (module_id, capability_domain_id, relevance) |
-| Dev Profile DP6 | Psychometric structured results | `psychometric_result_schemas` (assessment_id, dimensions JSONB), `psychometric_results` (user_assessment_id, scores JSONB, entered_by) |
+| ~~Dev Profile DP6~~ | ~~Psychometric structured results~~ | ✅ DONE — `psychometric_result_schemas` (assessment_id, dimensions JSONB, version) + `psychometric_results` (user_id, assessment_id, schema_id, scores JSONB, entered_by) |
 | Phase 9 | Micro-learning | New `micro_learning` value in `module_types` enum |
 | Phase 12 | Resource ratings | `resource_ratings` (user_id, resource_id, rating, review_text) |

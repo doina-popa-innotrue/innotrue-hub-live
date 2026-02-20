@@ -134,8 +134,8 @@ Approved for development 2026-02-18. Connects 3 assessment systems + development
 - ~~DP3: Assessment-gated milestones~~ ✅ DONE — `guided_path_milestone_gates` + `milestone_gate_overrides` tables, admin gate config on template milestones, traffic-light indicators (🟢🟡🔴⚪), coach/instructor waive with reason
 - ~~DP4: Intake-driven path recommendation~~ ✅ DONE — `guided_path_instantiations` table, shared `instantiateTemplate()` service, PathConfirmation with pace selector, survey wizard bug fix, GuidedPathDetail refactored to shared service
 - ~~DP5: Module ↔ domain mapping~~ ✅ DONE — `module_domain_mappings` table, `ModuleDomainMapper` component, "Domains" tab in admin module editor
-- DP6: Psychometric structured results (2-3 days) — manual score entry for DISC/VIA/etc.
-- DP7: Readiness dashboard (3-5 days) — capstone coach + client view combining all data
+- ~~DP6: Psychometric structured results~~ ✅ DONE — `psychometric_result_schemas` + `psychometric_results` tables, admin dimension schema UI, score entry dialog, PsychometricScores card on Development Profile
+- ~~DP7: Readiness dashboard~~ ✅ DONE — Coach ReadinessDashboard at `/teaching/readiness`, MyReadiness client widget on Development Profile
 - ~~**Known bug:** `GuidedPathSurveyWizard` saves survey response but never instantiates template goals/milestones~~ ✅ Fixed in DP4
 
 ~~**Priority 0 — Content Delivery Tier 3: Shared Content Packages & Cross-Program Completion (CT3)**~~ ✅
@@ -145,14 +145,14 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - ~~**CT3b: Cross-Program Completion**~~ ✅ — `content_completions` table. `xapi-statements` writes completion on xAPI verb. `useCrossProgramCompletion` extended with 3rd data source. Client `ModuleDetail` auto-accepts completion from shared content. `CanonicalCodesManagement` now shows content packages tab.
 - **`canonical_code` override** — kept as manual override for different content that should count as equivalent.
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → 5-Self-Registration (G8) → Development Profile (DP6-DP7) → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → 5-Self-Registration (G8) → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
 - **Cohort teaching workflow (GT1) ✅ DONE:** Instructors AND coaches can browse cohorts (`/teaching/cohorts`), view cohort detail with sessions, mark attendance (reuses `CohortSessionAttendance`), edit recap + recording URL, notify clients via RPC, see homework assignments per session, view enrolled clients with attendance summary. Dashboard widget shows upcoming cohort sessions merged with group sessions. StudentDetail shows cohort assignment card. Symmetric RLS for both roles.
 - **Onboarding:** ✅ DONE — Staff Welcome Card with 4-step checklist, Staff Profile setup (bio, specializations, company), enhanced empty states on teaching pages, role-specific welcome emails
 - **Admin creates coaches** via `/admin/users` — no self-registration needed currently
-- **Key pages:** `/teaching` (dashboard), `/teaching/students` (clients), `/teaching/assignments`, `/teaching/scenarios`, `/teaching/badges`, `/teaching/assessments`, `/teaching/groups`, `/teaching/cohorts`
+- **Key pages:** `/teaching` (dashboard), `/teaching/students` (clients), `/teaching/readiness` (DP7 readiness dashboard), `/teaching/assignments`, `/teaching/scenarios`, `/teaching/badges`, `/teaching/assessments`, `/teaching/groups`, `/teaching/cohorts`
 - **Remaining:** Teaching FAQ/quick guide page (nice to have)
 
 ## Instructor/Coach Assignment & Grading
@@ -184,7 +184,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 13. ~~Quick medium wins (M2, M11)~~ ✅ — assessment interest tracking on dashboard, console cleanup across 20 files
 14. **G8 Self-Enrollment Codes** — `enrollment_codes` table, self-enrollment via link (~2-3 days)
 15. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
-16. **Development Profile (DP6-DP7)** — psychometric structured results, readiness dashboard (~1 week)
+16. ~~Development Profile (DP6-DP7)~~ ✅ DONE (2026-02-24) — psychometric structured results, readiness dashboard
 17. Phase 3 AI — system prompt hardening first (2-3 days), then AI Learning Companion
 18. Remaining phases by business priority
 
@@ -223,7 +223,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Cohort core experience + G1-G7 DONE:** CohortDashboard (schedule timeline, next session, ICS, progress), CohortSessionCard (time-aware status, pulsing join, ICS), Calendar integration, ClientDashboard widget. G1-G7 gaps resolved: cohort assignment on enrollment (`enroll_with_credits` RPC with `p_cohort_id`), Google Meet automation, instructor assignment on cohorts (`lead_instructor_id`) and sessions (`instructor_id`), attendance tracking (`cohort_session_attendance` — instructors/coaches mark, clients read own), bulk session generation, session reminders (`send-schedule-reminders` edge function), session notes/recap (instructors edit, participants view). **Remaining:** G8 (session quality/feedback), G9 (cohort analytics), G10 (multi-cohort management). See `docs/COHORT_SCHEDULING_ANALYSIS.md`.
 - **Coach/instructor onboarding DONE:** Staff Welcome Card, profile setup (bio, specializations, company), enhanced empty states, role-specific welcome emails.
 - **Assignment routing DONE:** My Queue filtering, assignment transfer dialog, async notifications via create_notification RPC. Remaining: configurable notification routing (nice to have), assessor_id cleanup.
-- **Development Profile DP1-DP4 DONE** (`docs/DEVELOPMENT_PROFILE_ANALYSIS.md`): Assessment↔goal linking (`goal_assessment_links`), unified Development Profile page (5 sections), assessment-gated milestones (`guided_path_milestone_gates` + `milestone_gate_overrides`), path instantiation service (`guided_path_instantiations`). 4 new tables, 15 new files, 7 modified files. Survey wizard bug fixed. DP5-DP7 remaining.
+- **Development Profile DP1-DP7 DONE** (`docs/DEVELOPMENT_PROFILE_ANALYSIS.md`): Assessment↔goal linking (`goal_assessment_links`), unified Development Profile page (7 sections), assessment-gated milestones (`guided_path_milestone_gates` + `milestone_gate_overrides`), path instantiation service (`guided_path_instantiations`), module↔domain mapping (`module_domain_mappings`), psychometric structured results (`psychometric_result_schemas` + `psychometric_results`), readiness dashboard (coach + client).
 - **Key new components (DP1-DP4):**
   - `src/pages/client/DevelopmentProfile.tsx` — unified 5-section development profile (StrengthsGapsMatrix, ActiveDevelopmentItems, AssessmentGoalProgress, SkillsEarned, GuidedPathProgress)
   - `src/pages/instructor/StudentDevelopmentProfile.tsx` — coach/instructor view of client's development profile
@@ -240,7 +240,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - `supabase/functions/xapi-launch/index.ts` — session create/resume, auth token generation, enrollment/staff access checks
   - `supabase/functions/xapi-statements/index.ts` — statement storage, session lifecycle, auto-completion, state persistence
 - **AI reflection prompt fix (2026-02-19):** `WeeklyReflectionCard` now gated behind `hasFeature("ai_insights")`, consumes credits via `useConsumableFeature("ai_insights")` before generating, shows remaining credits + specific error messages (rate limit vs credit exhaustion vs generic). Edge function returns specific 429/402 responses. Hook parses error body for user-friendly messages.
-- **Next steps:** GT1 Teaching Cohort Workflow → Phase 5 Self-Registration → DP5-DP7 → Phase 3 AI
+- **Next steps:** G8 Self-Enrollment Codes → Phase 5 Self-Registration → Phase 3 AI
 
 ## npm Scripts
 ```

@@ -1,5 +1,24 @@
 # Completed Work — Detailed History
 
+## DP6 + DP7 — Psychometric Structured Results & Readiness Dashboard (2026-02-24)
+
+**DP6 — Psychometric Structured Results:**
+- Migration: `psychometric_result_schemas` (assessment_id, dimensions JSONB, version) + `psychometric_results` (user_id, assessment_id, schema_id, scores JSONB, entered_by, assessed_at) with full RLS
+- Hook: `usePsychometricSchemas.ts` — fetch schemas, get latest per assessment, schema map, upsert mutation
+- Hook: `usePsychometricResults.ts` — fetch user results, latest per assessment with trend previous, create/update mutations
+- Admin UI: "Define Dimensions" button + dialog on `AssessmentsManagement.tsx` — dynamic dimension list (key/label/min/max), dimension count badge on cards
+- Score entry: `PsychometricScoreEntryDialog.tsx` — slider + number input per dimension, assessment date, source description, notes
+- Development Profile: `PsychometricScores.tsx` card — color-coded bars (green/amber/red), trend arrows, grouped by assessment
+
+**DP7 — Readiness Dashboard:**
+- Hook: `useReadinessDashboard.ts` — batch gate status computation, coach dashboard query (via instructor_assignments → staff_enrollments → guided_path_instantiations → gates), client readiness query. Alert levels: green (≥80% + on schedule), amber (<80% but on schedule), red (behind + unmet), stalled (30+ days no progress)
+- Coach page: `ReadinessDashboard.tsx` at `/teaching/readiness` — stats row (clients on paths, average readiness, needing attention), sortable client table with alert badges, progress bars, click-through to StudentDevelopmentProfile
+- Client widget: `MyReadiness.tsx` — per-path readiness with gate breakdown, current milestone, estimated completion date, "gates remaining" hints
+- Sidebar nav: "Readiness" added to teaching items with Gauge icon
+- Route: lazy-loaded in App.tsx with ProtectedRoute
+
+**Files:** 7 new (1 migration, 3 hooks, 1 dialog, 1 card, 1 page), 6 modified (App.tsx, AppSidebar.tsx, AssessmentsManagement.tsx, DevelopmentProfile.tsx, StudentDevelopmentProfile.tsx)
+
 ## M2 + M11 — Quick Medium Wins (2026-02-20)
 
 **M2 — Assessment Interest Status Tracking:**
