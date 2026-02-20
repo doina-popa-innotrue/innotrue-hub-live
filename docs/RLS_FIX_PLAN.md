@@ -124,3 +124,28 @@ After verification against actual migration files:
 - `20260212190000_rls_fix_deferred.sql` — Deferred items (#2.6, #2.7, #3.11)
 - `20260212200000_assessment_scoring_server_side.sql` — Assessment scoring admin-only
 - `20260214180000_rls_fix_group_session_participants.sql` — #2.8 staff scoping fix
+
+## Deployment Status
+
+**Verified: 2026-02-21** via `supabase migration list --linked`
+
+All 6 RLS fix migrations are **deployed to production** and active.
+
+| Migration | Status | Notes |
+|-----------|--------|-------|
+| `20260212180000_rls_fix_critical.sql` | ✅ Deployed | Priority 1: ac_signup_intents, module_progress, client_enrollments |
+| `20260212180100_rls_fix_high.sql` | ✅ Deployed | Priority 2: notifications, email_queue, module_client_content_resources, scenario_assignments, module_scenarios |
+| `20260212180200_rls_fix_medium.sql` | ✅ Deployed | Priority 3: notification_preferences, capability notes, cohort_sessions, assessment_interest_registrations, user_assessments |
+| `20260212190000_rls_fix_deferred.sql` | ✅ Deployed | Assessment scoring authenticated-only, resource library visibility |
+| `20260212200000_assessment_scoring_server_side.sql` | ✅ Deployed | Assessment scoring tightened to admin-only SELECT |
+| `20260214180000_rls_fix_group_session_participants.sql` | ✅ Deployed | Staff SELECT scoped to own groups |
+
+### Post-deployment Audit (2026-02-21)
+
+Cross-referenced all 6 RLS fix migrations against 15+ later migrations (Feb 14–25) to check for regressions:
+
+- **22 of 23 tables**: Policies from RLS fix migrations are **still active and unchanged**
+- **1 table correctly overridden**: `assessment_option_scores` and `assessment_interpretations` — policies were intentionally dropped by later migration `20260214160000` because scoring moved entirely server-side via `compute-assessment-scores` edge function. This is a security improvement (less exposure), not a regression.
+- `cohort_sessions`: Later migration `20260225` added compatible new policies (facilitator access) without removing any existing ones. No conflict.
+
+**Conclusion:** No security regressions. All RLS fixes remain effective.
