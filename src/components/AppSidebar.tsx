@@ -47,6 +47,7 @@ import {
   Lock,
   Megaphone,
   Gauge,
+  Ticket,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -621,6 +622,12 @@ export function AppSidebar() {
       url: "/admin/canonical-codes",
       icon: Link2,
       tourId: "admin-canonical-codes",
+    },
+    {
+      title: "Enrollment Codes",
+      url: "/admin/enrollment-codes",
+      icon: Ticket,
+      tourId: "admin-enrollment-codes",
     },
     {
       title: "Guided Path Templates",
