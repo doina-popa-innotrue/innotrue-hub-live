@@ -32,35 +32,24 @@ ALTER TABLE public.psychometric_result_schemas ENABLE ROW LEVEL SECURITY;
 -- Admin full CRUD
 CREATE POLICY "Admin full access to result schemas"
   ON public.psychometric_result_schemas
-  FOR ALL
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.user_roles
-      WHERE user_id = auth.uid() AND role = 'admin'
-    )
-  );
+  FOR ALL TO authenticated
+  USING (has_role(auth.uid(), 'admin'::app_role))
+  WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
 
--- Staff/coach/instructor SELECT
-CREATE POLICY "Staff and coaches can view result schemas"
+-- Coach/instructor SELECT
+CREATE POLICY "Coaches and instructors can view result schemas"
   ON public.psychometric_result_schemas
-  FOR SELECT
+  FOR SELECT TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM public.user_roles
-      WHERE user_id = auth.uid() AND role IN ('staff', 'coach', 'instructor')
-    )
+    has_role(auth.uid(), 'instructor'::app_role) OR
+    has_role(auth.uid(), 'coach'::app_role)
   );
 
 -- Clients SELECT (need to see schemas to enter their own scores)
 CREATE POLICY "Clients can view result schemas"
   ON public.psychometric_result_schemas
-  FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.user_roles
-      WHERE user_id = auth.uid() AND role = 'client'
-    )
-  );
+  FOR SELECT TO authenticated
+  USING (has_role(auth.uid(), 'client'::app_role));
 
 -- ============================================
 -- 2. psychometric_results
@@ -99,57 +88,52 @@ ALTER TABLE public.psychometric_results ENABLE ROW LEVEL SECURITY;
 -- Admin full CRUD
 CREATE POLICY "Admin full access to psychometric results"
   ON public.psychometric_results
-  FOR ALL
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.user_roles
-      WHERE user_id = auth.uid() AND role = 'admin'
-    )
-  );
+  FOR ALL TO authenticated
+  USING (has_role(auth.uid(), 'admin'::app_role))
+  WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
 
 -- Users can view own results
 CREATE POLICY "Users can view own psychometric results"
   ON public.psychometric_results
-  FOR SELECT
+  FOR SELECT TO authenticated
   USING (user_id = auth.uid());
 
 -- Users can insert own results (self-entry)
 CREATE POLICY "Users can insert own psychometric results"
   ON public.psychometric_results
-  FOR INSERT
+  FOR INSERT TO authenticated
   WITH CHECK (user_id = auth.uid() AND entered_by = auth.uid());
 
--- Staff/coach/instructor can view their clients' results
-CREATE POLICY "Staff and coaches can view client psychometric results"
+-- Coach/instructor can view their clients' results
+CREATE POLICY "Coaches and instructors can view client psychometric results"
   ON public.psychometric_results
-  FOR SELECT
+  FOR SELECT TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM public.user_roles
-      WHERE user_id = auth.uid() AND role IN ('staff', 'coach', 'instructor')
-    )
+    has_role(auth.uid(), 'instructor'::app_role) OR
+    has_role(auth.uid(), 'coach'::app_role)
   );
 
 -- Coach/instructor can insert results for their clients
 CREATE POLICY "Coaches can insert psychometric results for clients"
   ON public.psychometric_results
-  FOR INSERT
+  FOR INSERT TO authenticated
   WITH CHECK (
     entered_by = auth.uid()
-    AND EXISTS (
-      SELECT 1 FROM public.user_roles
-      WHERE user_id = auth.uid() AND role IN ('coach', 'instructor', 'staff')
+    AND (
+      has_role(auth.uid(), 'instructor'::app_role) OR
+      has_role(auth.uid(), 'coach'::app_role)
     )
   );
 
 -- Coach/instructor can update results they entered
 CREATE POLICY "Coaches can update psychometric results they entered"
   ON public.psychometric_results
-  FOR UPDATE
+  FOR UPDATE TO authenticated
   USING (
     entered_by = auth.uid()
-    AND EXISTS (
-      SELECT 1 FROM public.user_roles
-      WHERE user_id = auth.uid() AND role IN ('coach', 'instructor', 'staff', 'admin')
+    AND (
+      has_role(auth.uid(), 'admin'::app_role) OR
+      has_role(auth.uid(), 'instructor'::app_role) OR
+      has_role(auth.uid(), 'coach'::app_role)
     )
   );

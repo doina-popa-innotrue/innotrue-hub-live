@@ -27,7 +27,7 @@ export function usePsychometricSchemas() {
     queryKey: ["psychometric-result-schemas"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("psychometric_result_schemas" as string)
+        .from("psychometric_result_schemas")
         .select(
           `
           *,
@@ -57,7 +57,7 @@ export function usePsychometricSchema(assessmentId: string | undefined) {
       if (!assessmentId) return null;
 
       const { data, error } = await supabase
-        .from("psychometric_result_schemas" as string)
+        .from("psychometric_result_schemas")
         .select("*")
         .eq("assessment_id", assessmentId)
         .order("version", { ascending: false })
@@ -69,8 +69,8 @@ export function usePsychometricSchema(assessmentId: string | undefined) {
 
       return {
         ...data,
-        dimensions: Array.isArray((data as any).dimensions)
-          ? (data as any).dimensions
+        dimensions: Array.isArray(data.dimensions)
+          ? data.dimensions
           : [],
       } as PsychometricResultSchema;
     },
@@ -114,17 +114,17 @@ export function useUpsertPsychometricSchema() {
     mutationFn: async ({ assessmentId, dimensions }: UpsertSchemaParams) => {
       // Check if a schema already exists
       const { data: existing } = await supabase
-        .from("psychometric_result_schemas" as string)
+        .from("psychometric_result_schemas")
         .select("version")
         .eq("assessment_id", assessmentId)
         .order("version", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      const nextVersion = existing ? (existing as any).version + 1 : 1;
+      const nextVersion = existing ? existing.version + 1 : 1;
 
       const { data, error } = await supabase
-        .from("psychometric_result_schemas" as string)
+        .from("psychometric_result_schemas")
         .insert({
           assessment_id: assessmentId,
           dimensions,

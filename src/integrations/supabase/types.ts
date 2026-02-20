@@ -10389,6 +10389,108 @@ export type Database = {
           },
         ]
       }
+      psychometric_result_schemas: {
+        Row: {
+          assessment_id: string
+          created_at: string
+          dimensions: Json
+          id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          assessment_id: string
+          created_at?: string
+          dimensions?: Json
+          id?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          assessment_id?: string
+          created_at?: string
+          dimensions?: Json
+          id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "psychometric_result_schemas_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "psychometric_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      psychometric_results: {
+        Row: {
+          assessed_at: string | null
+          assessment_id: string
+          created_at: string
+          entered_by: string
+          id: string
+          notes: string | null
+          schema_id: string
+          scores: Json
+          source_description: string | null
+          updated_at: string
+          user_assessment_id: string | null
+          user_id: string
+        }
+        Insert: {
+          assessed_at?: string | null
+          assessment_id: string
+          created_at?: string
+          entered_by: string
+          id?: string
+          notes?: string | null
+          schema_id: string
+          scores?: Json
+          source_description?: string | null
+          updated_at?: string
+          user_assessment_id?: string | null
+          user_id: string
+        }
+        Update: {
+          assessed_at?: string | null
+          assessment_id?: string
+          created_at?: string
+          entered_by?: string
+          id?: string
+          notes?: string | null
+          schema_id?: string
+          scores?: Json
+          source_description?: string | null
+          updated_at?: string
+          user_assessment_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "psychometric_results_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "psychometric_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psychometric_results_schema_id_fkey"
+            columns: ["schema_id"]
+            isOneToOne: false
+            referencedRelation: "psychometric_result_schemas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psychometric_results_user_assessment_id_fkey"
+            columns: ["user_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "user_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       public_profile_interests: {
         Row: {
           created_at: string

@@ -32,7 +32,7 @@ export function usePsychometricResults(userId: string | undefined) {
       if (!userId) return [];
 
       const { data, error } = await supabase
-        .from("psychometric_results" as string)
+        .from("psychometric_results")
         .select(
           `
           *,
@@ -117,7 +117,7 @@ export function useCreatePsychometricResult() {
   return useMutation({
     mutationFn: async (params: CreatePsychometricResultParams) => {
       const { data, error } = await supabase
-        .from("psychometric_results" as string)
+        .from("psychometric_results")
         .insert({
           user_id: params.user_id,
           assessment_id: params.assessment_id,
@@ -170,7 +170,7 @@ export function useUpdatePsychometricResult() {
       if (assessed_at !== undefined) updateData.assessed_at = assessed_at;
 
       const { data, error } = await supabase
-        .from("psychometric_results" as string)
+        .from("psychometric_results")
         .update(updateData)
         .eq("id", id)
         .select()
