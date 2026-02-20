@@ -1,5 +1,7 @@
 # Phase 5 — Self-Registration & Scale: Implementation Plan
 
+> **Partial completion:** G8 Self-Enrollment Codes (Step 1 enrollment_codes, Step 11 enrollment channels, Step 14 enrollment flow) completed 2026-02-25. See `completed-work.md` for details.
+
 ## Context
 
 The platform is currently invitation-only (pilot mode). Self-signup form, Google OAuth, and "Create Account" links are all hidden in `Auth.tsx`. The underlying infrastructure works — `signup-user` and `verify-signup` edge functions are fully functional, the C2 AuthContext fallback bug is resolved, and `ProtectedRoute` gracefully handles users with zero roles.
@@ -48,25 +50,11 @@ ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS verification_status TEXT,
   ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
 
--- 5. Enrollment codes for shareable program enrollment links
-CREATE TABLE IF NOT EXISTS public.enrollment_codes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  program_id UUID NOT NULL REFERENCES public.programs(id) ON DELETE CASCADE,
-  code TEXT NOT NULL UNIQUE,
-  code_type TEXT NOT NULL DEFAULT 'single_use', -- single_use, multi_use, bulk
-  max_uses INT, -- null = unlimited (for multi_use)
-  current_uses INT NOT NULL DEFAULT 0,
-  grants_plan_id UUID REFERENCES public.plans(id), -- override user plan on enrollment
-  grants_tier TEXT, -- override tier within program plan
-  discount_percent INT, -- for paid programs
-  is_free BOOLEAN NOT NULL DEFAULT false, -- bypass payment entirely
-  expires_at TIMESTAMPTZ,
-  created_by UUID NOT NULL REFERENCES auth.users(id),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  is_active BOOLEAN NOT NULL DEFAULT true
-);
--- RLS: admin-only management, public read for code validation
-ALTER TABLE public.enrollment_codes ENABLE ROW LEVEL SECURITY;
+-- 5. ✅ DONE (G8, 2026-02-25) — Enrollment codes implemented with additional cohort_id FK,
+-- validate_enrollment_code RPC, redeem-enrollment-code edge function, admin UI + public page.
+-- See migration: 20260225100000_g8_enrollment_codes.sql
+-- CREATE TABLE public.enrollment_codes (...) — DONE
+-- ALTER TABLE public.enrollment_codes ENABLE ROW LEVEL SECURITY — DONE
 ```
 
 Reuse `coach_instructor_requests` with `source_type` column for role applications. New `enrollment_codes` table for shareable program links.
@@ -467,11 +455,11 @@ True account separation (different user IDs for same person) creates data manage
 - `src/pages/ProgramEnroll.tsx`
 - `supabase/functions/complete-registration/index.ts`
 - `supabase/functions/submit-wheel-intent/index.ts`
-- `supabase/functions/validate-enrollment-code/index.ts`
+- ~~`supabase/functions/validate-enrollment-code/index.ts`~~ ✅ Implemented as `validate_enrollment_code` RPC (not edge function) + `redeem-enrollment-code` edge function (G8)
 - `supabase/functions/bulk-create-users/index.ts`
 - `supabase/functions/_shared/placeholder-transfer.ts`
 - `src/components/admin/BulkUserImport.tsx`
-- `src/components/admin/EnrollmentCodesManager.tsx`
+- ~~`src/components/admin/EnrollmentCodesManager.tsx`~~ ✅ Implemented as `src/pages/admin/EnrollmentCodesManagement.tsx` + `src/pages/public/EnrollWithCode.tsx` (G8)
 
 ### Modified files:
 - `src/pages/Auth.tsx` — re-enable signup form + Google OAuth

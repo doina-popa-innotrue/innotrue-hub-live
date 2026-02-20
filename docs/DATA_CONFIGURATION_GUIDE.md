@@ -439,10 +439,20 @@ Multiple-choice assessments with **server-side confidential scoring**. Used for 
 | `user_assessments` | Uploaded PDF results per client |
 | `user_assessment_shares` | Share uploaded PDFs with specific coaches/instructors |
 
-**Current limitations:** No in-app taking, no scoring engine, no visualization, no external API integration. See ISSUES_AND_IMPROVEMENTS.md Part 10 for enhancement roadmap.
+**Current limitations:** No in-app taking, no external API integration. See ISSUES_AND_IMPROVEMENTS.md Part 10 for enhancement roadmap.
 
-**Admin UI:** Assessments Management → Psychometric tab (CRUD catalog, manage interest registrations)
+**Structured Scoring (DP6):**
+
+| Table | Purpose |
+|-------|---------|
+| `psychometric_result_schemas` | Dimension schemas per assessment (assessment_id, dimensions JSONB with key/label/min/max, version) |
+| `psychometric_results` | Scored results per user (user_id, assessment_id, schema_id, scores JSONB, entered_by, assessed_at, source_description, notes) |
+
+Admin defines dimension schemas on each psychometric assessment (e.g., DISC: D/I/S/C with min 0, max 100). Coach/admin enters structured scores via `PsychometricScoreEntryDialog` (sliders + number inputs per dimension). Results display on Development Profile as color-coded bars (green ≥70%, amber ≥40%, red <40%) with trend arrows comparing latest vs previous.
+
+**Admin UI:** Assessments Management → Psychometric tab (CRUD catalog, manage interest registrations, **define dimension schemas per assessment**)
 **Client UI:** Explore Assessments (browse catalog, express interest), My Assessments (upload PDFs, share)
+**Coach/Instructor UI:** Student Development Profile → Psychometric Scores card → score entry dialog
 **Depends on:** assessment_categories
 **Storage bucket:** `psychometric-assessments`
 
@@ -530,8 +540,20 @@ The individual learning units within a program.
 | `feature_key` | Required feature (optional) | `session_coaching` |
 | `min_plan_tier` | Min tier for this module (optional) | 2 |
 | `capability_assessment_id` | Linked assessment (optional) | → assessment.id |
-| `content_package_path` | Storage path for Rise content package | `{moduleId}/{uuid}/` |
+| `content_package_path` | Storage path for Rise content package (legacy per-module) | `{moduleId}/{uuid}/` |
 | `content_package_type` | Content package type: `web` or `xapi` | `xapi` |
+| `content_package_id` | FK to shared `content_packages` table (CT3) — preferred over `content_package_path` | → content_packages.id |
+
+**Shared Content Library (CT3):**
+
+| Table | Purpose |
+|-------|---------|
+| `content_packages` | Shared library of Rise/xAPI packages — title, description, storage_path, package_type, file_count, original_filename, uploaded_by, is_active |
+| `content_completions` | Cross-program completion tracking — user_id, content_package_id, completed_at, source_module_id, source_enrollment_id, result_score_scaled (UNIQUE on user_id + content_package_id) |
+
+Upload content once to the shared library, assign to modules across programs via `content_package_id` FK. Completing content in one program via xAPI auto-creates a `content_completions` record. If the same package is assigned to modules in other programs, client auto-completes on module load.
+
+**Admin UI:** Content Library (`/admin/content-library`) — upload/replace/delete packages. ModuleForm — "From Library" picker or "Upload New" (creates shared + assigns).
 
 **Module type determines behavior:**
 - `session` → links to session scheduling (Cal.com)
@@ -586,11 +608,41 @@ Enroll a user in a program.
 | `status` | active, completed, withdrawn, paused, etc. |
 | `enrolled_at` | Enrollment date |
 
-**Atomic enrollment RPC:** `enroll_with_credits(p_client_user_id, p_program_id, p_tier, p_program_plan_id, p_discount_percent, p_original_credit_cost, p_final_credit_cost, p_description)` — combines credit consumption + enrollment creation in a single database transaction to prevent partial states (credits deducted but enrollment not created, or vice versa). Returns `{success, enrollment_id, credit_details}`.
+**Additional field:** `enrollment_code_id` — optional FK to `enrollment_codes` table, tracks which enrollment code was used for self-enrollment (G8).
+
+**Atomic enrollment RPC:** `enroll_with_credits(p_client_user_id, p_program_id, p_tier, p_program_plan_id, p_discount_percent, p_original_credit_cost, p_final_credit_cost, p_description, p_cohort_id)` — combines credit consumption + enrollment creation in a single database transaction to prevent partial states (credits deducted but enrollment not created, or vice versa). Returns `{success, enrollment_id, credit_details}`.
 
 **Helper RPC:** `user_is_enrolled_in_program(user_id, program_id)` — SECURITY DEFINER function that checks enrollment status (active, paused, or completed) without triggering RLS recursion. Used by multiple RLS policies on staff and assessment tables.
 
-**Depends on:** users (profiles), programs, program_plans (optional)
+### 5.3b Enrollment Codes (`enrollment_codes`) — G8
+
+Shareable enrollment codes for self-enrollment without admin intervention.
+
+| Field | Purpose | Example |
+|-------|---------|---------|
+| `program_id` | Which program this code enrolls into | → programs.id |
+| `cohort_id` | Optional cohort assignment on enrollment | → program_cohorts.id |
+| `code` | Unique code string (auto-generated ENR + 6 chars or custom) | `ENRABCDEF` |
+| `code_type` | `single_use` or `multi_use` | `multi_use` |
+| `max_uses` | Usage limit (null = unlimited for multi_use) | 50 |
+| `current_uses` | Incremented on each successful redemption | 12 |
+| `grants_plan_id` | Override user's plan on enrollment (optional) | → plans.id |
+| `grants_tier` | Override tier within program (optional) | `premium` |
+| `discount_percent` | Discount for paid programs (0-100) | 100 |
+| `is_free` | Bypass payment entirely | true |
+| `expires_at` | Optional expiration | 2026-06-01 |
+| `is_active` | Toggle active/inactive | true |
+| `created_by` | Admin who created the code | → auth.users.id |
+
+**Validation RPC:** `validate_enrollment_code(p_code)` — SECURITY DEFINER function that validates code and returns program info + code validity as JSONB. Used by frontend for pre-redemption display.
+
+**Redemption:** `redeem-enrollment-code` edge function — validates code, checks duplicate enrollment, calls `enroll_with_credits` with zero cost (free codes), updates enrollment with `enrollment_code_id`, increments `current_uses`, notifies code creator.
+
+**Admin UI:** Enrollment Codes Management (`/admin/enrollment-codes`) — quick code generator + full CRUD table
+**Public UI:** Enroll With Code (`/enroll?code=CODE`) — validates, shows program info, handles auth redirect, redeems
+**Depends on:** programs, program_cohorts (optional), plans (optional), auth.users
+
+**Depends on:** users (profiles), programs, program_plans (optional), enrollment_codes (optional)
 
 ### 5.4 Credit Balances (`user_credit_balances`)
 Each user has a credit balance initialized from their plan's `credit_allowance`.

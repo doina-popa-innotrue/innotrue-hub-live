@@ -891,7 +891,7 @@ The platform has **three distinct assessment systems** that share some infrastru
 |--------|-------|---------|---------------|---------------|
 | **Capability Assessments** | `capability_assessments` | Domain averages from slider ratings (stored in `capability_snapshots`) | Radar + line evolution charts | Rate self / be evaluated / peer review |
 | **Self-Assessments (Public)** | `assessment_definitions` | Server-side dimension scoring via `compute-assessment-scores` (option → dimension → interpretation) | Dimension bars + interpretation text | Answer multiple-choice questions, get scored |
-| **Psychometric Assessments** | `psychometric_assessments` | None (document upload only) | None | Upload PDF, share with coach |
+| **Psychometric Assessments** | `psychometric_assessments` | ~~None~~ ✅ DP6: Structured scoring via `psychometric_result_schemas` + `psychometric_results` (manual entry with sliders per dimension) | ~~None~~ ✅ DP6: Color-coded bars (green/amber/red) + trend arrows on Development Profile | Upload PDF, share with coach; admin defines dimension schemas; coach/admin enters structured scores |
 
 **Important distinction:**
 - `assessment_categories` is shared across all three systems (Personality, Aptitude, Career, Emotional Intelligence, Leadership, Other)
@@ -1081,7 +1081,7 @@ Create a unified feedback hub:
 
 ### 10.1 Current Implementation
 
-Psychometric assessments are a **completely separate system** from capability assessments. They function as a **document management catalog** — not as scored or analyzed assessments.
+Psychometric assessments are a **completely separate system** from capability assessments. They originally functioned as a **document management catalog** — not as scored or analyzed assessments. **DP6 (2026-02-24) added structured scoring and visualization** — admins define dimension schemas per assessment, coaches/admins enter structured scores, and the Development Profile shows color-coded bars with trend tracking.
 
 **What exists:**
 
@@ -1090,25 +1090,27 @@ Psychometric assessments are a **completely separate system** from capability as
 | Assessment catalog | `psychometric_assessments` table — name, provider, category, cost, external URL |
 | Client browsing | `ExploreAssessments.tsx` — filter by category, search, express interest |
 | Interest registration | `assessment_interest_registrations` — pending → contacted → completed/declined |
-| Admin management | `AssessmentsManagement.tsx` — CRUD on catalog, manage interest registrations |
+| Admin management | `AssessmentsManagement.tsx` — CRUD on catalog, manage interest registrations, **define dimension schemas (DP6)** |
 | PDF upload | `MyAssessments.tsx` — clients upload result PDFs to `psychometric-assessments` storage bucket |
 | Sharing | `user_assessment_shares` — share uploaded PDFs with coaches/instructors |
 | Categories | 6 categories: Personality, Aptitude, Career, Emotional Intelligence, Leadership, Other |
 | Plan gating | `feature_key` on each assessment — can restrict by subscription plan |
+| **Structured scoring (DP6)** | `psychometric_result_schemas` (assessment_id, dimensions JSONB key/label/min/max, version) + `psychometric_results` (user_id, assessment_id, schema_id, scores JSONB, entered_by, assessed_at). Admin defines dimension schemas; coach/admin enters scores via slider+number UI (`PsychometricScoreEntryDialog`) |
+| **Visualization (DP6)** | `PsychometricScores` card on Development Profile — color-coded bars (green ≥70%, amber ≥40%, red <40%), trend arrows (↑↓→), grouped by assessment |
 
 **What does NOT exist:**
 
 | Missing Feature | Impact |
 |----------------|--------|
 | **No in-app psychometric assessment taking** | Clients must go to external site, take assessment, download PDF, upload to platform |
-| **No scoring engine** | No analysis of uploaded PDFs — they're just documents |
-| **No visualization** | Unlike capability assessments (radar charts, evolution), psychometrics have zero visualization |
+| ~~**No scoring engine**~~ | ✅ DP6 added manual structured scoring (admin defines dimensions, coach enters scores). AI-powered PDF extraction still pending. |
+| ~~**No visualization**~~ | ✅ DP6 added color-coded bars + trend arrows on Development Profile |
 | **No external API integration** | No connection to DISC, MBTI, Hogan, CliftonStrengths, or any provider API |
-| **No comparison** | Can't compare psychometric results over time or against benchmarks |
+| ~~**No comparison**~~ | ✅ DP6 added trend tracking (previous score vs current with arrows). Benchmark comparison still pending. |
 | **No AI interpretation** | No AI-powered analysis of uploaded assessment results |
 | **No cross-assessment correlation** | No link between psychometric results and capability assessment results |
 | **No team/group psychometric view** | Org admins can't see team psychometric profiles (e.g., DISC team wheel) |
-| **No client status tracking** | Client registers interest but has no way to check status (same issue as program interest, Part 8) |
+| ~~**No client status tracking**~~ | ✅ M2 (2026-02-20) added assessment interest cards with status badges on ClientDashboard |
 
 ### 10.2 Recommended Enhancements (Prioritized)
 
@@ -1359,7 +1361,7 @@ Organized by theme, drawing from Parts 2, 3, 5, 6, 9, and 10.
 - ~~`CohortDashboard.tsx`~~ ✅ DONE (2026-02-18) — schedule timeline, next session highlight, ICS download, module progress, group section
 - ~~Join Session one-click~~ ✅ DONE (2026-02-18) — `useSessionTimeStatus` hook (30s reactive), CohortSessionCard + GroupSessionCard enhanced, Next Session widget on ClientDashboard
 - ~~Session Notes / Recap~~ ✅ DONE (G7, 2026-02-19) — `recording_url`, `summary`, `action_items` on `cohort_sessions`
-- Auto cohort enrollment — extend `enrollment_codes` with `cohort_id` for automatic cohort assignment (2-3 days, extends Phase 5)
+- ~~Auto cohort enrollment~~ ✅ DONE (G8, 2026-02-25) — `enrollment_codes.cohort_id` FK to `program_cohorts`, passed to `enroll_with_credits` during code redemption
 - ~~Cohort analytics~~ ✅ DONE (G9, 2026-02-23) — `CohortAnalytics.tsx` admin dashboard with at-risk detection
 - ~~Session-linked homework~~ ✅ DONE (G10, 2026-02-23) — `cohort_session_id` FK on `development_items`, `SessionHomework.tsx`
 
@@ -1372,7 +1374,7 @@ Organized by theme, drawing from Parts 2, 3, 5, 6, 9, and 10.
 - ~~G6: **Session notifications/reminders**~~ ✅ DONE (2026-02-19) — `send-session-reminder` edge function, 24h + 1h before, `create_notification` RPC
 - ~~G7: **Session notes/recap**~~ ✅ DONE (2026-02-19) — `recording_url`, `summary`, `action_items` on `cohort_sessions`, recap section
 - ~~GT1: **Instructor/Coach Cohort Teaching Workflow**~~ ✅ DONE (2026-02-23) — RLS fixes (4 policies), `/teaching/cohorts` list page, `/teaching/cohorts/:cohortId` detail page (attendance + recap + homework), dashboard cohort sessions widget, StudentDetail cohort card. 3 new files, 4 modified, 1 migration.
-- G8: **Enrollment codes** — self-enrollment via link/code. Part of Phase 5. (2-3 days) — deferred
+- ~~G8: **Enrollment codes**~~ ✅ DONE (2026-02-25) — `enrollment_codes` table (program_id, cohort_id, code, code_type, max_uses, grants_tier, is_free, discount_percent, expires_at), `validate_enrollment_code` RPC, `redeem-enrollment-code` edge function, admin `EnrollmentCodesManagement.tsx` with quick generator + CRUD, public `EnrollWithCode.tsx` page at `/enroll?code=`. Free codes only for G8 scope; paid enrollment via code deferred.
 - ~~G9: **Cohort analytics**~~ ✅ DONE (2026-02-23) — `CohortAnalytics.tsx` admin dashboard with attendance %, completion %, at-risk detection (<60% attendance or <30% completion)
 - ~~G10: **Session-linked homework**~~ ✅ DONE (2026-02-23) — `cohort_session_id` FK on `development_items`, `SessionHomework.tsx` component for bulk assignment per session
 
@@ -1524,7 +1526,7 @@ Priority 0 (Cohort Readiness):
   CohortDashboard → needs program_cohorts + cohort_sessions (exist)
   Join Session one-click → needs session_participants + meeting URLs (exist)
   Session Notes → extends cohort_sessions (minor schema addition)
-  Auto cohort enrollment → extends Phase 5 enrollment_codes with cohort_id
+  ~~Auto cohort enrollment~~ ✅ DONE (G8) — enrollment_codes with cohort_id
 
 Priority 0 (Assignment Routing):
   ~~Remove individualized filter~~ ✅ DONE (2026-02-18) — frontend-only change in EnrollmentModuleStaffManager.tsx
@@ -1619,7 +1621,7 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 | ~~Priority 0 — Cohort Scheduling Gaps (G1-G7)~~ | ~~7 items~~ | ✅ DONE (2026-02-19) |
 | ~~Priority 0 — Instructor/Coach Teaching Workflow (GT1)~~ | ~~1 item (6 phases)~~ | ✅ DONE (2026-02-23) |
 | ~~Priority 0 — Cohort Quality (G9-G10)~~ | ~~2 items~~ | ✅ DONE (2026-02-23) |
-| Priority 0 — G8 Enrollment Codes | 1 item | Deferred to Phase 5 |
+| ~~Priority 0 — G8 Enrollment Codes~~ | ~~1 item~~ | ✅ DONE (2026-02-25) |
 | ~~Priority 0 — Development Profile (DP1-DP5)~~ | ~~5 phases~~ | ✅ DONE (DP1-4: 2026-02-19, DP5: 2026-02-23) |
 | ~~Priority 0 — Development Profile (DP6-DP7)~~ | ~~2 phases~~ | ✅ DONE (2026-02-24) |
 | ~~Priority 0 — Content Delivery Tier 2~~ | ~~xAPI direct~~ | ✅ DONE (2026-02-22) |
@@ -1648,7 +1650,7 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 11. ~~DP5 Module↔Domain Mapping~~ ✅ DONE (2026-02-23) — `module_domain_mappings` table, admin UI
 12. ~~CT3 Shared Content Packages & Cross-Program Completion~~ ✅ DONE (2026-02-20) — `content_packages` + `content_completions` tables, content library picker, xAPI propagation, cross-program auto-accept
 13. ~~Quick medium wins (M2, M11)~~ ✅ DONE (2026-02-20) — assessment interest tracking on dashboard, console cleanup across 20 files
-14. **G8 Self-Enrollment Codes** — `enrollment_codes` table, self-enrollment via link (~2-3 days)
+14. ~~G8 Self-Enrollment Codes~~ ✅ DONE (2026-02-25) — `enrollment_codes` table, admin management page, public enrollment page, `redeem-enrollment-code` edge function
 15. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
 16. ~~Development Profile (DP6-DP7)~~ ✅ DONE (2026-02-24) — psychometric structured results (schema definition + score entry + profile card), readiness dashboard (coach view + client widget)
 17. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
@@ -1670,7 +1672,7 @@ Several roadmap items require new database tables or fields. These should be pla
 | ~~Priority 0~~ | ~~GT1 Teaching workflow RLS~~ | ✅ DONE — 4 RLS policies (coach SELECT on `program_cohorts`, UPDATE on `cohort_sessions` for both roles, upgrade coach attendance to ALL) + 3 new pages + 4 modified files |
 | ~~Priority 0~~ | ~~CT3a Shared content library~~ | ✅ DONE — `content_packages` table, `program_modules.content_package_id` FK, Content Library admin page, ModuleForm picker |
 | ~~Priority 0~~ | ~~CT3b Cross-program completion~~ | ✅ DONE — `content_completions` table, xAPI propagation, `useCrossProgramCompletion` extended, client auto-accept |
-| Priority 0 | G8 Auto cohort enrollment | `enrollment_codes` table with `cohort_id` (UUID FK to program_cohorts) — deferred to Phase 5 |
+| ~~Priority 0~~ | ~~G8 Enrollment codes~~ | ✅ DONE — `enrollment_codes` table (program_id, cohort_id, code, code_type, max_uses, grants_tier, is_free, discount_percent, expires_at), `client_enrollments.enrollment_code_id` FK, `validate_enrollment_code` RPC, `redeem-enrollment-code` edge function |
 | ~~Priority 0~~ | ~~Assignment routing~~ | ✅ DONE — async via `create_notification` RPC, My Queue via `enrollment_module_staff` |
 | ~~Priority 0~~ | ~~Assignment transfer~~ | ✅ DONE — `TransferAssignmentDialog` component |
 | Phase 1 | Onboarding | `profiles.onboarding_completed` (boolean) |

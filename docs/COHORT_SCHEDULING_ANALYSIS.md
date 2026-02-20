@@ -83,8 +83,8 @@ The `cohort_id` column is a nullable FK on `client_enrollments`. Clients are lin
 
 Additionally, a **unified sessions architecture** (`sessions` + `session_types` + `session_participants`) exists in the DB with 8 session types and 10 roles, but is not yet the active scheduling path. It appears to be a parallel/future design.
 
-#### Enrollment Codes — DO NOT EXIST
-No `enrollment_codes` table exists. Enrollment is purely admin-managed (inserting `client_enrollments` rows).
+#### ~~Enrollment Codes — DO NOT EXIST~~ ✅ DONE (G8, 2026-02-25)
+`enrollment_codes` table now exists with full self-enrollment flow: admin generates codes, authenticated users redeem at `/enroll?code=CODE`. See migration `20260225100000_g8_enrollment_codes.sql`, edge function `redeem-enrollment-code`, admin page `EnrollmentCodesManagement.tsx`, public page `EnrollWithCode.tsx`.
 
 ### 2.2 Admin UI
 
@@ -216,7 +216,7 @@ No `enrollment_codes` table exists. Enrollment is purely admin-managed (insertin
 | Create program with modules | Works | Admin UI |
 | Create open cohort | Works | No end date |
 | Create monthly recurring sessions | **Not possible** | No recurrence support |
-| Clients self-enroll | **Not possible** | No enrollment codes, no self-registration |
+| Clients self-enroll | ✅ Works (G8) | Enrollment codes + `/enroll?code=` page |
 | Clients pace themselves through content | Works | Content embed, module progress |
 
 ---
@@ -245,7 +245,7 @@ No `enrollment_codes` table exists. Enrollment is purely admin-managed (insertin
 |---|-----|--------|--------|
 | G7 | **No session notes/recap** — no way to add post-session summary, recording link, or action items. | Lost session value | 3 days |
 | ~~**GT1**~~ | ~~**No instructor/coach teaching UI for cohorts**~~ ✅ DONE (2026-02-23) — `/teaching/cohorts` list + detail page, RLS fixes, dashboard integration, StudentDetail cohort card | ~~Instructors need admin access~~ | ~~**~1 week**~~ |
-| G8 | **No enrollment codes** — self-enrollment via link/code doesn't exist. All enrollment is admin-managed. | Scaling friction | 2-3 days (Phase 5) |
+| ~~G8~~ | ~~**No enrollment codes**~~ ✅ DONE (2026-02-25) — `enrollment_codes` table, `validate_enrollment_code` RPC, `redeem-enrollment-code` edge function, admin `EnrollmentCodesManagement.tsx`, public `EnrollWithCode.tsx` | ~~Scaling friction~~ | ~~2-3 days~~ |
 | ~~G9~~ | ~~**No cohort analytics**~~ ✅ DONE (2026-02-23) — `CohortAnalytics.tsx` admin dashboard | ~~Blind spots~~ | ~~1 week~~ |
 | ~~G10~~ | ~~**No session-linked homework**~~ ✅ DONE (2026-02-23) — `cohort_session_id` on `development_items`, `SessionHomework.tsx` | ~~Missed reinforcement~~ | ~~3-5 days~~ |
 
@@ -305,9 +305,9 @@ No `enrollment_codes` table exists. Enrollment is purely admin-managed (insertin
 
 | # | Item | Est. | Description |
 |---|------|------|-------------|
-| G8 | Enrollment codes | 2-3 days | `enrollment_codes` table with optional `cohort_id`. Self-enrollment via link/code. Part of Phase 5 Self-Registration. |
-| G9 | Cohort analytics | 1 week | Admin dashboard: attendance %, completion %, at-risk students, session-by-session breakdown. |
-| G10 | Session-linked homework | 3-5 days | Link assignments/development items to specific sessions with deadlines. |
+| ~~G8~~ | ~~Enrollment codes~~ | ~~2-3 days~~ | ✅ DONE (2026-02-25) — `enrollment_codes` table with `cohort_id`, self-enrollment via link/code |
+| ~~G9~~ | ~~Cohort analytics~~ | ~~1 week~~ | ✅ DONE (2026-02-23) |
+| ~~G10~~ | ~~Session-linked homework~~ | ~~3-5 days~~ | ✅ DONE (2026-02-23) |
 
 ---
 

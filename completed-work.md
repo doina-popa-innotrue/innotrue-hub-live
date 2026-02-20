@@ -1,5 +1,47 @@
 # Completed Work — Detailed History
 
+## G8 — Self-Enrollment Codes (2026-02-25)
+
+Self-enrollment via shareable codes/links. Admins generate enrollment codes per program; authenticated users redeem codes to self-enroll without admin intervention. Commits `0db6aa3`, `3558ddc`, 4 new files, 3 modified, 1 migration, 1 edge function. Deployed to all 3 environments (prod + preprod + sandbox).
+
+**Database Migration (`20260225100000_g8_enrollment_codes.sql`):**
+- `enrollment_codes` table: id, program_id, cohort_id (optional cohort assignment), code (unique), code_type (single_use/multi_use), max_uses, current_uses, grants_plan_id, grants_tier, discount_percent, is_free, expires_at, created_by, is_active
+- RLS: admin full CRUD, authenticated users can view active codes (for validation)
+- Indexes on code + program_id
+- `client_enrollments.enrollment_code_id` FK to track which code was used
+- `validate_enrollment_code(p_code)` SECURITY DEFINER RPC — validates code, returns program info + code validity as JSONB
+- Notification type seed: `enrollment_code_redeemed` under programs category
+
+**Edge Function (`redeem-enrollment-code/index.ts`):**
+- Auth from Bearer token, service role client for atomic operations
+- Validates code (active, not expired, not at max_uses, program active)
+- Checks user not already enrolled (duplicate prevention)
+- G8 scope: free codes only (`is_free = true` or `discount_percent = 100`); partial discounts return "coming soon"
+- Calls `enroll_with_credits` RPC with `p_final_credit_cost = 0`, passes `p_cohort_id` from code
+- Updates enrollment with `enrollment_code_id`, increments `current_uses`
+- Notifies code creator via `create_notification` RPC
+
+**Admin UI (`EnrollmentCodesManagement.tsx`):**
+- Quick code generator card: select program → generate ENR code → copy shareable link
+- Full CRUD table: Code (copy buttons), Program/Cohort, Type, Usage (X/Y), Enrollment details, Status badges (Active/Expired/Used Up/Inactive), Actions
+- Create/Edit dialog: auto-generated or custom code, program selector, cohort selector (filtered by program), code_type, max_uses, grants_tier, is_free, discount_percent, expires_at, is_active, shareable link preview
+- Uses `useAdminCRUD` hook + custom mutations
+
+**Public Enrollment Page (`EnrollWithCode.tsx`):**
+- Route: `/enroll` with optional `?code=` query param
+- State machine: input → validating → valid → enrolling → enrolled → error
+- Auto-validates code from URL via `validate_enrollment_code` RPC on mount
+- Shows program info card with free/discount/tier badges
+- Auth redirect: `/auth?redirect=/enroll?code={CODE}` for unauthenticated users
+- Calls `redeem-enrollment-code` edge function for redemption
+- Success redirects to program page
+
+**Routing & Sidebar:**
+- App.tsx: lazy imports + public route `/enroll` + admin route `/admin/enrollment-codes`
+- AppSidebar.tsx: Ticket icon nav item in admin Programs submenu
+
+**Files:** 4 new (`EnrollmentCodesManagement.tsx`, `EnrollWithCode.tsx`, migration, edge function), 3 modified (App.tsx, AppSidebar.tsx, types.ts)
+
 ## DP6 + DP7 — Psychometric Structured Results & Readiness Dashboard (2026-02-24)
 
 **DP6 — Psychometric Structured Results:**

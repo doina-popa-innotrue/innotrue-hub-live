@@ -178,6 +178,8 @@ Manages their organization's members and program access within the platform.
 3. Client sees the program in their dashboard with module progression
 4. Credits are consumed atomically during enrollment (transaction-safe)
 
+**Self-enrollment via codes (G8):** Admins generate shareable enrollment codes per program. Codes can be single-use or multi-use, optionally assign a cohort, grant a tier, and offer free enrollment or discounts. Authenticated users redeem codes at `/enroll?code=CODE` — the `redeem-enrollment-code` edge function validates the code, calls `enroll_with_credits` with zero cost (for free codes), and increments usage. Admin manages codes at `/admin/enrollment-codes` with a quick generator and full CRUD table.
+
 ---
 
 ### 4.2 Assignments & Grading
@@ -209,7 +211,7 @@ The platform has three distinct assessment systems that share a common category 
 |--------|---------|---------|---------------|
 | **Capability Assessments** | Self-assessment and evaluator-assessment on skill domains | Client-side domain averages — simple average or **weighted by question types** | Radar chart (by domains or by question types) + evolution over time |
 | **Definition Assessments** | Structured evaluations with server-side scoring | Server-side via `compute-assessment-scores` edge function (confidential scoring matrix) | Dimension bars + interpretation text |
-| **Psychometric Assessments** | External assessment catalog (MBTI, Big Five, etc.) | None — document/PDF upload catalog | None — storage and reference |
+| **Psychometric Assessments** | External assessment catalog (MBTI, Big Five, etc.) | Manual structured scoring via `psychometric_result_schemas` + `psychometric_results` (DP6) — admin defines dimensions per assessment, coach/admin enters scores | Color-coded bars (green/amber/red) + trend arrows on Development Profile (DP6) |
 
 **Capability assessments** are the most actively used:
 - Admin creates assessment frameworks with domains and questions
@@ -372,19 +374,24 @@ Guided paths are structured development journeys that convert assessment-driven 
 
 The **Development Profile** (`/development-profile`) is a unified view connecting assessments, goals, development items, skills, and guided paths into a single dashboard:
 
-**Five sections:**
+**Six sections:**
 
 | Section | What It Shows |
 |---------|---------------|
 | **Strengths & Gaps Matrix** | Latest capability snapshot domain scores normalized to percentages, color-coded (green ≥80%, amber 50-79%, red <50%), with trend arrows comparing latest vs previous snapshot |
+| **Psychometric Scores (DP6)** | Structured psychometric results with color-coded bars per dimension (green ≥70%, amber ≥40%, red <40%), trend arrows (↑↓→), grouped by assessment. Admin defines dimension schemas; coach/admin enters scores via `PsychometricScoreEntryDialog`. |
 | **Active Development Items** | Development items grouped by linked domain, with status badges (pending/in_progress/completed) |
 | **Assessment-Linked Goal Progress** | Goals with assessment links showing progress bar + score journey (creation → current → target) |
 | **Skills Earned** | User skills displayed as badge grid grouped by skill category |
 | **Guided Path Progress** | Active guided paths from survey responses with completion percentage and template details |
 
+**My Readiness widget (DP7):** On the client Development Profile, a readiness widget shows per-path gate status breakdown — current milestone, estimated completion, gates remaining. Alert levels: green (≥80% + on schedule), amber (<80% but on schedule), red (behind + unmet), stalled (30+ days no progress).
+
+**Readiness Dashboard (DP7):** Coaches access `/teaching/readiness` — a sortable client table with alert badges, progress bars, and click-through to student Development Profile. Stats row shows total clients on paths, average readiness, and count needing attention.
+
 **Access:**
-- **Client:** `/development-profile` — sees their own data
-- **Coach/Instructor:** `/teaching/students/:enrollmentId/development-profile` — sees client's data (resolves client user ID from enrollment)
+- **Client:** `/development-profile` — sees their own data + My Readiness widget
+- **Coach/Instructor:** `/teaching/students/:enrollmentId/development-profile` — sees client's data (resolves client user ID from enrollment); `/teaching/readiness` — readiness dashboard across all clients
 - **Admin:** Can view any profile via admin tools
 
 ---
@@ -573,6 +580,14 @@ Client experience: Hub → Program → Module → Content loads inline. Zero cli
 | `xapi_sessions` table | Session lifecycle, auth tokens, bookmark, suspend_data |
 | `xapi_statements` table | Stored xAPI statements with verb/object/result fields |
 | `module-content-packages` bucket | Private storage for Rise ZIP content (500MB limit) |
+
+### Shared Content Library (CT3 ✅ DONE)
+
+Content packages can be uploaded once to a **shared library** (`content_packages` table) and assigned to modules across programs. Admin manages the library at `/admin/content-library` with upload, replace, and delete operations.
+
+**Cross-program completion propagation:** When a client completes content in one program via xAPI, a `content_completions` record is created. If the same content package is assigned to modules in other programs, the client's progress auto-completes on module load. The `useCrossProgramCompletion` hook resolves completions from 3 sources: canonical codes, TalentLMS, and content packages.
+
+**ModuleForm integration:** Two-tab content package card — "From Library" (combobox picker) and "Upload New" (creates shared package and auto-assigns). Existing legacy modules can "Migrate to Library."
 
 ### Legacy TalentLMS Infrastructure (kept for active programs)
 

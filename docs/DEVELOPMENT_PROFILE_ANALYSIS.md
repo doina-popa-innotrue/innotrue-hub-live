@@ -1,6 +1,6 @@
 # Development Profile & Assessment-Driven Guided Paths
 
-> **Status:** DP1-DP4 ✅ DONE (2026-02-19, commit `c6b2e11`). DP5 ✅ DONE (2026-02-23, commit `ed0254b`). DP6-DP7 pending. Approved for development (2026-02-18).
+> **Status:** DP1-DP4 ✅ DONE (2026-02-19, commit `c6b2e11`). DP5 ✅ DONE (2026-02-23, commit `ed0254b`). DP6-DP7 ✅ DONE (2026-02-24). All 7 phases complete. Approved for development (2026-02-18).
 >
 > **Scope:** Connect the platform's three assessment systems, development items, goals, and guided paths into a unified development journey — so clients can identify gaps, track progress, and follow structured paths (e.g., CTA review board preparation) with realistic timelines.
 
@@ -45,7 +45,7 @@ A **Development Profile** page that unifies strengths, gaps, and progress from a
 |--------|-------|---------|---------------|--------|
 | **Capability Assessments** | `capability_assessments` | Client-side domain averages — simple or weighted by question types (slider 1-N) | Radar chart (by domains or question types) + evolution charts | ✅ Working. Question types + weighted scoring added 2026-02-18 |
 | **Assessment Definitions** (Public/Quiz) | `assessment_definitions` | Server-side via `compute-assessment-scores` (confidential scoring matrix) | Dimension bars + interpretation text | ✅ Working |
-| **Psychometric Assessments** | `psychometric_assessments` | None — document catalog + PDF upload only | None | ⚠️ Incomplete — no scoring engine, no structured results, no visualization |
+| **Psychometric Assessments** | `psychometric_assessments` | ~~None~~ ✅ DP6: Structured scoring via `psychometric_result_schemas` + `psychometric_results` (manual entry per dimension) | ~~None~~ ✅ DP6: Color-coded bars + trend arrows on Development Profile | ✅ DP6 DONE — structured results with admin schema definition, score entry dialog, profile visualization |
 
 ### 2.2 Development Items (8 Link Tables)
 
@@ -346,7 +346,7 @@ CREATE TABLE module_domain_mappings (
 
 ---
 
-### Phase 6: Psychometric Structured Results (2-3 days)
+### Phase 6: Psychometric Structured Results (2-3 days) ✅ DONE (2026-02-24)
 
 **Why:** Psychometric assessments are currently PDF-only. To include them in the Development Profile, we need structured data.
 
@@ -379,7 +379,7 @@ CREATE TABLE psychometric_results (
 
 ---
 
-### Phase 7: Readiness Dashboard (3-5 days)
+### Phase 7: Readiness Dashboard (3-5 days) ✅ DONE (2026-02-24)
 
 **Why:** The capstone view. Combines everything into a single "Are you ready?" answer.
 
@@ -407,10 +407,10 @@ CREATE TABLE psychometric_results (
 | 2 | No schema changes (UI only, reads existing data) | 3-5 days | ✅ DONE |
 | 3 | `guided_path_milestone_gates` (CREATE), `milestone_gate_overrides` (CREATE) | 3-5 days | ✅ DONE |
 | 4 | `guided_path_instantiations` (CREATE), `goals.template_goal_id` + `goals.instantiation_id` (ALTER) | 3-5 days | ✅ DONE |
-| 5 | `module_domain_mappings` (CREATE) | 2-3 days | Pending |
-| 6 | `psychometric_result_schemas` (CREATE), `psychometric_results` (CREATE) | 2-3 days | Pending |
-| 7 | No schema changes (UI only, reads Phase 1-6 data) | 3-5 days | Pending |
-| **Total** | **6 new tables, 2 altered columns** | **~18-28 days** | **4/7 done** |
+| 5 | `module_domain_mappings` (CREATE) | 2-3 days | ✅ DONE |
+| 6 | `psychometric_result_schemas` (CREATE), `psychometric_results` (CREATE) | 2-3 days | ✅ DONE |
+| 7 | No schema changes (UI only, reads Phase 1-6 data) | 3-5 days | ✅ DONE |
+| **Total** | **6 new tables, 2 altered columns** | **~18-28 days** | **7/7 done** |
 
 ---
 

@@ -111,7 +111,7 @@ fi && npm run build
 Both preprod and prod have:
 - 420 database migrations applied
 - Seed data loaded (`supabase/seed.sql`)
-- 65 edge functions deployed
+- 66 edge functions deployed
 - Google OAuth configured
 - Auth email hook pointing to `send-auth-email` edge function
 
@@ -199,7 +199,7 @@ All INSERTs use `ON CONFLICT` for idempotency.
 
 ### Overview
 
-65 Deno/TypeScript edge functions in `supabase/functions/`.
+66 Deno/TypeScript edge functions in `supabase/functions/`.
 
 All functions have `verify_jwt = false` in `supabase/config.toml` — they implement custom auth checks internally (checking the `Authorization` header via `supabase.auth.getUser()`).
 
@@ -667,6 +667,71 @@ Content served via `serve-content-package` includes a Content-Security-Policy he
 3. Previous package files cleaned up
 4. `program_modules.content_package_path` updated
 5. Admin sets `content_package_type` to `web` or `xapi`
+
+---
+
+## 15c. Shared Content Library & Cross-Program Completion (CT3)
+
+### Shared Content Packages
+
+Content packages can be uploaded once to a shared library and assigned to modules across programs. The `content_packages` table stores metadata (title, description, storage_path, package_type, file_count). Modules reference shared packages via `program_modules.content_package_id` FK.
+
+**Upload modes in `upload-content-package`:**
+1. **Shared** — title + file → `shared/{uuid}/`, creates `content_packages` row
+2. **Replace** — contentPackageId + file → replaces ZIP in existing package
+3. **Legacy** — moduleId + file → unchanged per-module upload (backward compat)
+
+**Content Library Admin Page (`/admin/content-library`):** Stats cards, search/filter, table with title/type/files/module count/uploader, upload/replace/delete dialogs.
+
+**ModuleForm Integration:** Two-tab card — "From Library" (combobox picker) / "Upload New" (creates shared + auto-assigns). "Migrate to Library" button for legacy modules.
+
+### Cross-Program Completion
+
+When a client completes content via xAPI (`xapi-statements` edge function), the system checks if the module has a `content_package_id`. If so, it upserts a `content_completions` record (user_id + content_package_id = UNIQUE). On subsequent module loads, if the module's content package has a completion record, `module_progress` auto-upserts to "completed" with a toast notification.
+
+The `useCrossProgramCompletion` hook resolves completions from 3 sources: canonical codes, TalentLMS, and content packages.
+
+### Database Tables
+
+| Table | Key Fields | Purpose |
+|-------|-----------|---------|
+| `content_packages` | id, title, storage_path, package_type, file_count, uploaded_by, is_active | Shared content library |
+| `content_completions` | user_id, content_package_id, source_module_id, result_score_scaled | Cross-program completion tracking (UNIQUE on user_id + content_package_id) |
+
+---
+
+## 15d. Self-Enrollment Codes (G8)
+
+### Overview
+
+Admins generate shareable enrollment codes per program. Authenticated users redeem codes at `/enroll?code=CODE` to self-enroll without admin intervention.
+
+### Database
+
+| Table/Object | Purpose |
+|-------------|---------|
+| `enrollment_codes` | Code registry — program_id, cohort_id, code (unique), code_type, max_uses, current_uses, grants_tier, is_free, discount_percent, expires_at, created_by, is_active |
+| `client_enrollments.enrollment_code_id` | FK tracking which code was used for enrollment |
+| `validate_enrollment_code(p_code)` | SECURITY DEFINER RPC — validates code, returns program info + code validity as JSONB |
+
+### Edge Function: `redeem-enrollment-code`
+
+**Auth:** Bearer JWT → `supabase.auth.getUser()`
+**Input:** `{ code: string }`
+**Flow:**
+1. Validate code (active, not expired, not at max_uses, program active)
+2. Check user not already enrolled (duplicate prevention)
+3. G8 scope: free codes only (`is_free = true` or `discount_percent = 100`); partial discounts return error
+4. Call `enroll_with_credits` RPC with `p_final_credit_cost = 0`, passes `p_cohort_id` from code
+5. Update enrollment with `enrollment_code_id`, increment `current_uses`
+6. Notify code creator via `create_notification` RPC (`enrollment_code_redeemed` type)
+
+### Frontend
+
+| Page | Route | Purpose |
+|------|-------|---------|
+| `EnrollmentCodesManagement.tsx` | `/admin/enrollment-codes` | Admin CRUD with quick code generator, table with status badges, create/edit dialog |
+| `EnrollWithCode.tsx` | `/enroll?code=` | Public enrollment page — state machine (input → validating → valid → enrolling → enrolled → error), auth redirect |
 
 ---
 
