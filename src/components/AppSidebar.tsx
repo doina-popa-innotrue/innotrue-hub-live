@@ -46,6 +46,7 @@ import {
   Send,
   Lock,
   Megaphone,
+  Gauge,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -823,6 +824,12 @@ export function AppSidebar() {
       url: "/teaching/students",
       icon: Users,
       tourId: "teaching-students",
+    },
+    {
+      title: "Readiness",
+      url: "/teaching/readiness",
+      icon: Gauge,
+      tourId: "teaching-readiness",
     },
     {
       title: "Assignments",

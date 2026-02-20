@@ -2,6 +2,11 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminCRUD } from "@/hooks/useAdminCRUD";
+import {
+  usePsychometricSchemaMap,
+  useUpsertPsychometricSchema,
+} from "@/hooks/usePsychometricSchemas";
+import type { SchemaDimension } from "@/hooks/usePsychometricSchemas";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Loader2, ExternalLink, DollarSign } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2, ExternalLink, DollarSign, Sliders, X } from "lucide-react";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 
@@ -120,6 +125,52 @@ export default function AssessmentsManagement() {
       return data;
     },
   });
+
+  // DP6: Dimension schema management
+  const { schemaMap } = usePsychometricSchemaMap();
+  const upsertSchema = useUpsertPsychometricSchema();
+  const [dimensionDialogOpen, setDimensionDialogOpen] = useState(false);
+  const [dimensionAssessmentId, setDimensionAssessmentId] = useState<string | null>(null);
+  const [dimensionAssessmentName, setDimensionAssessmentName] = useState("");
+  const [dimensions, setDimensions] = useState<SchemaDimension[]>([]);
+
+  const openDimensionDialog = (assessment: Assessment) => {
+    setDimensionAssessmentId(assessment.id);
+    setDimensionAssessmentName(assessment.name);
+    const existing = schemaMap.get(assessment.id);
+    setDimensions(
+      existing?.dimensions && existing.dimensions.length > 0
+        ? [...existing.dimensions]
+        : [{ key: "", label: "", min: 0, max: 100 }],
+    );
+    setDimensionDialogOpen(true);
+  };
+
+  const addDimension = () => {
+    setDimensions([...dimensions, { key: "", label: "", min: 0, max: 100 }]);
+  };
+
+  const removeDimension = (index: number) => {
+    setDimensions(dimensions.filter((_, i) => i !== index));
+  };
+
+  const updateDimension = (index: number, field: keyof SchemaDimension, value: string | number) => {
+    const updated = [...dimensions];
+    updated[index] = { ...updated[index], [field]: value };
+    setDimensions(updated);
+  };
+
+  const handleSaveDimensions = async () => {
+    if (!dimensionAssessmentId) return;
+    const valid = dimensions.filter((d) => d.key.trim() && d.label.trim());
+    if (valid.length === 0) return;
+
+    await upsertSchema.mutateAsync({
+      assessmentId: dimensionAssessmentId,
+      dimensions: valid,
+    });
+    setDimensionDialogOpen(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -286,6 +337,12 @@ export default function AssessmentsManagement() {
                           {assessment.cost.toFixed(2)}
                         </Badge>
                       )}
+                      {schemaMap.get(assessment.id) && (
+                        <Badge variant="outline" className="gap-1">
+                          <Sliders className="h-3 w-3" />
+                          {schemaMap.get(assessment.id)!.dimensions.length} dimensions
+                        </Badge>
+                      )}
                     </div>
                     {assessment.url && (
                       <a
@@ -300,6 +357,14 @@ export default function AssessmentsManagement() {
                     )}
                   </div>
                   <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Define dimensions"
+                      onClick={() => openDimensionDialog(assessment)}
+                    >
+                      <Sliders className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => openEdit(assessment)}>
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -318,6 +383,88 @@ export default function AssessmentsManagement() {
           ))}
         </div>
       )}
+
+      {/* DP6: Dimension Schema Dialog */}
+      <Dialog open={dimensionDialogOpen} onOpenChange={setDimensionDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Define Dimensions — {dimensionAssessmentName}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Define the scoring dimensions for this assessment (e.g., DISC has D, I, S, C).
+            Coaches and clients will enter scores for each dimension.
+          </p>
+          <div className="space-y-3 mt-4">
+            {dimensions.map((dim, index) => (
+              <div key={index} className="flex items-end gap-2 p-3 rounded-lg border">
+                <div className="flex-1 space-y-1">
+                  <Label className="text-xs">Key</Label>
+                  <Input
+                    value={dim.key}
+                    onChange={(e) => updateDimension(index, "key", e.target.value)}
+                    placeholder="D"
+                    className="h-8"
+                  />
+                </div>
+                <div className="flex-[2] space-y-1">
+                  <Label className="text-xs">Label</Label>
+                  <Input
+                    value={dim.label}
+                    onChange={(e) => updateDimension(index, "label", e.target.value)}
+                    placeholder="Dominance"
+                    className="h-8"
+                  />
+                </div>
+                <div className="w-20 space-y-1">
+                  <Label className="text-xs">Min</Label>
+                  <Input
+                    type="number"
+                    value={dim.min}
+                    onChange={(e) => updateDimension(index, "min", parseFloat(e.target.value) || 0)}
+                    className="h-8"
+                  />
+                </div>
+                <div className="w-20 space-y-1">
+                  <Label className="text-xs">Max</Label>
+                  <Input
+                    type="number"
+                    value={dim.max}
+                    onChange={(e) => updateDimension(index, "max", parseFloat(e.target.value) || 100)}
+                    className="h-8"
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => removeDimension(index)}
+                  disabled={dimensions.length <= 1}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between mt-4">
+            <Button variant="outline" size="sm" onClick={addDimension}>
+              <Plus className="h-4 w-4 mr-1" />
+              Add Dimension
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setDimensionDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveDimensions}
+                disabled={upsertSchema.isPending || dimensions.every((d) => !d.key.trim())}
+              >
+                {upsertSchema.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Save Dimensions
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

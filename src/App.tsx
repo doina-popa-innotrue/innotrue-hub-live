@@ -139,6 +139,7 @@ const ScenarioAssignmentsManagement = lazy(
 );
 const ScenarioEvaluationPage = lazy(() => import("./pages/instructor/ScenarioEvaluationPage"));
 const StudentDevelopmentProfile = lazy(() => import("./pages/instructor/StudentDevelopmentProfile"));
+const ReadinessDashboard = lazy(() => import("./pages/instructor/ReadinessDashboard"));
 
 // Lazy-loaded pages — Client
 const ClientDashboard = lazy(() => import("./pages/client/ClientDashboard"));
@@ -1173,6 +1174,16 @@ const App = () => (
                       <ProtectedRoute>
                         <DashboardLayout>
                           <StudentDevelopmentProfile />
+                        </DashboardLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/teaching/readiness"
+                    element={
+                      <ProtectedRoute>
+                        <DashboardLayout>
+                          <ReadinessDashboard />
                         </DashboardLayout>
                       </ProtectedRoute>
                     }

@@ -2,6 +2,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { StrengthsGapsMatrix } from "@/components/development-profile/StrengthsGapsMatrix";
+import { PsychometricScores } from "@/components/development-profile/PsychometricScores";
+import { MyReadiness } from "@/components/development-profile/MyReadiness";
 import { ActiveDevelopmentItems } from "@/components/development-profile/ActiveDevelopmentItems";
 import { AssessmentGoalProgress } from "@/components/development-profile/AssessmentGoalProgress";
 import { SkillsEarned } from "@/components/development-profile/SkillsEarned";
@@ -88,12 +90,14 @@ export default function StudentDevelopmentProfile() {
         </div>
       </div>
 
-      {/* Same 5 sections, but for the student's userId */}
+      {/* Same sections, but for the student's userId */}
       <StrengthsGapsMatrix userId={clientUserId} />
+      <PsychometricScores userId={clientUserId} allowEntry />
       <ActiveDevelopmentItems userId={clientUserId} />
       <AssessmentGoalProgress userId={clientUserId} />
       <SkillsEarned userId={clientUserId} />
       <GuidedPathProgress userId={clientUserId} />
+      <MyReadiness userId={clientUserId} />
     </div>
   );
 }

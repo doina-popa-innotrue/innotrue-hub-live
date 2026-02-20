@@ -1,5 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { MyReadiness } from "@/components/development-profile/MyReadiness";
 import { StrengthsGapsMatrix } from "@/components/development-profile/StrengthsGapsMatrix";
+import { PsychometricScores } from "@/components/development-profile/PsychometricScores";
 import { ActiveDevelopmentItems } from "@/components/development-profile/ActiveDevelopmentItems";
 import { AssessmentGoalProgress } from "@/components/development-profile/AssessmentGoalProgress";
 import { SkillsEarned } from "@/components/development-profile/SkillsEarned";
@@ -29,6 +31,9 @@ export default function DevelopmentProfile() {
       {/* Section A: Strengths & Gaps Matrix */}
       <StrengthsGapsMatrix userId={user.id} />
 
+      {/* Section F: Psychometric Scores */}
+      <PsychometricScores userId={user.id} />
+
       {/* Section B: Active Development Items */}
       <ActiveDevelopmentItems userId={user.id} />
 
@@ -40,6 +45,9 @@ export default function DevelopmentProfile() {
 
       {/* Section E: Guided Path Progress */}
       <GuidedPathProgress userId={user.id} />
+
+      {/* Section G: My Readiness */}
+      <MyReadiness userId={user.id} />
     </div>
   );
 }
