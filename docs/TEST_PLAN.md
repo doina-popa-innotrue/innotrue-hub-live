@@ -1,9 +1,11 @@
 # Test Coverage Plan
 
-## Current State
-- 210 unit tests (Vitest) in `src/lib/__tests__/`
-- E2E infrastructure (Playwright) with role-based fixtures in `e2e/fixtures/`
-- CI pipeline: lint → typecheck → test → build
+> **For the full multi-phase testing roadmap (edge functions, hooks, components, E2E expansion, CI gates), see [`docs/TESTING_ROADMAP.md`](./TESTING_ROADMAP.md).**
+
+## Current State (updated 2026-02-20)
+- **453 unit tests** (Vitest) in 20 files under `src/lib/__tests__/` — **97% statement coverage** on `src/lib/`
+- **13 E2E specs** (Playwright) covering auth, admin, client, coach, instructor journeys
+- CI pipeline: lint → typecheck → test → build (`npm run verify`)
 
 ## Strategy
 Focus on business-critical logic and user journeys. Skip component rendering tests, snapshot tests, and React Query internals.

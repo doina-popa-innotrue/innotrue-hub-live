@@ -32,7 +32,8 @@
 | `docs/INTEGRATION_SETUP_GUIDE.md` | Cal.com, TalentLMS, Circle, Google Calendar setup |
 | `docs/SUPABASE_OPS_QUICKSTART.md` | Edge function deploy, migration push, data/storage sync |
 | `docs/LOVABLE_INTEGRATION.md` | Bidirectional Lovable ↔ live repo sync |
-| `docs/TEST_PLAN.md` | Unit + E2E test plan |
+| `docs/TEST_PLAN.md` | Unit + E2E test plan (original priorities — all completed) |
+| `docs/TESTING_ROADMAP.md` | **Comprehensive testing roadmap** — 6 phases: edge function utils, hooks, E2E expansion, function integration, components, CI gates |
 | `docs/CURSOR_AND_WORKFLOW_GUIDE.md` | Cursor IDE setup, git deploy pipeline, responsive testing |
 | `docs/ENTITLEMENTS_AND_FEATURE_ACCESS.md` | **Entitlements system** — 5 access sources, deny override, plan tiers, FeatureGate/CapabilityGate, admin config |
 | `docs/PHASE5_PLAN.md` | **Phase 5 Self-Registration** — 14-step implementation plan + 7 new roadmap items (R1-R7). Ready for implementation. |

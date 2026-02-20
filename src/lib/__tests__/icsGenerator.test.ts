@@ -241,4 +241,89 @@ describe("generateICSContent", () => {
     const ics = generateICSContent(event);
     expect(ics).toContain("RRULE:FREQ=WEEKLY;INTERVAL=2");
   });
+
+  // -- Additional coverage for edge cases --
+
+  it("includes CALSCALE and METHOD in calendar wrapper", () => {
+    const ics = generateICSContent(baseEvent);
+    expect(ics).toContain("CALSCALE:GREGORIAN");
+    expect(ics).toContain("METHOD:PUBLISH");
+  });
+
+  it("uses UTC format (no VTIMEZONE) when timezone is 'UTC'", () => {
+    const event: ICSEvent = {
+      ...baseEvent,
+      timezone: "UTC",
+    };
+    const ics = generateICSContent(event);
+    expect(ics).not.toContain("BEGIN:VTIMEZONE");
+    expect(ics).toContain("DTSTART:20250315T100000Z");
+    expect(ics).toContain("DTEND:20250315T110000Z");
+  });
+
+  it("uses UTC format when no timezone is specified", () => {
+    const event: ICSEvent = {
+      id: "no-tz",
+      title: "No TZ Event",
+      startDate: new Date("2025-01-01T08:00:00Z"),
+      endDate: new Date("2025-01-01T09:00:00Z"),
+    };
+    const ics = generateICSContent(event);
+    expect(ics).not.toContain("BEGIN:VTIMEZONE");
+    expect(ics).toContain("DTSTART:20250101T080000Z");
+  });
+
+  it("handles multiple attendees", () => {
+    const event: ICSEvent = {
+      ...baseEvent,
+      attendees: [
+        { email: "alice@example.com", name: "Alice", role: "CHAIR", status: "ACCEPTED" },
+        { email: "bob@example.com", name: "Bob", role: "OPT-PARTICIPANT", status: "TENTATIVE" },
+      ],
+    };
+    const ics = generateICSContent(event);
+    expect(ics).toContain("ATTENDEE;CN=Alice;ROLE=CHAIR;PARTSTAT=ACCEPTED;RSVP=TRUE:mailto:alice@example.com");
+    expect(ics).toContain("ATTENDEE;CN=Bob;ROLE=OPT-PARTICIPANT;PARTSTAT=TENTATIVE;RSVP=TRUE:mailto:bob@example.com");
+  });
+
+  it("escapes special characters in description and location", () => {
+    const event: ICSEvent = {
+      ...baseEvent,
+      description: "Goal: succeed; plan, execute\\deliver\nstep 2",
+      location: "Room 1; Building A, Floor 3",
+    };
+    const ics = generateICSContent(event);
+    expect(ics).toContain("DESCRIPTION:Goal: succeed\\; plan\\, execute\\\\deliver\\nstep 2");
+    expect(ics).toContain("LOCATION:Room 1\\; Building A\\, Floor 3");
+  });
+
+  it("generates CRLF line endings (ICS spec requirement)", () => {
+    const ics = generateICSContent(baseEvent);
+    // ICS files must use \r\n line endings
+    expect(ics).toContain("\r\n");
+    // Split by \r\n and verify the structure
+    const lines = ics.split("\r\n");
+    expect(lines[0]).toBe("BEGIN:VCALENDAR");
+    expect(lines[lines.length - 1]).toBe("END:VCALENDAR");
+  });
+
+  it("omits RRULE when isRecurring is undefined", () => {
+    const event: ICSEvent = {
+      ...baseEvent,
+      recurrencePattern: "weekly",
+    };
+    const ics = generateICSContent(event);
+    expect(ics).not.toContain("RRULE:");
+  });
+
+  it("formats timezone dates in local time format (no Z suffix)", () => {
+    const event: ICSEvent = {
+      ...baseEvent,
+      timezone: "Europe/Paris",
+    };
+    const ics = generateICSContent(event);
+    // With timezone, dates should NOT have Z suffix
+    expect(ics).toContain("DTSTART;TZID=Europe/Paris:");
+    expect(ics).not.toContain("DTSTART:20250315T100000Z");
+  });
 });
