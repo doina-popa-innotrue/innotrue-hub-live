@@ -69,13 +69,23 @@ serve(async (req) => {
     }
 
     // 3. Check if registration is already complete (idempotency guard)
+    // Must also verify user has roles — Google OAuth users get registration_status='complete'
+    // from the handle_new_user trigger default, but haven't actually registered yet.
     const { data: existingProfile } = await supabase
       .from("profiles")
       .select("registration_status")
       .eq("id", userId)
       .single();
 
-    if (existingProfile?.registration_status === "complete") {
+    const { data: existingRoles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+
+    if (
+      existingProfile?.registration_status === "complete" &&
+      existingRoles && existingRoles.length > 0
+    ) {
       return successResponse.ok({ message: "Registration already complete", already_complete: true }, cors);
     }
 
