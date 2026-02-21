@@ -153,9 +153,22 @@ Link plans to Stripe for billing. Each purchasable plan needs at least one price
 
 **External dependency:** Stripe products and prices must be created first in Stripe Dashboard, then IDs entered here.
 
+**Setup for new environments:**
+1. Create products in Stripe Dashboard (one per purchasable plan)
+2. Add a recurring price (monthly and/or yearly) to each product
+3. Copy the price ID (`price_...`) and enter it in the Admin UI or via SQL:
+   ```sql
+   UPDATE plan_prices
+   SET stripe_price_id = 'price_1ABC...'
+   WHERE plan_id = (SELECT id FROM plans WHERE key = 'pro')
+     AND billing_interval = 'month';
+   ```
+4. Stripe webhook must be configured for subscription lifecycle sync — see [SUBSCRIPTIONS_AND_PLANS.md](./SUBSCRIPTIONS_AND_PLANS.md#stripe-webhook-setup)
+
 **Admin UI:** Plans Management → Edit Plan → Pricing tab
 **Depends on:** plans, Stripe (products + prices created in Stripe Dashboard)
 **Needed by:** Subscription checkout page (`Subscription.tsx` reads `stripe_price_id` from this table)
+**Testing:** See the [Testing Guide](./SUBSCRIPTIONS_AND_PLANS.md#testing-guide) for end-to-end test instructions
 
 ---
 

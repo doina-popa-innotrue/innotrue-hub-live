@@ -271,6 +271,194 @@ Credits are used for AI operations (coaching, insights, recommendations), sessio
 
 ---
 
+## Testing Guide
+
+### Prerequisites
+
+Before testing any payment flow on **preprod**:
+
+1. **Stripe test mode is active** — preprod uses `sk_test_...` key
+2. **Webhook is configured** — endpoint `https://jtzcrirqflfnagceendt.supabase.co/functions/v1/stripe-webhook` with the 4 events
+3. **`STRIPE_WEBHOOK_SECRET`** is set on preprod
+4. **`plan_prices.stripe_price_id`** is populated for all purchasable plans (admin Plans Management page)
+5. **Credit packages exist** — `credit_topup_packages` populated (via seed data or migration)
+
+### Test Cards
+
+| Card Number | Behaviour |
+|-------------|-----------|
+| `4242 4242 4242 4242` | Always succeeds |
+| `5555 5555 5555 4444` | Mastercard, always succeeds |
+| `4000 0025 0000 3155` | Requires 3D Secure authentication |
+| `4000 0000 0000 0002` | Always declines |
+
+Use any future expiry date (e.g. `12/30`), any CVC (e.g. `123`), and any billing address.
+
+### Test A: New Subscription
+
+**Goal:** Verify a user can purchase a plan and their `plan_id` gets updated.
+
+1. Log in as a test user on Free plan (e.g. `sarah.johnson@demo.innotrue.com` / `DemoPass123!`)
+2. Navigate to `/subscription`
+3. Select a plan (e.g. Pro) and billing interval (Monthly)
+4. Click **Subscribe Now** → redirected to Stripe Checkout
+5. Enter test card `4242 4242 4242 4242`, any expiry, any CVC, any address
+6. Complete payment → redirected to `/subscription?success=true`
+7. A toast should appear confirming the subscription
+
+**Verify in database** (Supabase SQL Editor):
+```sql
+-- Check user's plan was updated
+SELECT p.email, pl.key AS plan_key, pl.name AS plan_name
+FROM profiles p
+JOIN plans pl ON p.plan_id = pl.id
+WHERE p.email = 'sarah.johnson@demo.innotrue.com';
+-- Expected: plan_key = 'pro'
+
+-- Check Stripe webhook logged the event
+SELECT * FROM edge_function_logs
+WHERE function_name = 'stripe-webhook'
+ORDER BY created_at DESC LIMIT 5;
+```
+
+**Verify in Stripe Dashboard:**
+- Toggle to Test mode → Payments → should see the test charge
+- Customers → the test user's email should appear as a customer
+
+### Test B: Upgrade/Downgrade via Billing Portal
+
+**Goal:** Verify plan changes made in the Stripe Billing Portal sync back to the database.
+
+1. Log in as the user who has an active subscription (from Test A)
+2. Navigate to `/subscription`
+3. Click **Manage Billing** → redirected to Stripe Billing Portal
+4. In the portal, click **Update plan** or change to a different plan
+5. Complete the change → redirected back to `/subscription`
+
+**Verify in database:**
+```sql
+-- Check plan_id was updated to the new plan
+SELECT p.email, pl.key AS plan_key
+FROM profiles p
+JOIN plans pl ON p.plan_id = pl.id
+WHERE p.email = 'sarah.johnson@demo.innotrue.com';
+```
+
+**Note:** Downgrades typically take effect at the end of the billing period. Upgrades are immediate. The webhook fires `customer.subscription.updated` which resolves the new Stripe price → `plan_prices.plan_id` → updates `profiles.plan_id`.
+
+### Test C: Subscription Cancellation
+
+**Goal:** Verify cancelling a subscription downgrades the user to Free.
+
+1. Log in as the user with an active subscription
+2. Navigate to `/subscription` → click **Manage Billing**
+3. In the Stripe portal, click **Cancel plan**
+4. Choose "Cancel immediately" (for testing; in production users may choose end-of-period)
+5. Confirm cancellation → redirected back to `/subscription`
+
+**Verify in database:**
+```sql
+-- Check user was downgraded to Free
+SELECT p.email, pl.key AS plan_key
+FROM profiles p
+JOIN plans pl ON p.plan_id = pl.id
+WHERE p.email = 'sarah.johnson@demo.innotrue.com';
+-- Expected: plan_key = 'free'
+```
+
+### Test D: Credit Top-Up Purchase
+
+**Goal:** Verify a user can purchase credits and they appear in their balance.
+
+1. Log in as a test user
+2. Navigate to `/credits`
+3. In the "Purchase Credit Top-ups" section, click **Purchase** on the Standard package (150 credits, €24.99)
+4. Stripe Checkout opens → enter test card `4242 4242 4242 4242`
+5. Complete payment → redirected to `/credits?success=true&session_id=cs_...`
+6. Toast: "Credits Added! 150 credits have been added to your account."
+7. Credit balance on the page should increase
+
+**Verify in database:**
+```sql
+-- Check purchase record was completed
+SELECT status, credits_purchased, amount_cents, stripe_checkout_session_id
+FROM user_credit_purchases
+WHERE user_id = (SELECT id FROM auth.users WHERE email = 'sarah.johnson@demo.innotrue.com')
+ORDER BY created_at DESC LIMIT 1;
+-- Expected: status = 'completed', credits_purchased = 150
+
+-- Check credit batch was granted
+SELECT amount, source_type, expires_at
+FROM credit_grant_batches
+WHERE owner_id = (SELECT id FROM auth.users WHERE email = 'sarah.johnson@demo.innotrue.com')
+  AND source_type = 'topup'
+ORDER BY created_at DESC LIMIT 1;
+-- Expected: amount = 150, expires_at ~12 months from now
+```
+
+### Test E: Payment Failure (declined card)
+
+**Goal:** Verify declined payments are handled gracefully.
+
+1. Navigate to `/subscription` or `/credits`
+2. Start a checkout
+3. Enter test card `4000 0000 0000 0002` (always declines)
+4. Stripe shows a decline error on the checkout page
+5. User can retry with a different card or close the page
+6. If closed, the user returns to the app with `?canceled=true`
+
+**Verify:** No changes in database — `plan_id` unchanged, no credit purchase records created.
+
+### Test F: Webhook Delivery (Stripe Dashboard)
+
+**Goal:** Verify the webhook endpoint is receiving and processing events correctly.
+
+1. Go to Stripe Dashboard → Developers → Webhooks
+2. Click your webhook endpoint
+3. Click **Send test webhook** → select `checkout.session.completed`
+4. Check the response — should be `200 OK`
+5. Check the event log for any delivery failures
+
+**Verify in Supabase:**
+- Edge Functions → `stripe-webhook` → Logs tab shows the invocation
+- If using test events, the function will log the event but may not find a matching user (that's OK for connectivity testing)
+
+### Test G: Stripe Price ID Setup (first-time setup)
+
+If `plan_prices.stripe_price_id` is empty (new environment), you need to create Stripe products first:
+
+1. Go to Stripe Dashboard → Products (in test mode for preprod)
+2. Create a product for each purchasable plan (Base, Pro, Advanced, Elite)
+3. Add a recurring price to each (e.g. €29/month for Base)
+4. Copy each price ID (`price_...`)
+5. In the app, go to admin Plans Management → edit each plan → Pricing tab
+6. Paste the Stripe price ID for each billing interval
+
+**Or via SQL:**
+```sql
+-- Example: set Pro monthly price
+UPDATE plan_prices
+SET stripe_price_id = 'price_1ABC...'
+WHERE plan_id = (SELECT id FROM plans WHERE key = 'pro')
+  AND billing_interval = 'month';
+```
+
+Credit packages auto-create their Stripe products/prices on first purchase — no manual setup needed.
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Checkout redirects but plan doesn't update | Webhook not configured or secret wrong | Check Stripe Dashboard → Webhooks → endpoint status. Verify `STRIPE_WEBHOOK_SECRET` matches |
+| "No prices found" on subscription page | `plan_prices.stripe_price_id` is null | Create Stripe products/prices and update `plan_prices` table |
+| Webhook returns 401/403 | Missing `STRIPE_WEBHOOK_SECRET` | Set the secret via `npx supabase secrets set` |
+| Webhook returns 400 | Signature verification failed | The signing secret doesn't match — copy it again from Stripe Dashboard |
+| Credits not appearing after purchase | `confirm-credit-topup` not called | Check browser console — the return URL must include `session_id` parameter |
+| Webhook fires but plan doesn't update | Price ID not in `plan_prices` table | The webhook resolves Stripe price → `plan_prices.plan_id`. Add the missing `stripe_price_id` |
+| "Checkout session expired" | Test session older than 24h | Start a new checkout |
+
+---
+
 ## Future Improvements
 
 ### 1. Programs/Continuation Plan Deprecation

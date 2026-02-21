@@ -2,7 +2,7 @@
 
 How to set up every external integration so that Production, Preprod, and Lovable Sandbox are fully isolated with zero risk of cross-contamination.
 
-Last updated: 2026-02-13
+Last updated: 2026-02-21
 
 ---
 
@@ -217,14 +217,18 @@ Credit purchases (top-ups) use a separate **confirm-on-return** pattern and don'
 - Test webhook events can be sent via **Developers → Webhooks → Send test event**
 - Test card for preprod: `4242 4242 4242 4242`, any future expiry, any CVC
 
+### End-to-End Testing
+
+For full step-by-step testing instructions (subscription purchase, upgrade/downgrade, cancellation, credit top-ups, troubleshooting), see the **[Testing Guide in SUBSCRIPTIONS_AND_PLANS.md](./SUBSCRIPTIONS_AND_PLANS.md#testing-guide)**.
+
 ### Configuration Record
 
 | Environment | Secret | Value | Status |
 |---|---|---|---|
-| Production | `STRIPE_SECRET_KEY` | `sk_live_...` | [ ] Verified |
-| Production | `STRIPE_WEBHOOK_SECRET` | `whsec_...` | [ ] Set up |
-| Preprod | `STRIPE_SECRET_KEY` | `sk_test_...` | [ ] Verified |
-| Preprod | `STRIPE_WEBHOOK_SECRET` | `whsec_...` | [ ] Set up |
+| Production | `STRIPE_SECRET_KEY` | `sk_live_...` | [x] Verified |
+| Production | `STRIPE_WEBHOOK_SECRET` | `whsec_...` | [x] Set up (2026-02-21) |
+| Preprod | `STRIPE_SECRET_KEY` | `sk_test_...` | [x] Verified |
+| Preprod | `STRIPE_WEBHOOK_SECRET` | `whsec_...` | [x] Set up (2026-02-21) |
 | Sandbox | `STRIPE_SECRET_KEY` | Not set | [ ] Verified |
 | Sandbox | `STRIPE_WEBHOOK_SECRET` | Not set | [ ] N/A |
 
@@ -1197,6 +1201,9 @@ This is **user-driven, not admin-configured.** Each instructor connects their ow
 - [x] **Preprod high-risk secrets** — deleted Cal.com/TalentLMS/Circle/Google Calendar secrets ✅ (2026-02-13)
 - [x] **Preprod security secrets** — regenerated `OAUTH_ENCRYPTION_KEY` + `CALENDAR_HMAC_SECRET`, added `REQUEST_SIGNING_SECRET` ✅ (2026-02-13)
 - [x] **Production `REQUEST_SIGNING_SECRET`** — added ✅ (2026-02-13)
+- [x] **Stripe webhook (preprod)** — endpoint configured, `STRIPE_WEBHOOK_SECRET` set, 4 events subscribed ✅ (2026-02-21)
+- [x] **Stripe webhook (prod)** — endpoint configured, `STRIPE_WEBHOOK_SECRET` set, 4 events subscribed ✅ (2026-02-21)
+- [x] **Credit package migration** — `20260227100000_fix_credit_topup_package_values.sql` applied to preprod + prod ✅ (2026-02-21)
 
 ### Priority 2: Before testing specific integrations on preprod
 
