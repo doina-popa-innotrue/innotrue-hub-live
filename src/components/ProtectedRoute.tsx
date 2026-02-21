@@ -27,6 +27,19 @@ export function ProtectedRoute({ children, requireRole }: ProtectedRouteProps) {
   const isOAuthNewUser = user && userRoles.length === 0 && user.app_metadata?.provider === "google";
   const isResolvingRoles = loading || (user && !authError && userRoles.length === 0 && !registrationStatus && !isOAuthNewUser);
 
+  // Temporary debug — remove after Google OAuth flow is confirmed working
+  if (user && userRoles.length === 0) {
+    console.log("[ProtectedRoute] OAuth debug:", {
+      provider: user.app_metadata?.provider,
+      providers: user.app_metadata?.providers,
+      registrationStatus,
+      isOAuthNewUser: !!isOAuthNewUser,
+      isResolvingRoles: !!isResolvingRoles,
+      rolesCount: userRoles.length,
+      appMetadata: user.app_metadata,
+    });
+  }
+
   if (isResolvingRoles) {
     return (
       <div className="flex min-h-screen items-center justify-center">
