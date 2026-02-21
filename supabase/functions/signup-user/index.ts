@@ -163,11 +163,14 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create unconfirmed user via admin API
+    // Create user via admin API with email_confirm: true to suppress
+    // Supabase's built-in confirmation email (send-auth-email hook).
+    // Our custom verification flow (signup-user sends email → verify-signup
+    // confirms) handles email verification independently.
     const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: false,
+      email_confirm: true,
       user_metadata: { name: validatedName }
     });
 
