@@ -452,6 +452,7 @@ export default function Auth() {
         setSignupName("");
         setSignupEmail("");
         setSignupPassword("");
+        setActiveTab("login");
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
