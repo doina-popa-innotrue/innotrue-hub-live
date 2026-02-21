@@ -16,14 +16,6 @@ const Index = () => {
       navigate("/auth", { replace: true });
     } else if (registrationStatus === "pending_role_selection") {
       navigate("/complete-registration", { replace: true });
-    } else if (
-      // Google OAuth new user — zero roles + Google provider. The handle_new_user trigger
-      // already created a profile with registration_status='complete', so we can't check
-      // !registrationStatus. Zero roles + Google provider is the reliable indicator.
-      userRoles.length === 0 &&
-      user.app_metadata?.provider === "google"
-    ) {
-      navigate("/complete-registration", { replace: true });
     } else if (userRole) {
       if (userRole === "admin") {
         navigate("/admin", { replace: true });
@@ -45,9 +37,13 @@ const Index = () => {
     }
 
     if (!loading && user && !userRole) {
+      // Google OAuth users with zero roles won't get a role resolved — redirect quickly.
+      // Other users (e.g. slow network) get a longer grace period for role resolution.
+      const isOAuthNoRoles = userRoles.length === 0 && user.app_metadata?.provider === "google";
+      const delay = isOAuthNoRoles ? 500 : 6000;
       fallbackTimerRef.current = setTimeout(() => {
         navigate("/dashboard", { replace: true });
-      }, 6000);
+      }, delay);
     }
 
     return () => {
@@ -56,7 +52,7 @@ const Index = () => {
         fallbackTimerRef.current = null;
       }
     };
-  }, [loading, user, userRole, navigate]);
+  }, [loading, user, userRole, userRoles, navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
