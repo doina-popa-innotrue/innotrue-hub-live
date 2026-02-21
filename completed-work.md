@@ -2,7 +2,7 @@
 
 ## Phase 5 — Self-Registration Core, Batches 1-3 (2026-02-26)
 
-Self-registration with role selection and admin approval flow. Transforms platform from invitation-only to self-registration. Commits `6cd54f5` (core), `b0b3f41` (CORS fix), `b5a659b` (config.toml fix), `9d598e7` (error messages), `ebba49f` (login tab switch), `7f7040e` (duplicate email fix), `0ca3358` (Google OAuth redirect). 3 new files, 9 modified, 1 migration, 1 new edge function. Deployed to all 3 environments.
+Self-registration with role selection and admin approval flow. Transforms platform from invitation-only to self-registration. Commits `6cd54f5` (core), `b0b3f41` (CORS fix), `b5a659b` (config.toml fix), `9d598e7` (error messages), `ebba49f` (login tab switch), `7f7040e` (duplicate email fix), `0ca3358`..`01652f3` (Google OAuth fixes — 8 commits). 3 new files, 9 modified, 1 migration, 1 new edge function. Deployed to all 3 environments.
 
 **Database Migration (`20260226100000_phase5_self_registration.sql`):**
 - `profiles.registration_status` (TEXT DEFAULT 'complete') — state machine: `pending_role_selection` → `complete` or `pending_approval` → `complete`
@@ -19,11 +19,12 @@ Self-registration with role selection and admin approval flow. Transforms platfo
 - Client-only: sets `registration_status = 'complete'`
 - Coach/instructor: inserts `coach_instructor_requests` with `source_type = 'role_application'`, sets `registration_status = 'pending_approval'`
 - Includes `transferPlaceholderIfExists()` for Google OAuth users — 7-table transfer (client_enrollments, capability_snapshots, client_badges, client_coaches, client_instructors, assessment_responses, client_profiles) + role copy + plan copy
-- Idempotency guard: returns early if `registration_status === 'complete'`
+- Idempotency guard: returns early if `registration_status === 'complete'` AND user has roles (handles Google OAuth users whose `handle_new_user` trigger sets status='complete' but have no roles yet)
 
 **Frontend — CompleteRegistration.tsx (new):**
 - Route: `/complete-registration` (outside ProtectedRoute in App.tsx)
-- Auth guard: redirects to `/auth` if not logged in, to `/dashboard` if already complete
+- Auth guard: redirects to `/auth` if not logged in, to `/dashboard` if already complete AND has roles
+- Sign out button in top-right corner
 - Three cards: "I'm here to grow" (client), "I'm a Coach or Instructor" (expands form), "I represent an Organization" (greyed out, coming soon)
 - Coach form: request_type select, bio, specialties, certifications, scheduling_url, message
 - Info card: "You'll get immediate platform access as a client. Once approved, your coach/instructor tools will be unlocked."
@@ -43,7 +44,7 @@ Self-registration with role selection and admin approval flow. Transforms platfo
 **Frontend — ProtectedRoute.tsx (modified):**
 - `isResolvingRoles`: accounts for `registrationStatus` to prevent infinite loading for users with `pending_role_selection` (zero roles is legitimate)
 - `pending_role_selection` → redirect to `/complete-registration`
-- Google OAuth new user detection: `app_metadata.provider === "google"` + no profile + no roles → redirect to `/complete-registration`
+- Google OAuth new user detection: `app_metadata.provider === "google"` + zero roles → redirect to `/complete-registration` (regardless of `registrationStatus`, since `handle_new_user` trigger sets it to 'complete')
 - `pending_approval` safety net card: "Application Under Review"
 
 **Frontend — Index.tsx (modified):**
@@ -66,6 +67,15 @@ Self-registration with role selection and admin approval flow. Transforms platfo
 - Role Applications: approve upserts roles into user_roles, updates profiles (registration_status='complete', verification_status='verified', verified_at, bio, scheduling_url, certifications); decline sets registration_status='complete' (user keeps client role)
 - Coach Assignments: existing approve flow (inserts into client_coaches/client_instructors)
 - Application details panel in review dialog shows bio, specialties, certifications, scheduling_url
+
+**Google OAuth flow fixes (`0ca3358`..`01652f3`):**
+- Root cause: `handle_new_user` DB trigger sets `registration_status='complete'` (column default) for ALL new users, including Google OAuth — detection logic assumed `null`
+- ProtectedRoute/Auth.tsx/Index.tsx: detect OAuth new users by `zero roles + provider === "google"` only (removed `!registrationStatus` condition)
+- `complete-registration` edge function: idempotency guard now checks `user_roles` count too — was short-circuiting with `already_complete: true` before creating any roles
+- `CompleteRegistration.tsx`: redirect to `/dashboard` only when `userRoles.length > 0` — prevents navigation loop
+- Index.tsx: 500ms fast fallback for Google OAuth users (vs 6s for others)
+- Added sign out button to `/complete-registration` page
+- Both email signup and Google OAuth → role selection → dashboard flows confirmed working end-to-end on preprod
 
 **Infrastructure fixes:**
 - `_shared/cors.ts`: added `*.innotrue-hub-live.pages.dev` wildcard for Cloudflare Pages preview URLs

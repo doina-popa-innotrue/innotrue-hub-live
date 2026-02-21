@@ -49,7 +49,7 @@
 - Supabase client: `src/integrations/supabase/client.ts`
 - Auth: `src/pages/Auth.tsx`, `src/contexts/AuthContext.tsx`
 - Routes: `src/App.tsx` | Sentry: `src/main.tsx` | Error boundary: `src/components/ErrorBoundary.tsx`
-- Edge functions: `supabase/functions/` (65 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`, `error-response.ts`, `ai-input-limits.ts`, `calcom-utils.ts`
+- Edge functions: `supabase/functions/` (68 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`, `error-response.ts`, `ai-input-limits.ts`, `calcom-utils.ts`
 - xAPI: `supabase/functions/xapi-launch/` (session create/resume), `supabase/functions/xapi-statements/` (LRS endpoint + state persistence)
 - Assessment scoring: `src/lib/assessmentScoring.ts` (weighted question type scoring for capability assessments)
 - Guided path instantiation: `src/lib/guidedPathInstantiation.ts` (shared template→goals service with pace/date logic)
@@ -252,7 +252,10 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - `config.toml`: added `complete-registration` and `redeem-enrollment-code` with `verify_jwt = false` (were missing, causing relay rejection)
   - `signup-user`: changed `email_confirm: true` in `createUser()` to suppress duplicate auth hook email ("Set Up Your Account")
   - Auth.tsx: check `data.error` before `error` in signup handler (show specific messages not generic "Edge Function returned a non-2xx"), switch to login tab after successful signup
-  - ProtectedRoute: detect Google OAuth new users (`app_metadata.provider === "google"` + no profile + no roles) and redirect to `/complete-registration` instead of "Account Not Configured"
+  - ProtectedRoute: detect Google OAuth new users (`app_metadata.provider === "google"` + zero roles) and redirect to `/complete-registration` instead of "Account Not Configured"
+  - **Google OAuth root cause:** `handle_new_user` trigger sets `registration_status='complete'` (column default) for ALL new users. Required 3 fixes: (1) detect OAuth new users by `zero roles + provider === "google"` only (not `!registrationStatus`), (2) `complete-registration` idempotency guard must also check `user_roles` count (was short-circuiting with `already_complete` before creating any roles), (3) `CompleteRegistration.tsx` redirect guard must check `userRoles.length > 0` before redirecting to `/dashboard`
+  - Added sign out button to `/complete-registration` page
+  - Index.tsx: 500ms fast fallback to `/dashboard` for Google OAuth users (vs 6s for others), ProtectedRoute then catches and redirects to `/complete-registration`
 - **Next steps:** Phase 5 remaining (Wheel pipeline, bulk import) → M13 Zod validation → Phase 3 AI
 
 ## npm Scripts
