@@ -35,7 +35,7 @@ type RoleChoice = "client" | "coach" | "instructor" | "both";
 
 export default function CompleteRegistration() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, userRoles, loading: authLoading, signOut } = useAuth();
 
   const [registrationStatus, setRegistrationStatus] = useState<string | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
@@ -70,8 +70,13 @@ export default function CompleteRegistration() {
       setRegistrationStatus(data?.registration_status ?? null);
       setStatusLoading(false);
 
-      // If already complete, redirect to dashboard
-      if (data?.registration_status === "complete" || data?.registration_status === "pending_approval") {
+      // If already complete AND user has roles, redirect to dashboard.
+      // Google OAuth new users have registration_status='complete' (set by handle_new_user
+      // trigger default) but zero roles — they still need to pick a role here.
+      if (
+        (data?.registration_status === "complete" || data?.registration_status === "pending_approval") &&
+        userRoles.length > 0
+      ) {
         navigate("/dashboard", { replace: true });
       }
     };
