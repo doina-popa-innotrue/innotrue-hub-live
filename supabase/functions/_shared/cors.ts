@@ -44,7 +44,12 @@ export function isOriginAllowed(origin: string | null): boolean {
   if (origin.startsWith('http://localhost:') || origin === 'http://localhost') {
     return true;
   }
-  
+
+  // Allow Cloudflare Pages preview/deploy URLs (preprod, sandbox, deploy previews)
+  if (origin.endsWith('.innotrue-hub-live.pages.dev')) {
+    return true;
+  }
+
   return false;
 }
 
