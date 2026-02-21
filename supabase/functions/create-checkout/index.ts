@@ -32,7 +32,8 @@ serve(async (req) => {
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } },
     );
 
     const token = authHeader.replace("Bearer ", "");
@@ -51,6 +52,16 @@ serve(async (req) => {
       return errorResponse.badRequest("Price ID is required", cors);
     }
     logStep("Request parsed", { priceId, mode });
+
+    // Resolve plan_id from stripe_price_id so the webhook can update profiles.plan_id
+    const { data: priceRow } = await supabaseClient
+      .from("plan_prices")
+      .select("plan_id")
+      .eq("stripe_price_id", priceId)
+      .maybeSingle();
+
+    const planId = priceRow?.plan_id ?? null;
+    logStep("Resolved plan", { planId });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
@@ -83,6 +94,18 @@ serve(async (req) => {
       customer_update: customerId ? {
         address: "auto",
         name: "auto",
+      } : undefined,
+      metadata: {
+        type: "user_subscription",
+        user_id: user.id,
+        plan_id: planId ?? "unknown",
+      },
+      subscription_data: mode === "subscription" ? {
+        metadata: {
+          type: "user_subscription",
+          user_id: user.id,
+          plan_id: planId ?? "unknown",
+        },
       } : undefined,
       success_url: `${origin}/subscription?success=true`,
       cancel_url: `${origin}/subscription?canceled=true`,

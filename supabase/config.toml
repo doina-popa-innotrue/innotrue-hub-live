@@ -159,6 +159,9 @@ verify_jwt = false
 [functions.subscription-reminders]
 verify_jwt = false
 
+[functions.stripe-webhook]
+verify_jwt = false
+
 [functions.sync-talentlms-progress]
 verify_jwt = false
 

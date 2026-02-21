@@ -111,7 +111,7 @@ serve(async (req) => {
 
     if (!freePlan) {
       console.error("Free plan not found in plans table");
-      return errorResponse.serverError("System configuration error: free plan not found", cors);
+      return errorResponse.serverError("complete-registration", "Free plan not found in plans table", cors);
     }
 
     // 6. Assign client role (all paths)
@@ -124,7 +124,7 @@ serve(async (req) => {
 
     if (roleError) {
       console.error("Error assigning client role:", roleError);
-      return errorResponse.serverError("Failed to assign role", cors);
+      return errorResponse.serverError("complete-registration", roleError, cors);
     }
 
     // 7. Create client_profiles entry
@@ -210,9 +210,7 @@ serve(async (req) => {
       role_choice,
     }, cors);
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("Error in complete-registration:", errorMessage);
-    return errorResponse.serverError(errorMessage, cors);
+    return errorResponse.serverError("complete-registration", error, cors);
   }
 });
 

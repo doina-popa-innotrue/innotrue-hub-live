@@ -251,30 +251,50 @@ Track-linked services can have different pricing for track members.
 
 ### 3.5 Credit Packages (`credit_topup_packages`, `org_credit_packages`)
 
-**Individual packages:**
+Credit packages let users and organizations purchase additional credits via Stripe Checkout. The `stripe_price_id` on each package is auto-created on the first purchase if null.
 
-| Package | Price | Credits | Validity |
-|---------|-------|---------|----------|
-| Starter | 50 EUR | 55,000 | 6 months |
-| Standard | 100 EUR | 120,000 | 12 months |
-| Premium | 200 EUR | 260,000 | 12 months |
+**Scale reference:** Plan allowances are 20–750 credits/month. Service costs: AI=1, sessions=3–15, programs=25–100, Review Board Mock (live)=150.
 
-**Organization packages:**
+**Individual top-up packages:**
 
-| Package | Price | Credits | Validity |
-|---------|-------|---------|----------|
-| Starter | 2,500 EUR | 3,000,000 | 12 months |
-| Growth | 5,000 EUR | 6,500,000 | 12 months |
-| Enterprise | 10,000 EUR | 14,000,000 | 12 months |
+| Package | Price | Credits | Per-Credit | Validity | Stripe Flow |
+|---------|-------|---------|-----------|----------|-------------|
+| Starter | €9.99 | 50 | €0.20 | 12 months | `purchase-credit-topup` → Stripe Checkout → `confirm-credit-topup` |
+| Standard (featured) | €24.99 | 150 | €0.17 | 12 months | Same |
+| Premium | €69.99 | 500 | €0.14 | 12 months | Same |
+
+**Organization credit packages:**
+
+| Package | Price | Credits | Per-Credit | Validity | Team Size |
+|---------|-------|---------|-----------|----------|-----------|
+| Starter | €399 | 2,500 | €0.16 | 12 months | 5–10 members |
+| Growth | €999 | 7,500 | €0.13 | 12 months | 10–25 members |
+| Enterprise | €2,499 | 20,000 | €0.12 | 12 months | 25–50 members |
 
 **Organization platform tiers:**
 
 | Tier | Monthly | Annual | Features |
 |------|---------|--------|----------|
-| Essentials | 30 EUR | — | Basic org features |
-| Professional | 50 EUR | — | Full org features |
+| Essentials | €300/yr | €300 | Basic org features, up to 10 members |
+| Professional | €500/yr | €500 | Full org features, up to 50 members |
 
-**External dependency:** Stripe for payment processing
+**Purchase flow (individual):**
+1. User visits `/credits` → sees packages with prices
+2. Clicks "Purchase" → `purchase-credit-topup` creates Stripe Checkout session
+3. Completes payment on Stripe → returns to `/credits?success=true&session_id=...`
+4. Frontend calls `confirm-credit-topup` → verifies payment → grants credits via `grant_credit_batch`
+
+**Purchase flow (organization):**
+1. Org admin visits `/org-admin/billing` → sees credit packages
+2. Clicks "Purchase" → `org-purchase-credits` creates Stripe Checkout session
+3. Returns → `org-confirm-credit-purchase` verifies and grants credits
+
+**Credit consumption order** (FIFO via `consume_credits_fifo`):
+1. Plan credits (monthly allowance)
+2. Program-specific credit batches (from enrollment)
+3. Bonus/purchased batches (earliest expiry first)
+
+**External dependency:** Stripe for payment processing (`STRIPE_SECRET_KEY` in edge function secrets)
 **Admin UI:** Credit packages managed via admin, checkout via Stripe
 **Depends on:** Stripe (payment processing)
 

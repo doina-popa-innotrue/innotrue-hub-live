@@ -363,18 +363,28 @@ ON CONFLICT (plan_id, feature_key) DO UPDATE SET
   updated_at = now();
 
 -- Individual credit top-up packages
+-- Scale reference: plans give 20-750 credits/month, services cost 1-150 credits
+-- Packages: Starter=50 credits (€9.99), Standard=150 (€24.99), Premium=500 (€69.99)
 INSERT INTO public.credit_topup_packages (name, slug, description, price_cents, credit_value, currency, validity_months, display_order, is_featured) VALUES
-  ('Starter Top-Up', 'starter-topup', 'Quick credit boost', 50000, 55000, 'eur', 24, 1, false),
-  ('Standard Top-Up', 'standard-topup', 'Best value top-up', 100000, 120000, 'eur', 24, 2, true),
-  ('Premium Top-Up', 'premium-topup', 'Maximum savings', 200000, 260000, 'eur', 24, 3, false)
-ON CONFLICT (slug) DO NOTHING;
+  ('Starter Top-Up', 'starter-topup', 'Quick credit boost for a few AI queries or a session', 999, 50, 'eur', 12, 1, false),
+  ('Standard Top-Up', 'standard-topup', 'Enough for a program enrollment or multiple sessions', 2499, 150, 'eur', 12, 2, true),
+  ('Premium Top-Up', 'premium-topup', 'Maximum savings — covers multiple programs and sessions', 6999, 500, 'eur', 12, 3, false)
+ON CONFLICT (slug) DO UPDATE SET
+  description = EXCLUDED.description,
+  price_cents = EXCLUDED.price_cents,
+  credit_value = EXCLUDED.credit_value,
+  validity_months = EXCLUDED.validity_months;
 
 -- Organization credit packages
+-- Org packages serve teams of 5-50 members for 6-12 months
 INSERT INTO public.org_credit_packages (name, slug, description, price_cents, credit_value, currency, validity_months, display_order) VALUES
-  ('Starter Package', 'starter', 'Perfect for trying out the platform', 2500000, 3000000, 'eur', 24, 1),
-  ('Growth Package', 'growth', 'Best value for growing teams', 5000000, 6500000, 'eur', 24, 2),
-  ('Enterprise Package', 'enterprise', 'Maximum flexibility and savings', 10000000, 14000000, 'eur', 24, 3)
-ON CONFLICT (slug) DO NOTHING;
+  ('Starter Package', 'starter', 'Perfect for small teams getting started (5-10 members)', 39900, 2500, 'eur', 12, 1),
+  ('Growth Package', 'growth', 'Best value for growing teams (10-25 members)', 99900, 7500, 'eur', 12, 2),
+  ('Enterprise Package', 'enterprise', 'Maximum flexibility for large teams (25-50 members)', 249900, 20000, 'eur', 12, 3)
+ON CONFLICT (slug) DO UPDATE SET
+  description = EXCLUDED.description,
+  price_cents = EXCLUDED.price_cents,
+  credit_value = EXCLUDED.credit_value;
 
 -- Organization platform tiers
 INSERT INTO public.org_platform_tiers (name, slug, description, annual_fee_cents, monthly_fee_cents, currency, features, display_order) VALUES

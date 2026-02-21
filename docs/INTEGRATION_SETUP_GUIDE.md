@@ -170,31 +170,77 @@ Stripe has built-in test mode on the same account — no extra cost.
 5. In Supabase Dashboard (preprod project `jtzcrirqflfnagceendt`):
    - Go to **Project Settings → Edge Function Secrets**
    - Set `STRIPE_SECRET_KEY` = the test secret key
-6. **(Optional) Webhook for preprod:**
+6. **Webhook for preprod (required for subscription sync):**
    - Go to **Developers → Webhooks** (still in test mode)
-   - Add endpoint: `https://jtzcrirqflfnagceendt.supabase.co/functions/v1/stripe-webhook` (if you have a webhook handler)
-   - Select relevant events (checkout.session.completed, etc.)
+   - Click **Add endpoint**
+   - URL: `https://jtzcrirqflfnagceendt.supabase.co/functions/v1/stripe-webhook`
+   - Select events:
+     - `checkout.session.completed`
+     - `customer.subscription.updated`
+     - `customer.subscription.deleted`
+     - `invoice.payment_failed`
+   - Copy the signing secret (`whsec_...`)
+   - Set in Supabase: `STRIPE_WEBHOOK_SECRET` = the signing secret
 
 **Production:**
 1. Toggle test mode OFF
 2. Copy the live **Secret key** (`sk_live_...`)
 3. Set in prod Supabase project (`qfdztdgublwlmewobxmx`) Edge Function Secrets
+4. **Webhook for production:**
+   - Go to **Developers → Webhooks** (live mode)
+   - Click **Add endpoint**
+   - URL: `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/stripe-webhook`
+   - Select same 4 events as preprod
+   - Copy signing secret → set as `STRIPE_WEBHOOK_SECRET` in prod
 
 **Lovable Sandbox:**
-- Do NOT set `STRIPE_SECRET_KEY` — payment features will be unavailable (graceful failure)
+- Do NOT set `STRIPE_SECRET_KEY` or `STRIPE_WEBHOOK_SECRET` — payment features will be unavailable (graceful failure)
+
+### What the webhook does
+
+The `stripe-webhook` edge function syncs Stripe subscription state back to the database:
+
+| Event | Action |
+|-------|--------|
+| `checkout.session.completed` | Sets `profiles.plan_id` (user subscriptions) or activates `org_platform_subscriptions` |
+| `customer.subscription.updated` | Syncs plan changes from Billing Portal (up/downgrade) |
+| `customer.subscription.deleted` | Downgrades user to Free plan or cancels org subscription |
+| `invoice.payment_failed` | Logs the failure (Stripe handles retry/dunning automatically) |
+
+Credit purchases (top-ups) use a separate **confirm-on-return** pattern and don't rely on webhooks.
 
 ### Verification
 - Preprod key starts with `sk_test_`
 - Prod key starts with `sk_live_`
+- Webhook secrets start with `whsec_`
 - Test mode charges show in Stripe dashboard under "Test mode" only
+- Test webhook events can be sent via **Developers → Webhooks → Send test event**
+- Test card for preprod: `4242 4242 4242 4242`, any future expiry, any CVC
 
 ### Configuration Record
 
 | Environment | Secret | Value | Status |
 |---|---|---|---|
 | Production | `STRIPE_SECRET_KEY` | `sk_live_...` | [ ] Verified |
+| Production | `STRIPE_WEBHOOK_SECRET` | `whsec_...` | [ ] Set up |
 | Preprod | `STRIPE_SECRET_KEY` | `sk_test_...` | [ ] Verified |
+| Preprod | `STRIPE_WEBHOOK_SECRET` | `whsec_...` | [ ] Set up |
 | Sandbox | `STRIPE_SECRET_KEY` | Not set | [ ] Verified |
+| Sandbox | `STRIPE_WEBHOOK_SECRET` | Not set | [ ] N/A |
+
+### Stripe Edge Functions
+
+| Function | Purpose | Payment Type |
+|----------|---------|-------------|
+| `create-checkout` | Individual subscription checkout | Subscription |
+| `customer-portal` | Billing Portal (manage/cancel) | — |
+| `stripe-webhook` | Receives Stripe events, syncs DB | — |
+| `subscription-reminders` | Renewal reminder emails (cron) | — |
+| `org-platform-subscription` | Org subscription checkout | Subscription |
+| `org-purchase-credits` | Org credit package checkout | One-time |
+| `org-confirm-credit-purchase` | Verify org credit payment | One-time |
+| `purchase-credit-topup` | User credit top-up checkout | One-time |
+| `confirm-credit-topup` | Verify user credit top-up | One-time |
 
 ### Future: Stripe Sandboxes
 
@@ -1090,22 +1136,32 @@ This is **user-driven, not admin-configured.** Each instructor connects their ow
 
 ---
 
-### 14.5 Stripe — Customer Mapping
+### 14.5 Stripe — Customer & Subscription Mapping
 
-**What needs to be set up:** Nothing manual — Stripe customer IDs are created automatically.
+**What needs to be set up:** Webhook endpoint (see Section 1 above). Customer IDs are created automatically.
 
 **Tables involved:**
+- `profiles.plan_id` — user's subscription plan (set by webhook on checkout/update/cancel)
+- `plan_prices.stripe_price_id` — maps Stripe prices to plan IDs (set in admin Plans Management)
 - `org_platform_subscriptions.stripe_customer_id` — Stripe customer ID per organization
-- `org_platform_subscriptions.stripe_subscription_id` — Stripe subscription ID
+- `org_platform_subscriptions.stripe_subscription_id` — Stripe subscription ID (set by webhook)
 - `org_credit_purchases.stripe_checkout_session_id` — checkout session per purchase
+- `user_credit_purchases.stripe_checkout_session_id` — user credit purchase session
+- `credit_topup_packages.stripe_price_id` — auto-created on first purchase
+- `org_credit_packages.stripe_price_id` — auto-created on first purchase
 
 **How it works:**
-- When an org admin starts a checkout, `create-checkout` edge function calls Stripe
-- Stripe creates/finds a customer by email
-- Customer ID and subscription ID are stored after successful checkout
-- Test mode (`sk_test_`) creates test customers that don't appear in live Stripe dashboard
+- When a user starts a subscription checkout, `create-checkout` creates a Stripe session with metadata (`user_id`, `plan_id`)
+- `stripe-webhook` receives `checkout.session.completed` → sets `profiles.plan_id`
+- Plan changes via Billing Portal → `customer.subscription.updated` → webhook resolves new Stripe price to `plan_id`
+- Subscription cancelled → `customer.subscription.deleted` → webhook downgrades to Free plan
+- Credit top-ups use confirm-on-return pattern (no webhook needed)
+- Stripe auto-creates customers by email; test mode creates test-only customers
 
-**No manual setup needed.** Just ensure:
+**No manual user setup needed.** Just ensure:
+- Webhook endpoint is configured (Section 1 above)
+- `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are set per environment
+- `plan_prices.stripe_price_id` is populated for each purchasable plan (admin UI)
 - Preprod uses `sk_test_...` key (test customers, test payments)
 - Production uses `sk_live_...` key (real customers, real payments)
 - Test payments in preprod use Stripe test card: `4242 4242 4242 4242`, any future expiry, any CVC
