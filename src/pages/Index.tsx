@@ -17,9 +17,10 @@ const Index = () => {
     } else if (registrationStatus === "pending_role_selection") {
       navigate("/complete-registration", { replace: true });
     } else if (
-      // Google OAuth new user — no profile, no roles. Redirect to complete registration.
+      // Google OAuth new user — zero roles + Google provider. The handle_new_user trigger
+      // already created a profile with registration_status='complete', so we can't check
+      // !registrationStatus. Zero roles + Google provider is the reliable indicator.
       userRoles.length === 0 &&
-      !registrationStatus &&
       user.app_metadata?.provider === "google"
     ) {
       navigate("/complete-registration", { replace: true });
