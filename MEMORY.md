@@ -247,6 +247,12 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - `src/pages/CompleteRegistration.tsx` — role selection after signup verification (client/coach/instructor/organization)
   - `supabase/functions/complete-registration/index.ts` — role assignment, free plan, placeholder transfer for Google OAuth
   - `src/pages/admin/CoachInstructorRequests.tsx` — dual-tab: Role Applications (approve/decline) + Coach Assignments (existing)
+- **Phase 5 deployment fixes (2026-02-26):**
+  - CORS: added `*.innotrue-hub-live.pages.dev` wildcard to `_shared/cors.ts` for Cloudflare Pages preview URLs
+  - `config.toml`: added `complete-registration` and `redeem-enrollment-code` with `verify_jwt = false` (were missing, causing relay rejection)
+  - `signup-user`: changed `email_confirm: true` in `createUser()` to suppress duplicate auth hook email ("Set Up Your Account")
+  - Auth.tsx: check `data.error` before `error` in signup handler (show specific messages not generic "Edge Function returned a non-2xx"), switch to login tab after successful signup
+  - ProtectedRoute: detect Google OAuth new users (`app_metadata.provider === "google"` + no profile + no roles) and redirect to `/complete-registration` instead of "Account Not Configured"
 - **Next steps:** Phase 5 remaining (Wheel pipeline, bulk import) → M13 Zod validation → Phase 3 AI
 
 ## npm Scripts

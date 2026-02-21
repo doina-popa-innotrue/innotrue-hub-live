@@ -109,11 +109,12 @@ fi && npm run build
 ### Supabase project details
 
 Both preprod and prod have:
-- 420 database migrations applied
+- 421+ database migrations applied (including Phase 5 self-registration)
 - Seed data loaded (`supabase/seed.sql`)
-- 66 edge functions deployed
-- Google OAuth configured
+- 68 edge functions deployed (including `complete-registration`, `redeem-enrollment-code`)
+- Google OAuth enabled (Phase 5)
 - Auth email hook pointing to `send-auth-email` edge function
+- Self-registration active: signup form + Google OAuth + role selection
 
 ---
 
@@ -121,8 +122,15 @@ Both preprod and prod have:
 
 ### Auth providers
 
-- **Google OAuth** — primary login method (Supabase built-in provider)
-- **Email/Password** — used for demo/test accounts
+- **Email/Password + custom verification** — primary signup method via `signup-user` → email → `verify-signup` → `/complete-registration`
+- **Google OAuth** — Supabase built-in provider, redirects new users to `/complete-registration`
+
+### Self-registration flow (Phase 5)
+
+1. **Email signup:** User fills form → `signup-user` creates user + sends verification email → user clicks link → `verify-signup` creates profile with `registration_status: 'pending_role_selection'` → redirect to `/complete-registration`
+2. **Google OAuth:** User clicks "Continue with Google" → Supabase handles OAuth → `ProtectedRoute` detects new user (no profile, `app_metadata.provider === "google"`) → redirect to `/complete-registration`
+3. **Role selection:** At `/complete-registration`, user picks client (immediate) or coach/instructor (pending admin approval). All users get client role + free plan. Coach/instructor role is additive after admin approves at `/admin/coach-requests`.
+4. **Placeholder handling:** If the user's email matches a hidden placeholder profile, `verify-signup` (email) or `complete-registration` (Google OAuth) transfers data from 7 tables and copies roles + plan.
 
 ### User roles
 
@@ -133,7 +141,8 @@ Roles are stored in `public.user_roles(user_id, role)` — a user can have multi
 ### Route protection
 
 - `src/App.tsx` wraps routes in `<ProtectedRoute>` (optionally with `requireRole="admin"`)
-- `src/contexts/AuthContext.tsx` manages auth state, role detection, and route redirects
+- `src/contexts/AuthContext.tsx` manages auth state, role detection, `registrationStatus`, and route redirects
+- `ProtectedRoute` handles: `pending_role_selection` → `/complete-registration`, `pending_approval` → safety net card, Google OAuth new users → `/complete-registration`
 - Role-based redirects after login:
   - `admin` → `/admin`
   - `client` → `/dashboard`

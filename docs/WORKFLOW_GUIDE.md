@@ -225,7 +225,9 @@ If you start a new session about a topic covered in a previous session, mention 
 
 ### Auth Email Hook
 
-The `send-auth-email` edge function handles all auth emails (signup confirmation, password reset, magic link, email change). It uses **Standard Webhooks** HMAC verification — not Bearer token auth.
+The `send-auth-email` edge function handles auth emails (password reset, magic link, email change). It uses **Standard Webhooks** HMAC verification — not Bearer token auth.
+
+**Note:** Signup confirmation emails are sent by `signup-user`, NOT by `send-auth-email`. The `signup-user` function creates users with `email_confirm: true` to suppress the auth hook email, and sends its own custom verification email via Resend.
 
 **Required setup per Supabase project:**
 1. **Authentication > Hooks:** Enable "Send Email" hook, point URL to the `send-auth-email` function

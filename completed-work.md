@@ -1,5 +1,78 @@
 # Completed Work — Detailed History
 
+## Phase 5 — Self-Registration Core, Batches 1-3 (2026-02-26)
+
+Self-registration with role selection and admin approval flow. Transforms platform from invitation-only to self-registration. Commits `6cd54f5` (core), `b0b3f41` (CORS fix), `b5a659b` (config.toml fix), `9d598e7` (error messages), `ebba49f` (login tab switch), `7f7040e` (duplicate email fix), `0ca3358` (Google OAuth redirect). 3 new files, 9 modified, 1 migration, 1 new edge function. Deployed to all 3 environments.
+
+**Database Migration (`20260226100000_phase5_self_registration.sql`):**
+- `profiles.registration_status` (TEXT DEFAULT 'complete') — state machine: `pending_role_selection` → `complete` or `pending_approval` → `complete`
+- `profiles.verification_status` (TEXT), `profiles.verified_at` (TIMESTAMPTZ)
+- `signup_verification_requests.plan_interest` (TEXT), `.context_data` (JSONB)
+- `coach_instructor_requests.source_type` (TEXT DEFAULT 'client_request') — values: `client_request` (existing), `role_application` (Phase 5)
+- `coach_instructor_requests.specialties`, `.certifications`, `.bio`, `.scheduling_url` (application fields)
+- No new RLS policies needed — existing policies sufficient
+
+**Edge Function (`complete-registration/index.ts`):**
+- Auth via JWT Bearer token from `supabase.functions.invoke`
+- Accepts `{ role_choice, specialties?, certifications?, bio?, scheduling_url?, message? }`
+- All paths: upsert client role → create client_profiles → create notification_preferences → assign free plan (lookup via `plans WHERE key = 'free'`)
+- Client-only: sets `registration_status = 'complete'`
+- Coach/instructor: inserts `coach_instructor_requests` with `source_type = 'role_application'`, sets `registration_status = 'pending_approval'`
+- Includes `transferPlaceholderIfExists()` for Google OAuth users — 7-table transfer (client_enrollments, capability_snapshots, client_badges, client_coaches, client_instructors, assessment_responses, client_profiles) + role copy + plan copy
+- Idempotency guard: returns early if `registration_status === 'complete'`
+
+**Frontend — CompleteRegistration.tsx (new):**
+- Route: `/complete-registration` (outside ProtectedRoute in App.tsx)
+- Auth guard: redirects to `/auth` if not logged in, to `/dashboard` if already complete
+- Three cards: "I'm here to grow" (client), "I'm a Coach or Instructor" (expands form), "I represent an Organization" (greyed out, coming soon)
+- Coach form: request_type select, bio, specialties, certifications, scheduling_url, message
+- Info card: "You'll get immediate platform access as a client. Once approved, your coach/instructor tools will be unlocked."
+
+**Frontend — Auth.tsx (modified):**
+- Signup form re-enabled: Full name + Email + Password fields with show/hide toggle
+- Google OAuth button with "Or" divider on both login and signup tabs
+- Bidirectional tab switching links restored ("Don't have an account?" / "Already have an account?")
+- Signup handler: calls `supabase.functions.invoke("signup-user")`, checks `data.error` first for specific messages
+- Switches to login tab after successful signup with toast "Account created! Please check your email to confirm."
+
+**Frontend — AuthContext.tsx (modified):**
+- Added `registrationStatus: string | null` to interface, state, provider value
+- `fetchUserRolesAndMembership`: fetches `profiles.registration_status`
+- `signOut`: resets `registrationStatus` to null
+
+**Frontend — ProtectedRoute.tsx (modified):**
+- `isResolvingRoles`: accounts for `registrationStatus` to prevent infinite loading for users with `pending_role_selection` (zero roles is legitimate)
+- `pending_role_selection` → redirect to `/complete-registration`
+- Google OAuth new user detection: `app_metadata.provider === "google"` + no profile + no roles → redirect to `/complete-registration`
+- `pending_approval` safety net card: "Application Under Review"
+
+**Frontend — Index.tsx (modified):**
+- Added `registrationStatus` redirect: `pending_role_selection` → navigate to `/complete-registration`
+
+**Edge Function — verify-signup (modified):**
+- Profile upsert includes `registration_status: 'pending_role_selection'`
+- Removed auto-assign client role (moved to complete-registration)
+- Removed notification_preferences creation (moved to complete-registration)
+- Enhanced placeholder transfer: 7 tables (client_enrollments, capability_snapshots, client_badges, client_coaches, client_instructors, assessment_responses, client_profiles with note merging)
+- Copies placeholder roles via `user_roles` upsert loop, copies plan_id
+- Sets `registration_status = 'complete'` for placeholder matches (user skips /complete-registration)
+
+**Edge Function — signup-user (modified):**
+- Changed `email_confirm: true` to suppress Supabase auth hook sending duplicate "Set Up Your Account" email
+- Our custom `signup-user` → `verify-signup` flow handles email verification independently
+
+**Admin — CoachInstructorRequests.tsx (rewritten):**
+- Tabs: "Role Applications" (source_type = 'role_application') + "Coach Assignments" (existing flow)
+- Role Applications: approve upserts roles into user_roles, updates profiles (registration_status='complete', verification_status='verified', verified_at, bio, scheduling_url, certifications); decline sets registration_status='complete' (user keeps client role)
+- Coach Assignments: existing approve flow (inserts into client_coaches/client_instructors)
+- Application details panel in review dialog shows bio, specialties, certifications, scheduling_url
+
+**Infrastructure fixes:**
+- `_shared/cors.ts`: added `*.innotrue-hub-live.pages.dev` wildcard for Cloudflare Pages preview URLs
+- `config.toml`: added `complete-registration` and `redeem-enrollment-code` with `verify_jwt = false`
+
+---
+
 ## G8 — Self-Enrollment Codes (2026-02-25)
 
 Self-enrollment via shareable codes/links. Admins generate enrollment codes per program; authenticated users redeem codes to self-enroll without admin intervention. Commits `0db6aa3`, `3558ddc`, 4 new files, 3 modified, 1 migration, 1 edge function. Deployed to all 3 environments (prod + preprod + sandbox).

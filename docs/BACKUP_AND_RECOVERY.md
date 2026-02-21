@@ -349,12 +349,19 @@ These settings live in **external service dashboards** — not in Git, not in th
 | **Stripe** | Webhook endpoint URL → `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/stripe-webhook` | Stripe → Developers → Webhooks |
 | **Cal.com** | Webhook URL → `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/calcom-webhook` | Cal.com → Settings → Webhooks |
 | **TalentLMS** | Webhook URL → `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/talentlms-webhook` | TalentLMS → admin panel |
-| **Google OAuth** | Redirect URI → `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/oauth-callback` | Google Cloud Console → Credentials |
-| **Microsoft OAuth** | Redirect URI → same pattern as Google | Azure Portal → App Registrations |
-| **Zoom OAuth** | Redirect URI → same pattern as Google | Zoom Marketplace → App Dashboard |
+| **Google OAuth (login)** | Redirect URIs → `https://{PROJECT_REF}.supabase.co/auth/v1/callback` (one per env) | Supabase Dashboard → Auth → Providers → Google + Google Cloud Console → Credentials |
+| **Google OAuth (calendar)** | Redirect URI → `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/oauth-callback` | Google Cloud Console → Credentials |
+| **Microsoft OAuth** | Redirect URI → same pattern as Google calendar | Azure Portal → App Registrations |
+| **Zoom OAuth** | Redirect URI → same pattern as Google calendar | Zoom Marketplace → App Dashboard |
 | **Supabase Auth** | Send Email Hook → `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/send-auth-email` | Supabase Dashboard → Auth → Hooks |
 
 > **Note:** If the Supabase project ref changes (e.g. after project recreation), ALL webhook URLs and OAuth redirect URIs above must be updated to the new project ref.
+>
+> **Google OAuth redirect URIs (all must be in Google Cloud Console):**
+> - `https://qfdztdgublwlmewobxmx.supabase.co/auth/v1/callback` (prod)
+> - `https://jtzcrirqflfnagceendt.supabase.co/auth/v1/callback` (preprod)
+> - `https://cezlnvdjildzxpyxyabb.supabase.co/auth/v1/callback` (sandbox)
+> - `https://app.innotrue.com/~oauth/callback` (custom calendar/meeting integrations)
 
 ## 8. Database Scheduled Jobs (pg_cron)
 

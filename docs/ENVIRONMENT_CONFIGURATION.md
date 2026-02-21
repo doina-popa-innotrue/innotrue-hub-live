@@ -2,7 +2,7 @@
 
 Reference for all environment variables, external service integrations, and cross-environment isolation settings across Production, Preprod, and Lovable Sandbox.
 
-Last updated: 2026-02-13
+Last updated: 2026-02-26
 
 ---
 
@@ -225,26 +225,28 @@ Set via: **Authentication → Configuration → Auth Providers**
 
 | Setting | Production | Preprod | Lovable Sandbox |
 |---|---|---|---|
-| Enable Email Signup | OFF (pilot) | OFF (pilot) | OFF (pilot) |
+| Enable Email Signup | OFF | OFF | OFF |
 | Confirm Email | ON | ON | ON |
 
-**Note:** App uses `auth.admin.createUser()` which bypasses dashboard settings. The "Confirm Email" setting does NOT conflict with the custom signup flow.
+**Note:** App uses `auth.admin.createUser()` via the `signup-user` edge function, which bypasses dashboard Email Signup settings. The Supabase Email Signup toggle does NOT need to be ON — our custom flow handles signup independently. `email_confirm: true` is set in `createUser()` to suppress the Supabase auth hook from sending a duplicate email.
 
 ### Google Provider
 
 | Setting | Production | Preprod | Lovable Sandbox |
 |---|---|---|---|
-| Enable Google Provider | OFF (pilot) | OFF | OFF |
+| Enable Google Provider | ON (Phase 5) | ON (Phase 5) | OFF |
 
-**Note:** Google sign-in is also hidden from the UI in `Auth.tsx` during pilot. Both the Supabase setting AND the UI hide must be re-enabled together when opening Google auth.
+**Phase 5 status (2026-02-26):** Google sign-in is now re-enabled on prod and preprod. Self-registered users land on `/complete-registration` to choose their role (client/coach/instructor). The `ProtectedRoute` detects Google OAuth new users via `app_metadata.provider === "google"` and redirects them.
 
-### Re-enabling Google Auth (future)
+### Google OAuth Setup Per Environment
 
-When ready to re-enable Google sign-in:
-1. Fix `AuthContext.tsx` — change `if (roles.length === 0) roles = ["client"]` to `roles = []` to prevent auto-granting access
-2. Implement an allowlist or admin-approval flow for new Google sign-ins
-3. Re-enable Google Provider in Supabase Dashboard per environment
-4. Uncomment Google sign-in button in `Auth.tsx` (search for "during pilot")
+Each Supabase project needs the Google Client ID + Secret from Google Cloud Console (APIs & Services → Credentials → OAuth 2.0 Client IDs).
+
+**Authorized redirect URIs in Google Cloud Console:**
+- `https://qfdztdgublwlmewobxmx.supabase.co/auth/v1/callback` (prod)
+- `https://jtzcrirqflfnagceendt.supabase.co/auth/v1/callback` (preprod)
+- `https://cezlnvdjildzxpyxyabb.supabase.co/auth/v1/callback` (sandbox)
+- `https://app.innotrue.com/~oauth/callback` (custom OAuth for calendar/meeting integrations)
 
 ---
 
@@ -255,8 +257,7 @@ When ready to re-enable Google sign-in:
 - [ ] Set `SITE_URL` = Lovable preview URL (Edge Function Secrets)
 - [ ] Set `APP_ENV` = `development` (Edge Function Secrets)
 - [ ] Set `STAGING_EMAIL_OVERRIDE` = your email (Edge Function Secrets)
-- [ ] Disable Email Signup in Authentication → Providers → Email
-- [ ] Disable Google Provider in Authentication → Providers → Google
+- [ ] Google Provider disabled (not needed for sandbox)
 
 ### Preprod — Verify
 
@@ -267,8 +268,7 @@ When ready to re-enable Google sign-in:
 - [ ] TalentLMS secrets are NOT set (unless testing with separate workspace)
 - [ ] Circle secrets are NOT set (unless testing with separate community)
 - [ ] Cal.com secrets are NOT set (unless testing with separate environment)
-- [ ] Email Signup disabled in Supabase Auth dashboard
-- [ ] Google Provider disabled in Supabase Auth dashboard
+- [ ] Google Provider enabled with correct Client ID + Secret (Phase 5)
 
 ### Production — Verify
 

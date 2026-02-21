@@ -17,7 +17,7 @@ ALWAYS work in this repo (`innotrue-hub-live`). NEVER work in the Backups folder
 - **NEVER merge lovable into main.** Lovable is a one-way push target only.
 
 ## Edge Function Standards (MANDATORY)
-All 61 edge functions use shared utilities. New functions MUST follow the same patterns:
+All 68 edge functions use shared utilities. New functions MUST follow the same patterns:
 
 1. **CORS:** `import { getCorsHeaders } from "../_shared/cors.ts"` → `const cors = getCorsHeaders(req)`
    - NEVER use inline/wildcard CORS headers
@@ -30,6 +30,9 @@ All 61 edge functions use shared utilities. New functions MUST follow the same p
 
 3. **AI:** Use `_shared/ai-config.ts` for provider config and `_shared/ai-input-limits.ts` for prompt truncation
    - NEVER hardcode AI URLs or keys
+
+4. **Config:** New edge functions MUST be added to `supabase/config.toml` with `verify_jwt = false`
+   - Without this, Supabase relay rejects requests before they reach the function
 
 ## Frontend Standards
 - Use `@/` import alias for all imports
