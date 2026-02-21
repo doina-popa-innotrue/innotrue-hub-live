@@ -21,7 +21,10 @@ export function ProtectedRoute({ children, requireRole }: ProtectedRouteProps) {
   // Wait for both loading to complete AND roles to be resolved
   // Skip waiting if there's an auth error — show the error instead of loading forever
   // Also skip waiting if we know the registration status (user may legitimately have 0 roles)
-  const isResolvingRoles = loading || (user && !authError && userRoles.length === 0 && !registrationStatus);
+  // For Google OAuth new users: no profile exists, so registrationStatus is null AND roles are empty.
+  // We detect this via the user's app_metadata — Google OAuth users have provider = "google".
+  const isOAuthNewUser = user && userRoles.length === 0 && !registrationStatus && user.app_metadata?.provider === "google";
+  const isResolvingRoles = loading || (user && !authError && userRoles.length === 0 && !registrationStatus && !isOAuthNewUser);
 
   if (isResolvingRoles) {
     return (
@@ -66,6 +69,11 @@ export function ProtectedRoute({ children, requireRole }: ProtectedRouteProps) {
 
   // User needs to complete registration (choose their role)
   if (user && registrationStatus === "pending_role_selection") {
+    return <Navigate to="/complete-registration" replace />;
+  }
+
+  // Google OAuth new user — no profile, no roles. Redirect to complete registration.
+  if (isOAuthNewUser) {
     return <Navigate to="/complete-registration" replace />;
   }
 
