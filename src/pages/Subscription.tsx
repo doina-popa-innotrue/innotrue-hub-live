@@ -234,16 +234,15 @@ export default function Subscription() {
   };
 
   const handleCheckout = async (plan: Plan) => {
-    // Use stripe_price_id from plan_prices (populated per-environment in DB)
+    // Find the plan_prices row for the selected billing interval
     const price = plan.plan_prices.find(
-      (p) => p.billing_interval === billingInterval && p.stripe_price_id,
+      (p) => p.billing_interval === billingInterval,
     );
-    const stripePriceId = price?.stripe_price_id;
 
-    if (!stripePriceId) {
+    if (!price) {
       toast({
         title: "Plan not available",
-        description: "This plan is not configured for checkout in this environment. Please contact support.",
+        description: "No pricing found for this plan and billing interval. Please contact support.",
         variant: "destructive",
       });
       return;
@@ -253,7 +252,7 @@ export default function Subscription() {
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
-          priceId: stripePriceId,
+          planPriceId: price.id,
           mode: "subscription",
         },
       });

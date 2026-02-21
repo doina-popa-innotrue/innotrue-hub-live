@@ -47,23 +47,117 @@ serve(async (req) => {
     }
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    const { priceId, mode = "subscription" } = await req.json();
-    if (!priceId) {
-      return errorResponse.badRequest("Price ID is required", cors);
+    const body = await req.json();
+    const mode = body.mode || "subscription";
+
+    // Support both: planPriceId (DB row ID) or legacy priceId (Stripe price ID)
+    const planPriceId = body.planPriceId;
+    const legacyPriceId = body.priceId;
+
+    if (!planPriceId && !legacyPriceId) {
+      return errorResponse.badRequest("planPriceId or priceId is required", cors);
     }
-    logStep("Request parsed", { priceId, mode });
-
-    // Resolve plan_id from stripe_price_id so the webhook can update profiles.plan_id
-    const { data: priceRow } = await supabaseClient
-      .from("plan_prices")
-      .select("plan_id")
-      .eq("stripe_price_id", priceId)
-      .maybeSingle();
-
-    const planId = priceRow?.plan_id ?? null;
-    logStep("Resolved plan", { planId });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    let stripePriceId: string;
+    let planId: string | null = null;
+
+    if (planPriceId) {
+      // New flow: look up plan_prices row by DB ID, auto-create Stripe product/price if needed
+      const { data: priceRow, error: priceError } = await supabaseClient
+        .from("plan_prices")
+        .select("id, plan_id, billing_interval, price_cents, stripe_price_id, plans!inner(key, name, description)")
+        .eq("id", planPriceId)
+        .maybeSingle();
+
+      if (priceError || !priceRow) {
+        return errorResponse.badRequest("Invalid plan price ID", cors);
+      }
+
+      planId = priceRow.plan_id;
+      const plan = (priceRow as any).plans;
+
+      if (priceRow.stripe_price_id) {
+        // Already has a Stripe price — use it directly
+        stripePriceId = priceRow.stripe_price_id;
+        logStep("Using existing Stripe price", { stripePriceId });
+      } else {
+        // Auto-create Stripe product and price
+        logStep("No Stripe price ID found, creating product and price", {
+          plan: plan.key,
+          interval: priceRow.billing_interval,
+        });
+
+        // Check if a product already exists for this plan (by metadata)
+        const existingProducts = await stripe.products.search({
+          query: `metadata["plan_key"]:"${plan.key}"`,
+        });
+
+        let productId: string;
+        if (existingProducts.data.length > 0) {
+          productId = existingProducts.data[0].id;
+          logStep("Found existing Stripe product", { productId });
+        } else {
+          const product = await stripe.products.create({
+            name: `InnoTrue Hub — ${plan.name}`,
+            description: plan.description || `${plan.name} subscription plan`,
+            metadata: {
+              plan_key: plan.key,
+              plan_id: planId,
+            },
+          });
+          productId = product.id;
+          logStep("Created Stripe product", { productId });
+        }
+
+        // Create the recurring price
+        const intervalMap: Record<string, "month" | "year" | "week" | "day"> = {
+          month: "month",
+          year: "year",
+          week: "week",
+          day: "day",
+        };
+        const stripeInterval = intervalMap[priceRow.billing_interval];
+        if (!stripeInterval) {
+          return errorResponse.badRequest(`Unsupported billing interval: ${priceRow.billing_interval}`, cors);
+        }
+
+        const price = await stripe.prices.create({
+          product: productId,
+          unit_amount: priceRow.price_cents,
+          currency: "eur",
+          recurring: { interval: stripeInterval },
+          metadata: {
+            plan_key: plan.key,
+            plan_id: planId,
+            billing_interval: priceRow.billing_interval,
+          },
+        });
+
+        stripePriceId = price.id;
+        logStep("Created Stripe price", { stripePriceId, amount: priceRow.price_cents });
+
+        // Store back to DB so it's reused next time
+        await supabaseClient
+          .from("plan_prices")
+          .update({ stripe_price_id: stripePriceId })
+          .eq("id", priceRow.id);
+
+        logStep("Stored stripe_price_id in plan_prices", { planPriceId: priceRow.id });
+      }
+    } else {
+      // Legacy flow: priceId is already a Stripe price ID
+      stripePriceId = legacyPriceId;
+      const { data: priceRow } = await supabaseClient
+        .from("plan_prices")
+        .select("plan_id")
+        .eq("stripe_price_id", stripePriceId)
+        .maybeSingle();
+      planId = priceRow?.plan_id ?? null;
+      logStep("Legacy flow: using provided Stripe price ID", { stripePriceId, planId });
+    }
+
+    logStep("Resolved plan", { planId, stripePriceId });
 
     // Check if Stripe customer exists
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
@@ -81,7 +175,7 @@ serve(async (req) => {
       customer_email: customerId ? undefined : user.email,
       line_items: [
         {
-          price: priceId,
+          price: stripePriceId,
           quantity: 1,
         },
       ],
