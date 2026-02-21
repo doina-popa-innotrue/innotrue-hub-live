@@ -27,6 +27,7 @@ import {
   Loader2,
   CheckCircle2,
   ArrowRight,
+  LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,7 +35,7 @@ type RoleChoice = "client" | "coach" | "instructor" | "both";
 
 export default function CompleteRegistration() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
 
   const [registrationStatus, setRegistrationStatus] = useState<string | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
@@ -141,7 +142,15 @@ export default function CompleteRegistration() {
   if (!user) return null;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-muted/30 p-4">
+      {/* Sign out button */}
+      <div className="absolute top-4 right-4">
+        <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign Out
+        </Button>
+      </div>
+
       <div className="w-full max-w-3xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
