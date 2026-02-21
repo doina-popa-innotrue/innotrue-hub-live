@@ -440,10 +440,13 @@ export default function Auth() {
         body: signupMetadata,
       });
 
-      if (error) {
-        toast.error(error.message || "An error occurred during signup");
-      } else if (data?.error) {
+      // Check data.error first — supabase.functions.invoke populates data
+      // with the response body even on non-2xx, but also sets error with a
+      // generic "Edge Function returned a non-2xx status code" message
+      if (data?.error) {
         toast.error(data.error);
+      } else if (error) {
+        toast.error("An error occurred during signup. Please try again.");
       } else {
         toast.success("Account created! Please check your email to confirm.");
         setSignupName("");
