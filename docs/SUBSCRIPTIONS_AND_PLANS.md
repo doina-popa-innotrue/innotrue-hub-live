@@ -132,7 +132,7 @@ The `stripe-webhook` edge function handles these events:
    # Preprod
    npx supabase secrets set STRIPE_WEBHOOK_SECRET='whsec_...' --project-ref jtzcrirqflfnagceendt
    # Prod
-   npx supabase secrets set STRIPE_WEBHOOK_SECRET='whsec_...' --project-ref lxqmmbucoydnfqkmiqzl
+   npx supabase secrets set STRIPE_WEBHOOK_SECRET='whsec_...' --project-ref qfdztdgublwlmewobxmx
    ```
 
 ### How Plan Resolution Works (Webhook)
