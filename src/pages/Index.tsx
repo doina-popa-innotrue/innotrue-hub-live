@@ -16,6 +16,13 @@ const Index = () => {
       navigate("/auth", { replace: true });
     } else if (registrationStatus === "pending_role_selection") {
       navigate("/complete-registration", { replace: true });
+    } else if (
+      // Google OAuth new user — no profile, no roles. Redirect to complete registration.
+      userRoles.length === 0 &&
+      !registrationStatus &&
+      user.app_metadata?.provider === "google"
+    ) {
+      navigate("/complete-registration", { replace: true });
     } else if (userRole) {
       if (userRole === "admin") {
         navigate("/admin", { replace: true });

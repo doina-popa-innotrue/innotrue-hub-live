@@ -159,7 +159,7 @@ export default function Auth() {
     };
   }, [resetMode]);
 
-  const { signIn, user, userRole, userRoles, loading } = useAuth();
+  const { signIn, user, userRole, userRoles, registrationStatus, loading } = useAuth();
   const navigate = useNavigate();
 
   // Redirect authenticated users to their appropriate dashboard (but not if in reset mode)
@@ -181,13 +181,19 @@ export default function Auth() {
     }
   }, [user, userRole, userRoles, loading, navigate, resetMode, isRecoverySession, redirectParam]);
 
-  // If the user is signed in but role resolution hasn't completed yet, route to '/' so
-  // the Index page can apply its own timeout-based fallbacks.
+  // If the user is signed in but role resolution hasn't completed yet, route appropriately.
   useEffect(() => {
     if (!loading && user && !userRole && !resetMode && !isRecoverySession) {
-      navigate("/", { replace: true });
+      // Google OAuth new user or pending role selection — go straight to registration
+      const isOAuthNewUser = userRoles.length === 0 && !registrationStatus && user.app_metadata?.provider === "google";
+      if (registrationStatus === "pending_role_selection" || isOAuthNewUser) {
+        navigate("/complete-registration", { replace: true });
+      } else {
+        // Fall back to Index page for timeout-based fallbacks
+        navigate("/", { replace: true });
+      }
     }
-  }, [loading, user, userRole, navigate, resetMode, isRecoverySession]);
+  }, [loading, user, userRole, userRoles, registrationStatus, navigate, resetMode, isRecoverySession]);
 
   // Show a friendly error when OAuth redirects back with #error=...
   useEffect(() => {
