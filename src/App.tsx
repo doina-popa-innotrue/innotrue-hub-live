@@ -224,6 +224,7 @@ const ResourceViewerPage = lazy(() => import("./pages/resources/ResourceViewerPa
 const WheelAssessment = lazy(() => import("./pages/public/WheelAssessment"));
 const PublicAssessment = lazy(() => import("./pages/public/PublicAssessment"));
 const EnrollWithCode = lazy(() => import("./pages/public/EnrollWithCode"));
+const CompleteRegistration = lazy(() => import("./pages/CompleteRegistration"));
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -276,6 +277,7 @@ const App = () => (
                   <Route path="/assess/:slug" element={<PublicAssessment />} />
                   <Route path="/accept-invite" element={<AcceptInvite />} />
                   <Route path="/enroll" element={<EnrollWithCode />} />
+                  <Route path="/complete-registration" element={<CompleteRegistration />} />
 
                   {/* Org Admin Routes */}
                   <Route

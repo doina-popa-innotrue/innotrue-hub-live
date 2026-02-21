@@ -99,14 +99,15 @@ export default function Auth() {
   const [resetComplete, setResetComplete] = useState(false);
   const [isRecoverySession, setIsRecoverySession] = useState(false);
 
-  // Default to login — signup hidden during pilot
-  // When re-enabling self-registration, restore: const defaultToSignup = wheelCompleted;
-  const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
+  // Default to signup when coming from Wheel assessment or when context requests it
+  const defaultToSignup = wheelCompleted;
+  const [activeTab, setActiveTab] = useState<"login" | "signup">(defaultToSignup ? "signup" : "login");
 
-  // Signup tab auto-switch disabled during pilot
-  // When re-enabling, restore: if (!contextLoading && context.default_to_signup) setActiveTab("signup");
+  // Auto-switch to signup tab when auth context requests it
   useEffect(() => {
-    // no-op during pilot
+    if (!contextLoading && context.default_to_signup) {
+      setActiveTab("signup");
+    }
   }, [contextLoading, context.default_to_signup]);
 
   // Track if we gave up waiting for recovery session
@@ -791,30 +792,121 @@ export default function Auth() {
                   {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
 
-                {/* Google sign-in hidden during pilot — re-enable when self-registration opens */}
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">Or</span>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-11 sm:h-12"
+                  onClick={handleGoogleSignIn}
+                  disabled={isGoogleLoading}
+                >
+                  {isGoogleLoading ? "Connecting..." : "Continue with Google"}
+                </Button>
               </form>
             ) : (
-              /* Signup form hidden during pilot — re-enable when self-registration opens */
-              <div className="text-center py-8 space-y-3">
-                <p className="text-muted-foreground">
-                  Registration is currently by invitation only.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Please contact your administrator for access.
-                </p>
+              <form onSubmit={handleSignup} className="space-y-4 sm:space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Full name</Label>
+                  <Input
+                    id="signup-name"
+                    type="text"
+                    value={signupName}
+                    onChange={(e) => setSignupName(e.target.value)}
+                    required
+                    placeholder="Your full name"
+                    className="h-11 sm:h-12"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email address</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
+                    required
+                    placeholder="your@email.com"
+                    className="h-11 sm:h-12"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="signup-password"
+                      type={showSignupPassword ? "text" : "password"}
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      required
+                      className="pr-10 h-11 sm:h-12"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowSignupPassword(!showSignupPassword)}
+                    >
+                      {showSignupPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <span className="sr-only">
+                        {showSignupPassword ? "Hide password" : "Show password"}
+                      </span>
+                    </Button>
+                  </div>
+                </div>
                 <Button
-                  variant="outline"
-                  onClick={() => setActiveTab("login")}
-                  className="mt-4"
+                  type="submit"
+                  className="w-full h-11 sm:h-12 text-base"
+                  style={{ backgroundColor: primaryColor }}
+                  disabled={isLoading}
                 >
-                  Back to Sign In
+                  {isLoading ? "Creating account..." : "Create Account"}
                 </Button>
-              </div>
+
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">Or</span>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-11 sm:h-12"
+                  onClick={handleGoogleSignIn}
+                  disabled={isGoogleLoading}
+                >
+                  {isGoogleLoading ? "Connecting..." : "Continue with Google"}
+                </Button>
+              </form>
             )}
 
             <div className="mt-6 text-center text-sm">
-              {/* "Create an Account" link hidden during pilot — re-enable when self-registration opens */}
-              {activeTab !== "login" && (
+              {activeTab === "login" ? (
+                <p className="text-muted-foreground">
+                  Don't have an account?{" "}
+                  <button
+                    onClick={() => setActiveTab("signup")}
+                    className="font-semibold hover:underline"
+                    style={{ color: primaryColor }}
+                  >
+                    Create Account
+                  </button>
+                </p>
+              ) : (
                 <p className="text-muted-foreground">
                   Already have an account?{" "}
                   <button

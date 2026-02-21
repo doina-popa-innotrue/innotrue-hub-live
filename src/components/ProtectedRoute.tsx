@@ -16,11 +16,12 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requireRole }: ProtectedRouteProps) {
-  const { user, userRole, userRoles, loading, authError, signOut } = useAuth();
+  const { user, userRole, userRoles, registrationStatus, loading, authError, signOut } = useAuth();
 
   // Wait for both loading to complete AND roles to be resolved
   // Skip waiting if there's an auth error — show the error instead of loading forever
-  const isResolvingRoles = loading || (user && !authError && userRoles.length === 0);
+  // Also skip waiting if we know the registration status (user may legitimately have 0 roles)
+  const isResolvingRoles = loading || (user && !authError && userRoles.length === 0 && !registrationStatus);
 
   if (isResolvingRoles) {
     return (
@@ -63,8 +64,36 @@ export function ProtectedRoute({ children, requireRole }: ProtectedRouteProps) {
     );
   }
 
+  // User needs to complete registration (choose their role)
+  if (user && registrationStatus === "pending_role_selection") {
+    return <Navigate to="/complete-registration" replace />;
+  }
+
   // User authenticated but has no roles (successful fetch, genuinely zero roles)
   if (user && userRoles.length === 0) {
+    // Coach/instructor application under review — but they have client role,
+    // so this branch shouldn't normally trigger for pending_approval users.
+    // Safety net for edge cases.
+    if (registrationStatus === "pending_approval") {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-muted/30">
+          <Card className="max-w-md w-full mx-4">
+            <CardHeader className="text-center">
+              <CardTitle>Application Under Review</CardTitle>
+              <CardDescription>
+                Your coach/instructor application is being reviewed by our team. You'll be notified once a decision is made.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button onClick={signOut} variant="outline" className="w-full">
+                Sign Out
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/30">
         <Card className="max-w-md w-full mx-4">

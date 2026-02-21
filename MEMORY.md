@@ -146,13 +146,13 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - ~~**CT3b: Cross-Program Completion**~~ ✅ — `content_completions` table. `xapi-statements` writes completion on xAPI verb. `useCrossProgramCompletion` extended with 3rd data source. Client `ModuleDetail` auto-accepts completion from shared content. `CanonicalCodesManagement` now shows content packages tab.
 - **`canonical_code` override** — kept as manual override for different content that should count as equivalent.
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → 5-Self-Registration (Phase 5) → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → Phase 5 remaining (Wheel pipeline, bulk import) → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
 - **Cohort teaching workflow (GT1) ✅ DONE:** Instructors AND coaches can browse cohorts (`/teaching/cohorts`), view cohort detail with sessions, mark attendance (reuses `CohortSessionAttendance`), edit recap + recording URL, notify clients via RPC, see homework assignments per session, view enrolled clients with attendance summary. Dashboard widget shows upcoming cohort sessions merged with group sessions. StudentDetail shows cohort assignment card. Symmetric RLS for both roles.
 - **Onboarding:** ✅ DONE — Staff Welcome Card with 4-step checklist, Staff Profile setup (bio, specializations, company), enhanced empty states on teaching pages, role-specific welcome emails
-- **Admin creates coaches** via `/admin/users` — no self-registration needed currently
+- **Coach/instructor registration:** Self-registration with admin approval (Phase 5). Users apply at `/complete-registration`, get client role immediately, admin approves/declines via `/admin/coach-requests` "Role Applications" tab. Admin can also directly create via `/admin/users`.
 - **Key pages:** `/teaching` (dashboard), `/teaching/students` (clients), `/teaching/readiness` (DP7 readiness dashboard), `/teaching/assignments`, `/teaching/scenarios`, `/teaching/badges`, `/teaching/assessments`, `/teaching/groups`, `/teaching/cohorts`
 - **Remaining:** Teaching FAQ/quick guide page (nice to have)
 
@@ -184,7 +184,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 12. **CT3 Shared Content Packages & Cross-Program Completion** — `content_packages` table, `content_completions` table, content library picker, xAPI propagation (~3-5 days)
 13. ~~Quick medium wins (M2, M11)~~ ✅ — assessment interest tracking on dashboard, console cleanup across 20 files
 14. ~~G8 Self-Enrollment Codes~~ ✅ DONE (2026-02-25) — `enrollment_codes` table, `redeem-enrollment-code` edge function, admin EnrollmentCodesManagement page (quick generator + CRUD), public `/enroll` page (code validation + redemption), `validate_enrollment_code` RPC, notification on redemption
-15. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md` (14 steps)
+15. ~~**Phase 5 Self-Registration (core Batches 1-3)**~~ ✅ DONE (2026-02-26) — DB migration, `complete-registration` edge function, `CompleteRegistration.tsx` role selection page, `verify-signup` modified for pending_role_selection + 7-table placeholder transfer, Auth.tsx re-enabled (signup form + Google OAuth + tab switching), AuthContext `registrationStatus`, ProtectedRoute pending states, Index.tsx redirect, admin `CoachInstructorRequests` rewritten with Role Applications + Coach Assignments tabs. **Remaining:** Wheel of Life pipeline, bulk import, public assessment funnels, org self-service
 16. ~~Development Profile (DP6-DP7)~~ ✅ DONE (2026-02-24) — psychometric structured results, readiness dashboard
 17. Phase 3 AI — system prompt hardening first (2-3 days), then AI Learning Companion
 18. Remaining phases by business priority
@@ -207,9 +207,9 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Preprod Auth Email Hook (2026-02-14):** Incorrect Authorization header. Fixed with correct service role key.
 - **Profiles RLS recursion (2026-02-14):** Circular RLS on profiles. Fixed via `client_can_view_staff_profile()` SECURITY DEFINER function.
 
-## Current State (as of 2026-02-19)
+## Current State (as of 2026-02-26)
 - All strict TypeScript flags enabled (including strictNullChecks). 0 errors.
-- Self-registration disabled during pilot. All users admin-created.
+- **Self-registration enabled** (Phase 5 core). Signup form + Google OAuth active in Auth.tsx. New users choose role at `/complete-registration` (client immediate, coach/instructor via admin approval). All self-registered users get client role + free plan immediately.
 - 16 storage buckets on all 3 Supabase projects
 - Full environment isolation (Stripe test/live, separate Cal.com keys, etc.)
 - Resend: 1 API key, 1 domain, SMTP configured on all projects
@@ -217,7 +217,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - Supabase ops scripts operational (deploy, push, sync data/storage)
 - Comprehensive analysis complete: 11-part issues doc + data config guide deployed
 - **All C1-C4 critical and H1-H10 high items resolved.** 3 medium items remain (M12, M13, M16). M2, M9, M11 resolved.
-- **Phase 5 plan complete** (`docs/PHASE5_PLAN.md`) — 14 steps covering self-registration, role applications, enrollment codes, bulk import, org invite flow. Not yet implemented.
+- **Phase 5 core implemented** (`docs/PHASE5_PLAN.md`) — Batches 1-3 complete: self-registration flow, role selection, admin approval for coach/instructor applications, enhanced placeholder transfer (7 tables), Google OAuth support. Remaining: Wheel of Life pipeline (Step 7), bulk import (Step 9), public assessment funnels (Step 12), org self-service (Step 13).
 - **AI infrastructure:** 4 edge functions (decision-insights, course-recommendations, generate-reflection-prompt, analytics-ai-insights), Vertex AI Gemini 3 Flash (EU/Frankfurt), input truncation, credit-based consumption (`useConsumableFeature("ai_insights")` pattern), explicit consent gating, provider-agnostic architecture. All AI features gated behind `ai_insights` feature key with plan-based credit limits (free=5, base=50, pro=100, advanced=200, elite=300).
 - **Product strategy documented** (`docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md`): 6 parts — young professionals (12 ideas), AI learning (5 features), content delivery (skip SCORM → xAPI), cohort readiness (6 gaps), coach/instructor onboarding (6 gaps), instructor/coach assignment & grading routing (6 gaps)
 - **Content delivery Tier 1 + Tier 2 DONE:** Tier 1: Rise ZIP upload + auth-gated edge function proxy + iframe embed in ModuleDetail. Private storage bucket, JWT + enrollment check on every request. Tier 2: Rise xAPI integration with session management (`xapi-launch`), statement storage (`xapi-statements`), auto-completion on xAPI verbs, resume support (bookmark + suspend_data persistence). TalentLMS kept for active programs only.
@@ -242,7 +242,12 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - `supabase/functions/xapi-statements/index.ts` — statement storage, session lifecycle, auto-completion, state persistence
 - **AI reflection prompt fix (2026-02-19):** `WeeklyReflectionCard` now gated behind `hasFeature("ai_insights")`, consumes credits via `useConsumableFeature("ai_insights")` before generating, shows remaining credits + specific error messages (rate limit vs credit exhaustion vs generic). Edge function returns specific 429/402 responses. Hook parses error body for user-friendly messages.
 - **G8 Self-Enrollment Codes (2026-02-25):** `enrollment_codes` table with RLS, `validate_enrollment_code` SECURITY DEFINER RPC, `redeem-enrollment-code` edge function (free enrollments only for G8 scope), admin EnrollmentCodesManagement page with quick code generator + full CRUD dialog, public `/enroll` page with code validation → program info → auth redirect → enrollment flow. Notification type `enrollment_code_redeemed` notifies code creator. Shareable links: `{origin}/enroll?code={CODE}`.
-- **Next steps:** Phase 5 Self-Registration → Phase 3 AI
+- **Phase 5 Self-Registration Core (2026-02-26):** Migration (`20260226100000_phase5_self_registration.sql`) adds `profiles.registration_status/verification_status/verified_at`, `signup_verification_requests.plan_interest/context_data`, `coach_instructor_requests.source_type/specialties/certifications/bio/scheduling_url`. `complete-registration` edge function handles role selection (client → immediate, coach/instructor → pending_approval + client role), free plan assignment, Google OAuth placeholder transfer (7 tables). `CompleteRegistration.tsx` three-card role selection page. `verify-signup` modified: sets `registration_status: 'pending_role_selection'`, no longer auto-assigns client role, enhanced 7-table placeholder transfer. Auth.tsx re-enabled: signup form + Google OAuth + tab switching. AuthContext tracks `registrationStatus`. ProtectedRoute redirects `pending_role_selection` to `/complete-registration`. `CoachInstructorRequests.tsx` rewritten with "Role Applications" tab (approve adds role on top of client, decline keeps client) and "Coach Assignments" tab (existing flow).
+- **Key Phase 5 components:**
+  - `src/pages/CompleteRegistration.tsx` — role selection after signup verification (client/coach/instructor/organization)
+  - `supabase/functions/complete-registration/index.ts` — role assignment, free plan, placeholder transfer for Google OAuth
+  - `src/pages/admin/CoachInstructorRequests.tsx` — dual-tab: Role Applications (approve/decline) + Coach Assignments (existing)
+- **Next steps:** Phase 5 remaining (Wheel pipeline, bulk import) → M13 Zod validation → Phase 3 AI
 
 ## npm Scripts
 ```

@@ -19,6 +19,7 @@ interface AuthContextType {
   userRole: UserRoleType | null;
   userRoles: string[];
   organizationMembership: OrganizationMembership | null;
+  registrationStatus: string | null;
   loading: boolean;
   authError: string | null;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -39,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useState<OrganizationMembership | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [registrationStatus, setRegistrationStatus] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const clearAuthError = useCallback(() => setAuthError(null), []);
@@ -140,6 +142,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         roles = [...roles, "org_admin"];
       }
     }
+
+    // Fetch registration status from profiles
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("registration_status")
+      .eq("id", userId)
+      .single();
+    setRegistrationStatus(profileData?.registration_status ?? null);
 
     // No silent fallback — empty roles is a legitimate state handled by ProtectedRoute
     setUserRoles(roles);
@@ -346,6 +356,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserRoles([]);
       setOrganizationMembership(null);
       setAuthError(null);
+      setRegistrationStatus(null);
       setUser(null);
       setSession(null);
       Sentry.setUser(null);
@@ -402,6 +413,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userRole,
         userRoles,
         organizationMembership,
+        registrationStatus,
         loading,
         authError,
         signIn,

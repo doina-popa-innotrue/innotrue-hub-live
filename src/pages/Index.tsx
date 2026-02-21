@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const Index = () => {
-  const { user, userRole, userRoles, loading } = useAuth();
+  const { user, userRole, userRoles, registrationStatus, loading } = useAuth();
   const navigate = useNavigate();
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -14,6 +14,8 @@ const Index = () => {
 
     if (!user) {
       navigate("/auth", { replace: true });
+    } else if (registrationStatus === "pending_role_selection") {
+      navigate("/complete-registration", { replace: true });
     } else if (userRole) {
       if (userRole === "admin") {
         navigate("/admin", { replace: true });
@@ -24,7 +26,7 @@ const Index = () => {
       }
     }
     // If user exists but userRole is null, wait for roles to load
-  }, [user, userRole, userRoles, loading, navigate]);
+  }, [user, userRole, userRoles, registrationStatus, loading, navigate]);
 
   useEffect(() => {
     // Safety fallback: if user is authenticated but role resolution never completes,
