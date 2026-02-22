@@ -142,6 +142,90 @@ All core features work end-to-end: programs, modules, assignments, assessments, 
 
 ---
 
+## Part 2B: Strategic Features (decided 2026-02-21)
+
+These are architectural decisions and features that have been discussed and decided on. Full details in [SUBSCRIPTIONS_AND_PLANS.md](./SUBSCRIPTIONS_AND_PLANS.md#strategic-roadmap).
+
+### 2B.1 Alumni Lifecycle System — NEW
+**What:** When a program enrollment is completed, the user enters an alumni grace period (configurable via `system_settings.alumni_grace_period_days`, default 90 days) with read-only access to program content. After the grace period, content access is revoked. The user's subscription plan does NOT change.
+
+**Alumni engagement layer:** Permanent alumni badge, alumni community access, completed program dashboard section, periodic nurture emails (30/60/90 days), re-enrollment incentives.
+
+**Replaces:** The Continuation plan and manual "Move to Continuation" admin workflow.
+
+**Database changes:**
+- `system_settings`: add `alumni_grace_period_days`
+- Entitlements hook: add grace period check for read-only content
+- New notification types: `program_alumni_touchpoint_30d/60d/90d`
+- New edge function: `alumni-nurture-emails` (daily cron)
+- Frontend: alumni badge, read-only program view, re-engagement CTAs
+
+**Effort:** Medium (2-3 weeks). No schema changes to `client_enrollments` — uses existing `status` and `completed_at`.
+**Priority:** High — needed before plan consolidation.
+
+### 2B.2 Coach/Instructor Partner Code System — NEW
+**What:** Coaches get unique partner codes. When clients sign up or enroll using a code, the coach earns commission (configurable: % of subscription, fixed bonus, or % of enrollment value). Attribution window: 30-90 days.
+
+**Reward system:** Session completion payouts, rating bonuses, milestone bonuses, referral commissions.
+
+**Future:** Coach tiers (Partner → Senior Partner → Principal) with increasing commission rates and platform privileges.
+
+**Database tables (new):**
+- `partner_codes` — coach_id, code, commission_type, commission_value, attribution_window_days
+- `partner_referrals` — partner_code_id, referred_user_id, status (pending/attributed/paid)
+- `partner_payouts` — coach_id, period, total_amount_cents, status
+- `coach_rewards` — coach_id, reward_type, amount_cents, source
+
+**Phases:**
+- Phase 1 (MVP): Partner codes + referral tracking + manual payout via admin export
+- Phase 2: Automated commission calculation + coach earnings dashboard
+- Phase 3: Coach tiers, performance bonuses, program co-creation revenue share
+
+**Effort:** Phase 1: Medium (2 weeks). Phase 2: Medium (2 weeks). Phase 3: High (3-4 weeks).
+**Priority:** Medium — ship after alumni and plan consolidation.
+
+### 2B.3 Plan Consolidation (Free / Member / Pro) — PLANNED
+**What:** Consolidate 5 purchasable tiers (Free/Base/Pro/Advanced/Elite) into 3 (Free/Member/Pro). Adjust pricing to €0/€49/€99 monthly with annual discounts. Adjust credit allowances to 20/300/600.
+
+**Why:** 4 paid tiers cause decision paralysis. Industry trend is toward fewer tiers (Pluralsight went 3→1). Real differentiation is credits, not feature gates.
+
+**Implementation:** Phase 1: ship current tiers. Phase 2: analyze which tiers users pick. Phase 3: consolidate based on data. Phase 3 involves renaming plans, migrating users, updating `plan_features` and `plan_prices`, simplifying `Subscription.tsx`.
+
+**Effort:** Low (data migration + UI simplification, no architecture change).
+**Priority:** Phase 3 only — wait for user data.
+
+### 2B.4 Corporate Program Seats — NEW
+**What:** B2B enrollment flow where HR can purchase N program seats at a per-seat price with volume tiers, instead of buying credits and enrolling one-by-one.
+
+**Effort:** Medium (3 weeks). Needs new `program_seat_purchases` table, bulk enrollment API, org admin UI.
+**Priority:** Medium — needed when B2B pipeline grows.
+
+### 2B.5 Certification Verification — NEW
+**What:** Public verification URL for completed certifications (e.g. `app.innotrue.com/verify/CERT-ABC123`). LinkedIn-shareable. Expiry and renewal tracking. Every shared certificate links back to InnoTrue (marketing flywheel).
+
+**Effort:** Medium (2 weeks). New `certificates` table + public verification page + PDF/image generation.
+**Priority:** Medium — high marketing value.
+
+### 2B.6 Waitlist / Cohort Management — NEW
+**What:** When a program cohort is full, users join a waitlist (no credits charged). Next cohort opens → notification → X hours to confirm → credits charged.
+
+**Effort:** Low-Medium (1-2 weeks). New `program_waitlist` table + notification flow.
+**Priority:** Low — only needed when programs are regularly full.
+
+### 2B.7 Content Drip / Time-Gating — NEW
+**What:** `module.available_after_days` or `module.available_after_previous_completion` — pacing control for program modules.
+
+**Effort:** Low (1 week). Add column + frontend check in module detail page.
+**Priority:** Medium — professional programs should have pacing.
+
+### 2B.8 Win-Back & Re-Engagement Flows — NEW
+**What:** Extend `subscription-reminders` cron with: win-back emails for cancelled users, re-engagement for dormant users, credit expiry warnings, alumni nurture touchpoints.
+
+**Effort:** Low-Medium (1-2 weeks). Extend existing cron + new notification types.
+**Priority:** Medium — important for retention.
+
+---
+
 ## Part 3: Business Enhancement Recommendations
 
 ### Tier 1 — High Impact, Differentiators

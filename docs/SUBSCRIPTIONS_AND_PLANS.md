@@ -459,11 +459,146 @@ Credit packages auto-create their Stripe products/prices on first purchase — n
 
 ---
 
-## Future Improvements
+## Strategic Roadmap
+
+### Pricing Strategy (decided 2026-02-21)
+
+**Context:** Programs generate €3K–€12K per client. Subscription pricing should reflect the ecosystem value, not just content access. The subscription creates the recurring relationship; programs and credits drive the high-ticket revenue.
+
+**Recommended individual pricing:**
+
+| Plan | Monthly | Annual (20% off) | Credits/mo | Target Audience |
+|------|---------|-------------------|-----------|-----------------|
+| **Free** | €0 | €0 | 20 | Lead capture — AI Coach taster, Wheel of Life, basic tools |
+| **Member** | €49/mo | €468/yr (€39/mo) | 300 | Active professionals — full AI, sessions, assessments, programs |
+| **Pro** | €99/mo | €948/yr (€79/mo) | 600 | Serious career developers — higher credits, advanced tools, cert prep, priority booking |
+
+**Why 2 paid tiers instead of 4:** Decision paralysis with 4 choices. Pluralsight consolidated from 3→1, Coursera from many→1 subscription. The real differentiation is credits, not feature gates. 2 tiers make the subscription page simple: Free → Member → Pro.
+
+**Implementation:** Phase 1 (now) — ship with current tiers. Phase 2 (after first paying users) — analyze which tiers people pick. Phase 3 — consolidate based on data.
+
+**Annual pricing:** Must be added. Annual subscriptions reduce churn, improve cash flow, and are standard across all platforms. Add rows to `plan_prices` with `billing_interval = 'year'` — the auto-create Stripe flow handles the rest.
+
+### Alumni Lifecycle (decided 2026-02-21)
+
+**Problem:** When users complete a program, they need a graceful transition that maintains belonging, not a hard cutoff.
+
+**Solution:** Alumni is an enrollment lifecycle state, NOT a plan or track.
+
+**How it works:**
+
+1. When `client_enrollments.status = 'completed'`, the enrollment enters an alumni grace period
+2. During the grace period, user retains **read-only access** to program content (modules, resources, recordings) but cannot submit assignments or book new sessions
+3. After the grace period, content access is fully revoked
+4. User's subscription plan does NOT change — they stay on whatever plan they had
+
+**Configuration:**
+- `system_settings` key: `alumni_grace_period_days` (default: 90)
+- Entitlements check: enrollment completed AND `completed_at + grace_period > now()` → grant read-only program access
+
+**Alumni engagement features:**
+- **Alumni badge** on profile — permanent (check `client_enrollments` history for any completed enrollment)
+- **Alumni Community access** — permanent, via Circle community space for alumni
+- **Alumni dashboard section** — shows completed programs with "Review materials" (during grace) and "Re-enroll" / "Explore next program" CTAs after
+- **Periodic touchpoints** — scheduled edge function sends nurture emails at 30/60/90 days post-completion with teasers, success stories, upgrade incentives
+- **Alumni upgrade incentives** — credit bonus or discount code for alumni who enroll in a new program
+
+**Why NOT a plan, track, or separate entity:**
+- A plan change would downgrade their paid subscription (wrong)
+- A track implies a learning path (wrong semantics)
+- An enrollment state is the natural place: Alumni = "you completed this enrollment"
+
+**Database changes needed:**
+- `system_settings`: add `alumni_grace_period_days`
+- `client_enrollments`: already has `status` and `completed_at` — no schema change
+- Entitlements hook: add alumni grace period check for read-only content
+- New notification types: `program_alumni_touchpoint_30d/60d/90d`
+- New scheduled edge function: `alumni-nurture-emails` (daily cron)
+- Frontend: alumni badge component, completed program read-only view, re-engagement CTAs
+
+**This replaces the Continuation plan.** Programs/Continuation plan deprecation (item 1 below) should proceed alongside this.
+
+### Coach/Instructor Revenue Model (decided 2026-02-21)
+
+**Problem:** No mechanism for coaches/instructors to earn revenue by referring clients or building the platform.
+
+**Solution: Partner Code System + Reward Framework**
+
+**Partner codes:**
+- Each coach gets a unique code (e.g. `COACH-EMILYP` or custom vanity)
+- New client signs up or enrolls using code → coach gets credited
+- Commission: configurable per coach (% of subscription, fixed credit bonus per referral, or % of program enrollment)
+- Attribution window: 30-90 days from first code use (configurable)
+- Payout: monthly reconciliation → bank transfer or InnoTrue account credit
+
+**Reward system for active coaches:**
+
+| Activity | Reward |
+|----------|--------|
+| Completing a coaching session | Base payout (per session type config) |
+| Client gives 4-5 star rating | Bonus multiplier |
+| Client completes program milestone after coaching | Milestone bonus |
+| Referral code → new subscription | Commission % for subscription duration |
+| Referral code → program enrollment | One-time commission on enrollment value |
+
+**Coach tiers (future):**
+
+| Tier | Criteria | Benefits |
+|------|----------|----------|
+| Partner | Active coach, <10 referrals | 10% commission, base session rates |
+| Senior Partner | 10+ referrals, 4.5+ avg rating | 15% commission, priority matching, featured profile |
+| Principal | 25+ referrals, strong track record | 20% commission, co-create programs, revenue share |
+
+**Database tables needed (new):**
+- `partner_codes` — coach_id, code, commission_type, commission_value, attribution_window_days, is_active
+- `partner_referrals` — partner_code_id, referred_user_id, attributed_subscription_id, attributed_enrollment_id, status (pending/attributed/paid)
+- `partner_payouts` — coach_id, period_start/end, total_amount_cents, status (pending/approved/paid)
+- `coach_rewards` — coach_id, reward_type, amount_cents, source_type, source_id
+
+**Implementation phases:**
+- Phase 1 (MVP): Partner codes + referral tracking. Manual payout via admin export.
+- Phase 2: Automated commission calculation, coach earnings dashboard.
+- Phase 3: Coach tiers, performance bonuses, program co-creation revenue share.
+
+### Identified Gaps (2026-02-21)
+
+These are areas not yet addressed in the current architecture:
+
+**A. Corporate/B2B Program Enrollment Flow**
+- How does HR enroll 20 employees in a program? Current flow is one-by-one.
+- Need: bulk "Program Seats" purchase for orgs — buy N seats at per-seat price with volume tiers.
+- Separate from credits, more intuitive for B2B buyers.
+
+**B. Certification Verification**
+- Programs lead to certifications but there's no verifiable credential system.
+- Need: public verification URL (e.g. `app.innotrue.com/verify/CERT-ABC123`), LinkedIn-shareable certificate, expiry and renewal tracking.
+- Every shared certificate links back to InnoTrue (marketing channel).
+
+**C. Waitlist / Cohort Management**
+- Programs with live coaching have cohort size limits, but no waitlist exists.
+- Need: waitlist system — when cohort full, users join waitlist (no credits charged). Next cohort opens → notification → X hours to confirm → credits charged.
+
+**D. Content Drip / Time-Gating**
+- Program modules have no pacing control — client could binge all on day 1.
+- Need: `module.available_after_days` (relative to enrollment start) or `module.available_after_previous_completion`.
+
+**E. Renewal & Win-Back Flows**
+- `subscription-reminders` does renewal emails but no win-back or re-engagement for churned/dormant users.
+- Need: extend cron with win-back emails (cancelled users), re-engagement (dormant users), credit expiry warnings.
+
+**F. Org Analytics & ROI Dashboard**
+- Org admins need to justify spend to leadership.
+- Need: aggregate dashboard — programs completed, skills gaps closed, session utilization, credits consumed vs purchased, engagement scores.
+- Critical for B2B retention and expansion.
+
+---
+
+## Future Improvements (Technical)
 
 ### 1. Programs/Continuation Plan Deprecation
 The `programs` and `continuation` plans can be removed once:
-- The ContinuationBanner triggers on enrollment status instead of plan_key
+- Alumni lifecycle (above) is implemented as the replacement for Continuation
+- The ContinuationBanner triggers on enrollment status + grace period instead of plan_key
 - The "Move to Continuation" admin action is removed from ProgramCompletions
 - Any users currently on these plans are migrated to Free
 - The plans are soft-deleted (set `is_active = false`)
@@ -476,3 +611,6 @@ Currently, after Stripe Checkout for subscriptions, the user returns to `/subscr
 
 ### 4. Stripe Customer Portal Enhancements
 The Billing Portal allows subscription management, but plan changes made there rely on the webhook to sync. Ensure all Stripe price IDs in the Portal match `plan_prices.stripe_price_id` entries.
+
+### 5. Annual Pricing
+Add `plan_prices` rows with `billing_interval = 'year'` for all purchasable plans. The auto-create Stripe flow will handle product/price creation automatically. Frontend already supports a billing interval toggle.
