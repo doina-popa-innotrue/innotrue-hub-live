@@ -192,6 +192,12 @@ verify_jwt = false
 [functions.redeem-enrollment-code]
 verify_jwt = false
 
+[functions.redeem-partner-code]
+verify_jwt = false
+
+[functions.alumni-lifecycle]
+verify_jwt = false
+
 [functions.verify-signup]
 verify_jwt = false
 

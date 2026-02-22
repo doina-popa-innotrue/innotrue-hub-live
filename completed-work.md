@@ -1,5 +1,124 @@
 # Completed Work — Detailed History
 
+## 2B.3 Pricing Update (2026-03-01)
+
+Migration-only update to new pricing tiers. `npm run verify` passed on first try.
+
+**Database Migration (`20260301130000_pricing_update.sql`):**
+- Monthly prices updated: base=€49, pro=€99, advanced=€179, elite=€249
+- Annual prices added (20% discount): base=€470, pro=€950, advanced=€1718, elite=€2390
+- Credit allowances scaled ~2x: base=300, pro=500, advanced=1000, elite=1500 (free stays at 20)
+- `stripe_price_id` set to NULL on all updated rows to force Stripe auto-create on next checkout
+- Continuation plan deactivated (`is_active = false`)
+
+**No frontend changes needed:** Subscription page already had monthly/annual toggle with dynamic pricing from `plan_prices`.
+
+---
+
+## 2B.1 Alumni Lifecycle (2026-03-01)
+
+Read-only content access for completed program enrollments with configurable grace period and automated nurture email sequence. 1 migration, 1 new edge function, 1 shared helper, 1 new hook, 5 modified files. `npm run verify` passed on first try.
+
+**Database Migration (`20260301120000_alumni_lifecycle.sql`):**
+- `client_enrollments.completed_at` (TIMESTAMPTZ) — auto-set by trigger when status changes to 'completed', backfilled for existing completed enrollments
+- `system_settings.alumni_grace_period_days` (default 90) — admin-configurable
+- `alumni_touchpoints` table — tracks nurture emails per enrollment with UNIQUE(enrollment_id, touchpoint_type) to prevent duplicates
+- `check_alumni_access(uuid, uuid)` RPC — computes grace period, returns has_access/read_only/in_grace_period/days_remaining/grace_expires_at
+- `set_enrollment_completed_at()` trigger — auto-sets completed_at on status transition to 'completed'
+
+**New Shared Helper (`_shared/content-access.ts`):**
+- `checkContentAccess(serviceClient, userId, programId)` → `ContentAccessResult`
+- Access chain: staff (full) → active enrollment (full) → alumni grace (read-only) → denied
+- Used by both `serve-content-package` and `xapi-launch` edge functions
+
+**Modified — `serve-content-package/index.ts`:**
+- Replaced inline staff+enrollment check with shared `checkContentAccess()` call
+- Alumni get read-only content access (no X-Alumni-Read-Only header needed — frontend handles via launch data)
+
+**Modified — `xapi-launch/index.ts`:**
+- Replaced inline access check with shared `checkContentAccess()` helper
+- Added `readOnly` flag to all success responses (staff session, normal session, resumed session)
+- Module progress upsert wrapped in `if (!isReadOnly)` guard
+- `tryResumeSession` accepts `readOnly` parameter
+
+**New Edge Function (`alumni-lifecycle/index.ts`):**
+- Daily cron function for alumni nurture email sequence
+- Touchpoints: completion_congratulations (day 0), nurture_30d/60d/90d, access_expired (grace period end)
+- Records touchpoints in `alumni_touchpoints` (UNIQUE constraint prevents duplicates)
+- Sends emails via `send-notification-email` + creates in-app notifications via `create_notification` RPC
+
+**New Hook (`useAlumniAccess.ts`):**
+- Calls `check_alumni_access` RPC for current user + program
+- Returns `{ alumniAccess, isLoading }` with full alumni status info
+- 5-minute stale time via TanStack React Query
+
+**Modified — `ContentPackageViewer.tsx`:**
+- Added `readOnly` prop
+- Alumni read-only banner (amber): "Read-Only — Alumni Access"
+- xAPI statement sending suppressed when `readOnly` or `launchData.readOnly` is true
+
+**Modified — `ClientDetail.tsx`:**
+- Shows `completed_at` timestamp for completed enrollments
+- Computed alumni access expiry (completed_at + 90 days) with countdown
+
+---
+
+## 2B.2 Partner Codes MVP (2026-03-01)
+
+Partner referral attribution system for coach/instructor onboarding. Admin-created codes, public redemption page, referral tracking. 1 migration, 1 new edge function, 2 new pages, 7 modified files. `npm run verify` passed on first try.
+
+**Database Migration (`20260301110000_partner_codes.sql`):**
+- `partner_codes` table — partner_id (FK→auth.users), program_id, cohort_id (optional), code (UNIQUE), label, discount_percent, is_free, max_uses, current_uses, expires_at, is_active
+- `partner_referrals` table — partner_code_id, partner_id (denormalized), referred_user_id, enrollment_id, referral_type, status
+- RLS: admins full CRUD, partners view own, authenticated validate active codes
+- `validate_partner_code(text)` RPC — validates code, returns program info + discount + partner_id
+- Indexes on partner_id, program_id, code
+
+**New Edge Function (`redeem-partner-code/index.ts`):**
+- Mirrors `redeem-enrollment-code` pattern (~230 lines)
+- Flow: auth → validate via RPC → check existing enrollment → program capacity → cohort capacity → `enroll_with_credits` with `enrollment_source='partner_referral'` → insert `partner_referrals` → increment usage → notify partner
+- Uses `successResponse.ok` / `errorResponse.*` standard pattern
+
+**New Page (`PartnerCodesManagement.tsx`):**
+- Admin page mirroring `EnrollmentCodesManagement.tsx` (~650 lines)
+- Quick generator: PRT prefix + 6 random chars, copies shareable link
+- CRUD dialog: label, discount_percent, is_free, max_uses, expires_at, cohort_id, is_active
+- Partner selector: dropdown from `user_roles` (coach/instructor)
+- Codes table: code, partner name, program, uses (current/max), status badge, referral count
+- Filter by partner dropdown, copy code/link buttons
+
+**New Page (`RedeemPartnerCode.tsx`):**
+- Public page mirroring `EnrollWithCode.tsx` (~340 lines)
+- URL: `/partner?code=PRTABCDEF`
+- Auto-validates from URL param → shows program info + discount + partner attribution
+- Auth redirect for unauthenticated users → calls `redeem-partner-code` edge function → redirect to program
+
+**Modified — `App.tsx`:**
+- Added lazy imports: `PartnerCodesManagement`, `RedeemPartnerCode`
+- Added routes: `/partner` (public), `/admin/partner-codes` (admin ProtectedRoute + DashboardLayout)
+
+**Modified — `AppSidebar.tsx`:**
+- Added "Partner Codes" to `adminProgramItems` (after Enrollment Codes, before Guided Path Templates) with `Users` icon
+
+**Modified — `InstructorCoachDashboard.tsx`:**
+- Added referral state (referralCount, activePartnerCodes)
+- Query in `loadAdditionalData`: counts from `partner_referrals` + `partner_codes` for current user
+- Conditional "My Referrals" card in stats grid (only shows if referralCount > 0 or activePartnerCodes > 0)
+
+**Modified — `types.ts`:**
+- Added `partner_codes` table type (Row/Insert/Update with Relationships)
+- Added `partner_referrals` table type (Row/Insert/Update with Relationships)
+- Added `alumni_touchpoints` table type (Row/Insert/Update)
+- Added `completed_at` to `client_enrollments` Row/Insert/Update
+- Added `validate_partner_code` function signature
+- Added `check_alumni_access` function signature
+
+**Modified — `config.toml`:**
+- Added `[functions.redeem-partner-code]` with `verify_jwt = false`
+- Added `[functions.alumni-lifecycle]` with `verify_jwt = false`
+
+---
+
 ## 2B.6 Cohort Waitlist Management (2026-03-01)
 
 Full waitlist system with capacity enforcement at program + cohort level, enrollment source attribution, client-facing waitlist UI, admin management, and spot availability notifications. 3 migrations, 2 new components, 1 new edge function, 6 modified files. `npm run verify` passed on first try.

@@ -148,10 +148,10 @@ These are architectural decisions and features that have been discussed and deci
 
 ### Priority order (updated 2026-03-01):
 1. ~~**2B.6 Waitlist / Cohort Management**~~ ✅ DONE (2026-03-01) — capacity enforcement + waitlist + enrollment attribution + admin management + notifications
-2. **2B.2 Coach/Instructor Partner Codes** — instructor partners being onboarded now
+2. ~~**2B.2 Coach/Instructor Partner Codes**~~ ✅ DONE (2026-03-01) — partner codes + referral tracking + admin CRUD + public redemption + teaching dashboard stats
 3. **2B.5 Certification via Credly/Accredible** — key differentiator, foundation 70% built
-4. **2B.1 Alumni Lifecycle** — needed before plan deprecation
-5. **2B.3 Pricing Update** — before first paying users
+4. ~~**2B.1 Alumni Lifecycle**~~ ✅ DONE (2026-03-01) — grace period read-only access + content access gating + nurture emails + admin management
+5. ~~**2B.3 Pricing Update**~~ ✅ DONE (2026-03-01) — €49/99/179/249 monthly + annual 20% discount + 2x credits + continuation plan deprecated
 6. **2B.8 Win-Back & ActiveCampaign Sync** — retention
 7. ~~**2B.7 Module Prerequisite UI**~~ ✅ DONE (2026-02-22) — lock icons + time-gating
 8. **2B.4 Corporate Program Seats** — when B2B pipeline grows
@@ -159,55 +159,16 @@ These are architectural decisions and features that have been discussed and deci
 
 ---
 
-### 2B.1 Alumni Lifecycle System — NEW
-**What:** When a program enrollment is completed, the user enters an alumni grace period (configurable via `system_settings.alumni_grace_period_days`, default 90 days) with read-only access to program content. After the grace period, content access is revoked. The user's subscription plan does NOT change.
+### 2B.1 Alumni Lifecycle System — ✅ DONE (2026-03-01)
+**Implemented:** Grace period read-only content access for completed enrollments. `completed_at` column + trigger on `client_enrollments`. `check_alumni_access` RPC computes grace period from `system_settings.alumni_grace_period_days` (default 90). Shared `_shared/content-access.ts` helper modifies `serve-content-package` and `xapi-launch` for staff → active → alumni → denied access chain. `alumni-lifecycle` cron edge function sends nurture emails at 0/30/60/90 days + grace expiry. `alumni_touchpoints` table prevents duplicates. `useAlumniAccess` hook + read-only banner in `ContentPackageViewer`. xAPI statement sending suppressed in read-only mode. Admin: `ClientDetail.tsx` shows alumni access expiry. Continuation plan deprecated.
 
-**Alumni engagement layer:** Permanent alumni badge, alumni community access, completed program dashboard section, periodic nurture emails (30/60/90 days), re-enrollment incentives.
+### 2B.2 Coach/Instructor Partner Code System — ✅ DONE (2026-03-01) — Phase 1 MVP
+**Implemented:** `partner_codes` + `partner_referrals` tables with RLS. `validate_partner_code` RPC. `redeem-partner-code` edge function (mirrors redeem-enrollment-code: validates → capacity check → enroll_with_credits with `enrollment_source='partner_referral'` → track referral → notify partner). Admin `PartnerCodesManagement.tsx` with quick generator (PRT prefix), CRUD dialog, partner filter, copy code/link buttons. Public `/partner?code=X` redemption page. Teaching dashboard referral stats card.
 
-**Replaces:** The Continuation plan and manual "Move to Continuation" admin workflow.
+**Future (Phase 2-3):** Automated commission calculation, coach earnings dashboard, coach tiers, performance bonuses.
 
-**Database changes:**
-- `system_settings`: add `alumni_grace_period_days`
-- Entitlements hook: add grace period check for read-only content
-- New notification types: `program_alumni_touchpoint_30d/60d/90d`
-- New edge function: `alumni-nurture-emails` (daily cron)
-- Frontend: alumni badge, read-only program view, re-engagement CTAs
-
-**Effort:** Medium (2-3 weeks). No schema changes to `client_enrollments` — uses existing `status` and `completed_at`.
-**Priority:** High — needed before plan deprecation.
-
-### 2B.2 Coach/Instructor Partner Code System — NEW ⚡ URGENT
-**What:** Coaches get unique partner codes. When clients sign up or enroll using a code, the coach earns commission (configurable: % of subscription, fixed bonus, or % of enrollment value). Attribution window: 30-90 days.
-
-**Context:** Instructor partners are being onboarded NOW for content co-development and program delivery scaling. Need at minimum a referral tracking mechanism.
-
-**Reward system:** Session completion payouts, rating bonuses, milestone bonuses, referral commissions.
-
-**Future:** Coach tiers (Partner → Senior Partner → Principal) with increasing commission rates and platform privileges.
-
-**Database tables (new):**
-- `partner_codes` — coach_id, code, commission_type, commission_value, attribution_window_days
-- `partner_referrals` — partner_code_id, referred_user_id, status (pending/attributed/paid)
-- `partner_payouts` — coach_id, period, total_amount_cents, status
-- `coach_rewards` — coach_id, reward_type, amount_cents, source
-
-**Phases:**
-- Phase 1 (MVP): Partner codes + referral tracking + manual payout via admin export
-- Phase 2: Automated commission calculation + coach earnings dashboard
-- Phase 3: Coach tiers, performance bonuses, program co-creation revenue share
-
-**Effort:** Phase 1: Medium (2 weeks). Phase 2: Medium (2 weeks). Phase 3: High (3-4 weeks).
-**Priority:** High — instructor partners being onboarded soon.
-
-### 2B.3 Pricing Update (4 tiers, higher prices) — PLANNED
-**What:** Keep 4 paid tiers but raise prices from €19/29/49/99 to €49/99/179/249 monthly. Add annual pricing with 20% discount. Adjust credit allowances upward.
-
-**Why:** Programs generate €3K–€12K per client (leadership up to €12K). Current pricing undervalues the ecosystem. 4 tiers provide natural stepping stones up to €249/mo — the jump from €49 to €249 would be too steep with only 2 tiers.
-
-**Implementation:** Update `plan_prices` + add annual rows. The auto-create Stripe flow handles new products/prices automatically.
-
-**Effort:** Low (data migration only).
-**Priority:** Before first paying users.
+### 2B.3 Pricing Update (4 tiers, higher prices) — ✅ DONE (2026-03-01)
+**Implemented:** Migration updates `plan_prices` to €49/99/179/249 monthly, adds annual prices at 20% discount (€470/950/1718/2390 yearly). Credit allowances scaled ~2x: base=300, pro=500, advanced=1000, elite=1500. `stripe_price_id` set to NULL to force Stripe auto-create on next checkout. Continuation plan deactivated (`is_active=false`). Subscription page already had monthly/annual toggle — no frontend changes needed.
 
 ### 2B.4 Corporate Program Seats — NEW
 **What:** B2B enrollment flow where HR can purchase N program seats at a per-seat price with volume tiers, instead of buying credits and enrolling one-by-one.

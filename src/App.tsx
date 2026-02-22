@@ -84,6 +84,9 @@ const DiscountCodesManagement = lazy(() => import("./pages/admin/DiscountCodesMa
 const EnrollmentCodesManagement = lazy(
   () => import("./pages/admin/EnrollmentCodesManagement"),
 );
+const PartnerCodesManagement = lazy(
+  () => import("./pages/admin/PartnerCodesManagement"),
+);
 const CapabilityAssessmentsManagement = lazy(
   () => import("./pages/admin/CapabilityAssessmentsManagement"),
 );
@@ -224,6 +227,7 @@ const ResourceViewerPage = lazy(() => import("./pages/resources/ResourceViewerPa
 const WheelAssessment = lazy(() => import("./pages/public/WheelAssessment"));
 const PublicAssessment = lazy(() => import("./pages/public/PublicAssessment"));
 const EnrollWithCode = lazy(() => import("./pages/public/EnrollWithCode"));
+const RedeemPartnerCode = lazy(() => import("./pages/public/RedeemPartnerCode"));
 const CompleteRegistration = lazy(() => import("./pages/CompleteRegistration"));
 
 const queryClient = new QueryClient({
@@ -277,6 +281,7 @@ const App = () => (
                   <Route path="/assess/:slug" element={<PublicAssessment />} />
                   <Route path="/accept-invite" element={<AcceptInvite />} />
                   <Route path="/enroll" element={<EnrollWithCode />} />
+                  <Route path="/partner" element={<RedeemPartnerCode />} />
                   <Route path="/complete-registration" element={<CompleteRegistration />} />
 
                   {/* Org Admin Routes */}
@@ -767,6 +772,16 @@ const App = () => (
                       <ProtectedRoute requireRole="admin">
                         <DashboardLayout>
                           <EnrollmentCodesManagement />
+                        </DashboardLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/partner-codes"
+                    element={
+                      <ProtectedRoute requireRole="admin">
+                        <DashboardLayout>
+                          <PartnerCodesManagement />
                         </DashboardLayout>
                       </ProtectedRoute>
                     }

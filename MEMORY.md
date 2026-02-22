@@ -151,7 +151,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - ~~**CT3b: Cross-Program Completion**~~ ✅ — `content_completions` table. `xapi-statements` writes completion on xAPI verb. `useCrossProgramCompletion` extended with 3rd data source. Client `ModuleDetail` auto-accepts completion from shared content. `CanonicalCodesManagement` now shows content packages tab.
 - **`canonical_code` override** — kept as manual override for different content that should count as equivalent.
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → 2B.2 Partner Codes → 2B.5 Certification → 2B.1 Alumni Lifecycle → 2B.3 Pricing Update → Phase 5 remaining → 3-AI/Engagement
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → 2B.5 Certification → Phase 5 remaining → 3-AI/Engagement
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
@@ -276,7 +276,20 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - `src/components/cohort/CohortWaitlistButton.tsx` — client-facing join/leave waitlist
   - `src/components/admin/CohortWaitlistManager.tsx` — admin promote/remove waitlist entries
   - `supabase/functions/notify-cohort-waitlist/index.ts` — spot availability notification
-- **Next steps:** 2B.2 Partner Codes → 2B.5 Certification → 2B.1 Alumni Lifecycle → 2B.3 Pricing Update → Phase 5 remaining (Wheel pipeline, bulk import) → Phase 3 AI
+- **2B.2 Partner Codes MVP (2026-03-01):** Partner referral attribution system. `partner_codes` + `partner_referrals` tables with RLS. `validate_partner_code` RPC. `redeem-partner-code` edge function (validates → capacity check → enroll_with_credits with `enrollment_source='partner_referral'`). Admin `PartnerCodesManagement.tsx` (PRT prefix generator, CRUD, partner filter, copy code/link). Public `/partner?code=X` redemption page. Teaching dashboard referral stats card. Sidebar nav link.
+- **2B.1 Alumni Lifecycle (2026-03-01):** Read-only content access for completed enrollments with configurable grace period. `completed_at` column + trigger on `client_enrollments`. `check_alumni_access` RPC. Shared `_shared/content-access.ts` modifies `serve-content-package` + `xapi-launch` with staff→active→alumni→denied access chain. `alumni-lifecycle` cron function sends nurture emails at 0/30/60/90d + grace expiry. `alumni_touchpoints` table prevents duplicates. `useAlumniAccess` hook + read-only banner in ContentPackageViewer. xAPI suppressed in read-only mode. Admin alumni info in ClientDetail.
+- **2B.3 Pricing Update (2026-03-01):** Migration updates plan_prices to €49/99/179/249 monthly + annual at 20% discount. Credits scaled ~2x (300/500/1000/1500). `stripe_price_id` nulled for Stripe auto-create. Continuation plan deactivated. Subscription page already had toggle — no frontend changes needed.
+- **Key new files (2B.2 + 2B.1 + 2B.3):**
+  - `supabase/migrations/20260301110000_partner_codes.sql` — partner codes + referrals tables
+  - `supabase/migrations/20260301120000_alumni_lifecycle.sql` — alumni grace period system
+  - `supabase/migrations/20260301130000_pricing_update.sql` — pricing + credits + continuation deprecation
+  - `supabase/functions/redeem-partner-code/index.ts` — partner code redemption
+  - `supabase/functions/_shared/content-access.ts` — shared content access helper (staff/active/alumni/denied)
+  - `supabase/functions/alumni-lifecycle/index.ts` — alumni nurture cron
+  - `src/pages/admin/PartnerCodesManagement.tsx` — admin partner codes CRUD
+  - `src/pages/public/RedeemPartnerCode.tsx` — public partner code redemption
+  - `src/hooks/useAlumniAccess.ts` — alumni status hook
+- **Next steps:** 2B.5 Certification → Phase 5 remaining (Wheel pipeline, bulk import) → Phase 3 AI
 
 ## npm Scripts
 ```

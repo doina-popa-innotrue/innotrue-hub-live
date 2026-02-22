@@ -16,6 +16,7 @@ import {
   Award,
   UsersRound,
   CalendarDays,
+  UserCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -117,6 +118,8 @@ export default function InstructorCoachDashboard() {
   const [pendingBadges, setPendingBadges] = useState<PendingBadge[]>([]);
   const [groupCount, setGroupCount] = useState(0);
   const [cohortCount, setCohortCount] = useState(0);
+  const [referralCount, setReferralCount] = useState(0);
+  const [activePartnerCodes, setActivePartnerCodes] = useState(0);
 
   // Staff welcome card state
   const [staffProfileName, setStaffProfileName] = useState("");
@@ -377,6 +380,20 @@ export default function InstructorCoachDashboard() {
       );
       setPendingBadges(badgesWithClients);
     }
+
+    // Load partner referral stats
+    const { count: refCount } = await supabase
+      .from("partner_referrals")
+      .select("*", { count: "exact", head: true })
+      .eq("partner_id", user.id);
+    setReferralCount(refCount || 0);
+
+    const { count: codesCount } = await supabase
+      .from("partner_codes")
+      .select("*", { count: "exact", head: true })
+      .eq("partner_id", user.id)
+      .eq("is_active", true);
+    setActivePartnerCodes(codesCount || 0);
   };
 
   const loadStaffOnboardingData = async () => {
@@ -714,6 +731,21 @@ export default function InstructorCoachDashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {(referralCount > 0 || activePartnerCodes > 0) && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">My Referrals</CardTitle>
+              <UserCheck className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{referralCount}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {activePartnerCodes} active code{activePartnerCodes !== 1 ? "s" : ""}
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Pending Assessments & Upcoming Sessions */}

@@ -16,6 +16,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { errorResponse } from "../_shared/error-response.ts";
+import { checkContentAccess } from "../_shared/content-access.ts";
 
 // MIME type lookup by extension
 const MIME_TYPES: Record<string, string> = {
@@ -150,28 +151,11 @@ Deno.serve(async (req: Request) => {
     return errorResponse.notFound("No content package for this module", cors);
   }
 
-  // Check user roles
-  const { data: roles } = await serviceClient
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id);
+  // Check content access (staff, active enrollment, or alumni grace period)
+  const access = await checkContentAccess(serviceClient, user.id, moduleData.program_id);
 
-  const userRoles = (roles || []).map((r: any) => r.role);
-  const isStaff = userRoles.includes("admin") || userRoles.includes("instructor") || userRoles.includes("coach");
-
-  if (!isStaff) {
-    // Must be enrolled in the program
-    const { data: enrollment } = await serviceClient
-      .from("client_enrollments")
-      .select("id")
-      .eq("client_user_id", user.id)
-      .eq("program_id", moduleData.program_id)
-      .eq("status", "active")
-      .limit(1);
-
-    if (!enrollment || enrollment.length === 0) {
-      return errorResponse.forbidden("Not enrolled in this program", cors);
-    }
+  if (!access.allowed) {
+    return errorResponse.forbidden("Not enrolled in this program", cors);
   }
 
   // --- Serve the file from private storage ---

@@ -637,6 +637,35 @@ export type Database = {
         }
         Relationships: []
       }
+      alumni_touchpoints: {
+        Row: {
+          enrollment_id: string
+          id: string
+          sent_at: string
+          touchpoint_type: string
+        }
+        Insert: {
+          enrollment_id: string
+          id?: string
+          sent_at?: string
+          touchpoint_type: string
+        }
+        Update: {
+          enrollment_id?: string
+          id?: string
+          sent_at?: string
+          touchpoint_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alumni_touchpoints_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "client_enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcement_categories: {
         Row: {
           color: string | null
@@ -1969,6 +1998,7 @@ export type Database = {
         Row: {
           client_user_id: string | null
           cohort_id: string | null
+          completed_at: string | null
           created_at: string | null
           discount_code_id: string | null
           discount_percent: number | null
@@ -1995,6 +2025,7 @@ export type Database = {
         Insert: {
           client_user_id?: string | null
           cohort_id?: string | null
+          completed_at?: string | null
           created_at?: string | null
           discount_code_id?: string | null
           discount_percent?: number | null
@@ -2021,6 +2052,7 @@ export type Database = {
         Update: {
           client_user_id?: string | null
           cohort_id?: string | null
+          completed_at?: string | null
           created_at?: string | null
           discount_code_id?: string | null
           discount_percent?: number | null
@@ -9044,6 +9076,72 @@ export type Database = {
           },
         ]
       }
+      partner_codes: {
+        Row: {
+          code: string
+          cohort_id: string | null
+          created_at: string
+          current_uses: number
+          discount_percent: number | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          is_free: boolean
+          label: string | null
+          max_uses: number | null
+          partner_id: string
+          program_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          cohort_id?: string | null
+          created_at?: string
+          current_uses?: number
+          discount_percent?: number | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_free?: boolean
+          label?: string | null
+          max_uses?: number | null
+          partner_id: string
+          program_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          cohort_id?: string | null
+          created_at?: string
+          current_uses?: number
+          discount_percent?: number | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_free?: boolean
+          label?: string | null
+          max_uses?: number | null
+          partner_id?: string
+          program_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_codes_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_codes_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "program_cohorts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_program_clicks: {
         Row: {
           clicked_at: string
@@ -9134,6 +9232,54 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "program_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_referrals: {
+        Row: {
+          created_at: string
+          enrollment_id: string | null
+          id: string
+          partner_code_id: string
+          partner_id: string
+          referral_type: string
+          referred_user_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          enrollment_id?: string | null
+          id?: string
+          partner_code_id: string
+          partner_id: string
+          referral_type?: string
+          referred_user_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          enrollment_id?: string | null
+          id?: string
+          partner_code_id?: string
+          partner_id?: string
+          referral_type?: string
+          referred_user_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_referrals_partner_code_id_fkey"
+            columns: ["partner_code_id"]
+            isOneToOne: false
+            referencedRelation: "partner_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_referrals_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "client_enrollments"
             referencedColumns: ["id"]
           },
         ]
@@ -14320,6 +14466,10 @@ export type Database = {
         Args: { file_name: string }
         Returns: boolean
       }
+      check_alumni_access: {
+        Args: { p_user_id: string; p_program_id: string }
+        Returns: Json
+      }
       check_resource_access: {
         Args: { p_org_id?: string; p_resource_id: string; p_user_id: string }
         Returns: Json
@@ -14739,6 +14889,7 @@ export type Database = {
         }[]
       }
       validate_enrollment_code: { Args: { p_code: string }; Returns: Json }
+      validate_partner_code: { Args: { p_code: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "coach" | "client" | "instructor"

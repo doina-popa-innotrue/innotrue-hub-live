@@ -1189,9 +1189,21 @@ export default function ClientDetail() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Started: {new Date(enrollment.start_date).toLocaleDateString()}
-                </p>
+                <div className="text-sm text-muted-foreground mb-4 space-y-1">
+                  <p>Started: {new Date(enrollment.start_date).toLocaleDateString()}</p>
+                  {enrollment.status === "completed" && enrollment.completed_at && (
+                    <p>
+                      Completed: {new Date(enrollment.completed_at).toLocaleDateString()}
+                      {" · "}
+                      <span className="text-xs">
+                        Alumni access expires:{" "}
+                        {new Date(
+                          new Date(enrollment.completed_at).getTime() + 90 * 24 * 60 * 60 * 1000,
+                        ).toLocaleDateString()}
+                      </span>
+                    </p>
+                  )}
+                </div>
                 <div className="flex gap-2 flex-wrap">
                   <Button
                     onClick={() => loadEnrollmentModules(enrollment.id, enrollment.programs.id)}

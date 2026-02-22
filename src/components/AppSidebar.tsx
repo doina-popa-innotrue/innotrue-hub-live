@@ -630,6 +630,12 @@ export function AppSidebar() {
       tourId: "admin-enrollment-codes",
     },
     {
+      title: "Partner Codes",
+      url: "/admin/partner-codes",
+      icon: Users,
+      tourId: "admin-partner-codes",
+    },
+    {
       title: "Guided Path Templates",
       url: "/admin/guided-path-templates",
       icon: Map,

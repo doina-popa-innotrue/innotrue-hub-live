@@ -31,6 +31,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { errorResponse, successResponse } from "../_shared/error-response.ts";
+import { checkContentAccess } from "../_shared/content-access.ts";
 
 Deno.serve(async (req: Request) => {
   const cors = getCorsHeaders(req);
@@ -111,35 +112,18 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // ─── Access check: enrolled or staff ──────────────────────────
-  const { data: roles } = await serviceClient
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id);
+  // ─── Access check: enrolled, staff, or alumni (read-only) ─────
+  const access = await checkContentAccess(serviceClient, user.id, moduleData.program_id);
 
-  const userRoles = (roles || []).map((r: { role: string }) => r.role);
-  const isStaff =
-    userRoles.includes("admin") ||
-    userRoles.includes("instructor") ||
-    userRoles.includes("coach");
+  if (!access.allowed) {
+    return errorResponse.forbidden("Not enrolled in this program", cors);
+  }
 
-  let enrollmentId: string | null = null;
+  const isStaff = access.reason === "staff";
+  const isReadOnly = access.readOnly;
+  let enrollmentId: string | null = access.enrollmentId || null;
 
-  if (!isStaff) {
-    const { data: enrollment } = await serviceClient
-      .from("client_enrollments")
-      .select("id")
-      .eq("client_user_id", user.id)
-      .eq("program_id", moduleData.program_id)
-      .eq("status", "active")
-      .limit(1)
-      .single();
-
-    if (!enrollment) {
-      return errorResponse.forbidden("Not enrolled in this program", cors);
-    }
-    enrollmentId = enrollment.id;
-  } else {
+  if (isStaff) {
     // Staff: find or create a synthetic enrollment for tracking
     const { data: enrollment } = await serviceClient
       .from("client_enrollments")
@@ -181,14 +165,14 @@ Deno.serve(async (req: Request) => {
       const xapiConfig = buildXapiConfig(supabaseUrl, authToken, user, moduleId);
 
       return successResponse.ok({
-        sessionId: session.id, resumed: false, bookmark: "", suspendData: "", xapiConfig,
+        sessionId: session.id, resumed: false, bookmark: "", suspendData: "", xapiConfig, readOnly: false,
       }, cors);
     }
   }
 
   // ─── Try to resume an existing active session ──────────────────
   const { resumed, response } = await tryResumeSession(
-    serviceClient, supabaseUrl, user, moduleId, enrollmentId!, cors,
+    serviceClient, supabaseUrl, user, moduleId, enrollmentId!, cors, isReadOnly,
   );
   if (resumed) return response!;
 
@@ -211,23 +195,25 @@ Deno.serve(async (req: Request) => {
     return errorResponse.serverError("xapi-launch-session", sessionError, cors);
   }
 
-  // ─── Auto-set module progress to in_progress ──────────────────
-  await serviceClient
-    .from("module_progress")
-    .upsert(
-      {
-        enrollment_id: enrollmentId,
-        module_id: moduleId,
-        status: "in_progress",
-      },
-      { onConflict: "enrollment_id,module_id", ignoreDuplicates: true },
-    );
+  // ─── Auto-set module progress to in_progress (skip for read-only alumni) ──
+  if (!isReadOnly) {
+    await serviceClient
+      .from("module_progress")
+      .upsert(
+        {
+          enrollment_id: enrollmentId,
+          module_id: moduleId,
+          status: "in_progress",
+        },
+        { onConflict: "enrollment_id,module_id", ignoreDuplicates: true },
+      );
+  }
 
   // ─── Build xAPI config for the frontend ─────────────────────
   const xapiConfig = buildXapiConfig(supabaseUrl, authToken, user, moduleId);
 
   return successResponse.ok({
-    sessionId: session.id, resumed: false, bookmark: "", suspendData: "", xapiConfig,
+    sessionId: session.id, resumed: false, bookmark: "", suspendData: "", xapiConfig, readOnly: isReadOnly,
   }, cors);
 });
 
@@ -246,6 +232,7 @@ async function tryResumeSession(
   moduleId: string,
   enrollmentId: string,
   cors: Record<string, string>,
+  readOnly = false,
 ): Promise<{ resumed: boolean; response?: Response }> {
   const { data: existingSession } = await serviceClient
     .from("xapi_sessions")
@@ -275,6 +262,7 @@ async function tryResumeSession(
       bookmark: existingSession.bookmark || "",
       suspendData: existingSession.suspend_data || "",
       xapiConfig,
+      readOnly,
     }, cors),
   };
 }
