@@ -461,21 +461,23 @@ Credit packages auto-create their Stripe products/prices on first purchase — n
 
 ## Strategic Roadmap
 
-### Pricing Strategy (decided 2026-02-21)
+### Pricing Strategy (revised 2026-02-22)
 
-**Context:** Programs generate €3K–€12K per client. Subscription pricing should reflect the ecosystem value, not just content access. The subscription creates the recurring relationship; programs and credits drive the high-ticket revenue.
+**Context:** Programs generate €3K–€12K per client (leadership programs up to €12K). Subscription pricing should reflect the ecosystem value. The subscription creates the recurring relationship; programs and credits drive the high-ticket revenue.
 
-**Recommended individual pricing:**
+**Recommended individual pricing (4 paid tiers):**
 
 | Plan | Monthly | Annual (20% off) | Credits/mo | Target Audience |
 |------|---------|-------------------|-----------|-----------------|
 | **Free** | €0 | €0 | 20 | Lead capture — AI Coach taster, Wheel of Life, basic tools |
-| **Member** | €49/mo | €468/yr (€39/mo) | 300 | Active professionals — full AI, sessions, assessments, programs |
-| **Pro** | €99/mo | €948/yr (€79/mo) | 600 | Serious career developers — higher credits, advanced tools, cert prep, priority booking |
+| **Base** | €49/mo | €468/yr (€39/mo) | 150-200 | Entry professionals — full AI, sessions, assessments, basic programs |
+| **Pro** | €99/mo | €948/yr (€79/mo) | 300-400 | Active career developers — higher credits, advanced tools |
+| **Advanced** | €179/mo | €1,716/yr (€143/mo) | 500-600 | Serious professionals — cert prep, priority booking, advanced programs |
+| **Elite** | €249/mo | €2,388/yr (€199/mo) | 750-1000 | Top tier — maximum credits, all features, premium support |
 
-**Why 2 paid tiers instead of 4:** Decision paralysis with 4 choices. Pluralsight consolidated from 3→1, Coursera from many→1 subscription. The real differentiation is credits, not feature gates. 2 tiers make the subscription page simple: Free → Member → Pro.
+**Why 4 paid tiers (not 2):** With Elite at €249/mo, the jump from €49 to €249 is too steep for a single upgrade. 4 tiers create natural stepping stones. At €4K–€12K program values, even Elite is <6% of total client spend.
 
-**Implementation:** Phase 1 (now) — ship with current tiers. Phase 2 (after first paying users) — analyze which tiers people pick. Phase 3 — consolidate based on data.
+**Current seed prices** (€19/€29/€49/€99) need to be updated to the above. This is a plan_prices + plans data migration.
 
 **Annual pricing:** Must be added. Annual subscriptions reduce churn, improve cash flow, and are standard across all platforms. Add rows to `plan_prices` with `billing_interval = 'year'` — the auto-create Stripe flow handles the rest.
 
@@ -560,36 +562,54 @@ Credit packages auto-create their Stripe products/prices on first purchase — n
 - Phase 2: Automated commission calculation, coach earnings dashboard.
 - Phase 3: Coach tiers, performance bonuses, program co-creation revenue share.
 
-### Identified Gaps (2026-02-21)
-
-These are areas not yet addressed in the current architecture:
+### Identified Gaps (revised 2026-02-22)
 
 **A. Corporate/B2B Program Enrollment Flow**
 - How does HR enroll 20 employees in a program? Current flow is one-by-one.
 - Need: bulk "Program Seats" purchase for orgs — buy N seats at per-seat price with volume tiers.
 - Separate from credits, more intuitive for B2B buyers.
+- Priority: Medium — needs more design work.
 
-**B. Certification Verification**
-- Programs lead to certifications but there's no verifiable credential system.
-- Need: public verification URL (e.g. `app.innotrue.com/verify/CERT-ABC123`), LinkedIn-shareable certificate, expiry and renewal tracking.
-- Every shared certificate links back to InnoTrue (marketing channel).
+**B. Certification Verification via Credly/Accredible** (partially built — see below)
+- Foundation exists: `program_badges`, `client_badges`, `program_badge_credentials` tables, admin badge manager, instructor approval flow, client display with LinkedIn share.
+- Credly/Accredible template URLs are stored but **no API integration** to push credentials.
+- What's missing:
+  1. **Auto-badge creation** — edge function triggered on program completion (all modules + scenarios done) → auto-creates `client_badges` with status `pending_approval`
+  2. **Credly/Accredible API push** — edge function to call their API on badge approval, store response ID, handle webhook for acceptance
+  3. **Public verification page** — route `/verify/:code` showing certificate details without login
+  4. **PDF certificate generation** — branded PDF alongside digital badge
+  5. **Badge expiry/renewal** — `expires_at` field on `client_badges` for certs requiring continuing education
+- Priority: High — certification is a key differentiator.
 
-**C. Waitlist / Cohort Management**
-- Programs with live coaching have cohort size limits, but no waitlist exists.
-- Need: waitlist system — when cohort full, users join waitlist (no credits charged). Next cohort opens → notification → X hours to confirm → credits charged.
+**C. Waitlist / Cohort Management** ⚡ URGENT
+- Programs with live coaching have cohort size limits, but no waitlist or cohort management exists.
+- Launching public cohort trainings soon with a partner — must be rock solid.
+- Need:
+  - `program_cohorts` table — cohort_id, program_id, name, start_date, max_seats, enrolled_count, status (open/full/in_progress/completed)
+  - `cohort_waitlist` table — user_id, cohort_id, joined_at, status (waiting/offered/confirmed/expired)
+  - When cohort full → "Join waitlist" button, no credits charged
+  - When spot opens → next in waitlist notified → X hours to confirm (configurable) → credits charged on confirmation
+  - Admin dashboard: view cohorts, manage waitlist, manually offer spots
+- Priority: **HIGHEST** — blocking upcoming public launch.
 
-**D. Content Drip / Time-Gating**
-- Program modules have no pacing control — client could binge all on day 1.
-- Need: `module.available_after_days` (relative to enrollment start) or `module.available_after_previous_completion`.
+**D. Module Prerequisite UI Gaps** (backend exists, frontend incomplete)
+- `module_prerequisites` table and `useGuidedResourceAccess` hook exist and work.
+- Missing: client-facing lock icons, "Complete Module X first" messages, disabled states on locked modules.
+- Time-gating (drip by date) is a separate concept from prerequisites — only needed if cohort pacing requires releasing modules by week regardless of completion. Defer unless cohort trainings need it.
+- Priority: Medium — fix UI gaps, defer time-gating.
 
-**E. Renewal & Win-Back Flows**
-- `subscription-reminders` does renewal emails but no win-back or re-engagement for churned/dormant users.
-- Need: extend cron with win-back emails (cancelled users), re-engagement (dormant users), credit expiry warnings.
+**E. Renewal & Win-Back Flows — System + ActiveCampaign**
+- `subscription-reminders` does renewal emails but no win-back or re-engagement.
+- Two layers needed:
+  1. **In-system:** Extend cron with credit expiry warnings, dormant user detection, re-engagement notifications
+  2. **ActiveCampaign:** `activecampaign-sync` edge function that pushes key events (subscription created/cancelled, program completed, credits low, dormant 30 days) to ActiveCampaign API for journey automation
+- Priority: Medium — important for retention.
 
 **F. Org Analytics & ROI Dashboard**
 - Org admins need to justify spend to leadership.
 - Need: aggregate dashboard — programs completed, skills gaps closed, session utilization, credits consumed vs purchased, engagement scores.
 - Critical for B2B retention and expansion.
+- Priority: Medium-High.
 
 ---
 
