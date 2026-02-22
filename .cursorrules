@@ -47,7 +47,7 @@ Edge functions deployed separately via `npm run deploy:functions`.
 
 ## Edge Function Patterns (MANDATORY)
 
-All 68 edge functions in `supabase/functions/` follow these standardized patterns. **New edge functions MUST follow them too.**
+All 71 edge functions in `supabase/functions/` follow these standardized patterns. **New edge functions MUST follow them too.**
 
 ### 1. CORS — Use `getCorsHeaders(req)` from shared utility
 

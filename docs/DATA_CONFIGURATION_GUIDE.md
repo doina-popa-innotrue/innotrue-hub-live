@@ -146,12 +146,16 @@ Link plans to Stripe for billing. Each purchasable plan needs at least one price
 
 | Plan | Interval | Price | Stripe Price ID |
 |------|----------|-------|-----------------|
-| Base | monthly | 29.00 EUR | `price_xxx` (from Stripe) |
-| Pro | monthly | 49.00 EUR | `price_xxx` |
-| Advanced | monthly | 79.00 EUR | `price_xxx` |
-| Elite | monthly | 129.00 EUR | `price_xxx` |
+| Base | monthly | 49.00 EUR | auto-created on first checkout |
+| Base | year | 470.00 EUR | auto-created on first checkout |
+| Pro | monthly | 99.00 EUR | auto-created on first checkout |
+| Pro | year | 950.00 EUR | auto-created on first checkout |
+| Advanced | monthly | 179.00 EUR | auto-created on first checkout |
+| Advanced | year | 1718.00 EUR | auto-created on first checkout |
+| Elite | monthly | 249.00 EUR | auto-created on first checkout |
+| Elite | year | 2390.00 EUR | auto-created on first checkout |
 
-**External dependency:** Stripe products and prices must be created first in Stripe Dashboard, then IDs entered here.
+**Stripe auto-creation:** When `stripe_price_id` is NULL, the `create-checkout` edge function automatically creates a Stripe product + price on first checkout. The migration `20260301130000_pricing_update.sql` reset all `stripe_price_id` to NULL to trigger new Stripe prices at the updated amounts.
 
 **Setup for new environments:**
 1. Create products in Stripe Dashboard (one per purchasable plan)

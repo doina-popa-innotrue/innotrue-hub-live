@@ -44,7 +44,7 @@
 
 ## Phase 1 — Edge Function Shared Utilities (Est. 2-3 sessions)
 
-**Goal:** Test the 10 shared modules that ALL 61 edge functions depend on. Bugs here affect everything.
+**Goal:** Test the 10 shared modules that ALL 71 edge functions depend on. Bugs here affect everything.
 
 **Approach:** Create a Deno test runner alongside the functions, or create Node-compatible mirror tests.
 

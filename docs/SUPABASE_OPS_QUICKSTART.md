@@ -14,7 +14,7 @@
 
 | Script | Command | Purpose |
 |--------|---------|---------|
-| **Deploy Functions** | `npm run deploy:functions` | Deploy all 61 edge functions to an env |
+| **Deploy Functions** | `npm run deploy:functions` | Deploy all 71 edge functions to an env |
 | **Push Migrations** | `npm run push:migrations` | Apply pending DB migrations to an env |
 | **Sync Data** | `npm run sync:data` | Export/import config tables between envs |
 | **Sync Storage** | `npm run sync:storage` | Copy storage bucket files between envs |
@@ -24,7 +24,7 @@
 
 ## 1. Edge Function Deployment
 
-Deploy all 61 edge functions (or specific ones) to any environment.
+Deploy all 71 edge functions (or specific ones) to any environment.
 
 ### Deploy all functions
 

@@ -112,12 +112,12 @@ The Strategyzer Value Proposition Canvas has two sides:
 
 | # | Gain Created | How |
 |---|-------------|-----|
-| GC1 | **G1: Single platform** → 160+ pages covering all roles. 61 edge functions for backend logic. 17 storage buckets for all file types. Everything integrated. | Comprehensive, not assembled |
+| GC1 | **G1: Single platform** → 160+ pages covering all roles. 71 edge functions for backend logic. 17 storage buckets for all file types. Everything integrated. | Comprehensive, not assembled |
 | GC2 | **G2: Quantifiable outcomes** → Capability snapshots track score evolution over time. Radar charts compare self vs evaluator. Module completion rates per cohort. Credit consumption analytics. | Built-in outcome dashboards |
 | GC3 | **G3: Professional client experience** → PWA-ready, responsive UI. Onboarding welcome card. Journey progress widget. Unified feedback inbox (`/feedback`). Resource unlock dialogs. | Polished learner-facing UX |
 | GC4 | **G4: Scalable operations** → Cohort infrastructure (sessions, groups, member management). Enrollment codes with cohort auto-assignment (Phase 5 planned). Batch operations throughout admin. | Built for cohort-scale programs |
 | GC5 | **G5: AI-enhanced coaching** → 4 AI functions today (reflections, recommendations, decision insights, admin analytics). Anti-hallucination design: input grounding, output constraints, source restriction. 5 more AI features designed (learning companion, pre-session prep, scenario debrief, goal nudges, conversational dashboard). | AI that augments, doesn't replace, coaches |
-| GC6 | **G6: Flexible monetization** → 7 plan tiers (Free → Elite + Programs + Continuation). Credit packages (individual + org). Program-level pricing. Feature-level gating. Stripe checkout integration. | Multiple revenue models from day one |
+| GC6 | **G6: Flexible monetization** → 6 plan tiers (Free → Elite + Programs). Credit packages (individual + org). Program-level pricing. Feature-level gating. Stripe checkout + annual pricing. Alumni lifecycle with grace period. | Multiple revenue models from day one |
 | GC7 | **G7: Multi-instructor programs** → 3-tier staff hierarchy. Per-client per-module instructor assignment. Broadcast notifications for team coverage. Multi-instructor grading guide built into documentation. | Enterprise-grade instructor management |
 | GC8 | **G8: Assessment-driven development** → `CapabilitySnapshotView` surfaces weak domains with "Create Goal" action. Goals pre-filled with assessment context. Coach sees assessment evolution. | Closes the assessment-to-action gap |
 

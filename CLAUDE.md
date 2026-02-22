@@ -17,7 +17,7 @@ ALWAYS work in this repo (`innotrue-hub-live`). NEVER work in the Backups folder
 - **NEVER merge lovable into main.** Lovable is a one-way push target only.
 
 ## Edge Function Standards (MANDATORY)
-All 68 edge functions use shared utilities. New functions MUST follow the same patterns:
+All 71 edge functions use shared utilities. New functions MUST follow the same patterns:
 
 1. **CORS:** `import { getCorsHeaders } from "../_shared/cors.ts"` → `const cors = getCorsHeaders(req)`
    - NEVER use inline/wildcard CORS headers

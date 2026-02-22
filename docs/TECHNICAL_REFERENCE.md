@@ -111,7 +111,7 @@ fi && npm run build
 Both preprod and prod have:
 - 421+ database migrations applied (including Phase 5 self-registration)
 - Seed data loaded (`supabase/seed.sql`)
-- 68 edge functions deployed (including `complete-registration`, `redeem-enrollment-code`)
+- 71 edge functions deployed (including `complete-registration`, `redeem-enrollment-code`, `redeem-partner-code`, `alumni-lifecycle`)
 - Google OAuth enabled (Phase 5)
 - Auth email hook pointing to `send-auth-email` edge function
 - Self-registration active: signup form + Google OAuth + role selection

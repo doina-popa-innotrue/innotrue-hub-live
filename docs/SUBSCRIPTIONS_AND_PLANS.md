@@ -9,12 +9,12 @@
 | Key | Name | Tier | is_free | is_purchasable | Credit Allowance | Purpose |
 |-----|------|------|---------|----------------|-----------------|---------|
 | `free` | Free | 0 | yes | yes | 20 | Default plan for all new users |
-| `base` | Base | 1 | no | yes | 150 | Entry paid tier |
-| `pro` | Pro | 2 | no | yes | 250 | Professional tier |
-| `advanced` | Advanced | 3 | no | yes | 500 | Advanced tier |
-| `elite` | Elite | 4 | no | yes | 750 | Top tier |
+| `base` | Base | 1 | no | yes | 300 | Entry paid tier |
+| `pro` | Pro | 2 | no | yes | 500 | Professional tier |
+| `advanced` | Advanced | 3 | no | yes | 1000 | Advanced tier |
+| `elite` | Elite | 4 | no | yes | 1500 | Top tier |
 | `programs` | Programs | 0 | yes | **no** | - | Admin-assigned: users with purchased programs only |
-| `continuation` | Continuation | 0 | yes | **no** | - | Admin-assigned: post-program alumni access |
+| `continuation` | Continuation | 0 | yes | **no (deprecated)** | - | ~~Post-program alumni access~~ — replaced by alumni lifecycle (2B.1). `is_active = false` since 2026-03-01. |
 
 ### How plan_id Gets Assigned
 
@@ -26,7 +26,7 @@
 | Stripe plan change | `stripe-webhook` on `customer.subscription.updated` | Updates `plan_id` to new plan |
 | Stripe cancellation | `stripe-webhook` on `customer.subscription.deleted` | Downgrades `plan_id` to Free |
 | Admin manual | ClientDetail page or `create-admin-user` | Direct `plan_id` update |
-| Admin bulk | ProgramCompletions page | Moves users to Continuation plan |
+| Admin bulk | ProgramCompletions page | ~~Moves users to Continuation plan~~ (deprecated — alumni lifecycle handles this automatically) |
 | Org-sponsored | `organization_members.sponsored_plan_id` | Separate column, not `profiles.plan_id` |
 
 ### Plans vs. Program Enrollments
@@ -47,18 +47,11 @@ client_enrollments ────────> program_plan_features ──> useEn
 - Enrollment codes create enrollments, they do NOT change `profiles.plan_id`
 - When an enrollment ends, the program plan features are simply no longer returned by `useEntitlements`
 
-### The Programs & Continuation Plans: Current Status and Recommendation
+### The Programs & Continuation Plans: Current Status
 
-**Current state:** The `programs` and `continuation` plans are non-purchasable, admin-assigned plans that sit outside the Stripe billing flow. They're used for:
-- Users who bought a program directly (not via subscription) and need platform access
-- Alumni who completed a program and should retain some access while being nudged to upgrade
+**Continuation plan — DEPRECATED (2026-03-01):** Set `is_active = false` by migration `20260301130000_pricing_update.sql`. Replaced by the alumni lifecycle system (2B.1): completed enrollments automatically enter a configurable grace period (default 90 days) with read-only content access. No manual "Move to Continuation" needed — the `check_alumni_access` RPC and `_shared/content-access.ts` helper handle access gating automatically. Nurture emails sent by `alumni-lifecycle` cron function.
 
-**Analysis:** The 3-layer entitlements engine (subscription + program plan + org-sponsored) already handles these use cases without needing dedicated plans:
-- A Free-plan user with an active enrollment gets program features via `program_plan_features`
-- The ContinuationBanner could trigger on "has completed enrollments but no active ones" instead of checking `plan_key === 'continuation'`
-- The admin "Move to Continuation" action could be replaced by the natural fallback to Free
-
-**Recommendation:** These plans can be deprecated in a future cleanup. They don't cause harm (non-purchasable, no Stripe mapping), but they add a manual admin workflow that the automated system doesn't need. See the "Future Improvements" section below.
+**Programs plan — still active:** Used for admin-assigned users who bought a program directly. The `programs` plan remains as a non-purchasable admin tool for edge cases where a user needs platform features without a subscription.
 
 ---
 
@@ -498,69 +491,36 @@ Credit packages auto-create their Stripe products/prices on first purchase — n
 - `system_settings` key: `alumni_grace_period_days` (default: 90)
 - Entitlements check: enrollment completed AND `completed_at + grace_period > now()` → grant read-only program access
 
-**Alumni engagement features:**
-- **Alumni badge** on profile — permanent (check `client_enrollments` history for any completed enrollment)
-- **Alumni Community access** — permanent, via Circle community space for alumni
-- **Alumni dashboard section** — shows completed programs with "Review materials" (during grace) and "Re-enroll" / "Explore next program" CTAs after
-- **Periodic touchpoints** — scheduled edge function sends nurture emails at 30/60/90 days post-completion with teasers, success stories, upgrade incentives
-- **Alumni upgrade incentives** — credit bonus or discount code for alumni who enroll in a new program
+**✅ IMPLEMENTED (2026-03-01)** — See `completed-work.md` for full details.
 
-**Why NOT a plan, track, or separate entity:**
-- A plan change would downgrade their paid subscription (wrong)
-- A track implies a learning path (wrong semantics)
-- An enrollment state is the natural place: Alumni = "you completed this enrollment"
-
-**Database changes needed:**
-- `system_settings`: add `alumni_grace_period_days`
-- `client_enrollments`: already has `status` and `completed_at` — no schema change
-- Entitlements hook: add alumni grace period check for read-only content
-- New notification types: `program_alumni_touchpoint_30d/60d/90d`
-- New scheduled edge function: `alumni-nurture-emails` (daily cron)
-- Frontend: alumni badge component, completed program read-only view, re-engagement CTAs
-
-**This replaces the Continuation plan.** Programs/Continuation plan deprecation (item 1 below) should proceed alongside this.
+**What was built:**
+- `completed_at` column + trigger on `client_enrollments` (auto-set on status → completed)
+- `alumni_touchpoints` table (prevents duplicate nurture emails via UNIQUE constraint)
+- `check_alumni_access` RPC — computes grace period from `system_settings.alumni_grace_period_days` (default 90)
+- Shared `_shared/content-access.ts` helper — staff → active enrollment → alumni grace → denied access chain
+- `serve-content-package` + `xapi-launch` modified to use shared access check (alumni get read-only)
+- `alumni-lifecycle` cron edge function — nurture emails at 0/30/60/90 days + grace expiry notification
+- `useAlumniAccess` hook + read-only banner in `ContentPackageViewer` + xAPI suppression
+- Admin: `ClientDetail.tsx` shows alumni access expiry countdown
+- **Continuation plan deprecated** (`is_active = false`)
 
 ### Coach/Instructor Revenue Model (decided 2026-02-21)
 
-**Problem:** No mechanism for coaches/instructors to earn revenue by referring clients or building the platform.
+**Phase 1 (MVP) — ✅ IMPLEMENTED (2026-03-01):** See `completed-work.md` for full details.
 
-**Solution: Partner Code System + Reward Framework**
+**What was built:**
+- `partner_codes` table — partner_id, program_id, cohort_id (optional), code (UNIQUE), label, discount_percent, is_free, max_uses, current_uses, expires_at, is_active
+- `partner_referrals` table — partner_code_id, partner_id (denormalized), referred_user_id, enrollment_id, referral_type, status
+- `validate_partner_code` RPC — validates code, returns program info + discount + partner_id
+- `redeem-partner-code` edge function — validate → capacity check → enroll_with_credits with `enrollment_source='partner_referral'` → track referral → notify partner
+- Admin `PartnerCodesManagement.tsx` — PRT prefix code generator, CRUD dialog, partner filter, copy code/link, referral counts
+- Public `/partner?code=X` redemption page — auto-validate from URL, show program + discount, auth redirect, enroll
+- Teaching dashboard referral stats card (My Referrals)
 
-**Partner codes:**
-- Each coach gets a unique code (e.g. `COACH-EMILYP` or custom vanity)
-- New client signs up or enrolls using code → coach gets credited
-- Commission: configurable per coach (% of subscription, fixed credit bonus per referral, or % of program enrollment)
-- Attribution window: 30-90 days from first code use (configurable)
-- Payout: monthly reconciliation → bank transfer or InnoTrue account credit
-
-**Reward system for active coaches:**
-
-| Activity | Reward |
-|----------|--------|
-| Completing a coaching session | Base payout (per session type config) |
-| Client gives 4-5 star rating | Bonus multiplier |
-| Client completes program milestone after coaching | Milestone bonus |
-| Referral code → new subscription | Commission % for subscription duration |
-| Referral code → program enrollment | One-time commission on enrollment value |
-
-**Coach tiers (future):**
-
-| Tier | Criteria | Benefits |
-|------|----------|----------|
-| Partner | Active coach, <10 referrals | 10% commission, base session rates |
-| Senior Partner | 10+ referrals, 4.5+ avg rating | 15% commission, priority matching, featured profile |
-| Principal | 25+ referrals, strong track record | 20% commission, co-create programs, revenue share |
-
-**Database tables needed (new):**
-- `partner_codes` — coach_id, code, commission_type, commission_value, attribution_window_days, is_active
-- `partner_referrals` — partner_code_id, referred_user_id, attributed_subscription_id, attributed_enrollment_id, status (pending/attributed/paid)
-- `partner_payouts` — coach_id, period_start/end, total_amount_cents, status (pending/approved/paid)
-- `coach_rewards` — coach_id, reward_type, amount_cents, source_type, source_id
-
-**Implementation phases:**
-- Phase 1 (MVP): Partner codes + referral tracking. Manual payout via admin export.
-- Phase 2: Automated commission calculation, coach earnings dashboard.
-- Phase 3: Coach tiers, performance bonuses, program co-creation revenue share.
+**Future phases (not yet built):**
+- Phase 2: Automated commission calculation, coach earnings dashboard
+- Phase 3: Coach tiers (Partner → Senior → Principal), performance bonuses, program co-creation revenue share
+- Tables needed for Phase 2-3: `partner_payouts`, `coach_rewards`
 
 ### Identified Gaps (revised 2026-02-22)
 
@@ -606,13 +566,13 @@ Credit packages auto-create their Stripe products/prices on first purchase — n
 
 ## Future Improvements (Technical)
 
-### 1. Programs/Continuation Plan Deprecation
-The `programs` and `continuation` plans can be removed once:
-- Alumni lifecycle (above) is implemented as the replacement for Continuation
-- The ContinuationBanner triggers on enrollment status + grace period instead of plan_key
-- The "Move to Continuation" admin action is removed from ProgramCompletions
-- Any users currently on these plans are migrated to Free
-- The plans are soft-deleted (set `is_active = false`)
+### 1. ~~Programs/Continuation Plan Deprecation~~ ✅ PARTIALLY DONE (2026-03-01)
+- ✅ Alumni lifecycle implemented as Continuation replacement (2B.1)
+- ✅ Continuation plan set `is_active = false` (migration `20260301130000_pricing_update.sql`)
+- ⬜ ContinuationBanner still triggers on `plan_key === 'continuation'` — should migrate to enrollment status + grace period
+- ⬜ "Move to Continuation" admin action still exists in ProgramCompletions — should be removed
+- ⬜ Existing users on continuation plan need migration to Free
+- ⬜ `programs` plan still active for admin-assigned users — evaluate if still needed
 
 ### 2. Fallback Plan Activation
 The `fallback_plan_id` field exists on the `plans` table with a validation trigger, but no code executes the fallback. This could be wired to `stripe-webhook` on `customer.subscription.deleted` to downgrade to the plan's configured fallback instead of always defaulting to Free.
@@ -623,5 +583,5 @@ Currently, after Stripe Checkout for subscriptions, the user returns to `/subscr
 ### 4. Stripe Customer Portal Enhancements
 The Billing Portal allows subscription management, but plan changes made there rely on the webhook to sync. Ensure all Stripe price IDs in the Portal match `plan_prices.stripe_price_id` entries.
 
-### 5. Annual Pricing
-Add `plan_prices` rows with `billing_interval = 'year'` for all purchasable plans. The auto-create Stripe flow will handle product/price creation automatically. Frontend already supports a billing interval toggle.
+### 5. ~~Annual Pricing~~ ✅ DONE (2026-03-01)
+Annual prices added by migration `20260301130000_pricing_update.sql`: Base €470/yr, Pro €950/yr, Advanced €1718/yr, Elite €2390/yr (20% discount vs monthly). Frontend already had billing interval toggle — no changes needed.
