@@ -96,6 +96,9 @@ verify_jwt = false
 [functions.notify-waitlist]
 verify_jwt = false
 
+[functions.notify-cohort-waitlist]
+verify_jwt = false
+
 [functions.oauth-authorize]
 verify_jwt = false
 

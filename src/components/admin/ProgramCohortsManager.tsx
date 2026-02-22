@@ -21,11 +21,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Calendar, Users, ChevronDown, ChevronUp, UserCheck } from "lucide-react";
+import { Plus, Pencil, Trash2, Calendar, Users, ChevronDown, ChevronUp, UserCheck, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CohortSessionsManager } from "./CohortSessionsManager";
+import { CohortWaitlistManager } from "./CohortWaitlistManager";
 
 interface ProgramCohortsManagerProps {
   programId: string;
@@ -125,6 +126,28 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
       });
       return counts;
     },
+  });
+
+  const { data: waitlistCounts } = useQuery({
+    queryKey: ["cohort-waitlist-counts", programId],
+    queryFn: async () => {
+      const cohortIds = (cohorts || []).map((c) => c.id);
+      if (cohortIds.length === 0) return {};
+
+      const { data, error } = await supabase
+        .from("cohort_waitlist")
+        .select("cohort_id")
+        .in("cohort_id", cohortIds);
+
+      if (error) throw error;
+
+      const counts: Record<string, number> = {};
+      data?.forEach((entry) => {
+        counts[entry.cohort_id] = (counts[entry.cohort_id] || 0) + 1;
+      });
+      return counts;
+    },
+    enabled: !!cohorts?.length,
   });
 
   const saveMutation = useMutation({
@@ -388,6 +411,7 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
         <div className="space-y-4">
           {cohorts?.map((cohort) => {
             const enrolledCount = enrollmentCounts?.[cohort.id] || 0;
+            const waitlistCount = waitlistCounts?.[cohort.id] || 0;
             const isExpanded = expandedCohorts.has(cohort.id);
 
             return (
@@ -421,6 +445,12 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
                             {enrolledCount}
                             {cohort.capacity ? ` / ${cohort.capacity}` : ""} enrolled
                           </span>
+                          {waitlistCount > 0 && (
+                            <Badge variant="outline" className="text-amber-600 text-xs">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {waitlistCount} waiting
+                            </Badge>
+                          )}
                           {cohort.lead_instructor_id && (
                             <span className="flex items-center gap-1">
                               <UserCheck className="h-3 w-3" />
@@ -466,6 +496,11 @@ export function ProgramCohortsManager({ programId }: ProgramCohortsManagerProps)
                         programId={programId}
                         cohortInstructorId={cohort.lead_instructor_id}
                         programInstructors={programInstructors || []}
+                      />
+                      <CohortWaitlistManager
+                        cohortId={cohort.id}
+                        cohortName={cohort.name}
+                        programId={programId}
                       />
                     </CardContent>
                   </CollapsibleContent>

@@ -116,6 +116,18 @@ export function useProgramEnrollment() {
       setIsEnrolling(true);
 
       try {
+        // Check program capacity before proceeding
+        const { data: capCheck } = await supabase.rpc("check_program_capacity", {
+          p_program_id: programId,
+        });
+
+        if (capCheck && !capCheck.has_capacity) {
+          toast.error(
+            `This program is at full capacity (${capCheck.enrolled_count}/${capCheck.capacity}).`,
+          );
+          return { success: false };
+        }
+
         // Fetch fresh tier pricing
         const pricing = await fetchTierPricing(programId);
         // Case-insensitive comparison to match DB values like "Premium" / "Essentials"
@@ -209,6 +221,7 @@ export function useProgramEnrollment() {
               : null,
             original_credit_cost: originalCreditCost,
             final_credit_cost: finalCreditCost,
+            enrollment_source: "self",
           })
           .select("id")
           .single();

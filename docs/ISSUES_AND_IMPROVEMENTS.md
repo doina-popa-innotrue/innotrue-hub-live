@@ -146,14 +146,14 @@ All core features work end-to-end: programs, modules, assignments, assessments, 
 
 These are architectural decisions and features that have been discussed and decided on. Full details in [SUBSCRIPTIONS_AND_PLANS.md](./SUBSCRIPTIONS_AND_PLANS.md#strategic-roadmap).
 
-### Priority order (decided 2026-02-22):
-1. **2B.6 Waitlist / Cohort Management** ⚡ HIGHEST — blocking upcoming public cohort launch
+### Priority order (updated 2026-03-01):
+1. ~~**2B.6 Waitlist / Cohort Management**~~ ✅ DONE (2026-03-01) — capacity enforcement + waitlist + enrollment attribution + admin management + notifications
 2. **2B.2 Coach/Instructor Partner Codes** — instructor partners being onboarded now
 3. **2B.5 Certification via Credly/Accredible** — key differentiator, foundation 70% built
 4. **2B.1 Alumni Lifecycle** — needed before plan deprecation
 5. **2B.3 Pricing Update** — before first paying users
 6. **2B.8 Win-Back & ActiveCampaign Sync** — retention
-7. **2B.7 Module Prerequisite UI** — polish existing feature
+7. ~~**2B.7 Module Prerequisite UI**~~ ✅ DONE (2026-02-22) — lock icons + time-gating
 8. **2B.4 Corporate Program Seats** — when B2B pipeline grows
 9. **2B.9 Org Analytics & ROI Dashboard** — B2B retention
 
@@ -238,31 +238,32 @@ These are architectural decisions and features that have been discussed and deci
 **Effort:** Medium (2-3 weeks for API integration + auto-creation + public page).
 **Priority:** High — key differentiator, foundation mostly built.
 
-### 2B.6 Waitlist / Cohort Management — NEW ⚡ HIGHEST PRIORITY
-**What:** Cohort-based program management with waitlist for full cohorts. Launching public cohort trainings with a partner soon — must be rock solid.
+### 2B.6 Waitlist / Cohort Management — ✅ DONE (2026-03-01)
+**What:** Cohort-based program management with waitlist for full cohorts, capacity enforcement at both program and cohort level, enrollment source attribution, and admin override.
 
-**Need:**
-- `program_cohorts` table — program_id, name, start_date, end_date, max_seats, enrolled_count, status (open/full/in_progress/completed)
-- `cohort_waitlist` table — user_id, cohort_id, joined_at, status (waiting/offered/confirmed/expired)
-- When cohort full → "Join waitlist" button, no credits charged
-- When spot opens → next in waitlist notified → configurable confirmation window → credits charged on confirmation
-- Admin dashboard: view cohorts, manage waitlist, manually offer spots, open/close enrollment
-- Client-facing: cohort info on program page, waitlist position, "Join waitlist" CTA
+**Implemented:**
+- `cohort_waitlist` table — user_id, cohort_id, position (sequential), notified (boolean). UNIQUE per user+cohort. RLS: users manage own, admins manage all.
+- `programs.capacity` column — program-level capacity. NULL = unlimited.
+- `check_cohort_capacity` / `check_program_capacity` RPCs — return capacity status as JSON
+- `join_cohort_waitlist` RPC — validates not enrolled, checks cohort IS full, assigns next position
+- `enroll_with_credits` RPC upgraded: 13 params (was 9). New: `p_force` (admin override), `p_enrollment_source`, `p_referred_by`, `p_referral_note`. Enforces program + cohort capacity unless forced.
+- `CohortWaitlistButton.tsx` — client-facing join/leave waitlist, position badge
+- `CohortWaitlistManager.tsx` — admin promote (free enrollment with `p_force=true`) / remove
+- `notify-cohort-waitlist` edge function — notifies next N users when spots open
+- Enrollment attribution: `enrollment_source` (self/admin/enrollment_code/waitlist_promotion/partner_referral), `referred_by`, `referral_note` on `client_enrollments`
+- Capacity check added to `redeem-enrollment-code` edge function and `useProgramEnrollment` hook
+- Admin override via `p_force=true` in ClientDetail.tsx and waitlist promotion — skips all capacity checks
 
-**Effort:** Medium (2-3 weeks). New tables, enrollment flow changes, admin UI, notification integration.
-**Priority:** **HIGHEST** — blocking upcoming public launch with partner.
+**Files:** 3 migrations, 2 new components, 1 new edge function, 6 modified files. See `completed-work.md` for details.
 
-### 2B.7 Module Prerequisite UI Gaps — EXISTING FEATURE, NEEDS POLISH
-**What:** Module prerequisites backend is fully built (`module_prerequisites` table, `useGuidedResourceAccess` hook). Missing: client-facing lock icons, "Complete Module X first" messages, disabled states.
+### 2B.7 Module Prerequisite UI + Time-Gating — ✅ DONE (2026-02-22)
+**What:** Module prerequisites backend was fully built. Added client-facing lock icons, "Complete Module X first" messages, disabled states on locked modules. Also added time-gating via `available_from_date` column on `program_modules` — modules hidden/locked before date. Admin toggle in module editor.
 
-**Also missing (lower priority):**
+**Remaining (lower priority):**
 - Prerequisite waiver mechanism for coaches/instructors
 - Circular dependency detection on prerequisite creation
 
-**Time-gating** (drip by date, regardless of completion) is a separate concept. Defer unless cohort pacing specifically requires it — prerequisites handle most sequencing needs.
-
-**Effort:** Low (1 week for UI). Medium (1-2 weeks with waiver + validation).
-**Priority:** Medium — polish for professionalism.
+**Commit:** `783f06d`
 
 ### 2B.8 Win-Back, Re-Engagement & ActiveCampaign Sync — NEW
 **What:** Two layers:

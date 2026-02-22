@@ -1,5 +1,80 @@
 # Completed Work — Detailed History
 
+## 2B.6 Cohort Waitlist Management (2026-03-01)
+
+Full waitlist system with capacity enforcement at program + cohort level, enrollment source attribution, client-facing waitlist UI, admin management, and spot availability notifications. 3 migrations, 2 new components, 1 new edge function, 6 modified files. `npm run verify` passed on first try.
+
+**Database Migration 1 (`20260301090000_enrollment_source_and_capacity.sql`):**
+- `client_enrollments.enrollment_source` (TEXT) — values: self, admin, enrollment_code, waitlist_promotion, partner_referral
+- `client_enrollments.referred_by` (UUID FK → auth.users) — who referred or promoted the enrollment
+- `client_enrollments.referral_note` (TEXT) — free text context (partner name, code used, etc.)
+- `programs.capacity` (INTEGER, nullable) — max enrollments for program. NULL = unlimited.
+- `check_program_capacity(uuid)` RPC — returns JSON: has_capacity, capacity, enrolled_count, available_spots
+- Backfill: existing enrollment-code enrollments get `enrollment_source = 'enrollment_code'`
+
+**Database Migration 2 (`20260301100000_cohort_waitlist.sql`):**
+- `cohort_waitlist` table: id, user_id, cohort_id, position, notified, created_at, updated_at. UNIQUE(user_id, cohort_id).
+- RLS: users manage own entries, admins manage all (via `user_roles` check)
+- `check_cohort_capacity(uuid)` RPC — returns JSON: has_capacity, capacity, enrolled_count, waitlist_count, available_spots
+- `join_cohort_waitlist(uuid)` RPC — validates not enrolled, checks cohort IS full, assigns next position. Returns `{success, position}`.
+
+**Database Migration 3 (`20260301100001_enroll_with_credits_capacity.sql`):**
+- Full `CREATE OR REPLACE` of `enroll_with_credits` — 13 params (was 9), all new params have defaults (backward compatible)
+- New params: `p_force` (boolean, skips capacity), `p_enrollment_source` (text), `p_referred_by` (uuid), `p_referral_note` (text)
+- Program capacity check → cohort capacity check → credit consumption → INSERT with source tracking
+- Drops old 8-param and 9-param overloads to avoid PostgreSQL ambiguity
+- GRANT with full 13-param signature
+
+**New Component — `CohortWaitlistButton.tsx`:**
+- Client-facing: shows nothing when cohort has capacity, "Join Waitlist" when full, "On Waitlist #N" badge when joined
+- Calls `check_cohort_capacity` and `join_cohort_waitlist` RPCs
+- Leave waitlist via direct DELETE
+- TanStack React Query with 15s staleTime
+
+**New Component — `CohortWaitlistManager.tsx`:**
+- Admin panel: table view of waitlist entries (position, name, email, joined date, notified status)
+- Promote action: calls `enroll_with_credits` with `p_force: true`, `p_enrollment_source: 'waitlist_promotion'`, `p_discount_percent: 100`
+- Remove action: deletes from `cohort_waitlist`
+- Shows available spots count from `check_cohort_capacity`
+
+**New Edge Function — `notify-cohort-waitlist/index.ts`:**
+- Input: `{ cohortId }`, auth via anon/service role key
+- Checks capacity → gets next N unnotified entries by position → sends email via `send-notification-email` with type `waitlist_spot_available` → marks `notified = true`
+- Added to `config.toml` with `verify_jwt = false`
+
+**Modified — `redeem-enrollment-code/index.ts`:**
+- Added program capacity check (calls `check_program_capacity` RPC)
+- Added cohort capacity check (calls `check_cohort_capacity` RPC)
+- Passes `p_enrollment_source: 'enrollment_code'`, `p_referred_by: enrollCode.created_by`, `p_referral_note: 'Via code ${code}'` to `enroll_with_credits`
+
+**Modified — `useProgramEnrollment.ts`:**
+- Added program capacity check at start of `enrollInProgram`: calls `check_program_capacity` RPC, shows toast if full
+- Added `enrollment_source: 'self'` to direct `client_enrollments.insert`
+
+**Modified — `ClientDetail.tsx`:**
+- Added `useAuth()` for admin user ID
+- Passes `p_force: true`, `p_enrollment_source: 'admin'`, `p_referred_by: adminUser.id`, `p_referral_note: 'Enrolled by admin'` to `enroll_with_credits`
+
+**Modified — `ProgramCohortsManager.tsx`:**
+- Added waitlist count query (parallel to existing enrollment counts)
+- Shows waitlist badge per cohort: `⏳ N waiting` in amber
+- Embeds `CohortWaitlistManager` inside collapsible content (after sessions)
+
+**Modified — `types.ts`:**
+- Added `cohort_waitlist` table types (Row/Insert/Update with Relationships)
+- Added enrollment source columns to `client_enrollments` Row/Insert/Update
+- Added `capacity` to `programs` Row/Insert/Update
+- Added function signatures: `check_cohort_capacity`, `check_program_capacity`, `join_cohort_waitlist`
+- Updated `enroll_with_credits` Args with 4 new params
+
+---
+
+## 2B.7 Module Prerequisite UI + Time-Gating (2026-02-22)
+
+Lock icons + "Complete X first" messages + disabled states on client module lists. Time-gating via `available_from_date` column on `program_modules` — modules hidden/locked before date. Admin toggle in module editor. Commit `783f06d`.
+
+---
+
 ## Phase 5 — Self-Registration Core, Batches 1-3 (2026-02-26)
 
 Self-registration with role selection and admin approval flow. Transforms platform from invitation-only to self-registration. Commits `6cd54f5` (core), `b0b3f41` (CORS fix), `b5a659b` (config.toml fix), `9d598e7` (error messages), `ebba49f` (login tab switch), `7f7040e` (duplicate email fix), `0ca3358`..`01652f3` (Google OAuth fixes — 8 commits). 3 new files, 9 modified, 1 migration, 1 new edge function. Deployed to all 3 environments.

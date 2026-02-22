@@ -581,22 +581,13 @@ Credit packages auto-create their Stripe products/prices on first purchase — n
   5. **Badge expiry/renewal** — `expires_at` field on `client_badges` for certs requiring continuing education
 - Priority: High — certification is a key differentiator.
 
-**C. Waitlist / Cohort Management** ⚡ URGENT
-- Programs with live coaching have cohort size limits, but no waitlist or cohort management exists.
-- Launching public cohort trainings soon with a partner — must be rock solid.
-- Need:
-  - `program_cohorts` table — cohort_id, program_id, name, start_date, max_seats, enrolled_count, status (open/full/in_progress/completed)
-  - `cohort_waitlist` table — user_id, cohort_id, joined_at, status (waiting/offered/confirmed/expired)
-  - When cohort full → "Join waitlist" button, no credits charged
-  - When spot opens → next in waitlist notified → X hours to confirm (configurable) → credits charged on confirmation
-  - Admin dashboard: view cohorts, manage waitlist, manually offer spots
-- Priority: **HIGHEST** — blocking upcoming public launch.
+**C. Waitlist / Cohort Management** ✅ DONE (2026-03-01)
+- Implemented: `cohort_waitlist` table (position-based queue), `programs.capacity` column, `check_cohort_capacity` + `check_program_capacity` RPCs, `join_cohort_waitlist` RPC, `enroll_with_credits` capacity enforcement (13 params, `p_force` admin override), `CohortWaitlistButton` (client), `CohortWaitlistManager` (admin promote/remove), `notify-cohort-waitlist` edge function.
+- Enrollment attribution: `enrollment_source`, `referred_by`, `referral_note` on `client_enrollments` — tracks self/admin/code/waitlist/partner sources.
+- See `completed-work.md` for full details.
 
-**D. Module Prerequisite UI Gaps** (backend exists, frontend incomplete)
-- `module_prerequisites` table and `useGuidedResourceAccess` hook exist and work.
-- Missing: client-facing lock icons, "Complete Module X first" messages, disabled states on locked modules.
-- Time-gating (drip by date) is a separate concept from prerequisites — only needed if cohort pacing requires releasing modules by week regardless of completion. Defer unless cohort trainings need it.
-- Priority: Medium — fix UI gaps, defer time-gating.
+**D. Module Prerequisite UI + Time-Gating** ✅ DONE (2026-02-22)
+- Implemented: lock icons, "Complete Module X first" messages, disabled states on locked modules. Time-gating via `available_from_date` on `program_modules`. Admin toggle in module editor. Commit `783f06d`.
 
 **E. Renewal & Win-Back Flows — System + ActiveCampaign**
 - `subscription-reminders` does renewal emails but no win-back or re-engagement.

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,7 @@ import { PageLoadingState } from "@/components/ui/page-loading-state";
 export default function ClientDetail() {
   const { id } = useParams() as { id: string };
   const navigate = useNavigate();
+  const { user: adminUser } = useAuth();
   const [client, setClient] = useState<any>(null);
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [programs, setPrograms] = useState<any[]>([]);
@@ -445,6 +447,10 @@ export default function ClientDetail() {
         p_final_credit_cost: finalCreditCost,
         p_description: `Enrolled in ${program?.name} (${selectedTier}) by admin`,
         p_cohort_id: selectedCohort || null,
+        p_force: true,
+        p_enrollment_source: "admin",
+        p_referred_by: adminUser?.id || null,
+        p_referral_note: "Enrolled by admin",
       },
     );
 

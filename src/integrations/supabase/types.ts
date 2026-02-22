@@ -1975,6 +1975,7 @@ export type Database = {
           end_date: string | null
           enrollment_code_id: string | null
           enrollment_number: number | null
+          enrollment_source: string | null
           final_credit_cost: number | null
           id: string
           is_public: boolean
@@ -1984,6 +1985,8 @@ export type Database = {
           program_id: string
           program_plan_id: string | null
           program_version_id: string | null
+          referral_note: string | null
+          referred_by: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["enrollment_status"]
           tier: string | null
@@ -1998,6 +2001,7 @@ export type Database = {
           end_date?: string | null
           enrollment_code_id?: string | null
           enrollment_number?: number | null
+          enrollment_source?: string | null
           final_credit_cost?: number | null
           id?: string
           is_public?: boolean
@@ -2007,6 +2011,8 @@ export type Database = {
           program_id: string
           program_plan_id?: string | null
           program_version_id?: string | null
+          referral_note?: string | null
+          referred_by?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["enrollment_status"]
           tier?: string | null
@@ -2021,6 +2027,7 @@ export type Database = {
           end_date?: string | null
           enrollment_code_id?: string | null
           enrollment_number?: number | null
+          enrollment_source?: string | null
           final_credit_cost?: number | null
           id?: string
           is_public?: boolean
@@ -2030,6 +2037,8 @@ export type Database = {
           program_id?: string
           program_plan_id?: string | null
           program_version_id?: string | null
+          referral_note?: string | null
+          referred_by?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["enrollment_status"]
           tier?: string | null
@@ -2461,6 +2470,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      cohort_waitlist: {
+        Row: {
+          id: string
+          user_id: string
+          cohort_id: string
+          position: number
+          notified: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          cohort_id: string
+          position: number
+          notified?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          cohort_id?: string
+          position?: number
+          notified?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cohort_waitlist_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "program_cohorts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cohort_session_attendance: {
         Row: {
@@ -10353,6 +10400,7 @@ export type Database = {
       programs: {
         Row: {
           allow_repeat_enrollment: boolean
+          capacity: number | null
           category: Database["public"]["Enums"]["program_category"]
           code: string | null
           created_at: string | null
@@ -10373,6 +10421,7 @@ export type Database = {
         }
         Insert: {
           allow_repeat_enrollment?: boolean
+          capacity?: number | null
           category: Database["public"]["Enums"]["program_category"]
           code?: string | null
           created_at?: string | null
@@ -10393,6 +10442,7 @@ export type Database = {
         }
         Update: {
           allow_repeat_enrollment?: boolean
+          capacity?: number | null
           category?: Database["public"]["Enums"]["program_category"]
           code?: string | null
           created_at?: string | null
@@ -14316,6 +14366,18 @@ export type Database = {
         }
         Returns: Json
       }
+      check_cohort_capacity: {
+        Args: {
+          p_cohort_id: string
+        }
+        Returns: Json
+      }
+      check_program_capacity: {
+        Args: {
+          p_program_id: string
+        }
+        Returns: Json
+      }
       consume_credits_fifo: {
         Args: {
           p_action_reference_id?: string
@@ -14406,10 +14468,14 @@ export type Database = {
           p_cohort_id?: string
           p_description?: string
           p_discount_percent?: number
+          p_enrollment_source?: string
           p_final_credit_cost?: number
+          p_force?: boolean
           p_original_credit_cost?: number
           p_program_id: string
           p_program_plan_id?: string
+          p_referral_note?: string
+          p_referred_by?: string
           p_tier?: string
         }
         Returns: Json
@@ -14597,6 +14663,12 @@ export type Database = {
       is_session_participant: {
         Args: { p_session_id: string; p_user_id: string }
         Returns: boolean
+      }
+      join_cohort_waitlist: {
+        Args: {
+          p_cohort_id: string
+        }
+        Returns: Json
       }
       module_type_has_session_capability: {
         Args: { _module_type: string }

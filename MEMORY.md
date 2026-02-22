@@ -49,7 +49,7 @@
 - Supabase client: `src/integrations/supabase/client.ts`
 - Auth: `src/pages/Auth.tsx`, `src/contexts/AuthContext.tsx`
 - Routes: `src/App.tsx` | Sentry: `src/main.tsx` | Error boundary: `src/components/ErrorBoundary.tsx`
-- Edge functions: `supabase/functions/` (68 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`, `error-response.ts`, `ai-input-limits.ts`, `calcom-utils.ts`
+- Edge functions: `supabase/functions/` (69 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`, `error-response.ts`, `ai-input-limits.ts`, `calcom-utils.ts`
 - xAPI: `supabase/functions/xapi-launch/` (session create/resume), `supabase/functions/xapi-statements/` (LRS endpoint + state persistence)
 - Assessment scoring: `src/lib/assessmentScoring.ts` (weighted question type scoring for capability assessments)
 - Guided path instantiation: `src/lib/guidedPathInstantiation.ts` (shared template→goals service with pace/date logic)
@@ -57,8 +57,9 @@
 - Seed: `supabase/seed.sql` | Cursor rules: `.cursorrules`
 
 ## Database Schema
-- 380+ tables, 25 enums, 421 migrations
+- 380+ tables, 25 enums, 424 migrations
 - Key tables (CT3): `content_packages` (shared content library), `content_completions` (cross-program completion tracking), `program_modules.content_package_id` FK
+- Key tables (waitlist): `cohort_waitlist` (user_id, cohort_id, position, notified), `programs.capacity`, `client_enrollments.enrollment_source/referred_by/referral_note`
 - Key enums: `app_role` (admin, client, coach, instructor), `module_type`, `enrollment_status`
 - **Two plan systems:** Subscription plans (`plans` table, tier 0-4) + Program plans (`program_plans`, per-enrollment features)
 - `useEntitlements` merges 5 sources: subscription, program plan, add-ons, tracks, org-sponsored (highest wins)
@@ -73,6 +74,10 @@
 
 ## Cohort & Session Infrastructure (already built)
 - **Cohorts:** `program_cohorts` (status, capacity, dates) + `cohort_sessions` (date, time, meeting link, module link)
+- **Waitlist:** `cohort_waitlist` (position-based queue, UNIQUE per user+cohort) + `check_cohort_capacity` RPC + `join_cohort_waitlist` RPC + `notify-cohort-waitlist` edge function
+- **Program capacity:** `programs.capacity` column + `check_program_capacity` RPC — enforced in `enroll_with_credits` and `useProgramEnrollment`
+- **Capacity enforcement:** `enroll_with_credits` RPC checks both program + cohort capacity (skippable with `p_force=true` for admin override)
+- **Enrollment attribution:** `client_enrollments.enrollment_source` (self/admin/enrollment_code/waitlist_promotion/partner_referral) + `referred_by` (UUID) + `referral_note` (text)
 - **Unified sessions:** `sessions` + `session_types` (8 types: coaching, group_coaching, workshop, mastermind, review_board, peer_coaching, office_hours, webinar) + `session_type_roles` (10 roles)
 - **Session participants:** `session_participants` with attendance workflow (invited → registered → confirmed → attended/no_show)
 - **Groups:** `groups` + `group_memberships` + tasks, check-ins, notes, peer assessments, member links
@@ -146,7 +151,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - ~~**CT3b: Cross-Program Completion**~~ ✅ — `content_completions` table. `xapi-statements` writes completion on xAPI verb. `useCrossProgramCompletion` extended with 3rd data source. Client `ModuleDetail` auto-accepts completion from shared content. `CanonicalCodesManagement` now shows content packages tab.
 - **`canonical_code` override** — kept as manual override for different content that should count as equivalent.
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → Phase 5 remaining (Wheel pipeline, bulk import) → 3-AI/Engagement → 1-Onboarding → 2-Assessment → 4-Peer → 6-Enterprise → 7-Mobile → 8-Integrations → 9-Strategic
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → 2B.2 Partner Codes → 2B.5 Certification → 2B.1 Alumni Lifecycle → 2B.3 Pricing Update → Phase 5 remaining → 3-AI/Engagement
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
@@ -207,7 +212,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Preprod Auth Email Hook (2026-02-14):** Incorrect Authorization header. Fixed with correct service role key.
 - **Profiles RLS recursion (2026-02-14):** Circular RLS on profiles. Fixed via `client_can_view_staff_profile()` SECURITY DEFINER function.
 
-## Current State (as of 2026-02-26)
+## Current State (as of 2026-03-01)
 - All strict TypeScript flags enabled (including strictNullChecks). 0 errors.
 - **Self-registration enabled** (Phase 5 core). Signup form + Google OAuth active in Auth.tsx. New users choose role at `/complete-registration` (client immediate, coach/instructor via admin approval). All self-registered users get client role + free plan immediately.
 - 16 storage buckets on all 3 Supabase projects
@@ -256,7 +261,22 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - **Google OAuth root cause:** `handle_new_user` trigger sets `registration_status='complete'` (column default) for ALL new users. Required 3 fixes: (1) detect OAuth new users by `zero roles + provider === "google"` only (not `!registrationStatus`), (2) `complete-registration` idempotency guard must also check `user_roles` count (was short-circuiting with `already_complete` before creating any roles), (3) `CompleteRegistration.tsx` redirect guard must check `userRoles.length > 0` before redirecting to `/dashboard`
   - Added sign out button to `/complete-registration` page
   - Index.tsx: 500ms fast fallback to `/dashboard` for Google OAuth users (vs 6s for others), ProtectedRoute then catches and redirects to `/complete-registration`
-- **Next steps:** Phase 5 remaining (Wheel pipeline, bulk import) → M13 Zod validation → Phase 3 AI
+- **2B.7 Module Prerequisite UI + Time-Gating (2026-02-22):** Lock icons + "Complete X first" messages + disabled states on client module lists. Time-gating via `available_from_date` column on `program_modules` — modules hidden before date. Admin toggle in module editor. Commit `783f06d`.
+- **2B.6 Cohort Waitlist Management (2026-03-01):** Full waitlist system with capacity enforcement, enrollment attribution, admin management, and notifications. 3 migrations, 2 new components, 1 new edge function, 6 modified files.
+  - **Enrollment source tracking:** 3 columns on `client_enrollments` (`enrollment_source`, `referred_by`, `referral_note`) — tracks self/admin/enrollment_code/waitlist_promotion/partner_referral attribution
+  - **Program-level capacity:** `programs.capacity` column + `check_program_capacity` RPC — enforced in `enroll_with_credits` and `useProgramEnrollment`
+  - **Cohort waitlist:** `cohort_waitlist` table (position-based queue) + `check_cohort_capacity` RPC + `join_cohort_waitlist` RPC + RLS policies (users manage own, admins manage all)
+  - **Capacity enforcement in `enroll_with_credits`:** New params `p_force` (admin override), `p_enrollment_source`, `p_referred_by`, `p_referral_note`. 13 params total (was 9, backward compatible). Program + cohort capacity checked unless `p_force=true`.
+  - **Client UI:** `CohortWaitlistButton.tsx` — join/leave waitlist, position badge, capacity-aware visibility
+  - **Admin UI:** `CohortWaitlistManager.tsx` — table with promote/remove actions, waitlist count badges in ProgramCohortsManager
+  - **Notification:** `notify-cohort-waitlist` edge function — notifies next N users when spots open, reuses `waitlist_spot_available` email template
+  - **Capacity check in `redeem-enrollment-code`:** Program + cohort capacity checked before enrollment
+  - **Admin override:** `p_force=true` in ClientDetail.tsx admin enrollment and waitlist promotion — skips all capacity checks
+- **Key waitlist components:**
+  - `src/components/cohort/CohortWaitlistButton.tsx` — client-facing join/leave waitlist
+  - `src/components/admin/CohortWaitlistManager.tsx` — admin promote/remove waitlist entries
+  - `supabase/functions/notify-cohort-waitlist/index.ts` — spot availability notification
+- **Next steps:** 2B.2 Partner Codes → 2B.5 Certification → 2B.1 Alumni Lifecycle → 2B.3 Pricing Update → Phase 5 remaining (Wheel pipeline, bulk import) → Phase 3 AI
 
 ## npm Scripts
 ```

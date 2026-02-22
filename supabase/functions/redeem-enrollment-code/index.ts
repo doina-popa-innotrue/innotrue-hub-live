@@ -114,6 +114,32 @@ serve(async (req) => {
       );
     }
 
+    // 5b. Check program capacity
+    const { data: progCapacity } = await supabase.rpc("check_program_capacity", {
+      p_program_id: enrollCode.program_id,
+    });
+
+    if (progCapacity && !progCapacity.has_capacity) {
+      return errorResponse.badRequest(
+        `This program is at full capacity (${progCapacity.enrolled_count}/${progCapacity.capacity}).`,
+        cors,
+      );
+    }
+
+    // 5c. Check cohort capacity if code targets a specific cohort
+    if (enrollCode.cohort_id) {
+      const { data: cohortCapacity } = await supabase.rpc("check_cohort_capacity", {
+        p_cohort_id: enrollCode.cohort_id,
+      });
+
+      if (cohortCapacity && !cohortCapacity.has_capacity) {
+        return errorResponse.badRequest(
+          `This cohort is at full capacity (${cohortCapacity.enrolled_count}/${cohortCapacity.capacity}).`,
+          cors,
+        );
+      }
+    }
+
     // 6. G8 scope: only process free enrollments
     const isFreeEnrollment =
       enrollCode.is_free || enrollCode.discount_percent === 100;
@@ -140,6 +166,9 @@ serve(async (req) => {
         p_final_credit_cost: 0,
         p_description: `Self-enrolled via code ${enrollCode.code}`,
         p_cohort_id: enrollCode.cohort_id || null,
+        p_enrollment_source: "enrollment_code",
+        p_referred_by: enrollCode.created_by || null,
+        p_referral_note: `Via code ${enrollCode.code}`,
       },
     );
 
