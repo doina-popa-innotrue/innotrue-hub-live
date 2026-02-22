@@ -1410,7 +1410,7 @@ export default function ProgramDetail() {
                     <TabsTrigger value="sections">Sections</TabsTrigger>
                     <TabsTrigger value="skills">Skills</TabsTrigger>
                     <TabsTrigger value="scenarios">Scenarios</TabsTrigger>
-                    <TabsTrigger value="prerequisites">Prerequisites</TabsTrigger>
+                    <TabsTrigger value="prerequisites">Access</TabsTrigger>
                     <TabsTrigger value="domains">Domains</TabsTrigger>
                   </TabsList>
                   <TabsContent value="details" className="mt-4">
@@ -1454,8 +1454,7 @@ export default function ProgramDetail() {
                   </TabsContent>
                   <TabsContent value="prerequisites" className="mt-4 space-y-2">
                     <p className="text-xs text-muted-foreground">
-                      Click <span className="font-medium">Add</span> /{" "}
-                      <span className="font-medium">Remove</span> to save changes.
+                      Manage prerequisites and time-gating for this module.
                     </p>
                     <ModulePrerequisites
                       moduleId={editingModule.id}

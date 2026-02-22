@@ -9922,6 +9922,7 @@ export type Database = {
       }
       program_modules: {
         Row: {
+          available_from_date: string | null
           calendly_event_url: string | null
           canonical_code: string | null
           capability_assessment_id: string | null
@@ -9948,9 +9949,11 @@ export type Database = {
           program_id: string
           tier_required: string | null
           title: string
+          unlock_after_days: number | null
           updated_at: string | null
         }
         Insert: {
+          available_from_date?: string | null
           calendly_event_url?: string | null
           canonical_code?: string | null
           capability_assessment_id?: string | null
@@ -9977,9 +9980,11 @@ export type Database = {
           program_id: string
           tier_required?: string | null
           title: string
+          unlock_after_days?: number | null
           updated_at?: string | null
         }
         Update: {
+          available_from_date?: string | null
           calendly_event_url?: string | null
           canonical_code?: string | null
           capability_assessment_id?: string | null
@@ -10006,6 +10011,7 @@ export type Database = {
           program_id?: string
           tier_required?: string | null
           title?: string
+          unlock_after_days?: number | null
           updated_at?: string | null
         }
         Relationships: [

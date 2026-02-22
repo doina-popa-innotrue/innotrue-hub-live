@@ -20,11 +20,13 @@ import {
   ChevronRight,
   FileText,
   Link as LinkIcon,
+  Lock,
   Paperclip,
   Plus,
   RotateCcw,
   PlayCircle,
 } from "lucide-react";
+import { format } from "date-fns";
 import { useTalentLmsSSO } from "@/hooks/useTalentLmsSSO";
 import { useTalentLmsProgress } from "@/hooks/useTalentLmsProgress";
 import { awardSkillsForModuleCompletion } from "@/hooks/useSkillsAcquisition";
@@ -81,12 +83,20 @@ interface Module {
   content_package_path?: string | null;
   content_package_type?: "web" | "xapi" | null;
   content_package_id?: string | null;
+  available_from_date?: string | null;
+  unlock_after_days?: number | null;
   progress?: {
     id: string;
     status: string;
     notes: string | null;
     enrollment_id: string;
   };
+}
+
+interface PrerequisiteModule {
+  id: string;
+  title: string;
+  order_index: number;
 }
 
 interface ClientContent {
@@ -145,6 +155,7 @@ export default function ModuleDetail() {
   const [notes, setNotes] = useState("");
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [modulePlanAccessGranted, setModulePlanAccessGranted] = useState<boolean | null>(null);
+  const [incompletePrereqs, setIncompletePrereqs] = useState<PrerequisiteModule[]>([]);
   const { loginToTalentLms, isLoading: isSSOLoading } = useTalentLmsSSO();
   const { progress: talentLmsProgress } = useTalentLmsProgress(user?.id);
   const {
@@ -188,9 +199,48 @@ export default function ModuleDetail() {
 
       const { data: moduleData } = await supabase
         .from("program_modules")
-        .select("*, plan_id, min_plan_tier, content_package_path, content_package_type, content_package_id")
+        .select("*, plan_id, min_plan_tier, content_package_path, content_package_type, content_package_id, available_from_date, unlock_after_days")
         .eq("id", moduleId)
         .single();
+
+      // Check prerequisites
+      if (moduleData && enrollmentData) {
+        const { data: prereqsData } = await supabase
+          .from("module_prerequisites")
+          .select("prerequisite_module_id")
+          .eq("module_id", moduleData.id);
+
+        if (prereqsData && prereqsData.length > 0) {
+          const prereqIds = prereqsData.map((p) => p.prerequisite_module_id);
+
+          // Fetch progress for prerequisites
+          const { data: prereqProgress } = await supabase
+            .from("module_progress")
+            .select("module_id, status")
+            .eq("enrollment_id", enrollmentData.id)
+            .in("module_id", prereqIds);
+
+          const progressMap = new Map(
+            (prereqProgress || []).map((p) => [p.module_id, p.status]),
+          );
+
+          // Find incomplete prerequisites
+          const incompleteIds = prereqIds.filter(
+            (id) => progressMap.get(id) !== "completed",
+          );
+
+          if (incompleteIds.length > 0) {
+            const { data: prereqModules } = await supabase
+              .from("program_modules")
+              .select("id, title, order_index")
+              .in("id", incompleteIds)
+              .order("order_index");
+            setIncompletePrereqs(prereqModules || []);
+          } else {
+            setIncompletePrereqs([]);
+          }
+        }
+      }
 
       if (moduleData && enrollmentData) {
         let progressData = await supabase
@@ -533,50 +583,161 @@ export default function ModuleDetail() {
   const isModulePlanLocked = !planAccessLoading && modulePlanAccessGranted === false;
   const requiredPlanName = module.min_plan_tier ? getPlanNameForTier(module.min_plan_tier) : "";
 
+  // Check prerequisite lock
+  const isPrerequisiteLocked = incompletePrereqs.length > 0;
+
+  // Check time-gate lock
+  const now = new Date();
+  let isTimeGateLocked = false;
+  let unlockDate: Date | null = null;
+
+  if (module.available_from_date) {
+    const d = new Date(module.available_from_date);
+    if (now < d) {
+      isTimeGateLocked = true;
+      unlockDate = d;
+    }
+  }
+  if (module.unlock_after_days != null && module.unlock_after_days > 0 && enrollment?.created_at) {
+    const enrollmentDate = new Date(enrollment.created_at);
+    const d = new Date(enrollmentDate);
+    d.setDate(d.getDate() + module.unlock_after_days);
+    if (now < d) {
+      isTimeGateLocked = true;
+      if (!unlockDate || d > unlockDate) unlockDate = d;
+    }
+  }
+
+  // Common breadcrumb for lock overlays
+  const lockBreadcrumb = (
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink onClick={() => navigate("/programs")} className="cursor-pointer">
+            Programs
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator>
+          <ChevronRight className="h-4 w-4" />
+        </BreadcrumbSeparator>
+        <BreadcrumbItem>
+          <BreadcrumbLink
+            onClick={() => navigate(`/programs/${programId}`)}
+            className="cursor-pointer"
+          >
+            {programName}
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator>
+          <ChevronRight className="h-4 w-4" />
+        </BreadcrumbSeparator>
+        <BreadcrumbItem>
+          <BreadcrumbPage>{module.title}</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
+
   // Show plan lock overlay if module is locked by plan
   if (isModulePlanLocked) {
     return (
       <SessionMismatchGuard>
         <div className="space-y-6">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink onClick={() => navigate("/programs")} className="cursor-pointer">
-                  Programs
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator>
-                <ChevronRight className="h-4 w-4" />
-              </BreadcrumbSeparator>
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  onClick={() => navigate(`/programs/${programId}`)}
-                  className="cursor-pointer"
-                >
-                  {programName}
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator>
-                <ChevronRight className="h-4 w-4" />
-              </BreadcrumbSeparator>
-              <BreadcrumbItem>
-                <BreadcrumbPage>{module.title}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-
+          {lockBreadcrumb}
           <Card>
             <CardHeader>
               <CardTitle>{module.title}</CardTitle>
               <RichTextDisplay content={module.description} className="text-muted-foreground" />
             </CardHeader>
           </Card>
-
           <PlanLockOverlay
             reason="plan_required"
             requiredPlanName={requiredPlanName}
             userPlanName={userPlan?.name}
           />
+        </div>
+      </SessionMismatchGuard>
+    );
+  }
+
+  // Show prerequisite lock overlay
+  if (isPrerequisiteLocked) {
+    return (
+      <SessionMismatchGuard>
+        <div className="space-y-6">
+          {lockBreadcrumb}
+          <Card>
+            <CardHeader>
+              <CardTitle>{module.title}</CardTitle>
+              <RichTextDisplay content={module.description} className="text-muted-foreground" />
+            </CardHeader>
+          </Card>
+          <Card className="border-dashed">
+            <CardContent className="py-12">
+              <div className="flex flex-col items-center gap-4 text-center">
+                <Lock className="h-12 w-12 text-muted-foreground" />
+                <div>
+                  <h3 className="text-lg font-semibold">Complete Prerequisites First</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    You need to complete the following modules before accessing this one:
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {incompletePrereqs.map((prereq) => (
+                    <Badge key={prereq.id} variant="outline" className="text-sm">
+                      Module {prereq.order_index}: {prereq.title}
+                    </Badge>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/programs/${programId}`)}
+                  className="mt-2"
+                >
+                  Back to Program
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </SessionMismatchGuard>
+    );
+  }
+
+  // Show time-gate lock overlay
+  if (isTimeGateLocked) {
+    return (
+      <SessionMismatchGuard>
+        <div className="space-y-6">
+          {lockBreadcrumb}
+          <Card>
+            <CardHeader>
+              <CardTitle>{module.title}</CardTitle>
+              <RichTextDisplay content={module.description} className="text-muted-foreground" />
+            </CardHeader>
+          </Card>
+          <Card className="border-dashed">
+            <CardContent className="py-12">
+              <div className="flex flex-col items-center gap-4 text-center">
+                <Clock className="h-12 w-12 text-muted-foreground" />
+                <div>
+                  <h3 className="text-lg font-semibold">Available Soon</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {unlockDate
+                      ? `This module will be available on ${format(unlockDate, "MMMM d, yyyy")}.`
+                      : "This module is not yet available."}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/programs/${programId}`)}
+                  className="mt-2"
+                >
+                  Back to Program
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </SessionMismatchGuard>
     );

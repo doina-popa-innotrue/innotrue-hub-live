@@ -72,6 +72,8 @@ interface Module {
   prerequisites?: string[]; // IDs of prerequisite modules
   plan_id?: string | null;
   min_plan_tier?: number;
+  available_from_date?: string | null;
+  unlock_after_days?: number | null;
 }
 
 export default function ProgramDetail() {
@@ -200,7 +202,7 @@ export default function ProgramDetail() {
         .single();
       const { data: modulesData } = await supabase
         .from("program_modules")
-        .select("*, plan_id, min_plan_tier")
+        .select("*, plan_id, min_plan_tier, available_from_date, unlock_after_days")
         .eq("program_id", id)
         .order("order_index");
 
@@ -233,6 +235,8 @@ export default function ProgramDetail() {
               prerequisites: prereqMap.get(module.id) || [],
               plan_id: module.plan_id,
               min_plan_tier: module.min_plan_tier || 0,
+              available_from_date: module.available_from_date,
+              unlock_after_days: module.unlock_after_days,
             };
           }),
         );
@@ -321,12 +325,14 @@ export default function ProgramDetail() {
     fetchUpgradeRequest();
   }, [user, enrollment]);
 
-  // Helper to check if a module is accessible based on tier and plan
+  // Helper to check if a module is accessible based on tier, plan, prerequisites, and time-gate
   const isModuleAccessible = (module: Module): boolean => {
     const programTiers = program?.tiers as string[] | undefined;
     const isTierLocked = !hasTierAccess(programTiers, enrollment?.tier, module.tier_required);
     const isModulePlanLocked = modulePlanAccessMap[module.id] === false;
-    return !isTierLocked && !isModulePlanLocked;
+    const moduleTimeGated = isTimeGated(module);
+    const prereqsMet = arePrerequisitesMet(module);
+    return !isTierLocked && !isModulePlanLocked && !moduleTimeGated && prereqsMet;
   };
 
   // Calculate progress based on accessible modules only
@@ -426,6 +432,41 @@ export default function ProgramDetail() {
     return module.prerequisites
       .map((prereqId) => modules.find((m) => m.id === prereqId))
       .filter((m): m is Module => m !== undefined && m.progress?.status !== "completed");
+  };
+
+  // Check if a module is time-gated (not yet available)
+  const isTimeGated = (module: Module): boolean => {
+    const now = new Date();
+    // Check absolute date gate
+    if (module.available_from_date) {
+      const availableDate = new Date(module.available_from_date);
+      if (now < availableDate) return true;
+    }
+    // Check relative date gate (days after enrollment)
+    if (module.unlock_after_days != null && module.unlock_after_days > 0 && enrollment?.created_at) {
+      const enrollmentDate = new Date(enrollment.created_at);
+      const unlockDate = new Date(enrollmentDate);
+      unlockDate.setDate(unlockDate.getDate() + module.unlock_after_days);
+      if (now < unlockDate) return true;
+    }
+    return false;
+  };
+
+  // Get the unlock date for display (returns the later of the two gates)
+  const getUnlockDate = (module: Module): Date | null => {
+    let latestDate: Date | null = null;
+
+    if (module.available_from_date) {
+      const d = new Date(module.available_from_date);
+      if (!latestDate || d > latestDate) latestDate = d;
+    }
+    if (module.unlock_after_days != null && module.unlock_after_days > 0 && enrollment?.created_at) {
+      const enrollmentDate = new Date(enrollment.created_at);
+      const d = new Date(enrollmentDate);
+      d.setDate(d.getDate() + module.unlock_after_days);
+      if (!latestDate || d > latestDate) latestDate = d;
+    }
+    return latestDate;
   };
 
   if (loading) return <PageLoadingState message="Loading program..." />;
@@ -699,7 +740,9 @@ export default function ProgramDetail() {
             );
             const isModulePlanLocked = modulePlanAccessMap[module.id] === false;
             const prereqsMet = arePrerequisitesMet(module);
-            const isLocked = isTierLocked || !prereqsMet || isModulePlanLocked;
+            const moduleTimeGated = isTimeGated(module);
+            const moduleUnlockDate = moduleTimeGated ? getUnlockDate(module) : null;
+            const isLocked = isTierLocked || !prereqsMet || isModulePlanLocked || moduleTimeGated;
             const incompletePrereqs = getIncompletePrerequisites(module);
             const moduleProgress = getModuleProgress(module);
             const showProgress = !isLocked && moduleProgress > 0;
@@ -798,6 +841,20 @@ export default function ProgramDetail() {
                             <Lock className="h-3 w-3" />
                             Prerequisites Required
                           </Badge>
+                        ) : moduleTimeGated ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="secondary" className="gap-1">
+                                <Clock className="h-3 w-3" />
+                                Available {moduleUnlockDate ? format(moduleUnlockDate, "MMM d") : "soon"}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {moduleUnlockDate
+                                ? `This module unlocks on ${format(moduleUnlockDate, "MMMM d, yyyy")}`
+                                : "This module is not yet available"}
+                            </TooltipContent>
+                          </Tooltip>
                         ) : module.progress?.status === "completed" ? (
                           <CheckCircle2 className="h-5 w-5 text-green-500" />
                         ) : hasElsewhereCompletion ? (
@@ -891,6 +948,21 @@ export default function ProgramDetail() {
                             </Badge>
                           ))}
                         </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                )}
+                {!isModulePlanLocked && !isTierLocked && prereqsMet && moduleTimeGated && (
+                  <CardContent>
+                    <div className="text-center py-4">
+                      <div className="flex flex-col items-center gap-2">
+                        <Clock className="h-8 w-8 text-muted-foreground" />
+                        <p className="text-sm font-medium">Available Soon</p>
+                        <p className="text-xs text-muted-foreground">
+                          {moduleUnlockDate
+                            ? `This module unlocks on ${format(moduleUnlockDate, "MMMM d, yyyy")}`
+                            : "This module is not yet available"}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
