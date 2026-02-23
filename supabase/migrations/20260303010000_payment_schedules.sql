@@ -49,6 +49,17 @@ CREATE INDEX IF NOT EXISTS idx_payment_schedules_stripe_sub
 CREATE INDEX IF NOT EXISTS idx_payment_schedules_status
   ON public.payment_schedules(status) WHERE status = 'active';
 
+-- Ensure handle_updated_at() trigger function exists (common Supabase helper)
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
 -- Auto-update updated_at
 CREATE OR REPLACE TRIGGER update_payment_schedules_updated_at
   BEFORE UPDATE ON public.payment_schedules
