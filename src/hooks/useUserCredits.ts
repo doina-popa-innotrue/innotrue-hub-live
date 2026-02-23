@@ -309,12 +309,25 @@ export function formatPriceFromCents(cents: number, currency: string = "EUR"): s
   }).format(cents / 100);
 }
 
-// Calculate bonus percentage for a package
+// Calculate bonus percentage for a package (2:1 ratio: 1 EUR = 2 credits)
 export function calculatePackageBonus(priceCents: number, creditValue: number): number {
   if (priceCents === 0) return 0;
-  // Base: €1 = 1 credit, so price in cents / 100 = base credits
-  const baseCredits = priceCents / 100;
+  // Base: €1 = 2 credits, so base credits = (price in cents / 100) * 2
+  const baseCredits = (priceCents / 100) * 2;
   if (baseCredits === 0) return 0;
   const bonus = ((creditValue - baseCredits) / baseCredits) * 100;
   return Math.round(bonus);
+}
+
+// Convert credits to EUR equivalent (2:1 ratio)
+export function creditsToEur(credits: number): number {
+  return credits / 2;
+}
+
+// Format credits as EUR equivalent
+export function formatCreditsAsEur(credits: number): string {
+  return new Intl.NumberFormat("en-EU", {
+    style: "currency",
+    currency: "EUR",
+  }).format(credits / 2);
 }

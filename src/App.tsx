@@ -73,6 +73,7 @@ const ProgramCompletions = lazy(() => import("./pages/admin/ProgramCompletions")
 const TracksManagement = lazy(() => import("./pages/admin/TracksManagement"));
 const PartnerProgramsManagement = lazy(() => import("./pages/admin/PartnerProgramsManagement"));
 const OrgBillingManagement = lazy(() => import("./pages/admin/OrgBillingManagement"));
+const PaymentSchedulesManagement = lazy(() => import("./pages/admin/PaymentSchedulesManagement"));
 const CreditServicesManagement = lazy(() => import("./pages/admin/CreditServicesManagement"));
 const SkillsManagement = lazy(() => import("./pages/admin/SkillsManagement"));
 const SkillCategoriesManagement = lazy(() => import("./pages/admin/SkillCategoriesManagement"));
@@ -1041,6 +1042,14 @@ const App = () => (
                     element={
                       <ProtectedRoute requireRole="admin">
                         <OrgBillingManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/payment-schedules"
+                    element={
+                      <ProtectedRoute requireRole="admin">
+                        <PaymentSchedulesManagement />
                       </ProtectedRoute>
                     }
                   />

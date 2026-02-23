@@ -29,6 +29,7 @@ import {
 import { getTierDisplayName } from "@/lib/tierUtils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSupportEmail } from "@/hooks/useSupportEmail";
+import { formatCredits, formatCreditsAsEur } from "@/hooks/useUserCredits";
 interface ScheduledDate {
   id: string;
   date: string;
@@ -77,6 +78,8 @@ interface ExpressInterestDialogProps {
   };
   // Discount code props
   tierCreditCost?: number | null;
+  /** Map of tier name → credit cost for dynamic lookup (preferred over scalar tierCreditCost) */
+  tierCreditCosts?: Record<string, number | null>;
   onValidateDiscount?: (
     code: string,
     programId: string,
@@ -100,6 +103,7 @@ export function ExpressInterestDialog({
   isSubmitting = false,
   crossCompletions,
   tierCreditCost,
+  tierCreditCosts,
   onValidateDiscount,
   isValidatingDiscount,
   validatedDiscount,
@@ -123,10 +127,16 @@ export function ExpressInterestDialog({
     }
   }, [selectedTier, onClearDiscount]);
 
+  // Resolve credit cost for the currently selected tier
+  const resolvedTierCost =
+    tierCreditCosts && selectedTier
+      ? (tierCreditCosts[selectedTier] ?? tierCreditCost)
+      : tierCreditCost;
+
   const handleValidateDiscount = async () => {
-    if (!onValidateDiscount || !programId || !tierCreditCost || tierCreditCost <= 0) return;
+    if (!onValidateDiscount || !programId || !resolvedTierCost || resolvedTierCost <= 0) return;
     setHasAttemptedValidation(true);
-    await onValidateDiscount(discountCode, programId, selectedTier, tierCreditCost);
+    await onValidateDiscount(discountCode, programId, selectedTier, resolvedTierCost);
   };
 
   const handleSubmit = () => {
@@ -209,16 +219,28 @@ export function ExpressInterestDialog({
                   >
                     <RadioGroupItem value={tier} id={`tier-${tier}`} />
                     <Label htmlFor={`tier-${tier}`} className="flex-1 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        {getTierIcon(tier)}
-                        <div>
-                          <div className="font-medium">
-                            {getTierDisplayName(availableTiers, tier)}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {getTierDescription(tier)}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {getTierIcon(tier)}
+                          <div>
+                            <div className="font-medium">
+                              {getTierDisplayName(availableTiers, tier)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {getTierDescription(tier)}
+                            </div>
                           </div>
                         </div>
+                        {tierCreditCosts?.[tier] != null && tierCreditCosts[tier]! > 0 && (
+                          <div className="text-right shrink-0">
+                            <div className="text-sm font-semibold">
+                              {formatCredits(tierCreditCosts[tier]!)} credits
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {formatCreditsAsEur(tierCreditCosts[tier]!)}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </Label>
                   </div>
@@ -228,7 +250,7 @@ export function ExpressInterestDialog({
           )}
 
           {/* Discount Code Input */}
-          {tierCreditCost && tierCreditCost > 0 && onValidateDiscount && (
+          {resolvedTierCost && resolvedTierCost > 0 && onValidateDiscount && (
             <div className="space-y-3">
               <Label>Have a discount code?</Label>
               <div className="flex gap-2">

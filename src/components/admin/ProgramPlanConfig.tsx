@@ -13,8 +13,9 @@ import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, Shield, Package, Gem, AlertTriangle, Coins, RotateCcw } from "lucide-react";
+import { Loader2, Shield, Package, Gem, AlertTriangle, Coins, RotateCcw, CreditCard } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Plan {
@@ -65,8 +66,12 @@ export function ProgramPlanConfig({
     currentRequiresSeparatePurchase,
   );
   const [allowRepeatEnrollment, setAllowRepeatEnrollment] = useState(currentAllowRepeatEnrollment);
+  const [installmentMonths, setInstallmentMonths] = useState<number[]>([]);
+  const [upfrontDiscountPercent, setUpfrontDiscountPercent] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const AVAILABLE_INSTALLMENT_OPTIONS = [3, 6, 12];
 
   useEffect(() => {
     async function fetchData() {
@@ -87,7 +92,7 @@ export function ProgramPlanConfig({
       // Fetch current program's default program plan and separate purchase flag
       const { data: programData } = await supabase
         .from("programs")
-        .select("default_program_plan_id, requires_separate_purchase, allow_repeat_enrollment")
+        .select("default_program_plan_id, requires_separate_purchase, allow_repeat_enrollment, installment_options, upfront_discount_percent")
         .eq("id", programId)
         .single();
 
@@ -102,6 +107,12 @@ export function ProgramPlanConfig({
       setSelectedProgramPlanId(programData?.default_program_plan_id || "none");
       setRequiresSeparatePurchase(programData?.requires_separate_purchase || false);
       setAllowRepeatEnrollment(programData?.allow_repeat_enrollment || false);
+      // Parse installment options: stored as JSON array of {months: N} objects
+      const instOpts = programData?.installment_options;
+      if (Array.isArray(instOpts)) {
+        setInstallmentMonths(instOpts.map((o: { months: number }) => o.months).filter(Boolean));
+      }
+      setUpfrontDiscountPercent(programData?.upfront_discount_percent ?? 0);
 
       // Initialize tier plan mappings
       const mappings: TierPlanMapping[] = programTiers.map((tier) => {
@@ -166,6 +177,11 @@ export function ProgramPlanConfig({
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Build installment options JSON
+      const installmentOptionsJson = installmentMonths.length > 0
+        ? installmentMonths.sort((a, b) => a - b).map((m) => ({ months: m, label: `${m} monthly payments` }))
+        : null;
+
       // Update program settings
       const { error: programError } = await supabase
         .from("programs")
@@ -175,6 +191,8 @@ export function ProgramPlanConfig({
           default_program_plan_id: selectedProgramPlanId === "none" ? null : selectedProgramPlanId,
           requires_separate_purchase: requiresSeparatePurchase,
           allow_repeat_enrollment: allowRepeatEnrollment,
+          installment_options: installmentOptionsJson,
+          upfront_discount_percent: upfrontDiscountPercent,
         })
         .eq("id", programId);
 
@@ -315,6 +333,77 @@ export function ProgramPlanConfig({
         </CardContent>
       </Card>
 
+      {/* Installment Payment Options */}
+      <Card className={installmentMonths.length > 0 ? "border-blue-500/50 bg-blue-50/30 dark:bg-blue-950/20" : ""}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <CreditCard className="h-4 w-4 text-blue-600" />
+            Installment Payment Options
+          </CardTitle>
+          <CardDescription>
+            Allow clients to pay for this program in monthly installments. Credits are granted upfront;
+            access is locked if a payment is missed.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <Label>Available Payment Plans</Label>
+            <div className="flex flex-col gap-2">
+              {AVAILABLE_INSTALLMENT_OPTIONS.map((months) => (
+                <div key={months} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`installment-${months}`}
+                    checked={installmentMonths.includes(months)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setInstallmentMonths((prev) => [...prev, months]);
+                      } else {
+                        setInstallmentMonths((prev) => prev.filter((m) => m !== months));
+                      }
+                    }}
+                  />
+                  <Label htmlFor={`installment-${months}`} className="cursor-pointer text-sm">
+                    {months} monthly payments
+                  </Label>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Select which installment options are available. Leave all unchecked to disable installments.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="upfront-discount">Upfront Payment Discount (%)</Label>
+            <Input
+              id="upfront-discount"
+              type="number"
+              min="0"
+              max="100"
+              value={upfrontDiscountPercent}
+              onChange={(e) => setUpfrontDiscountPercent(Number(e.target.value) || 0)}
+              className="w-32"
+            />
+            <p className="text-xs text-muted-foreground">
+              Discount applied when client pays in full upfront (0 = no discount).
+              Displayed as incentive alongside installment options.
+            </p>
+          </div>
+
+          {installmentMonths.length > 0 && (
+            <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
+              <CreditCard className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
+                <strong>How it works:</strong> When a client chooses an installment plan, they pay the
+                first installment via Stripe Checkout. All credits are granted immediately and the
+                enrollment is created. Stripe then charges the remaining installments monthly. If a
+                payment fails, the client's program access is paused until payment is recovered.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Subscription Plan Access */}
       <Card className={requiresSeparatePurchase ? "opacity-50" : ""}>
         <CardHeader className="pb-3">
@@ -415,7 +504,7 @@ export function ProgramPlanConfig({
                 <Label className="text-sm font-medium">Tier Configuration</Label>
               </div>
               <p className="text-xs text-muted-foreground">
-                Assign program plans and set credit costs (pricing) for each tier. 1 credit = €1.
+                Assign program plans and set credit costs (pricing) for each tier. 2 credits = €1.
               </p>
 
               <div className="space-y-4">

@@ -42,6 +42,7 @@
 | `docs/PLATFORM_FUNCTIONAL_OVERVIEW.md` | **Platform functional overview** — human-readable guide to the entire platform: roles, architecture, 14 functional areas, staff assignment system, content delivery, integrations, admin tooling, key flows |
 | `docs/VALUE_PROPOSITION_CANVAS.md` | **Strategyzer Value Proposition Canvas** — 4 customer segments (coaching orgs, learners, coaches/instructors, corporate L&D), each with Customer Profile (jobs, pains, gains) + Value Map (products, pain relievers, gain creators), competitive differentiation, assumptions to validate |
 | `docs/BUSINESS_MODEL_CANVAS.md` | **Strategyzer Business Model Canvas** — 9 building blocks: customer segments (4, multi-sided platform), value propositions, channels (awareness/evaluation/delivery/support), customer relationships, revenue streams (subscriptions + credits + org billing), key resources, key activities, key partnerships (tech + business), cost structure. Includes cross-block analysis, assumptions/risks, business model patterns, current vs target state comparison |
+| `docs/CREDIT_ECONOMY_AND_PAYMENTS.md` | **Unified Credit Economy & Payment System** — 2:1 credit ratio spec, 6 pricing tables (plans, top-ups, org bundles, services), 3 enrollment flows (standard, top-up-&-enrol, installments), discount/voucher system (schema, validation, admin UI), payment plan architecture (Stripe subscription-as-instalment, upfront credit consumption, access locking), 4-phase implementation plan |
 | `docs/COHORT_SCHEDULING_ANALYSIS.md` | **Cohort scheduling audit** — full infrastructure audit (DB schema, admin UI, calendar integrations, 3 parallel session systems), scenario walkthroughs, 10 gaps (G1-G10), build vs buy recommendation (Google Calendar for Meet links, not TalentLMS/Zoom), 3-phase implementation plan with DB changes |
 | `docs/DEVELOPMENT_PROFILE_ANALYSIS.md` | **Development Profile & Assessment-Driven Guided Paths** — 7-phase plan connecting 3 assessment systems + development items + goals + guided paths into unified development journey. Assessment-gated milestones, intake-driven path recommendation, readiness dashboard. 6 new tables, ~18-28 days total. Approved for development 2026-02-18. |
 
@@ -49,7 +50,7 @@
 - Supabase client: `src/integrations/supabase/client.ts`
 - Auth: `src/pages/Auth.tsx`, `src/contexts/AuthContext.tsx`
 - Routes: `src/App.tsx` | Sentry: `src/main.tsx` | Error boundary: `src/components/ErrorBoundary.tsx`
-- Edge functions: `supabase/functions/` (69 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`, `error-response.ts`, `ai-input-limits.ts`, `calcom-utils.ts`
+- Edge functions: `supabase/functions/` (71 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`, `error-response.ts`, `ai-input-limits.ts`, `calcom-utils.ts`, `content-access.ts`
 - xAPI: `supabase/functions/xapi-launch/` (session create/resume), `supabase/functions/xapi-statements/` (LRS endpoint + state persistence)
 - Assessment scoring: `src/lib/assessmentScoring.ts` (weighted question type scoring for capability assessments)
 - Guided path instantiation: `src/lib/guidedPathInstantiation.ts` (shared template→goals service with pace/date logic)
@@ -57,11 +58,14 @@
 - Seed: `supabase/seed.sql` | Cursor rules: `.cursorrules`
 
 ## Database Schema
-- 380+ tables, 25 enums, 424 migrations
+- 380+ tables, 25 enums, 425+ migrations
 - Key tables (CT3): `content_packages` (shared content library), `content_completions` (cross-program completion tracking), `program_modules.content_package_id` FK
 - Key tables (waitlist): `cohort_waitlist` (user_id, cohort_id, position, notified), `programs.capacity`, `client_enrollments.enrollment_source/referred_by/referral_note`
 - Key enums: `app_role` (admin, client, coach, instructor), `module_type`, `enrollment_status`
-- **Two plan systems:** Subscription plans (`plans` table, tier 0-4) + Program plans (`program_plans`, per-enrollment features)
+- **Two plan systems (independent, additive):**
+  - **Subscription plans** (`plans` table, tier 0-4) — one per user (`profiles.plan_id`), Stripe-integrated, platform-wide features
+  - **Program plans** (`program_plans`, per-enrollment features) — auto-resolved from enrollment tier, never set manually
+  - `enroll_with_credits` RPC auto-resolves both: Step 0c defaults tier from `programs.tiers[0]`, Step 0d resolves `program_plan_id` from `program_tier_plans` → `programs.default_program_plan_id`
 - `useEntitlements` merges 5 sources: subscription, program plan, add-ons, tracks, org-sponsored (highest wins)
 - Credits additive: `plans.credit_allowance` + `program_plans.credit_allowance` + top-ups
 
@@ -77,6 +81,7 @@
 - **Waitlist:** `cohort_waitlist` (position-based queue, UNIQUE per user+cohort) + `check_cohort_capacity` RPC + `join_cohort_waitlist` RPC + `notify-cohort-waitlist` edge function
 - **Program capacity:** `programs.capacity` column + `check_program_capacity` RPC — enforced in `enroll_with_credits` and `useProgramEnrollment`
 - **Capacity enforcement:** `enroll_with_credits` RPC checks both program + cohort capacity (skippable with `p_force=true` for admin override)
+- **Tier + plan auto-resolution:** `enroll_with_credits` Step 0c defaults `tier` from `programs.tiers[0]`, Step 0d resolves `program_plan_id` from `program_tier_plans` → `programs.default_program_plan_id`. All enrollment paths (self, codes, partner, admin) get correct tier + program plan automatically.
 - **Enrollment attribution:** `client_enrollments.enrollment_source` (self/admin/enrollment_code/waitlist_promotion/partner_referral) + `referred_by` (UUID) + `referral_note` (text)
 - **Unified sessions:** `sessions` + `session_types` (8 types: coaching, group_coaching, workshop, mastermind, review_board, peer_coaching, office_hours, webinar) + `session_type_roles` (10 roles)
 - **Session participants:** `session_participants` with attendance workflow (invited → registered → confirmed → attended/no_show)
@@ -151,7 +156,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - ~~**CT3b: Cross-Program Completion**~~ ✅ — `content_completions` table. `xapi-statements` writes completion on xAPI verb. `useCrossProgramCompletion` extended with 3rd data source. Client `ModuleDetail` auto-accepts completion from shared content. `CanonicalCodesManagement` now shows content packages tab.
 - **`canonical_code` override** — kept as manual override for different content that should count as equivalent.
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → 2B.5 Certification → Phase 5 remaining → 3-AI/Engagement
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → 2B.5 Certification → Phase 5 remaining → 3-AI/Engagement
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
@@ -212,7 +217,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Preprod Auth Email Hook (2026-02-14):** Incorrect Authorization header. Fixed with correct service role key.
 - **Profiles RLS recursion (2026-02-14):** Circular RLS on profiles. Fixed via `client_can_view_staff_profile()` SECURITY DEFINER function.
 
-## Current State (as of 2026-03-01)
+## Current State (as of 2026-03-03)
 - All strict TypeScript flags enabled (including strictNullChecks). 0 errors.
 - **Self-registration enabled** (Phase 5 core). Signup form + Google OAuth active in Auth.tsx. New users choose role at `/complete-registration` (client immediate, coach/instructor via admin approval). All self-registered users get client role + free plan immediately.
 - 16 storage buckets on all 3 Supabase projects
@@ -276,7 +281,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - `src/components/cohort/CohortWaitlistButton.tsx` — client-facing join/leave waitlist
   - `src/components/admin/CohortWaitlistManager.tsx` — admin promote/remove waitlist entries
   - `supabase/functions/notify-cohort-waitlist/index.ts` — spot availability notification
-- **2B.2 Partner Codes MVP (2026-03-01):** Partner referral attribution system. `partner_codes` + `partner_referrals` tables with RLS. `validate_partner_code` RPC. `redeem-partner-code` edge function (validates → capacity check → enroll_with_credits with `enrollment_source='partner_referral'`). Admin `PartnerCodesManagement.tsx` (PRT prefix generator, CRUD, partner filter, copy code/link). Public `/partner?code=X` redemption page. Teaching dashboard referral stats card. Sidebar nav link.
+- **2B.2 Partner Codes MVP (2026-03-01):** Partner referral attribution system. `partner_codes` + `partner_referrals` tables with RLS. `validate_partner_code` RPC. `redeem-partner-code` edge function (validates → capacity check → enroll_with_credits with `enrollment_source='partner_referral'`). Admin `PartnerCodesManagement.tsx` (PRT prefix generator, CRUD, partner filter, copy code/link, **tier selector**). Public `/partner?code=X` redemption page (**shows tier badge**). Teaching dashboard referral stats card. Sidebar nav link. `partner_codes.grants_tier` column for tier override.
 - **2B.1 Alumni Lifecycle (2026-03-01):** Read-only content access for completed enrollments with configurable grace period. `completed_at` column + trigger on `client_enrollments`. `check_alumni_access` RPC. Shared `_shared/content-access.ts` modifies `serve-content-package` + `xapi-launch` with staff→active→alumni→denied access chain. `alumni-lifecycle` cron function sends nurture emails at 0/30/60/90d + grace expiry. `alumni_touchpoints` table prevents duplicates. `useAlumniAccess` hook + read-only banner in ContentPackageViewer. xAPI suppressed in read-only mode. Admin alumni info in ClientDetail.
 - **2B.3 Pricing Update (2026-03-01):** Migration updates plan_prices to €49/99/179/249 monthly + annual at 20% discount. Credits scaled ~2x (300/500/1000/1500). `stripe_price_id` nulled for Stripe auto-create. Continuation plan deactivated. Subscription page already had toggle — no frontend changes needed.
 - **Key new files (2B.2 + 2B.1 + 2B.3):**
@@ -289,6 +294,27 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - `src/pages/admin/PartnerCodesManagement.tsx` — admin partner codes CRUD
   - `src/pages/public/RedeemPartnerCode.tsx` — public partner code redemption
   - `src/hooks/useAlumniAccess.ts` — alumni status hook
+- **Tier & Program Plan Defaulting (2026-03-01):** Ensures every enrollment has consistent tier + program_plan_id. Migration `20260301140000_tier_defaulting.sql` adds:
+  - `partner_codes.grants_tier` column + updated `validate_partner_code` RPC
+  - `enroll_with_credits` Step 0c: tier defaults to `programs.tiers[0]` when NULL
+  - `enroll_with_credits` Step 0d: `program_plan_id` resolved from `program_tier_plans(program_id, tier_name)` → `programs.default_program_plan_id` fallback
+  - Fixed `redeem-enrollment-code` bug: was passing `grants_plan_id` (subscription plan FK) as `p_program_plan_id` (program plan FK) — now passes NULL, lets RPC resolve correctly
+  - Partner codes admin UI: tier selector, tier badge on redemption page
+  - All enrollment paths (self, enrollment codes, partner codes, admin) now auto-resolve tier + program plan
+- **Stripe Credit Bundles Sync (2026-03-02):** Synced 8 Stripe "Credit Bundle" products to `org_credit_packages` with `stripe_price_id` linking. Volume-based bonus credits: 5%→40%. Migration `20260302100000_sync_stripe_credit_bundles.sql`. No individual top-up products in Stripe yet (auto-created on first checkout).
+- **Credit Economy Redesign (2026-03-02 – 2026-03-03):** Unified 2:1 credit-to-EUR ratio across all pricing. 4-phase implementation:
+  - **Phase 1 (Credit Recalibration):** Migration `20260302120000_credit_recalibration_2to1.sql` recalibrates all plans, packages, services, and program costs to 2:1 ratio. Seed.sql updated for fresh environments.
+  - **Phase 2 (Top Up & Enrol UX):** Smart package recommendation on Credits page (reads `pendingEnrollment` from sessionStorage, computes shortfall, finds smallest adequate package). Contextual large package display (≥€1,500 hidden unless needed). "Top Up & Enroll" one-click flow. Discount code input in enrollment dialog with per-tier credit cost display. Credit cost badges on program cards. `creditsToEur()` and `formatCreditsAsEur()` utility functions in `useUserCredits.ts`.
+  - **Phase 3 (Installment Plans):** `payment_schedules` table (migration `20260303010000`). Per-program installment config (`installment_options` JSONB, `upfront_discount_percent` on programs). `create-installment-checkout` edge function (Stripe subscription with `cancel_at` for fixed-term). Webhook handlers for `invoice.paid`, `invoice.payment_failed`, `subscription.deleted` with credit_installment metadata routing. Client UI payment plan selector (RadioGroup: pay in full / 3x / 6x / 12x). Enhanced `PlanLockOverlay` for payment_outstanding. Admin `PaymentSchedulesManagement` dashboard with stats, progress bars, status badges.
+  - **Phase 4 (Documentation):** Updated MEMORY.md, completed-work.md, SUBSCRIPTIONS_AND_PLANS.md.
+- **Key credit economy components:**
+  - `src/pages/client/Credits.tsx` — complete rewrite: smart recommendation, contextual display, installment selector, "Top Up & Enroll" flow
+  - `src/pages/client/ExplorePrograms.tsx` — credit cost badges on program cards, discount code wiring
+  - `src/components/programs/ExpressInterestDialog.tsx` — `tierCreditCosts` map, per-tier cost display in RadioGroup
+  - `src/components/admin/ProgramPlanConfig.tsx` — installment options checkboxes (3/6/12 months), upfront discount percent
+  - `src/pages/admin/PaymentSchedulesManagement.tsx` — admin installment tracking dashboard
+  - `supabase/functions/create-installment-checkout/index.ts` — Stripe subscription-as-instalment
+  - Stripe webhook (`stripe-webhook/index.ts`) — installment lifecycle handlers (invoice.paid, payment_failed, subscription.deleted)
 - **Next steps:** 2B.5 Certification → Phase 5 remaining (Wheel pipeline, bulk import) → Phase 3 AI
 
 ## npm Scripts

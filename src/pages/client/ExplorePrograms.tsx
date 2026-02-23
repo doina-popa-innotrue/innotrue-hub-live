@@ -27,6 +27,7 @@ import {
   ChevronDown,
   Lock,
   RotateCcw,
+  Coins,
 } from "lucide-react";
 import { ProgramPreviewDialog } from "@/components/programs/ProgramPreviewDialog";
 import { ExpressInterestDialog } from "@/components/programs/ExpressInterestDialog";
@@ -42,6 +43,8 @@ import {
 import { usePlanAccess } from "@/hooks/usePlanAccess";
 import { PlanLockBadge } from "@/components/programs/PlanLockBadge";
 import { useExploreModuleCompletions } from "@/hooks/useExploreModuleCompletions";
+import { useProgramEnrollment } from "@/hooks/useProgramEnrollment";
+import { formatCredits, formatCreditsAsEur } from "@/hooks/useUserCredits";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface CrossProgramModule {
@@ -88,6 +91,7 @@ interface Program {
   min_plan_tier?: number;
   requires_separate_purchase?: boolean;
   allow_repeat_enrollment?: boolean;
+  credit_cost?: number | null;
   hasActiveEnrollment?: boolean;
   enrollmentCount?: number;
 }
@@ -152,6 +156,22 @@ export default function ExplorePrograms() {
     userPlan,
   } = usePlanAccess();
   const { checkProgramCompletions } = useExploreModuleCompletions(user?.id);
+  const {
+    fetchTierPricing,
+    getTierCreditCost,
+    validateDiscountCode,
+    validatedDiscount,
+    isValidatingDiscount,
+    discountValidationError,
+    clearDiscount,
+  } = useProgramEnrollment();
+
+  // Fetch tier pricing when interest dialog opens
+  useEffect(() => {
+    if (interestProgram?.id) {
+      fetchTierPricing(interestProgram.id);
+    }
+  }, [interestProgram?.id, fetchTierPricing]);
 
   // Fetch categories
   const { data: programCategories = [] } = useQuery({
@@ -175,7 +195,7 @@ export default function ExplorePrograms() {
       const { data: programsData, error: programsError } = await supabase
         .from("programs")
         .select(
-          "id, name, description, category, scheduled_dates, tiers, plan_id, min_plan_tier, requires_separate_purchase, allow_repeat_enrollment",
+          "id, name, description, category, scheduled_dates, tiers, plan_id, min_plan_tier, requires_separate_purchase, allow_repeat_enrollment, credit_cost",
         )
         .eq("is_active", true)
         .order("name");
@@ -327,6 +347,7 @@ export default function ExplorePrograms() {
           plan_id: program.plan_id,
           min_plan_tier: program.min_plan_tier || 0,
           allow_repeat_enrollment: (program as any).allow_repeat_enrollment || false,
+          credit_cost: (program as any).credit_cost ?? null,
           hasActiveEnrollment,
           enrollmentCount: programEnrollments.length,
         };
@@ -779,6 +800,12 @@ export default function ExplorePrograms() {
                 Interest Registered
               </Badge>
             )}
+            {program.credit_cost != null && program.credit_cost > 0 && !program.isEnrolled && (
+              <Badge variant="outline" className="text-xs" title={formatCreditsAsEur(program.credit_cost)}>
+                <Coins className="h-3 w-3 mr-1" />
+                {formatCredits(program.credit_cost)} credits
+              </Badge>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -990,12 +1017,33 @@ export default function ExplorePrograms() {
       <ExpressInterestDialog
         open={!!interestProgram}
         onOpenChange={(open) => !open && setInterestProgram(null)}
+        programId={interestProgram?.id}
         programName={interestProgram?.name || ""}
         scheduledDates={interestProgram?.scheduled_dates}
         availableTiers={interestProgram?.tiers || []}
         onSubmit={handleExpressInterest}
         isSubmitting={isSubmittingInterest}
         crossCompletions={interestCrossCompletions || undefined}
+        tierCreditCost={
+          interestProgram?.id && interestProgram?.tiers?.[0]
+            ? getTierCreditCost(interestProgram.id, interestProgram.tiers[0])
+            : null
+        }
+        tierCreditCosts={
+          interestProgram?.id && interestProgram?.tiers
+            ? Object.fromEntries(
+                interestProgram.tiers.map((t) => [
+                  t,
+                  getTierCreditCost(interestProgram.id, t),
+                ]),
+              )
+            : undefined
+        }
+        onValidateDiscount={validateDiscountCode}
+        isValidatingDiscount={isValidatingDiscount}
+        validatedDiscount={validatedDiscount}
+        discountValidationError={discountValidationError}
+        onClearDiscount={clearDiscount}
       />
     </div>
   );

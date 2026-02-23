@@ -8,11 +8,11 @@
 
 | Key | Name | Tier | is_free | is_purchasable | Credit Allowance | Purpose |
 |-----|------|------|---------|----------------|-----------------|---------|
-| `free` | Free | 0 | yes | yes | 20 | Default plan for all new users |
-| `base` | Base | 1 | no | yes | 300 | Entry paid tier |
-| `pro` | Pro | 2 | no | yes | 500 | Professional tier |
-| `advanced` | Advanced | 3 | no | yes | 1000 | Advanced tier |
-| `elite` | Elite | 4 | no | yes | 1500 | Top tier |
+| `free` | Free | 0 | yes | yes | 40 | Default plan for all new users |
+| `base` | Base | 1 | no | yes | 100 | Entry paid tier |
+| `pro` | Pro | 2 | no | yes | 200 | Professional tier |
+| `advanced` | Advanced | 3 | no | yes | 360 | Advanced tier |
+| `elite` | Elite | 4 | no | yes | 500 | Top tier |
 | `programs` | Programs | 0 | yes | **no** | - | Admin-assigned: users with purchased programs only |
 | `continuation` | Continuation | 0 | yes | **no (deprecated)** | - | ~~Post-program alumni access~~ — replaced by alumni lifecycle (2B.1). `is_active = false` since 2026-03-01. |
 
@@ -66,6 +66,7 @@ Subscription.tsx ────────────> create-checkout ───
                  ────────────> customer-portal ────────────> Billing Portal
 Credits.tsx ─────────────────> purchase-credit-topup ──────> Checkout Session (one-time)
              (return URL) ───> confirm-credit-topup ───────> Session.retrieve (verify)
+Credits.tsx ─────────────────> create-installment-checkout ─> Checkout Session (subscription + cancel_at)
 OrgBilling.tsx ──────────────> org-purchase-credits ───────> Checkout Session (one-time)
                (return URL) ─> org-confirm-credit-purchase > Session.retrieve (verify)
                ──────────────> org-platform-subscription ──> Checkout Session (subscription)
@@ -73,8 +74,9 @@ OrgBilling.tsx ──────────────> org-purchase-credits 
 Stripe ──────────────────────> stripe-webhook ─────────────> DB updates
   (checkout.session.completed)    ↓
   (subscription.updated)         profiles.plan_id
-  (subscription.deleted)         org_platform_subscriptions
-  (invoice.payment_failed)       (log only)
+  (subscription.deleted)         org_platform_subscriptions + payment_schedules
+  (invoice.paid)                 payment_schedules (installment tracking)
+  (invoice.payment_failed)       payment_schedules + enrollment payment_status
 ```
 
 ### Edge Functions (8 total)
@@ -90,6 +92,7 @@ Stripe ──────────────────────> strip
 | `org-confirm-credit-purchase` | Verify org credit payment on return | One-time |
 | `purchase-credit-topup` | User credit top-up checkout | One-time |
 | `confirm-credit-topup` | Verify user credit top-up on return | One-time |
+| `create-installment-checkout` | User installment plan checkout | Subscription (fixed-term) |
 
 ### Payment Verification Strategy
 
@@ -105,10 +108,11 @@ The `stripe-webhook` edge function handles these events:
 
 | Event | Action |
 |-------|--------|
-| `checkout.session.completed` | Activates subscription: sets `profiles.plan_id` (user) or `org_platform_subscriptions.status` (org) |
+| `checkout.session.completed` | Activates subscription: sets `profiles.plan_id` (user) or `org_platform_subscriptions.status` (org). For `credit_installment` type: grants full credits upfront + creates `payment_schedules` record |
 | `customer.subscription.updated` | Syncs plan changes (up/downgrade via Billing Portal): resolves new Stripe price to `plan_id` |
-| `customer.subscription.deleted` | Downgrades user to Free plan or cancels org subscription |
-| `invoice.payment_failed` | Logs the failure (Stripe handles dunning/retry automatically) |
+| `customer.subscription.deleted` | Downgrades user to Free plan or cancels org subscription. For `credit_installment` type: marks completed or defaulted, locks enrollment if defaulted |
+| `invoice.paid` | For installment subscriptions: updates `payment_schedules` (increments installments_paid, amount_paid_cents), sets enrollment `payment_status` to 'paid' |
+| `invoice.payment_failed` | Logs the failure (Stripe handles dunning/retry automatically). For installment subscriptions: sets enrollment `payment_status` to 'outstanding' |
 
 **To configure the webhook in Stripe Dashboard:**
 
@@ -118,6 +122,7 @@ The `stripe-webhook` edge function handles these events:
    - `checkout.session.completed`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
+   - `invoice.paid`
    - `invoice.payment_failed`
 4. Copy the signing secret (`whsec_...`)
 5. Set it as an edge function secret:
@@ -163,6 +168,9 @@ This metadata persists on the Stripe subscription object and is available in all
 | `org_platform_subscriptions` | `stripe_subscription_id`, `stripe_customer_id` |
 | `org_credit_purchases` | `stripe_checkout_session_id`, `stripe_payment_intent_id` |
 | `user_credit_purchases` | `stripe_checkout_session_id`, `stripe_payment_intent_id` |
+| `payment_schedules` | `stripe_subscription_id` |
+| `client_enrollments` | `stripe_subscription_id`, `payment_type`, `payment_status` |
+| `programs` | `installment_options` (JSONB), `upfront_discount_percent` |
 
 ### Environment Configuration
 
@@ -179,44 +187,45 @@ This metadata persists on the Stripe subscription object and is available in all
 
 ## Credit System
 
+> **Full specification:** See [`CREDIT_ECONOMY_AND_PAYMENTS.md`](CREDIT_ECONOMY_AND_PAYMENTS.md) for the complete unified credit economy spec including pricing tables, enrollment flows, installment plans, and discount/voucher system.
+
 Credits are a separate dimension from plans. Plans provide a monthly `credit_allowance` that auto-refills, while purchased credits are stored in `credit_batches` with expiry dates.
 
-### Credit Scale
+**Base ratio: 1 EUR = 2 credits** (unified across all pricing — plans, top-ups, org bundles, services).
 
-| Category | Service | Cost (credits) |
-|----------|---------|---------------|
-| AI | AI Coach query, Insight, Recommendation | 1 each |
-| Goals | Goal creation | 2 |
-| Sessions | Peer coaching | 3 |
-| Sessions | Group session | 5 |
-| Sessions | Workshop | 8 |
-| Sessions | Coaching (1:1) | 10 |
-| Sessions | Review Board Mock | 15 |
-| Programs | Base program enrollment | 25 |
-| Programs | Pro program enrollment | 50 |
-| Programs | Advanced program enrollment | 100 |
-| Specialty | SF CTA RBM (async) | 75 |
-| Specialty | SF CTA RBM (live) | 150 |
+### Credit Scale (at 2:1 ratio)
+
+| Category | Service | Credits | EUR equivalent |
+|----------|---------|---------|---------------|
+| AI | AI Coach query, Insight, Recommendation | 2 each | EUR 1 |
+| Goals | Goal creation | 4 | EUR 2 |
+| Sessions | Peer coaching | 60 | EUR 30 |
+| Sessions | Group session | 100 | EUR 50 |
+| Sessions | Workshop | 150 | EUR 75 |
+| Sessions | Coaching (1:1) | 200 | EUR 100 |
+| Sessions | Review Board Mock (async) | 300 | EUR 150 |
+| Sessions | Review Board Mock (live) | 1,500 | EUR 750 |
+| Programs | Base program enrollment | 500 | EUR 250 |
+| Programs | Pro program enrollment | 2,000 | EUR 1,000 |
+| Programs | Advanced / Premium enrollment | 6,000-17,000 | EUR 3,000-8,500 |
 
 ### Credit Top-Up Packages
 
 Users and organizations can purchase additional credits via Stripe Checkout.
 
-**Individual packages** (`credit_topup_packages`):
+**Individual packages** (`credit_topup_packages`) — 6 tiers from EUR 10 to EUR 8,500:
 
-| Package | Price | Credits | Per-Credit | Validity |
-|---------|-------|---------|-----------|----------|
-| Starter | €9.99 | 50 | €0.20 | 12 months |
-| Standard (featured) | €24.99 | 150 | €0.17 | 12 months |
-| Premium | €69.99 | 500 | €0.14 | 12 months |
+| Package | Price | Credits | Target Use Case |
+|---------|-------|---------|-----------------|
+| Micro | EUR 10 | 20 | AI insights |
+| Session | EUR 75 | 150 | One coaching session |
+| Module | EUR 250 | 500 | Short course / workshop |
+| Program | EUR 1,500 | 3,000 | Small program |
+| Premium Program | EUR 4,500 | 9,000 | Mid-tier program |
+| Immersion | EUR 8,500 | 17,000 | Premium program (CTA etc.) |
 
-**Organization packages** (`org_credit_packages`):
-
-| Package | Price | Credits | Per-Credit | Validity | Team Size |
-|---------|-------|---------|-----------|----------|-----------|
-| Starter | €399 | 2,500 | €0.16 | 12 months | 5-10 |
-| Growth | €999 | 7,500 | €0.13 | 12 months | 10-25 |
-| Enterprise | €2,499 | 20,000 | €0.12 | 12 months | 25-50 |
+**Organization bundles** (`org_credit_packages`) — 8 tiers with volume bonuses (5%-40%):
+See [`CREDIT_ECONOMY_AND_PAYMENTS.md`](CREDIT_ECONOMY_AND_PAYMENTS.md) Section 2c for full table.
 
 Each package has a `stripe_price_id` that is auto-created on first purchase. When prices change, the migration resets `stripe_price_id = NULL` so new Stripe products/prices are created automatically.
 
@@ -242,6 +251,61 @@ confirm-credit-topup (edge function)
 Toast: "Credits Added! X credits have been added to your account."
 ```
 
+### Installment Plan Flow (✅ IMPLEMENTED 2026-03-03)
+
+Installment plans allow high-value program enrollments to be paid over 3, 6, or 12 monthly payments via a Stripe subscription with a fixed end date.
+
+**Architecture:**
+```
+/credits page → Select package + installment option
+      ↓
+create-installment-checkout (edge function)
+  → Creates Stripe product/price for installment amount
+  → Creates Stripe Checkout Session (mode: subscription)
+  → Sets cancel_at for auto-termination after N months
+  → Creates pending user_credit_purchases record
+  → Returns Stripe Checkout URL
+      ↓
+Stripe hosted checkout (user pays first installment)
+      ↓
+stripe-webhook: checkout.session.completed (metadata.type = "credit_installment")
+  → handleInstallmentCheckoutCompleted()
+  → Grants ALL credits upfront via grant_credit_batch RPC
+  → Creates payment_schedules record (installments_paid = 1)
+  → Updates enrollment with stripe_subscription_id
+      ↓
+Monthly: Stripe auto-charges → invoice.paid webhook
+  → handleInvoicePaid() → update_installment_payment_status RPC
+  → Increments installments_paid, amount_paid_cents
+  → Sets enrollment payment_status = 'paid'
+      ↓
+On missed payment: invoice.payment_failed webhook
+  → Sets enrollment payment_status = 'outstanding'
+  → PlanLockOverlay shows "Payment Required" on program access
+      ↓
+After N months: Stripe auto-cancels (cancel_at reached)
+  → customer.subscription.deleted webhook
+  → handleInstallmentSubscriptionDeleted()
+  → If all paid: status = 'completed'
+  → If not all paid: status = 'defaulted', enrollment locked
+```
+
+**Key design decisions:**
+- **Credits granted upfront** — all credits consumed at enrollment time, not dripped per payment. Prevents clients from spending credits elsewhere before program is paid for.
+- **Access locking on missed payment** — `usePlanAccess` checks `payment_type = 'payment_plan'` + `payment_status IN ('outstanding','overdue')` → `isLocked = true`
+- **Stripe cancel_at** — subscription auto-terminates, no manual intervention needed
+- **First invoice deduplication** — `handleInvoicePaid` skips `billing_reason === "subscription_create"` (already handled in checkout.completed)
+
+**Per-program configuration:**
+- `programs.installment_options` (JSONB): `[{"months":3,"label":"3 monthly payments"},{"months":6,...},{"months":12,...}]`
+- `programs.upfront_discount_percent` (NUMERIC): e.g., 5% off for paying in full
+- Admin UI: ProgramPlanConfig.tsx checkboxes for 3/6/12 months + discount input
+
+**Admin tracking:**
+- `/admin/payment-schedules` — PaymentSchedulesManagement page
+- Summary stats: active plans, defaulted, outstanding amount, total collected
+- Per-schedule: status badge, progress bar (X/Y payments), next payment date
+
 ### Consumption Order
 
 FIFO by expiry, via `consume_credits_fifo` SQL function:
@@ -261,6 +325,7 @@ Credits are used for AI operations (coaching, insights, recommendations), sessio
 | `/credits` | View credit balance, purchase top-ups | `purchase-credit-topup`, `confirm-credit-topup` |
 | `/org-admin/billing` | Org subscription + credit purchases | `org-platform-subscription`, `org-purchase-credits` |
 | `/admin/plans` | Admin CRUD for plans + Stripe price IDs | Read/write `plan_prices.stripe_price_id` |
+| `/admin/payment-schedules` | Admin installment tracking dashboard | Reads `payment_schedules` table |
 
 ---
 
@@ -454,25 +519,29 @@ Credit packages auto-create their Stripe products/prices on first purchase — n
 
 ## Strategic Roadmap
 
-### Pricing Strategy (revised 2026-02-22)
+### Pricing Strategy (revised 2026-03-02)
 
-**Context:** Programs generate €3K–€12K per client (leadership programs up to €12K). Subscription pricing should reflect the ecosystem value. The subscription creates the recurring relationship; programs and credits drive the high-ticket revenue.
+**Context:** Programs generate EUR 3K-12K per client (leadership programs up to EUR 12K). Subscription pricing reflects ecosystem value. Subscriptions create the recurring relationship; programs and credits drive high-ticket revenue.
 
-**Recommended individual pricing (4 paid tiers):**
+**Unified credit ratio: 1 EUR = 2 credits.** See [`CREDIT_ECONOMY_AND_PAYMENTS.md`](CREDIT_ECONOMY_AND_PAYMENTS.md) for full specification.
 
-| Plan | Monthly | Annual (20% off) | Credits/mo | Target Audience |
-|------|---------|-------------------|-----------|-----------------|
-| **Free** | €0 | €0 | 20 | Lead capture — AI Coach taster, Wheel of Life, basic tools |
-| **Base** | €49/mo | €468/yr (€39/mo) | 150-200 | Entry professionals — full AI, sessions, assessments, basic programs |
-| **Pro** | €99/mo | €948/yr (€79/mo) | 300-400 | Active career developers — higher credits, advanced tools |
-| **Advanced** | €179/mo | €1,716/yr (€143/mo) | 500-600 | Serious professionals — cert prep, priority booking, advanced programs |
-| **Elite** | €249/mo | €2,388/yr (€199/mo) | 750-1000 | Top tier — maximum credits, all features, premium support |
+**Individual pricing (4 paid tiers) — IMPLEMENTED (2026-03-01):**
 
-**Why 4 paid tiers (not 2):** With Elite at €249/mo, the jump from €49 to €249 is too steep for a single upgrade. 4 tiers create natural stepping stones. At €4K–€12K program values, even Elite is <6% of total client spend.
+| Plan | Monthly | Annual (20% off) | Credits/mo (at 2:1) | Target Audience |
+|------|---------|-------------------|---------------------|-----------------|
+| **Free** | EUR 0 | EUR 0 | 40 | Lead capture — AI Coach taster, Wheel of Life, basic tools |
+| **Base** | EUR 49/mo | EUR 470/yr | 100 | Entry professionals — full AI, sessions, assessments, basic programs |
+| **Pro** | EUR 99/mo | EUR 950/yr | 200 | Active career developers — higher credits, advanced tools |
+| **Advanced** | EUR 179/mo | EUR 1,718/yr | 360 | Serious professionals — cert prep, priority booking, advanced programs |
+| **Elite** | EUR 249/mo | EUR 2,390/yr | 500 | Top tier — maximum credits, all features, premium support |
 
-**Current seed prices** (€19/€29/€49/€99) need to be updated to the above. This is a plan_prices + plans data migration.
+**Why 4 paid tiers (not 2):** With Elite at EUR 249/mo, the jump from EUR 49 to EUR 249 is too steep for a single upgrade. 4 tiers create natural stepping stones. At EUR 4K-12K program values, even Elite is <6% of total client spend.
 
-**Annual pricing:** Must be added. Annual subscriptions reduce churn, improve cash flow, and are standard across all platforms. Add rows to `plan_prices` with `billing_interval = 'year'` — the auto-create Stripe flow handles the rest.
+**Annual pricing:** IMPLEMENTED (2026-03-01). 20% discount vs monthly. `plan_prices` with `billing_interval = 'year'` — Stripe auto-create handles the rest. Frontend already had billing interval toggle.
+
+**Individual top-ups:** 6 packages from EUR 10 to EUR 8,500. Large packages shown contextually when redirected from enrollment.
+
+**Installment plans:** ✅ IMPLEMENTED (2026-03-03). Stripe subscription-as-instalment with `cancel_at` for fixed-term. Credits consumed upfront, access locked on missed payment. Per-program config (`installment_options` JSONB). Admin tracking dashboard at `/admin/payment-schedules`. See credit economy doc for full spec.
 
 ### Alumni Lifecycle (decided 2026-02-21)
 

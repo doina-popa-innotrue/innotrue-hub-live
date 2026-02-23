@@ -61,3 +61,6 @@ supabase/.temp/
 
 # Data sync temp files
 .supabase-data-sync/
+
+# Test coverage output
+coverage/

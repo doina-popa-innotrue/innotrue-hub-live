@@ -1,5 +1,180 @@
 # Completed Work — Detailed History
 
+## Credit Economy Redesign — Phases 1-4 (2026-03-02 – 2026-03-03)
+
+Unified 2:1 credit-to-EUR ratio across the entire platform. 4-phase implementation: credit recalibration migration, Top Up & Enrol UX, installment plans (Stripe subscription-as-instalment), documentation. 1 new migration, 1 new edge function, 1 new admin page, 8+ modified files. `npm run verify` passed.
+
+**Problem solved:** Credit values were inconsistent across plans, packages, and services. No installment payment option for high-value programs. No smart package recommendation when users needed credits for enrollment. Large top-up packages cluttered the Credits page for casual users.
+
+### Phase 1 — Credit Recalibration
+
+**Migration (`20260302120000_credit_recalibration_2to1.sql`):**
+- Recalibrates ALL pricing to unified 2:1 ratio (1 EUR = 2 credits)
+- Plan allowances: Free=40, Base=100, Pro=200, Advanced=360, Elite=500
+- 6 individual top-up packages: Micro (€10/20cr), Session (€75/150cr), Module (€250/500cr), Program (€1,500/3,000cr), Premium Program (€4,500/9,000cr), Immersion (€8,500/17,000cr)
+- 8 org credit bundles recalibrated with new slugs (bundle-1050 through bundle-56000)
+- Credit services doubled: AI=2, Goals=4, Peer coaching=60, Group session=100, Workshop=150, Coaching 1:1=200, RBM async=300, RBM live=1,500
+- Program costs: CTA Immersion=16,896cr, Leadership Elevate=2,000cr
+- Payment columns on `client_enrollments`: `payment_type` (upfront/payment_plan/free), `payment_status` (paid/outstanding/overdue)
+
+**Seed.sql updated** to match all 2:1 values for fresh environments.
+
+**Utility functions (`useUserCredits.ts`):**
+- `calculatePackageBonus()` updated: `baseCredits = (priceCents / 100) * 2`
+- New: `creditsToEur(credits)` → `credits / 2`
+- New: `formatCreditsAsEur(credits)` → formatted EUR string (e.g., "€4,250.00")
+
+### Phase 2 — Top Up & Enrol UX
+
+**Credits.tsx (complete rewrite):**
+- Smart package recommendation: reads `pendingEnrollment` from sessionStorage, computes credit shortfall, finds smallest adequate package
+- Contextual display: `LARGE_PACKAGE_THRESHOLD_CENTS = 150000` (€1,500); large packages hidden unless needed for enrollment
+- Pending enrollment banner with shortfall info and "Complete Enrollment" button (when already have enough credits)
+- Package cards: "Recommended" badge, "Covers your enrollment" indicator, "Top Up & Enroll" button text
+- Toggle "Show X larger packages" for browsing users
+
+**ExplorePrograms.tsx:**
+- Credit cost badge on program cards: `{formatCredits(credit_cost)} credits` with EUR tooltip
+- Wired discount code props to `ExpressInterestDialog`: `programId`, `tierCreditCost`, `tierCreditCosts`, `onValidateDiscount`
+
+**ExpressInterestDialog.tsx:**
+- New `tierCreditCosts?: Record<string, number | null>` prop for dynamic per-tier cost lookup
+- `resolvedTierCost` computed from map or scalar fallback
+- Credit cost display next to each tier option: `{formatCredits(cost)} credits` + `{formatCreditsAsEur(cost)}`
+
+### Phase 3 — Installment Plans
+
+**Phase 3a — Database (`20260303010000_payment_schedules.sql`):**
+- `payment_schedules` table: enrollment_id, stripe_subscription_id, total_amount_cents, installment_count, installment_amount_cents, installments_paid, amount_paid_cents, next_payment_date, status (active/completed/defaulted/cancelled), credits_granted
+- RLS: users SELECT own, service_role full access
+- `installment_options` JSONB column on `programs` (e.g., `[{"months":3,"label":"3 monthly payments"}]`)
+- `upfront_discount_percent` NUMERIC column on `programs`
+- `stripe_subscription_id` TEXT column on `client_enrollments`
+- `update_installment_payment_status()` SECURITY DEFINER function for webhook use
+
+**Phase 3b — Admin UI (`ProgramPlanConfig.tsx`):**
+- Installment options section: checkboxes for 3/6/12 months
+- Upfront discount percent input
+- Fixed "1 credit = €1" → "2 credits = €1"
+- Fetches + saves `installment_options` and `upfront_discount_percent` from programs table
+
+**Phase 3c — Edge Function (`create-installment-checkout/index.ts`):**
+- Creates Stripe Checkout in subscription mode with `cancel_at` for fixed-term installments
+- Creates recurring price per-installment: `Math.ceil(price_cents / installmentMonths)`
+- Metadata: `type: "credit_installment"`, user_id, package_id, credit_value, installment_count
+- Creates pending `user_credit_purchases` record
+- Returns `{ url, installmentMonths, perInstallment, totalCharged }`
+- Added to `config.toml` with `verify_jwt = false`
+
+**Phase 3d — Webhook Handlers (`stripe-webhook/index.ts`):**
+- `invoice.paid` → `handleInvoicePaid()`: checks subscription metadata for `credit_installment`, skips first invoice (`billing_reason === "subscription_create"`), calls `update_installment_payment_status` RPC
+- Enhanced `invoice.payment_failed` → checks for installment subscriptions, sets `payment_status` to 'outstanding' via RPC
+- `handleInstallmentCheckoutCompleted()`: grants FULL credits upfront via `grant_credit_batch` RPC, creates `payment_schedules` record with installments_paid=1
+- `handleInstallmentSubscriptionDeleted()`: marks completed (all paid) or defaulted (not all paid), locks enrollment if defaulted
+- Routing via `metadata.type === "credit_installment"` in checkout.completed and subscription.deleted handlers
+
+**Phase 3e — Client UI (Credits.tsx):**
+- Installment payment plan selector with RadioGroup: "Pay in full (X% discount)" / "3 monthly payments" / "6 monthly payments" / "12 monthly payments"
+- `purchaseWithInstallments()` calling `create-installment-checkout` edge function
+- Fetches `installment_options` from program table when pending enrollment exists
+- State: `installmentOptions`, `upfrontDiscountPercent`, `selectedPaymentMode`, `isCreatingInstallment`
+
+**Phase 3f — Enhanced PlanLockOverlay (`PlanLockOverlay.tsx`):**
+- Payment outstanding display: Contact Support button alongside Manage Billing button
+
+**Phase 3g — Admin Dashboard (`PaymentSchedulesManagement.tsx`):**
+- Summary cards: Active Plans, Defaulted, Outstanding amount, Total Collected
+- Table: client name/email, status badge, progress bar (X/Y payments), total, paid, next payment, credits, started date
+- Queries `payment_schedules` with joined `profiles` data
+- Lazy-loaded route `/admin/payment-schedules` in App.tsx
+- Sidebar link in AppSidebar.tsx under admin monetization
+
+### Phase 4 — Documentation
+
+Updated MEMORY.md, completed-work.md, and SUBSCRIPTIONS_AND_PLANS.md with all Phase 1-4 changes.
+
+**Files created:** `supabase/migrations/20260302120000_credit_recalibration_2to1.sql`, `supabase/migrations/20260303010000_payment_schedules.sql`, `supabase/functions/create-installment-checkout/index.ts`, `src/pages/admin/PaymentSchedulesManagement.tsx`
+
+**Files modified:** `supabase/seed.sql`, `src/hooks/useUserCredits.ts`, `src/pages/client/Credits.tsx`, `src/pages/client/ExplorePrograms.tsx`, `src/components/programs/ExpressInterestDialog.tsx`, `src/components/admin/ProgramPlanConfig.tsx`, `supabase/functions/stripe-webhook/index.ts`, `src/components/programs/PlanLockOverlay.tsx`, `src/components/AppSidebar.tsx`, `src/App.tsx`, `supabase/config.toml`
+
+---
+
+## Stripe Credit Bundles Sync (2026-03-02)
+
+Synced 8 Stripe "Credit Bundle" products to `org_credit_packages` database table with direct `stripe_price_id` linking. Eliminates auto-creation of duplicate Stripe products on first org credit purchase. 1 new migration, seed.sql updated, 2 docs updated. `npm run verify` passed.
+
+**Problem solved:** After the previous Supabase project crash (Lovable cloud), `org_credit_packages` had no `stripe_price_id` values. The 8 Credit Bundle products already existed in the Stripe account but weren't linked to database records. Without linking, each first purchase would auto-create a duplicate Stripe product/price.
+
+**Migration (`20260302100000_sync_stripe_credit_bundles.sql`):**
+- Deactivates old 3 placeholder packages (starter/growth/enterprise) that had no Stripe linkage
+- Inserts 8 new Credit Bundle packages with volume-based bonus credits and direct Stripe price IDs:
+
+| Slug | Name | Price | Base Credits | Bonus | Total Credits | Stripe Price ID |
+|------|------|-------|-------------|-------|--------------|----------------|
+| `bundle-525` | Credit Bundle - 525 Credits | €500 | 500 | 5% | 525 | `price_1SqR2cKTUzwyKyi3uAIH6MEt` |
+| `bundle-1100` | Credit Bundle - 1,100 Credits | €1,000 | 1,000 | 10% | 1,100 | `price_1SqR33KTUzwyKyi3l2dJ8gcb` |
+| `bundle-2875` | Credit Bundle - 2,875 Credits | €2,500 | 2,500 | 15% | 2,875 | `price_1SqR3QKTUzwyKyi38wHvLsBh` |
+| `bundle-6000` | Credit Bundle - 6,000 Credits | €5,000 | 5,000 | 20% | 6,000 | `price_1SqR3kKTUzwyKyi3yq5pI8TR` |
+| `bundle-9375` | Credit Bundle - 9,375 Credits | €7,500 | 7,500 | 25% | 9,375 | `price_1SqR7MKTUzwyKyi3k5Adok6m` |
+| `bundle-13000` | Credit Bundle - 13,000 Credits | €10,000 | 10,000 | 30% | 13,000 | `price_1SqR7WKTUzwyKyi3C3W53I8L` |
+| `bundle-20250` | Credit Bundle - 20,250 Credits | €15,000 | 15,000 | 35% | 20,250 | `price_1SqR7gKTUzwyKyi34HWzcSe9` |
+| `bundle-28000` | Credit Bundle - 28,000 Credits | €20,000 | 20,000 | 40% | 28,000 | `price_1SqR81KTUzwyKyi3OnZfVqrp` |
+
+**Also modified:**
+- `supabase/seed.sql` — replaced 3 old org packages with 8 Stripe-linked bundles (for fresh environments)
+- `MEMORY.md` — added entry for Stripe credit bundles sync
+- `completed-work.md` — this entry
+
+**Note:** Individual credit top-up packages (`credit_topup_packages`) have no Stripe products yet — they use auto-creation on first purchase via `purchase-credit-topup` edge function.
+
+## Tier & Program Plan Defaulting (2026-03-01)
+
+Ensures every enrollment across all paths gets a consistent `tier` and `program_plan_id`. Fixes a bug in `redeem-enrollment-code` that was passing a subscription plan ID as a program plan ID. 1 migration (updated), 2 edge functions modified, 2 admin components modified, 1 public page modified, 1 types file updated, 3 docs updated. `npm run verify` passed.
+
+**Problem solved:** Enrollment flows (enrollment codes, partner codes) could leave `tier` as NULL even when a program defines tiers, and `program_plan_id` was either NULL or wrong (subscription plan FK instead of program plan FK). The entitlements system (`useEntitlements.ts`) had runtime fallbacks, but enrollment records themselves were inconsistent.
+
+**Database Migration (`20260301140000_tier_defaulting.sql`) — updated from initial version:**
+- `partner_codes.grants_tier` TEXT column — optional tier override on partner codes
+- Updated `validate_partner_code()` RPC to return `grants_tier` in JSONB response
+- Updated `enroll_with_credits()` RPC with two new auto-resolution steps:
+  - **Step 0c — Tier defaulting:** If `p_tier IS NULL`, defaults to `programs.tiers->>0` (first/lowest tier in program's JSONB tier array)
+  - **Step 0d — Program plan resolution:** If `p_program_plan_id IS NULL`:
+    1. Look up `program_tier_plans` for `(program_id, tier_name)` → get `program_plan_id`
+    2. If no tier mapping, fall back to `programs.default_program_plan_id`
+  - Explicit values are never overridden — only NULL values get defaulted
+
+**Bug fix — `redeem-enrollment-code/index.ts`:**
+- Was passing `enrollCode.grants_plan_id` (FK to `plans` — subscription plans) as `p_program_plan_id` (expects FK to `program_plans` — in-program feature templates)
+- Now passes `p_program_plan_id: null`, letting the RPC resolve it correctly via Step 0d
+- Added explanatory comments documenting the type mismatch
+
+**Modified — `redeem-partner-code/index.ts`:**
+- Changed `p_tier: null` to `p_tier: codeValidation.grants_tier || null` — passes partner code's tier override to RPC
+
+**Modified — `PartnerCodesManagement.tsx`:**
+- Added tier selector in create/edit dialog (shows program's tiers from `programs.tiers` JSONB)
+- Shows "X tier" badge below program name in table when `grants_tier` is set
+- Selector shows "Default (lowest) tier" as first option with helper text
+
+**Modified — `RedeemPartnerCode.tsx`:**
+- Added `grants_tier` to `ValidationResult` interface
+- Shows tier badge in program info card when partner code specifies a tier
+
+**Modified — `types.ts`:**
+- Added `grants_tier: string | null` to `partner_codes` Row/Insert/Update types
+
+**All enrollment paths now auto-resolve:**
+| Path | Before | After |
+|------|--------|-------|
+| Self-enrollment (credits) | ✅ Already resolved tier + plan | ✅ No change needed |
+| Enrollment code | ❌ Wrong `program_plan_id` (subscription FK) | ✅ RPC resolves from tier |
+| Partner code | ❌ NULL tier, NULL plan | ✅ Tier from code or defaulted, plan from RPC |
+| Admin enrollment | ✅ Already resolved tier + plan | ✅ No change needed |
+
+**Deployed to:** prod, preprod, sandbox (migration + both edge functions)
+
+---
+
 ## 2B.3 Pricing Update (2026-03-01)
 
 Migration-only update to new pricing tiers. `npm run verify` passed on first try.

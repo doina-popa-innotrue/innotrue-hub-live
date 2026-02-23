@@ -129,6 +129,9 @@ verify_jwt = false
 [functions.purchase-credit-topup]
 verify_jwt = false
 
+[functions.create-installment-checkout]
+verify_jwt = false
+
 [functions.registration-follow-ups]
 verify_jwt = false
 

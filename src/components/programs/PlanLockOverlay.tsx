@@ -78,9 +78,18 @@ export function PlanLockOverlay({
             </div>
             <h3 className="text-xl font-semibold mb-2">Payment Required</h3>
             <p className="text-muted-foreground mb-6 max-w-md">
-              Your access is paused due to outstanding payments. Complete your payment to continue.
+              Your access is paused due to an outstanding payment. Please update your payment method
+              or contact support to restore access.
             </p>
-            <Button onClick={() => navigate("/subscription")}>Manage Subscription</Button>
+            <div className="flex gap-3">
+              <Button onClick={() => navigate("/subscription")}>Manage Billing</Button>
+              <Button variant="outline" asChild>
+                <a href={`mailto:${supportEmail}?subject=Payment Issue - Program Access`}>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Contact Support
+                </a>
+              </Button>
+            </div>
           </>
         ) : (
           <>

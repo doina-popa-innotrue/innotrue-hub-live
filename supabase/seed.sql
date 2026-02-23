@@ -31,9 +31,9 @@ ON CONFLICT (key) DO UPDATE SET description = EXCLUDED.description;
 -- Plus non-purchasable: Programs (tier 0), Continuation (tier 0)
 
 -- Update existing plans from migrations to have correct tier data
-UPDATE public.plans SET is_free = true, tier_level = 0, credit_allowance = 20
+UPDATE public.plans SET is_free = true, tier_level = 0, credit_allowance = 40
   WHERE key = 'free';
-UPDATE public.plans SET tier_level = 2, credit_allowance = 250
+UPDATE public.plans SET tier_level = 2, credit_allowance = 200
   WHERE key = 'pro';
 
 -- Rename enterprise to something else or ensure Base/Advanced/Elite exist
@@ -41,9 +41,9 @@ UPDATE public.plans SET tier_level = 2, credit_allowance = 250
 -- Note: price_cents and billing_interval were moved to plan_prices table
 INSERT INTO public.plans (key, name, description, is_active, is_free, tier_level, credit_allowance, is_purchasable)
 VALUES
-  ('base', 'Base', 'Essential tools for structured personal development', true, false, 1, 150, true),
-  ('advanced', 'Advanced', 'Comprehensive toolkit with advanced coaching and analytics', true, false, 3, 500, true),
-  ('elite', 'Elite', 'Full platform access with premium features and priority support', true, false, 4, 750, true)
+  ('base', 'Base', 'Essential tools for structured personal development', true, false, 1, 100, true),
+  ('advanced', 'Advanced', 'Comprehensive toolkit with advanced coaching and analytics', true, false, 3, 360, true),
+  ('elite', 'Elite', 'Full platform access with premium features and priority support', true, false, 4, 500, true)
 ON CONFLICT (key) DO UPDATE SET
   name = EXCLUDED.name,
   description = EXCLUDED.description,
@@ -280,72 +280,72 @@ ON CONFLICT (session_type_id, role_name) DO NOTHING;
 
 -- Credit services (central registry for anything that costs credits)
 INSERT INTO credit_services (name, description, credit_cost, category, feature_id, is_active)
-SELECT 'AI Insight', 'Generate an AI insight for decisions', 1, 'ai', id, true
+SELECT 'AI Insight', 'Generate an AI insight for decisions', 2, 'ai', id, true
 FROM features WHERE key = 'ai_insights'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO credit_services (name, description, credit_cost, category, feature_id, is_active)
-SELECT 'AI Recommendation', 'Generate an AI recommendation', 1, 'ai', id, true
+SELECT 'AI Recommendation', 'Generate an AI recommendation', 2, 'ai', id, true
 FROM features WHERE key = 'ai_recommendations'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO credit_services (name, description, credit_cost, category, feature_id, is_active)
-SELECT 'Coaching Session', 'Book a 1:1 coaching session', 10, 'sessions', id, true
+SELECT 'Coaching Session', 'Book a 1:1 coaching session', 200, 'sessions', id, true
 FROM features WHERE key = 'session_coaching'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO credit_services (name, description, credit_cost, category, feature_id, is_active)
-SELECT 'Group Session', 'Join a group session', 5, 'sessions', id, true
+SELECT 'Group Session', 'Join a group session', 100, 'sessions', id, true
 FROM features WHERE key = 'session_group'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO credit_services (name, description, credit_cost, category, feature_id, is_active)
-SELECT 'Peer Coaching Session', 'Participate in peer coaching', 3, 'sessions', id, true
+SELECT 'Peer Coaching Session', 'Participate in peer coaching', 60, 'sessions', id, true
 FROM features WHERE key = 'session_peer_coaching'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO credit_services (name, description, credit_cost, category, feature_id, is_active)
-SELECT 'Workshop', 'Attend a workshop session', 8, 'sessions', id, true
+SELECT 'Workshop', 'Attend a workshop session', 150, 'sessions', id, true
 FROM features WHERE key = 'session_workshop'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO credit_services (name, description, credit_cost, category, feature_id, is_active)
-SELECT 'Review Board Session', 'Participate in a review board', 15, 'sessions', id, true
+SELECT 'Review Board Session', 'Participate in a review board', 300, 'sessions', id, true
 FROM features WHERE key = 'session_review_board'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO credit_services (name, description, credit_cost, category, feature_id, is_active)
-SELECT 'Base Program Enrollment', 'Enroll in a base program', 25, 'programs', id, true
+SELECT 'Base Program Enrollment', 'Enroll in a base program', 500, 'programs', id, true
 FROM features WHERE key = 'programs_base'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO credit_services (name, description, credit_cost, category, feature_id, is_active)
-SELECT 'Pro Program Enrollment', 'Enroll in a pro program', 50, 'programs', id, true
+SELECT 'Pro Program Enrollment', 'Enroll in a pro program', 2000, 'programs', id, true
 FROM features WHERE key = 'programs_pro'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO credit_services (name, description, credit_cost, category, feature_id, is_active)
-SELECT 'Advanced Program Enrollment', 'Enroll in an advanced program', 100, 'programs', id, true
+SELECT 'Advanced Program Enrollment', 'Enroll in an advanced program', 6000, 'programs', id, true
 FROM features WHERE key = 'programs_advanced'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO credit_services (name, description, credit_cost, category, feature_id, is_active)
-SELECT 'Micro-learning Course', 'Access a micro-learning or short program', 5, 'programs', id, true
+SELECT 'Micro-learning Course', 'Access a micro-learning or short program', 100, 'programs', id, true
 FROM features WHERE key = 'courses_free'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO credit_services (name, description, credit_cost, category, feature_id, is_active)
-SELECT 'SF CTA Review Board Mock (Async)', 'Salesforce CTA Review Board Mock - Asynchronous', 75, 'specialty', id, true
+SELECT 'SF CTA Review Board Mock (Async)', 'Salesforce CTA Review Board Mock - Asynchronous', 300, 'specialty', id, true
 FROM features WHERE key = 'sf_cta_rbm_full_asynch'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO credit_services (name, description, credit_cost, category, feature_id, is_active)
-SELECT 'SF CTA Review Board Mock (Live)', 'Salesforce CTA Review Board Mock - Live', 150, 'specialty', id, true
+SELECT 'SF CTA Review Board Mock (Live)', 'Salesforce CTA Review Board Mock - Live', 1500, 'specialty', id, true
 FROM features WHERE key = 'sf_cta_rbm_full_live'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO credit_services (name, description, credit_cost, category, feature_id, is_active)
-SELECT 'Goal Creation', 'Create a new goal', 2, 'goals', id, true
+SELECT 'Goal Creation', 'Create a new goal', 4, 'goals', id, true
 FROM features WHERE key = 'goals'
 ON CONFLICT DO NOTHING;
 
@@ -362,29 +362,45 @@ ON CONFLICT (plan_id, feature_key) DO UPDATE SET
   monthly_allocation = EXCLUDED.monthly_allocation,
   updated_at = now();
 
--- Individual credit top-up packages
--- Scale reference: plans give 20-750 credits/month, services cost 1-150 credits
--- Packages: Starter=50 credits (€9.99), Standard=150 (€24.99), Premium=500 (€69.99)
-INSERT INTO public.credit_topup_packages (name, slug, description, price_cents, credit_value, currency, validity_months, display_order, is_featured) VALUES
-  ('Starter Top-Up', 'starter-topup', 'Quick credit boost for a few AI queries or a session', 999, 50, 'eur', 12, 1, false),
-  ('Standard Top-Up', 'standard-topup', 'Enough for a program enrollment or multiple sessions', 2499, 150, 'eur', 12, 2, true),
-  ('Premium Top-Up', 'premium-topup', 'Maximum savings — covers multiple programs and sessions', 6999, 500, 'eur', 12, 3, false)
+-- Individual credit top-up packages (2:1 ratio: 1 EUR = 2 credits)
+-- 6 tiers from €10 to €8,500, scaling from quick AI boosts to full program enrollment
+-- Old packages (starter/standard/premium) deactivated by migration
+INSERT INTO public.credit_topup_packages (name, slug, description, price_cents, credit_value, currency, validity_months, display_order, is_active, is_featured) VALUES
+  ('Micro Top-Up',           'micro-topup',           'A few AI insights or goal creations',                                   1000,    20, 'eur', 12, 1, true, false),
+  ('Session Top-Up',         'session-topup',         'Covers one coaching session or group sessions',                          7500,   150, 'eur', 12, 2, true, false),
+  ('Module Top-Up',          'module-topup',          'Enough for a short course or multiple workshops',                       25000,   500, 'eur', 12, 3, true, true),
+  ('Program Top-Up',         'program-topup',         'Covers a small program enrollment',                                   150000,  3000, 'eur', 12, 4, true, false),
+  ('Premium Program Top-Up', 'premium-program-topup', 'Covers a mid-tier program enrollment with credits to spare',          450000,  9000, 'eur', 12, 5, true, false),
+  ('Immersion Top-Up',       'immersion-topup',       'Covers premium program enrollment (e.g. CTA Immersion) with surplus', 850000, 17000, 'eur', 12, 6, true, false)
 ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
   description = EXCLUDED.description,
   price_cents = EXCLUDED.price_cents,
   credit_value = EXCLUDED.credit_value,
+  is_active = EXCLUDED.is_active,
+  is_featured = EXCLUDED.is_featured,
   validity_months = EXCLUDED.validity_months;
 
--- Organization credit packages
--- Org packages serve teams of 5-50 members for 6-12 months
-INSERT INTO public.org_credit_packages (name, slug, description, price_cents, credit_value, currency, validity_months, display_order) VALUES
-  ('Starter Package', 'starter', 'Perfect for small teams getting started (5-10 members)', 39900, 2500, 'eur', 12, 1),
-  ('Growth Package', 'growth', 'Best value for growing teams (10-25 members)', 99900, 7500, 'eur', 12, 2),
-  ('Enterprise Package', 'enterprise', 'Maximum flexibility for large teams (25-50 members)', 249900, 20000, 'eur', 12, 3)
+-- Organization credit bundles (2:1 base + volume bonus)
+-- 8 tiers: base = 2x EUR price, then + volume bonus %
+-- Old Stripe price IDs cleared — new products auto-created on first purchase
+INSERT INTO public.org_credit_packages (name, slug, description, price_cents, credit_value, currency, stripe_price_id, validity_months, display_order, is_active) VALUES
+  ('Credit Bundle - 1,050 Credits',  'bundle-1050',  '1,000 base + 50 bonus (5%) — great for testing or a small pilot',           50000,   1050, 'eur', NULL, 12, 1, true),
+  ('Credit Bundle - 2,200 Credits',  'bundle-2200',  '2,000 base + 200 bonus (10%) — enough for a small team pilot',             100000,   2200, 'eur', NULL, 12, 2, true),
+  ('Credit Bundle - 5,750 Credits',  'bundle-5750',  '5,000 base + 750 bonus (15%) — perfect for small teams (5-10 members)',    250000,   5750, 'eur', NULL, 12, 3, true),
+  ('Credit Bundle - 12,000 Credits', 'bundle-12000', '10,000 base + 2,000 bonus (20%) — ideal for growing teams (10-20)',        500000,  12000, 'eur', NULL, 12, 4, true),
+  ('Credit Bundle - 18,750 Credits', 'bundle-18750', '15,000 base + 3,750 bonus (25%) — great value for mid-size teams',         750000,  18750, 'eur', NULL, 12, 5, true),
+  ('Credit Bundle - 26,000 Credits', 'bundle-26000', '20,000 base + 6,000 bonus (30%) — best for large teams (20-35)',          1000000,  26000, 'eur', NULL, 12, 6, true),
+  ('Credit Bundle - 40,500 Credits', 'bundle-40500', '30,000 base + 10,500 bonus (35%) — premium for large organizations',     1500000,  40500, 'eur', NULL, 12, 7, true),
+  ('Credit Bundle - 56,000 Credits', 'bundle-56000', '40,000 base + 16,000 bonus (40%) — maximum savings for enterprise',      2000000,  56000, 'eur', NULL, 12, 8, true)
 ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
   description = EXCLUDED.description,
   price_cents = EXCLUDED.price_cents,
-  credit_value = EXCLUDED.credit_value;
+  credit_value = EXCLUDED.credit_value,
+  stripe_price_id = EXCLUDED.stripe_price_id,
+  is_active = EXCLUDED.is_active,
+  display_order = EXCLUDED.display_order;
 
 -- Organization platform tiers
 INSERT INTO public.org_platform_tiers (name, slug, description, annual_fee_cents, monthly_fee_cents, currency, features, display_order) VALUES
@@ -650,14 +666,14 @@ INSERT INTO auth.users (
 -- Disable the auto-version trigger (auth.uid() is NULL during seed)
 ALTER TABLE public.programs DISABLE TRIGGER USER;
 
--- CTA Immersion Premium Program
+-- CTA Immersion Premium Program (EUR 8,448 → 16,896 credits at 2:1)
 INSERT INTO public.programs (slug, name, description, category, is_active, credit_cost, min_plan_tier) VALUES
-  ('cta-immersion-premium', 'CTA Immersion Premium', 'Comprehensive Salesforce CTA certification preparation program with live coaching, review board mocks, and hands-on practice.', 'cta', true, 100, 2)
+  ('cta-immersion-premium', 'CTA Immersion Premium', 'Comprehensive Salesforce CTA certification preparation program with live coaching, review board mocks, and hands-on practice.', 'cta', true, 16896, 2)
 ON CONFLICT (slug) DO NOTHING;
 
--- Leadership Elevate Program
+-- Leadership Elevate Program (EUR 1,000 → 2,000 credits at 2:1)
 INSERT INTO public.programs (slug, name, description, category, is_active, credit_cost, min_plan_tier) VALUES
-  ('leadership-elevate', 'Leadership Elevate', 'Transform your leadership skills through structured coaching, peer learning, and real-world application exercises.', 'leadership', true, 50, 1)
+  ('leadership-elevate', 'Leadership Elevate', 'Transform your leadership skills through structured coaching, peer learning, and real-world application exercises.', 'leadership', true, 2000, 1)
 ON CONFLICT (slug) DO NOTHING;
 
 -- Re-enable triggers

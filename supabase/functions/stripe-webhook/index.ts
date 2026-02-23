@@ -8,16 +8,17 @@ import { errorResponse, successResponse } from "../_shared/error-response.ts";
  * Stripe Webhook Handler
  *
  * Handles subscription lifecycle events from Stripe:
- *   - checkout.session.completed  → activate subscription (set plan_id or org subscription)
+ *   - checkout.session.completed  → activate subscription (set plan_id or org subscription) or grant installment credits
  *   - customer.subscription.updated → handle plan changes, renewals
- *   - customer.subscription.deleted → downgrade to free plan
- *   - invoice.payment_failed       → log warning (Stripe handles dunning)
+ *   - customer.subscription.deleted → downgrade to free plan or mark installment defaulted
+ *   - invoice.paid                 → mark installment payment received, keep access
+ *   - invoice.payment_failed       → mark installment payment outstanding, lock access
  *
  * Setup:
  *   1. In Stripe Dashboard → Developers → Webhooks → Add endpoint
  *   2. URL: https://<project-ref>.supabase.co/functions/v1/stripe-webhook
  *   3. Events: checkout.session.completed, customer.subscription.updated,
- *              customer.subscription.deleted, invoice.payment_failed
+ *              customer.subscription.deleted, invoice.paid, invoice.payment_failed
  *   4. Copy the signing secret (whsec_...) and set it:
  *      supabase secrets set STRIPE_WEBHOOK_SECRET='whsec_...' --project-ref <ref>
  */
@@ -90,8 +91,12 @@ serve(async (req) => {
         await handleSubscriptionDeleted(stripe, supabase, event.data.object as Stripe.Subscription);
         break;
 
+      case "invoice.paid":
+        await handleInvoicePaid(stripe, supabase, event.data.object as Stripe.Invoice);
+        break;
+
       case "invoice.payment_failed":
-        await handlePaymentFailed(event.data.object as Stripe.Invoice);
+        await handlePaymentFailed(supabase, stripe, event.data.object as Stripe.Invoice);
         break;
 
       default:
@@ -127,6 +132,8 @@ async function handleCheckoutCompleted(
     await activateUserSubscription(stripe, supabase, session, metadata);
   } else if (metadata.type === "org_platform_subscription" && session.mode === "subscription") {
     await activateOrgSubscription(supabase, session, metadata);
+  } else if (metadata.type === "credit_installment" && session.mode === "subscription") {
+    await handleInstallmentCheckoutCompleted(stripe, supabase, session, metadata);
   } else {
     logStep("Checkout session not a tracked subscription type, skipping", { mode: session.mode, type: metadata.type });
   }
@@ -302,23 +309,275 @@ async function handleSubscriptionDeleted(
       .eq("organization_id", organizationId);
 
     logStep("Org subscription canceled", { organizationId });
+  } else if (metadata.type === "credit_installment") {
+    await handleInstallmentSubscriptionDeleted(supabase, subscription, metadata);
+  }
+}
+
+/**
+ * checkout.session.completed for credit_installment
+ *
+ * When a client completes the installment checkout:
+ *   1. Grant FULL credits to the user's wallet immediately
+ *   2. Create a payment_schedules record to track installments
+ *   3. Mark the first instalment as paid
+ *
+ * The enrollment itself is handled by the client-side flow
+ * (pendingEnrollment in sessionStorage → resumePendingEnrollment).
+ */
+async function handleInstallmentCheckoutCompleted(
+  stripe: Stripe,
+  supabase: ReturnType<typeof createClient>,
+  session: Stripe.Checkout.Session,
+  metadata: Record<string, string>,
+) {
+  const userId = metadata.user_id;
+  const packageId = metadata.package_id;
+  const creditValue = parseInt(metadata.credit_value || "0", 10);
+  const totalAmountCents = parseInt(metadata.total_amount_cents || "0", 10);
+  const installmentCount = parseInt(metadata.installment_count || "0", 10);
+  const installmentAmountCents = parseInt(metadata.installment_amount_cents || "0", 10);
+  const expiresAt = metadata.expires_at || null;
+  const subscriptionId = session.subscription as string;
+
+  if (!userId || !packageId || creditValue <= 0 || !subscriptionId) {
+    logStep("Missing required metadata for installment checkout", { userId, packageId, creditValue, subscriptionId });
+    return;
+  }
+
+  logStep("Processing installment checkout", {
+    userId, packageId, creditValue, installmentCount, subscriptionId,
+  });
+
+  // 1. Grant FULL credits to user wallet via grant_credit_batch RPC
+  const { error: grantError } = await supabase.rpc("grant_credit_batch", {
+    p_user_id: userId,
+    p_amount: creditValue,
+    p_source_type: "purchase",
+    p_description: `Installment purchase: ${creditValue} credits (${installmentCount} monthly payments)`,
+    p_expires_at: expiresAt || null,
+  });
+
+  if (grantError) {
+    logStep("Error granting installment credits", { userId, creditValue, error: grantError.message });
+    // Don't return — still create the schedule so we can track the payments
+  } else {
+    logStep("Installment credits granted", { userId, creditValue });
+  }
+
+  // 2. Update user_credit_purchases status
+  await supabase
+    .from("user_credit_purchases")
+    .update({ status: "completed", stripe_payment_intent_id: session.payment_intent as string || null })
+    .eq("stripe_checkout_session_id", session.id);
+
+  // 3. Get Stripe customer ID
+  let stripeCustomerId = session.customer as string || null;
+
+  // 4. Calculate next payment date (1 month from now)
+  const nextPaymentDate = new Date();
+  nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
+
+  // 5. Create payment_schedules record (installments_paid = 1 since first payment is immediate)
+  const { error: scheduleError } = await supabase
+    .from("payment_schedules")
+    .insert({
+      user_id: userId,
+      enrollment_id: null as unknown as string, // Will be linked after enrollment completes
+      stripe_subscription_id: subscriptionId,
+      stripe_customer_id: stripeCustomerId,
+      total_amount_cents: totalAmountCents || (installmentAmountCents * installmentCount),
+      currency: "eur",
+      installment_count: installmentCount,
+      installment_amount_cents: installmentAmountCents,
+      installments_paid: 1,
+      amount_paid_cents: installmentAmountCents,
+      next_payment_date: nextPaymentDate.toISOString(),
+      credits_granted: creditValue,
+      credit_package_id: packageId,
+      status: installmentCount <= 1 ? "completed" : "active",
+      completed_at: installmentCount <= 1 ? new Date().toISOString() : null,
+      metadata: {
+        checkout_session_id: session.id,
+        package_slug: metadata.package_slug || null,
+      },
+    });
+
+  if (scheduleError) {
+    logStep("Error creating payment schedule", { userId, error: scheduleError.message });
+  } else {
+    logStep("Payment schedule created", { userId, subscriptionId, installmentsRemaining: installmentCount - 1 });
+  }
+}
+
+/**
+ * invoice.paid
+ *
+ * Fires when a Stripe invoice is paid (including the first one during checkout).
+ * For installment subscriptions: updates the payment schedule and keeps access active.
+ * For regular subscriptions: no special handling needed (subscription.updated covers it).
+ */
+async function handleInvoicePaid(
+  stripe: Stripe,
+  supabase: ReturnType<typeof createClient>,
+  invoice: Stripe.Invoice,
+) {
+  const subscriptionId = invoice.subscription as string;
+  if (!subscriptionId) {
+    logStep("invoice.paid: no subscription, skipping (one-time payment)");
+    return;
+  }
+
+  // Check if this is an installment subscription
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const metadata = subscription.metadata || {};
+
+  if (metadata.type !== "credit_installment") {
+    logStep("invoice.paid: not an installment subscription, skipping", { subscriptionId });
+    return;
+  }
+
+  logStep("Installment invoice paid", {
+    invoiceId: invoice.id,
+    subscriptionId,
+    amount: invoice.amount_paid,
+    userId: metadata.user_id,
+  });
+
+  // Skip the first invoice (already handled in checkout.session.completed)
+  // The billing_reason for the first invoice is "subscription_create"
+  if ((invoice as Record<string, unknown>).billing_reason === "subscription_create") {
+    logStep("First invoice (subscription_create), already handled at checkout");
+    return;
+  }
+
+  // Calculate next payment date
+  const nextPeriodEnd = invoice.lines?.data?.[0]?.period?.end;
+  const nextPaymentDate = nextPeriodEnd
+    ? new Date(nextPeriodEnd * 1000).toISOString()
+    : null;
+
+  // Update payment schedule via RPC
+  const { data: result } = await supabase.rpc("update_installment_payment_status", {
+    p_stripe_subscription_id: subscriptionId,
+    p_new_status: "paid",
+    p_installment_amount_cents: invoice.amount_paid,
+    p_next_payment_date: nextPaymentDate,
+  });
+
+  if (result?.success) {
+    logStep("Installment payment recorded", {
+      installmentsPaid: result.installments_paid,
+      installmentCount: result.installment_count,
+      enrollmentId: result.enrollment_id,
+    });
+  } else {
+    logStep("Error updating installment payment", { result });
   }
 }
 
 /**
  * invoice.payment_failed
  *
- * Logs the failure. Stripe handles dunning (retry emails) automatically.
- * The subscription will eventually become past_due or canceled, which
- * triggers customer.subscription.updated / deleted.
+ * Logs the failure. For installment subscriptions: sets payment_status to 'outstanding'
+ * which locks program access via usePlanAccess.
+ * Stripe handles dunning (retry emails) automatically.
  */
-async function handlePaymentFailed(invoice: Stripe.Invoice) {
+async function handlePaymentFailed(
+  supabase: ReturnType<typeof createClient>,
+  stripe: Stripe,
+  invoice: Stripe.Invoice,
+) {
   logStep("Payment failed", {
     invoiceId: invoice.id,
     customer: invoice.customer,
     amount: invoice.amount_due,
     attempt: invoice.attempt_count,
   });
+
+  const subscriptionId = invoice.subscription as string;
+  if (!subscriptionId) return;
+
+  // Check if this is an installment subscription
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const metadata = subscription.metadata || {};
+
+  if (metadata.type !== "credit_installment") return;
+
+  logStep("Installment payment failed — locking access", {
+    subscriptionId,
+    userId: metadata.user_id,
+    attempt: invoice.attempt_count,
+  });
+
+  // Set payment_status to 'outstanding' — usePlanAccess will lock content
+  const { data: result } = await supabase.rpc("update_installment_payment_status", {
+    p_stripe_subscription_id: subscriptionId,
+    p_new_status: "outstanding",
+  });
+
+  if (result?.success) {
+    logStep("Enrollment locked due to failed payment", { enrollmentId: result.enrollment_id });
+  } else {
+    logStep("Error locking enrollment", { result });
+  }
+}
+
+/**
+ * Handle installment subscription deleted/cancelled.
+ * If all installments are paid → mark completed (normal end).
+ * If not all paid → mark as overdue/defaulted.
+ */
+async function handleInstallmentSubscriptionDeleted(
+  supabase: ReturnType<typeof createClient>,
+  subscription: Stripe.Subscription,
+  metadata: Record<string, string>,
+) {
+  const subscriptionId = subscription.id;
+  logStep("Installment subscription deleted", { subscriptionId, userId: metadata.user_id });
+
+  // Check the payment schedule status
+  const { data: schedule } = await supabase
+    .from("payment_schedules")
+    .select("*")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+
+  if (!schedule) {
+    logStep("No payment schedule found for cancelled installment sub", { subscriptionId });
+    return;
+  }
+
+  if (schedule.installments_paid >= schedule.installment_count) {
+    // All paid — this is a normal end (cancel_at was reached)
+    logStep("Installment plan completed normally", {
+      subscriptionId,
+      installmentsPaid: schedule.installments_paid,
+    });
+
+    await supabase
+      .from("payment_schedules")
+      .update({ status: "completed", completed_at: new Date().toISOString() })
+      .eq("id", schedule.id);
+  } else {
+    // Not all paid — default
+    logStep("Installment plan defaulted", {
+      subscriptionId,
+      installmentsPaid: schedule.installments_paid,
+      installmentCount: schedule.installment_count,
+    });
+
+    await supabase
+      .from("payment_schedules")
+      .update({ status: "defaulted", cancelled_at: new Date().toISOString() })
+      .eq("id", schedule.id);
+
+    // Lock the enrollment
+    await supabase.rpc("update_installment_payment_status", {
+      p_stripe_subscription_id: subscriptionId,
+      p_new_status: "overdue",
+    });
+  }
 }
 
 // ─── Helpers ────────────────────────────────────────────────────

@@ -497,8 +497,14 @@ Admin defines dimension schemas on each psychometric assessment (e.g., DISC: D/I
 
 ## Layer 4 — Programs & Program Plans (depends on everything above)
 
+> **Key concept — Two separate plan systems:**
+> 1. **Subscription plans** (`plans` table) — one per user, Stripe-integrated, controls platform-wide features (AI, sessions, etc.)
+> 2. **Program plans** (`program_plans` table) — per-enrollment, controls in-program features. **Automatically resolved** from the enrollment tier — admins never need to set this manually.
+>
+> These systems are independent and additive. The entitlements system merges both (subscription features take priority over program plan features).
+
 ### 4.1 Program Plans (`program_plans`)
-Define feature access tiers **within a program** (separate from subscription plans).
+Define feature access tiers **within a program** (separate from subscription plans). These are internal feature templates that get automatically linked to enrollments — admins configure them once and never think about them again.
 
 Example program plans:
 | Program Plan | Tier | Credits | Purpose |
@@ -538,31 +544,52 @@ The main learning experiences users enroll in.
 | `credit_cost` | Credits to enroll | 100 |
 | `min_plan_tier` | Minimum subscription tier to access | 2 (Pro+) |
 | `default_program_plan_id` | Fallback program plan for enrollees | → program_plans.id |
+| `tiers` | JSONB array of tier names (ordered lowest→highest) | `["Essentials", "Premium"]` |
+| `capacity` | Max active enrollments (null = unlimited) | 50 |
 
 **Access gating chain:**
 1. User's subscription `plan.tier_level` must be >= `program.min_plan_tier`
-2. User pays `credit_cost` credits to enroll
-3. Once enrolled, features gated by program plan (from enrollment or default)
+2. User pays `credit_cost` credits to enroll (or uses enrollment/partner code)
+3. Once enrolled, features gated by program plan (automatically resolved — see 4.4)
 
 **Admin UI:** Programs Management
 **Depends on:** program_plans (default_program_plan_id), tracks (category)
 **Needed by:** Program modules, program tier plans, client enrollments
 
 ### 4.4 Program Tier Plans (`program_tier_plans`)
-Map tier names within a program to specific program plans.
+Map tier names within a program to specific program plans and credit costs.
 
 | Program | Tier Name | Program Plan | Credit Cost |
 |---------|-----------|-------------|-------------|
-| CTA Immersion | base | Basic Access | 50 |
-| CTA Immersion | pro | Standard Access | 75 |
-| CTA Immersion | premium | Premium Access | 100 |
+| CTA Immersion | Essentials | Basic Access | 1700 |
+| CTA Immersion | Premium | Premium Access | 3400 |
 
 This allows the same program to offer different access levels at different prices.
 
-**Resolution order:** explicit enrollment plan → program_tier_plans mapping → `programs.default_program_plan_id` fallback
-
-**Admin UI:** Programs Management → Tier Plans tab
+**Admin UI:** Programs Management → Plan Config tab (set default program plan + per-tier mappings)
 **Depends on:** programs, program_plans
+
+### 4.5 Automatic Tier & Program Plan Resolution
+
+When a user enrolls (via any path), the `enroll_with_credits` RPC automatically resolves both tier and program plan. **No caller ever needs to set these manually.**
+
+**Step 0c — Tier defaulting:** If no tier is specified but the program has `tiers` defined, the RPC defaults to `programs.tiers[0]` (the first/lowest tier).
+
+**Step 0d — Program plan defaulting:** If no `program_plan_id` is specified:
+1. Look up `program_tier_plans` for `(program_id, tier_name)` → get `program_plan_id`
+2. If no tier mapping exists, fall back to `programs.default_program_plan_id`
+
+**This means:**
+- Self-enrollment via credits → user picks a tier, RPC resolves the rest
+- Enrollment code redemption → code specifies tier (or defaults), RPC resolves program plan
+- Partner code redemption → code specifies tier (or defaults), RPC resolves program plan
+- Admin enrollment → admin picks tier, RPC resolves program plan (or admin can override)
+
+**Admin setup required:**
+1. Create program plans with features (sections 4.1 + 4.2)
+2. On each program, set `default_program_plan_id` (fallback)
+3. If program has tiers: map each tier → a program plan via `program_tier_plans` (section 4.4)
+4. That's it — all enrollment paths auto-resolve from there
 
 ### 4.5 Program Modules (`program_modules`)
 The individual learning units within a program.
@@ -641,13 +668,32 @@ Enroll a user in a program.
 |-------|---------|
 | `client_user_id` | The enrolled user |
 | `program_id` | The program |
-| `program_plan_id` | Their access tier within the program (optional) |
+| `tier` | The tier within the program (auto-defaulted from `programs.tiers[0]` if not specified) |
+| `program_plan_id` | Their feature access template (auto-resolved from tier — see 4.5) |
 | `status` | active, completed, withdrawn, paused, etc. |
 | `enrolled_at` | Enrollment date |
+| `completed_at` | Auto-set by trigger when status → completed (alumni lifecycle) |
+| `enrollment_source` | How they enrolled: self/admin/enrollment_code/partner_referral/waitlist_promotion |
+| `referred_by` | UUID of referrer (partner, code creator, etc.) |
+| `referral_note` | Attribution details |
+| `enrollment_code_id` | FK to `enrollment_codes` if enrolled via code |
+| `original_credit_cost` | Pre-discount credit cost |
+| `final_credit_cost` | After discount |
+| `discount_percent` | Applied discount |
+| `cohort_id` | Optional cohort assignment |
 
-**Additional field:** `enrollment_code_id` — optional FK to `enrollment_codes` table, tracks which enrollment code was used for self-enrollment (G8).
+> **Important:** `tier` and `program_plan_id` are automatically resolved by the `enroll_with_credits` RPC (see section 4.5). No enrollment path needs to set these manually — the RPC defaults tier from the program's tier array and resolves the program plan from `program_tier_plans` → `programs.default_program_plan_id`.
 
-**Atomic enrollment RPC:** `enroll_with_credits(p_client_user_id, p_program_id, p_tier, p_program_plan_id, p_discount_percent, p_original_credit_cost, p_final_credit_cost, p_description, p_cohort_id)` — combines credit consumption + enrollment creation in a single database transaction to prevent partial states (credits deducted but enrollment not created, or vice versa). Returns `{success, enrollment_id, credit_details}`.
+**Atomic enrollment RPC:** `enroll_with_credits(p_client_user_id, p_program_id, p_tier, p_program_plan_id, p_discount_percent, p_original_credit_cost, p_final_credit_cost, p_description, p_cohort_id, p_force, p_enrollment_source, p_referred_by, p_referral_note)` — 13 params. Combines capacity checks + tier defaulting + program plan resolution + credit consumption + enrollment creation in a single transaction. Returns `{success, enrollment_id, credit_details}`.
+
+**Built-in steps (in order):**
+1. **Step 0a:** Program capacity check (skip with `p_force=true`)
+2. **Step 0b:** Cohort capacity check (skip with `p_force=true`)
+3. **Step 0c:** Tier defaulting — defaults to `programs.tiers[0]` if NULL
+4. **Step 0d:** Program plan resolution — looks up `program_tier_plans` → falls back to `programs.default_program_plan_id`
+5. **Step 1:** Credit consumption (FIFO, if cost > 0)
+6. **Step 2:** Create enrollment record
+7. **Step 3:** Link credit log entries
 
 **Helper RPC:** `user_is_enrolled_in_program(user_id, program_id)` — SECURITY DEFINER function that checks enrollment status (active, paused, or completed) without triggering RLS recursion. Used by multiple RLS policies on staff and assessment tables.
 
@@ -1362,16 +1408,34 @@ supabase db reset    # runs all migrations + seed.sql
 4. Tag resources with skills
 
 ### Step 6: Programs & Modules
-1. Create program plans with feature mappings
-2. Create programs with min_plan_tier, credit_cost, default_program_plan
-3. Create program tier plans (if multiple tiers)
-4. Add modules to programs:
+
+**6a. Program Plans (one-time setup — defines in-program feature templates):**
+1. Create program plans in Admin → Program Plans Management (e.g., "Basic Access", "Premium Access")
+2. Configure features per program plan (toggle features on/off, set limits)
+   - These are feature templates, not per-user — shared across all enrollments that map to this plan
+
+**6b. Programs:**
+1. Create programs in Admin → Programs Management
+2. Set `min_plan_tier` (subscription gate), `tiers` (JSON array, e.g., `["Essentials", "Premium"]`)
+3. Set `default_program_plan_id` → fallback program plan for enrollments without a tier mapping
+4. Set `capacity` if enrollment limits are needed
+
+**6c. Program Tier Plans (maps tiers → program plans + credit costs):**
+1. In Admin → Program Detail → Plan Config tab
+2. Map each tier to a program plan and set credit cost:
+   - "Essentials" → Basic Access program plan, 1700 credits
+   - "Premium" → Premium Access program plan, 3400 credits
+3. **This is the key configuration** — once set, all enrollment paths (self-enrollment, enrollment codes, partner codes, admin enrollment) will automatically resolve the correct program plan from the tier (see section 4.5)
+
+**6d. Modules:**
+1. Add modules to programs:
    - `session` modules → link to session types
    - `assignment` modules → link to assignment types via module_assignment_configs
    - `reflection` modules → assign reflection resources
    - `resource` modules → assign resources with section_type
-5. Set `capability_assessment_id` on modules that include assessments
-6. Assign scenarios to modules/enrollments
+2. Set `capability_assessment_id` on modules that include assessments
+3. Assign scenarios to modules/enrollments
+4. Optionally set module prerequisites and time-gating (`available_from_date`)
 
 ### Step 7: Coach Feedback Templates
 1. Create module feedback templates for structured coach feedback
@@ -1384,6 +1448,11 @@ supabase db reset    # runs all migrations + seed.sql
 ### Verification Checklist
 After population, verify each path works:
 - [ ] Client login → dashboard → browse programs → enroll → access modules
+- [ ] Tier defaulting: enroll without specifying tier → enrollment gets `programs.tiers[0]` (lowest tier)
+- [ ] Program plan resolution: enroll with tier → enrollment gets correct `program_plan_id` from `program_tier_plans`
+- [ ] Program plan fallback: enroll in program without tier mappings → enrollment gets `programs.default_program_plan_id`
+- [ ] Enrollment code redemption: code with `grants_tier` → enrollment gets that tier + auto-resolved program plan
+- [ ] Partner code redemption: code with `grants_tier` → enrollment gets that tier + auto-resolved program plan
 - [ ] Client takes capability assessment (self-assessment mode) → weak domains suggest goals
 - [ ] Capability assessment with question types: weighted domain scores display correctly, type subtotals shown
 - [ ] Capability assessment without question types: simple average unchanged (backward compatibility)

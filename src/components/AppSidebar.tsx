@@ -793,6 +793,18 @@ export function AppSidebar() {
       icon: Coins,
       tourId: "admin-consumption",
     },
+    {
+      title: "Org Billing",
+      url: "/admin/org-billing",
+      icon: Coins,
+      tourId: "admin-org-billing",
+    },
+    {
+      title: "Payment Schedules",
+      url: "/admin/payment-schedules",
+      icon: Coins,
+      tourId: "admin-payment-schedules",
+    },
   ];
 
   // Admin integration items - separated for cleaner UI
