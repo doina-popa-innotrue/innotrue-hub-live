@@ -315,6 +315,8 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - `src/pages/admin/PaymentSchedulesManagement.tsx` — admin installment tracking dashboard
   - `supabase/functions/create-installment-checkout/index.ts` — Stripe subscription-as-instalment
   - Stripe webhook (`stripe-webhook/index.ts`) — installment lifecycle handlers (invoice.paid, payment_failed, subscription.deleted)
+- **Remove Continuation Plan (2026-03-04):** Deleted ContinuationBanner component, removed continuation state from ClientDashboard, rewrote ProgramCompletions as read-only view (no "Move to Continuation"), updated AdminFAQ/PlansManagement/platformDocumentation/seed.sql. Safety-net migration `20260304100000_remove_continuation_plan.sql` moves any remaining Continuation users to Free. Alumni lifecycle (2B.1) handles completed programs — alumni is an enrollment-level state, not a plan change.
+- **Stripe Webhook Config (2026-03-04):** Webhooks configured in both preprod (test mode) and production (live mode) with all 5 events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`. `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` set in both environments. Stripe price IDs auto-created on first checkout per environment.
 - **Next steps:** 2B.5 Certification → Phase 5 remaining (Wheel pipeline, bulk import) → Phase 3 AI
 
 ## npm Scripts

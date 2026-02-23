@@ -133,6 +133,11 @@ The `stripe-webhook` edge function handles these events:
    npx supabase secrets set STRIPE_WEBHOOK_SECRET='whsec_...' --project-ref qfdztdgublwlmewobxmx
    ```
 
+**Current Status (2026-03-04):**
+- ✅ **Preprod** webhook configured — all 5 events, `STRIPE_SECRET_KEY` (`sk_test_...`) and `STRIPE_WEBHOOK_SECRET` set
+- ✅ **Production** webhook configured — all 5 events, `STRIPE_SECRET_KEY` (`sk_live_...`) and `STRIPE_WEBHOOK_SECRET` set
+- Stripe price IDs: auto-created on first checkout per environment (no manual sync needed)
+
 ### How Plan Resolution Works (Webhook)
 
 When the webhook receives a subscription event, it needs to map Stripe's price to our plan:
@@ -336,10 +341,10 @@ Credits are used for AI operations (coaching, insights, recommendations), sessio
 Before testing any payment flow on **preprod**:
 
 1. **Stripe test mode is active** — preprod uses `sk_test_...` key
-2. **Webhook is configured** — endpoint `https://jtzcrirqflfnagceendt.supabase.co/functions/v1/stripe-webhook` with the 4 events
-3. **`STRIPE_WEBHOOK_SECRET`** is set on preprod
-4. **`plan_prices.stripe_price_id`** is populated for all purchasable plans (admin Plans Management page)
-5. **Credit packages exist** — `credit_topup_packages` populated (via seed data or migration)
+2. **Webhook is configured** ✅ — endpoint `https://jtzcrirqflfnagceendt.supabase.co/functions/v1/stripe-webhook` with all 5 events (`checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`)
+3. **`STRIPE_WEBHOOK_SECRET`** is set on preprod ✅
+4. **`plan_prices.stripe_price_id`** — auto-created on first checkout (edge functions create Stripe products/prices if `stripe_price_id` is NULL, then save the ID back to the database)
+5. **Credit packages exist** — `credit_topup_packages` populated (via seed data or migration). Stripe prices auto-created on first purchase.
 
 ### Test Cards
 

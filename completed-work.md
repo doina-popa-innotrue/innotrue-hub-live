@@ -1,5 +1,27 @@
 # Completed Work — Detailed History
 
+## Remove Continuation Plan (2026-03-04)
+
+Removed the deprecated Continuation plan and all code remnants. The Continuation plan was an old concept where clients who finished a program were moved to a special tier-0 plan — replaced by Alumni Lifecycle (2B.1) where alumni is an enrollment-level state, not a plan change. 1 new migration, 1 deleted component, 6 modified files. `npm run verify` passed.
+
+**Migration (`20260304100000_remove_continuation_plan.sql`):** Safety-net to move any remaining Continuation plan users to Free (none found in practice).
+
+**Deleted:** `src/components/dashboard/ContinuationBanner.tsx`
+
+**Modified:**
+- `src/pages/client/ClientDashboard.tsx` — removed `isOnContinuationPlan` state, continuation plan check query, and banner render
+- `src/pages/admin/ProgramCompletions.tsx` — rewritten as read-only view: removed selection state, `moveToContinuationMutation`, bulk/individual move buttons, confirmation dialog, checkbox and action columns. Title changed to "Program Completions" / "Completed Programs"
+- `src/pages/admin/AdminFAQ.tsx` — Tier 0 label: "Continuation (free/limited)" → "Free (base access)"
+- `src/pages/admin/PlansManagement.tsx` — help text: removed ", Continuation"
+- `src/lib/documentation/platformDocumentation.ts` — updated continuation banner text and tier 0 table row
+- `supabase/seed.sql` — removed continuation plan INSERT
+
+## Stripe Webhook Configuration (2026-03-04)
+
+Configured Stripe webhooks for both preprod and production environments. All 5 events enabled: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`. `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` set in both environments (test key for preprod, live key for prod). Stripe price IDs auto-created on first checkout — no manual product sync needed between environments.
+
+---
+
 ## Credit Economy Redesign — Phases 1-4 (2026-03-02 – 2026-03-03)
 
 Unified 2:1 credit-to-EUR ratio across the entire platform. 4-phase implementation: credit recalibration migration, Top Up & Enrol UX, installment plans (Stripe subscription-as-instalment), documentation. 1 new migration, 1 new edge function, 1 new admin page, 8+ modified files. `npm run verify` passed.
