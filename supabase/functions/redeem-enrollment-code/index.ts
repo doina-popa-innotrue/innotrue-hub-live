@@ -6,12 +6,14 @@ import { errorResponse, successResponse } from "../_shared/error-response.ts";
 /**
  * G8: Redeem an enrollment code to self-enroll in a program.
  *
- * Input: { code: string }
+ * Input: { code: string, partner_code?: string }
  * - Validates the code (active, not expired, not at max_uses)
+ * - Optionally validates a partner code for referral attribution (non-fatal)
  * - Checks user is not already enrolled
  * - Calls enroll_with_credits RPC for free enrollments
  * - Increments code usage counter
- * - Notifies the code creator
+ * - Records partner referral if partner code valid
+ * - Notifies the code creator (and partner if attributed)
  */
 
 function validateCode(code: unknown): string | null {
@@ -58,6 +60,9 @@ serve(async (req) => {
     if (!code) {
       return errorResponse.badRequest("Invalid enrollment code format", cors);
     }
+
+    // 2b. Parse optional partner code for referral attribution
+    const partnerCode = validateCode(body?.partner_code);
 
     // 3. Fetch code with program info (service role bypasses RLS)
     const { data: enrollCode, error: codeError } = await supabase
@@ -140,6 +145,42 @@ serve(async (req) => {
       }
     }
 
+    // 5d. Validate optional partner code for attribution (non-fatal)
+    let partnerValidation: {
+      code_id: string;
+      partner_id: string;
+      program_id: string;
+      partner_name: string;
+    } | null = null;
+
+    if (partnerCode) {
+      try {
+        const { data: pv, error: pvError } = await supabase.rpc(
+          "validate_partner_code",
+          { p_code: partnerCode },
+        );
+
+        if (pvError) {
+          console.warn("Partner code validation error (non-fatal):", pvError);
+        } else if (!pv?.valid) {
+          console.warn(`Partner code ${partnerCode} is invalid: ${pv?.error}`);
+        } else if (pv.program_id !== enrollCode.program_id) {
+          console.warn(
+            `Partner code ${partnerCode} is for program ${pv.program_id}, but enrollment code is for ${enrollCode.program_id} — skipping attribution`,
+          );
+        } else {
+          partnerValidation = {
+            code_id: pv.code_id,
+            partner_id: pv.partner_id,
+            program_id: pv.program_id,
+            partner_name: pv.partner_name,
+          };
+        }
+      } catch (pvCatchError) {
+        console.warn("Partner code validation failed (non-fatal):", pvCatchError);
+      }
+    }
+
     // 6. G8 scope: only process free enrollments
     const isFreeEnrollment =
       enrollCode.is_free || enrollCode.discount_percent === 100;
@@ -167,8 +208,12 @@ serve(async (req) => {
         p_description: `Self-enrolled via code ${enrollCode.code}`,
         p_cohort_id: enrollCode.cohort_id || null,
         p_enrollment_source: "enrollment_code",
-        p_referred_by: enrollCode.created_by || null,
-        p_referral_note: `Via code ${enrollCode.code}`,
+        p_referred_by: partnerValidation
+          ? partnerValidation.partner_id
+          : enrollCode.created_by || null,
+        p_referral_note: partnerValidation
+          ? `Via enrollment code ${enrollCode.code} + partner code ${partnerCode}`
+          : `Via code ${enrollCode.code}`,
       },
     );
 
@@ -218,6 +263,63 @@ serve(async (req) => {
         .eq("id", enrollCode.id);
     }
 
+    // 8b. Record partner referral attribution (non-fatal)
+    if (partnerValidation) {
+      try {
+        // Insert partner_referrals row
+        const { error: referralError } = await supabase
+          .from("partner_referrals")
+          .insert({
+            partner_code_id: partnerValidation.code_id,
+            partner_id: partnerValidation.partner_id,
+            referred_user_id: userId,
+            enrollment_id: enrollmentId,
+            referral_type: "enrollment",
+            status: "attributed",
+          });
+
+        if (referralError) {
+          console.error("Failed to record partner referral:", referralError);
+        }
+
+        // Increment partner code usage counter
+        const { data: currentPartnerCode } = await supabase
+          .from("partner_codes")
+          .select("current_uses")
+          .eq("id", partnerValidation.code_id)
+          .single();
+
+        if (currentPartnerCode) {
+          await supabase
+            .from("partner_codes")
+            .update({ current_uses: currentPartnerCode.current_uses + 1 })
+            .eq("id", partnerValidation.code_id);
+        }
+
+        // Notify the partner
+        await supabase.rpc("create_notification", {
+          p_user_id: partnerValidation.partner_id,
+          p_type_key: "partner_code_redeemed",
+          p_title: "Partner Referral",
+          p_message: `${userEmail} enrolled in ${enrollCode.programs.name} using your partner code ${partnerCode}`,
+          p_link: "/teaching",
+          p_metadata: {
+            enrollment_id: enrollmentId,
+            partner_code_id: partnerValidation.code_id,
+            code: partnerCode,
+            user_email: userEmail,
+            program_name: enrollCode.programs.name,
+          },
+        });
+
+        console.log(
+          `Partner attribution: ${partnerValidation.partner_name} credited for ${userEmail} via ${partnerCode}`,
+        );
+      } catch (partnerError) {
+        console.error("Partner attribution failed (non-fatal):", partnerError);
+      }
+    }
+
     // 9. Notify code creator
     try {
       await supabase.rpc("create_notification", {
@@ -250,6 +352,8 @@ serve(async (req) => {
         program_name: enrollCode.programs.name,
         program_slug: enrollCode.programs.slug,
         program_id: enrollCode.program_id,
+        partner_attributed: !!partnerValidation,
+        partner_name: partnerValidation?.partner_name || null,
       },
       cors,
     );

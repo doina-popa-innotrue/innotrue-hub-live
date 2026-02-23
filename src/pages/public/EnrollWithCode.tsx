@@ -20,6 +20,7 @@ import {
   Loader2,
   Ticket,
   ArrowRight,
+  UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -63,9 +64,13 @@ export default function EnrollWithCode() {
     program_name: string;
     program_slug: string;
     program_id: string;
+    partner_attributed?: boolean;
+    partner_name?: string | null;
   } | null>(null);
+  const [partnerCodeInput, setPartnerCodeInput] = useState("");
 
   const urlCode = searchParams.get("code");
+  const urlPartnerCode = searchParams.get("partner");
 
   // -----------------------------------------------------------------------
   // Auto-validate code from URL on mount
@@ -76,6 +81,13 @@ export default function EnrollWithCode() {
       validateCode(urlCode);
     }
   }, [urlCode]);
+
+  // Pre-fill partner code from URL
+  useEffect(() => {
+    if (urlPartnerCode) {
+      setPartnerCodeInput(urlPartnerCode.toUpperCase());
+    }
+  }, [urlPartnerCode]);
 
   // -----------------------------------------------------------------------
   // Validate via RPC
@@ -124,17 +136,29 @@ export default function EnrollWithCode() {
   // -----------------------------------------------------------------------
   const handleEnroll = async () => {
     if (!user) {
-      // Redirect to auth, come back here after login
+      // Redirect to auth, come back here after login (preserve partner code)
       const codeParam = validation?.code || codeInput;
-      navigate(`/auth?redirect=/enroll?code=${encodeURIComponent(codeParam)}`);
+      const partnerParam = partnerCodeInput.trim();
+      const redirectUrl = partnerParam
+        ? `/enroll?code=${encodeURIComponent(codeParam)}&partner=${encodeURIComponent(partnerParam)}`
+        : `/enroll?code=${encodeURIComponent(codeParam)}`;
+      navigate(`/auth?redirect=${encodeURIComponent(redirectUrl)}`);
       return;
     }
 
     setStatus("enrolling");
 
     try {
+      const requestBody: { code: string; partner_code?: string } = {
+        code: validation?.code || codeInput.toUpperCase(),
+      };
+      const trimmedPartner = partnerCodeInput.trim().toUpperCase();
+      if (trimmedPartner) {
+        requestBody.partner_code = trimmedPartner;
+      }
+
       const { data, error } = await supabase.functions.invoke("redeem-enrollment-code", {
-        body: { code: validation?.code || codeInput.toUpperCase() },
+        body: requestBody,
       });
 
       if (error) throw error;
@@ -148,6 +172,8 @@ export default function EnrollWithCode() {
         program_name: data.program_name,
         program_slug: data.program_slug,
         program_id: data.program_id,
+        partner_attributed: data.partner_attributed,
+        partner_name: data.partner_name,
       });
       setStatus("enrolled");
       toast.success(`Successfully enrolled in ${data.program_name}!`);
@@ -244,7 +270,13 @@ export default function EnrollWithCode() {
               <strong>{enrollmentResult.program_name}</strong>
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            {enrollmentResult.partner_attributed && enrollmentResult.partner_name && (
+              <div className="flex items-center gap-2 justify-center text-sm text-muted-foreground">
+                <UserCheck className="h-4 w-4" />
+                <span>Referred by <strong>{enrollmentResult.partner_name}</strong></span>
+              </div>
+            )}
             <Button
               className="w-full"
               onClick={() =>
@@ -350,6 +382,20 @@ export default function EnrollWithCode() {
             </div>
           </div>
 
+          {/* Optional partner/referral code */}
+          <div className="space-y-2">
+            <Label htmlFor="partner-code" className="text-sm text-muted-foreground">
+              Referral code <span className="text-xs">(optional)</span>
+            </Label>
+            <Input
+              id="partner-code"
+              value={partnerCodeInput}
+              onChange={(e) => setPartnerCodeInput(e.target.value.toUpperCase())}
+              placeholder="e.g. PRTABCDEF"
+              className="font-mono text-center text-sm tracking-wider"
+            />
+          </div>
+
           {/* Auth-dependent action */}
           {!user ? (
             <div className="space-y-3">
@@ -360,7 +406,11 @@ export default function EnrollWithCode() {
                 className="w-full"
                 onClick={() => {
                   const codeParam = validation?.code || codeInput;
-                  navigate(`/auth?redirect=/enroll?code=${encodeURIComponent(codeParam)}`);
+                  const partnerParam = partnerCodeInput.trim();
+                  const redirectUrl = partnerParam
+                    ? `/enroll?code=${encodeURIComponent(codeParam)}&partner=${encodeURIComponent(partnerParam)}`
+                    : `/enroll?code=${encodeURIComponent(codeParam)}`;
+                  navigate(`/auth?redirect=${encodeURIComponent(redirectUrl)}`);
                 }}
               >
                 Sign In to Enroll

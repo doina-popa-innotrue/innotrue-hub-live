@@ -204,6 +204,11 @@ export default function RedeemPartnerCode() {
             <CardDescription>{errorMessage}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            {errorMessage.toLowerCase().includes("already enrolled") && (
+              <p className="text-xs text-muted-foreground text-center">
+                If you'd like to attribute your enrollment to this partner, please contact your administrator.
+              </p>
+            )}
             <Button
               variant="outline"
               className="w-full"
@@ -302,6 +307,13 @@ export default function RedeemPartnerCode() {
                 Validate Code
               </Button>
             </form>
+            <p className="text-xs text-muted-foreground text-center mt-3">
+              Already have an enrollment code?{" "}
+              <a href="/enroll" className="text-primary hover:underline">
+                Use it here
+              </a>{" "}
+              and add your partner code during enrollment.
+            </p>
           </CardContent>
         </Card>
       </div>

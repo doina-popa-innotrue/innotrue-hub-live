@@ -22,6 +22,7 @@ interface EnrollmentResult {
   discountApplied?: boolean;
   originalCost?: number;
   finalCost?: number;
+  partnerAttributed?: boolean;
 }
 
 export function useProgramEnrollment() {
@@ -106,6 +107,7 @@ export function useProgramEnrollment() {
         redirectIfInsufficientCredits?: boolean;
         returnUrl?: string;
         discountCode?: string;
+        partnerCode?: string;
       },
     ): Promise<EnrollmentResult> => {
       if (!user) {
@@ -173,6 +175,7 @@ export function useProgramEnrollment() {
                   tierName,
                   creditCost: finalCreditCost,
                   discountCode: options?.discountCode,
+                  partnerCode: options?.partnerCode,
                   returnUrl,
                 }),
               );
@@ -256,6 +259,70 @@ export function useProgramEnrollment() {
           );
         }
 
+        // Record partner referral attribution (non-fatal)
+        let partnerAttributed = false;
+        if (options?.partnerCode) {
+          try {
+            const partnerCodeClean = options.partnerCode.trim().toUpperCase();
+            const { data: pv } = await supabase.rpc("validate_partner_code", {
+              p_code: partnerCodeClean,
+            });
+
+            if (pv?.valid && pv.program_id === programId) {
+              // Update enrollment with partner attribution
+              await supabase
+                .from("client_enrollments")
+                .update({
+                  referred_by: pv.partner_id,
+                  referral_note: `Via partner code ${partnerCodeClean}`,
+                })
+                .eq("id", enrollment.id);
+
+              // Record partner referral
+              await supabase.from("partner_referrals").insert({
+                partner_code_id: pv.code_id,
+                partner_id: pv.partner_id,
+                referred_user_id: user.id,
+                enrollment_id: enrollment.id,
+                referral_type: "enrollment",
+                status: "attributed",
+              });
+
+              // Increment partner code usage
+              const { data: currentCode } = await supabase
+                .from("partner_codes")
+                .select("current_uses")
+                .eq("id", pv.code_id)
+                .single();
+
+              if (currentCode) {
+                await supabase
+                  .from("partner_codes")
+                  .update({ current_uses: currentCode.current_uses + 1 })
+                  .eq("id", pv.code_id);
+              }
+
+              // Notify partner
+              await supabase.rpc("create_notification", {
+                p_user_id: pv.partner_id,
+                p_type_key: "partner_code_redeemed",
+                p_title: "Partner Referral",
+                p_message: `A new client enrolled via your partner code ${partnerCodeClean}`,
+                p_link: "/teaching",
+                p_metadata: {
+                  enrollment_id: enrollment.id,
+                  partner_code_id: pv.code_id,
+                  code: partnerCodeClean,
+                },
+              });
+
+              partnerAttributed = true;
+            }
+          } catch (partnerErr) {
+            console.warn("Partner attribution failed (non-fatal):", partnerErr);
+          }
+        }
+
         const savedCredits = discountResult ? discountResult.discountAmount : 0;
         toast.success("Successfully enrolled!", {
           description: finalCreditCost
@@ -270,6 +337,7 @@ export function useProgramEnrollment() {
           discountApplied: !!discountResult,
           originalCost: originalCreditCost ?? undefined,
           finalCost: finalCreditCost ?? undefined,
+          partnerAttributed,
         };
       } catch (error: any) {
         console.error("Enrollment error:", error);
@@ -310,14 +378,24 @@ export function useProgramEnrollment() {
 
   // Resume pending enrollment after credit purchase
   const resumePendingEnrollment = useCallback(async (): Promise<EnrollmentResult> => {
+    const pendingStr = sessionStorage.getItem("pendingEnrollment");
     const pending = await checkPendingEnrollment();
     if (!pending.hasPending || !pending.programId || !pending.tierName) {
       return { success: false };
     }
 
+    // Extract partnerCode from stored data before clearing
+    let partnerCode: string | undefined;
+    if (pendingStr) {
+      try {
+        partnerCode = JSON.parse(pendingStr).partnerCode;
+      } catch { /* ignore */ }
+    }
+
     clearPendingEnrollment();
     return enrollInProgram(pending.programId, pending.tierName, {
       redirectIfInsufficientCredits: true,
+      partnerCode,
     });
   }, [checkPendingEnrollment, clearPendingEnrollment, enrollInProgram]);
 
