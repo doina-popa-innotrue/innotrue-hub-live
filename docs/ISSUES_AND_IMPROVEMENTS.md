@@ -146,16 +146,21 @@ All core features work end-to-end: programs, modules, assignments, assessments, 
 
 These are architectural decisions and features that have been discussed and decided on. Full details in [SUBSCRIPTIONS_AND_PLANS.md](./SUBSCRIPTIONS_AND_PLANS.md#strategic-roadmap).
 
-### Priority order (updated 2026-03-01):
+### Priority order (updated 2026-03-04):
 1. ~~**2B.6 Waitlist / Cohort Management**~~ ✅ DONE (2026-03-01) — capacity enforcement + waitlist + enrollment attribution + admin management + notifications
 2. ~~**2B.2 Coach/Instructor Partner Codes**~~ ✅ DONE (2026-03-01) — partner codes + referral tracking + admin CRUD + public redemption + teaching dashboard stats
 3. **2B.5 Certification via Credly/Accredible** — key differentiator, foundation 70% built
 4. ~~**2B.1 Alumni Lifecycle**~~ ✅ DONE (2026-03-01) — grace period read-only access + content access gating + nurture emails + admin management
 5. ~~**2B.3 Pricing Update**~~ ✅ DONE (2026-03-01) — €49/99/179/249 monthly + annual 20% discount + 2x credits + continuation plan deprecated
-6. **2B.8 Win-Back & ActiveCampaign Sync** — retention
-7. ~~**2B.7 Module Prerequisite UI**~~ ✅ DONE (2026-02-22) — lock icons + time-gating
-8. **2B.4 Corporate Program Seats** — when B2B pipeline grows
-9. **2B.9 Org Analytics & ROI Dashboard** — B2B retention
+6. **2B.10 Program Enrollment Duration & Deadline Enforcement** — 🔴 prevents indefinite feature freeloading
+7. **2B.11 Feature Loss Communication** — 🟠 UX: warns users before/after program feature loss
+8. **2B.12 Feature Gain Visibility** — 🟡 shows users what extra features programs grant
+9. **2B.13 Credit Expiry Policy Update & Awareness** — 🟠 purchased credits to 10-year expiry + dashboard banner + email cron
+10. **2B.14 Admin Features Management UX** — 🟡 deny scope clarification, Programs plan notes, column reordering
+11. **2B.8 Win-Back & ActiveCampaign Sync** — retention
+12. ~~**2B.7 Module Prerequisite UI**~~ ✅ DONE (2026-02-22) — lock icons + time-gating
+13. **2B.4 Corporate Program Seats** — when B2B pipeline grows
+14. **2B.9 Org Analytics & ROI Dashboard** — B2B retention
 
 ---
 
@@ -239,6 +244,122 @@ These are architectural decisions and features that have been discussed and deci
 
 **Effort:** Medium (2-3 weeks). Most data exists, needs aggregation views + visualization layer.
 **Priority:** Medium-High — critical for B2B retention and expansion.
+
+### 2B.10 Program Enrollment Duration & Deadline Enforcement — NEW (decided 2026-03-04)
+**Problem:** Enrollments stay `active` indefinitely. The `end_date` column exists on `client_enrollments` but is completely unenforced — no trigger, no cron, no UI. A user could enroll, access premium features via `program_plan_id`, and never complete — keeping those features forever with no incentive to finish.
+
+**What:**
+1. **Program-level default duration:** Add `default_duration_days` (nullable INT) to `programs` table. When set, `enroll_with_credits` auto-calculates `end_date = start_date + default_duration_days`.
+2. **Enforcement cron:** New cron function (or extend `alumni-lifecycle`) that transitions active enrollments past `end_date` to `completed` (triggering `completed_at` → alumni grace period starts).
+3. **Expiry warnings:** Email + dashboard banner at 30 days before, 7 days before, and on expiry.
+4. **Admin flexibility:** Admin can extend `end_date` per-enrollment (button in ClientDetail). `default_duration_days = NULL` means self-paced with no deadline (opt-in enforcement).
+5. **Admin UI:** Duration config per program in ProgramPlanConfig.
+
+**Existing foundation:**
+- `client_enrollments.end_date` column exists (unused)
+- `client_enrollments.completed_at` trigger exists (fires on status → completed)
+- `alumni-lifecycle` cron function exists (can be extended)
+- Alumni grace period + nurture emails already handle post-completion lifecycle
+
+**Effort:** Medium (1-2 weeks). DB migration (new column), RPC update, cron extension, notification emails, dashboard warnings.
+**Priority:** 🔴 High — business risk (prevents indefinite feature freeloading via enrollment).
+
+### 2B.11 Feature Loss Communication (Post-Program Completion) — NEW (decided 2026-03-04)
+**Problem:** When enrollment status changes to `completed`, program plan features silently disappear from `useEntitlements` (it only fetches `status = 'active'` enrollments). Users have no warning about what they'll lose.
+
+**What:**
+1. **Pre-completion warning:** When the last module/content-package is completed, show notification: "You're about to complete [Program]. After completion, the following features from this program will no longer be available: [list]. You'll retain read-only access to program content for [X] days."
+2. **Post-completion dashboard notice:** For 7-14 days after completion, show card: "You recently completed [Program]. Some features from this program are no longer active. [See upgrade options]."
+3. **Alumni grace banner:** Surface `useAlumniAccess().days_remaining` on program content pages: "Alumni access — X days remaining (read-only)."
+4. **New hook:** `useRecentlyLostFeatures()` — compares current entitlements against recently completed enrollments to identify which features were lost.
+
+**Existing foundation:**
+- `useEntitlements().getAccessSource()` already returns `"program_plan"` — can identify program-sourced features
+- `useAlumniAccess` hook returns `days_remaining`, `grace_expires_at` — ready for UI
+- Alumni read-only banner exists in `ContentPackageViewer` but not on dashboard or program pages
+- `alumni_touchpoints` tracks nurture emails — can be extended for in-app notifications
+
+**Effort:** Medium (1-2 weeks). New hook, dashboard components, alumni banner on more pages.
+**Priority:** 🟠 High — UX impact (prevents surprise feature loss, drives upgrades).
+
+### 2B.12 Feature Gain Visibility (During Program Enrollment) — NEW (decided 2026-03-04)
+**Problem:** When a user enrolls in a program, they silently get extra features via `program_plan_id` → `program_plan_features`. Users have no visibility into which features came from their subscription vs. their program enrollment, and no awareness of the temporary feature boost.
+
+**What:**
+1. **Program detail page (pre-enroll):** "What's included" section showing features the program plan grants — similar to plan comparison on the Subscription page. Helps justify credit cost and sets expectations.
+2. **Dashboard feature attribution:** Subtle indicators (badge/tooltip) on feature cards unlocked by a program. E.g., if `ai_insights` comes from program plan, show "Via Leadership Academy" tag. Uses `useEntitlements().getAccessSource()`.
+3. **Subscription page context:** When viewing plans, note which features the user already has via an active program — prevents unnecessary upgrade pressure.
+
+**Existing foundation:**
+- `useEntitlements().getAccessSource()` returns source for each feature (`"program_plan"`, `"subscription"`, etc.)
+- `program_plan_features` table has the feature grants per program plan
+- Subscription page already renders feature comparison grid
+
+**Effort:** Medium (1 week). Primarily UI/UX work — feature attribution badges, "program includes" section.
+**Priority:** 🟡 Medium — nice-to-have, enhances perceived program value.
+
+### 2B.13 Credit Expiry Awareness & Policy Update — NEW (decided 2026-03-04)
+
+**Policy decisions (decided 2026-03-04):**
+- **Purchased credits (top-ups + org bundles):** 10-year expiry (effectively permanent). Users paid real money — expiring paid credits erodes trust and discourages purchasing. 10-year horizon avoids permanent deferred revenue liability while being functionally permanent.
+- **Plan credits (monthly allowance):** No rollover, resets each billing period. Creates natural scarcity, drives engagement and top-up purchases. FIFO consumption already protects purchased credits (plan credits consumed first).
+- Full rationale documented in `docs/CREDIT_ECONOMY_AND_PAYMENTS.md` Section 11.
+
+**Implementation — Policy change (migration needed):**
+1. Update `grant_credit_batch` RPC and all credit-granting edge functions to use 10-year expiry for purchased credits (currently 12 months)
+2. Retroactively extend existing `credit_batches` with `source_type = 'purchase'` to 10 years from `granted_at`
+3. Update `credit_topup_packages.validity_months` from 12 to 120
+4. Update seed data to match
+
+**Implementation — Awareness features:**
+1. **Dashboard expiry banner** — shows credits expiring within 30 days (plan credits at billing reset, any expiring grant batches). Data already available via `get_user_credit_summary_v2` (`expiring_soon`, `earliest_expiry`). Similar to existing `LowBalanceAlert`.
+2. **Email notification cron** — 7-day warning before credits expire. Notification type `credits_expiring` exists in seed data with email template key, but no cron sends it. Add to `subscription-reminders` or new cron.
+3. **AI spend suggestions** (future, Phase 3) — when credits are about to expire, suggest actions based on user context: coaching sessions, AI insights, program exploration.
+
+**Existing foundation:**
+- `get_user_credit_summary_v2` returns `expiring_soon` (7-day window) and `earliest_expiry` timestamp
+- Credits page already shows "Expiring Soon" card for batches expiring within 30 days
+- `LowBalanceAlert` component pattern is reusable
+- `credits_expiring` notification type exists in seed data (no cron triggers it)
+- `consume_credits_fifo` orders by `expires_at NULLS LAST, created_at` — 10-year expiry works correctly
+
+**Effort:** Low-Medium (2-3 days for policy migration + banner + cron). AI suggestions deferred to Phase 3.
+**Priority:** 🟠 High for policy migration (fairness to paying users), 🟡 Medium for awareness UI.
+
+### 2B.14 Admin Features Management UX Improvements — NEW (decided 2026-03-04)
+
+**Context:** The Features Management page (`/admin/features`) > Plan Configuration tab shows a grid of features × plans. Several admin UX issues exist:
+
+**A. "Deny" checkbox scope clarification**
+
+The Deny checkbox (Ban icon) sets `plan_features.is_restrictive = true`. This works correctly end-to-end, but **Deny only takes effect for org-sponsored plans** — `useEntitlements` only checks `is_restrictive` in `fetchOrgSponsoredFeatures`. For regular subscribers, the deny column is ignored (they just won't have the feature if `enabled = false`).
+
+This is by design (deny = org policy override), but the UI doesn't explain this. An admin might set deny on the "Free" plan expecting it to override program plan features for Free subscribers — it won't.
+
+**Action:** Add a tooltip or info banner on the Deny checkbox explaining: *"Deny overrides apply only to organization-sponsored plans. When an org sponsors this plan for its members, denied features will be blocked regardless of any other access sources (personal subscription, add-ons, tracks). For regular subscribers, use the enable/disable switch instead."*
+
+**B. "Programs" plan — explain its special nature**
+
+The "Programs" plan (`key: programs`, tier 0, `is_purchasable: false`) is admin-assigned only. It's for users who buy individual programs without a monthly subscription. Features for these users come from `program_plan_features` (via enrollment), NOT from the subscription plan's `plan_features`. This makes the "Programs" column in the plan configuration grid misleading — admins might think enabling features here grants them to program users, but in practice `program_plan_features` (configured per-program) is what matters.
+
+**Action:**
+- Add a visual indicator (badge/banner) on the "Programs" column header: *"Admin-assigned only. Not sold as a subscription. Program features come from per-program plan configuration, not this column."*
+- Link to the Program Plans admin page for context
+
+**C. Move "Programs" (and any other non-purchasable plans) to the end of the table**
+
+Currently all plans are displayed in one sequence. The purchasable plans (Free, Base, Pro, Advanced, Elite) should come first since they're the primary configuration target. Non-purchasable/special plans (Programs, and any future admin-only plans) should be grouped at the end with a visual separator.
+
+**Action:** Sort plan columns: purchasable plans by `tier_level` ASC first, then non-purchasable plans at the end. Add a subtle divider or "Special Plans" section header.
+
+**D. "Enterprise" plan clarification (if it exists in any environment)**
+
+The seed data no longer creates an "Enterprise" plan (it was replaced by "Elite" in the current plan lineup). However, if older environments still have it, add a note explaining its status. If it shows up in the grid, mark it as deprecated or explain how it maps to the current tiers.
+
+**Note:** In the current system, Elite (tier 4) IS the top tier. There is no separate Enterprise plan. If the admin sees an "Enterprise" column in the grid (from a legacy migration), it should be marked as *"Legacy — replaced by Elite"*.
+
+**Effort:** Low (1-2 days). Purely UI — add info banners, tooltips, and column reordering logic.
+**Priority:** 🟡 Medium — admin UX quality, prevents misconfiguration.
 
 ---
 

@@ -17,11 +17,11 @@ All pricing across the platform uses a unified **2:1 credit-to-euro ratio**. Thi
 
 | Source | How Credits Are Obtained | Expiry |
 |--------|------------------------|--------|
-| **Plan allowance** | Monthly refill from subscription plan | Resets each billing period |
+| **Plan allowance** | Monthly refill from subscription plan | Resets each billing period (no rollover) |
 | **Program enrollment** | Granted via `program_plans.credit_allowance` | Tied to enrollment duration |
-| **Individual top-ups** | Purchased via Stripe Checkout (one-time) | 12 months from purchase |
-| **Org credit bundles** | Purchased by org admin via Stripe (one-time) | 12 months from purchase |
-| **Admin grants** | Manually granted by admin (`grant_credit_batch` RPC) | Configurable |
+| **Individual top-ups** | Purchased via Stripe Checkout (one-time) | 10 years (effectively permanent) |
+| **Org credit bundles** | Purchased by org admin via Stripe (one-time) | 10 years (effectively permanent) |
+| **Admin grants** | Manually granted by admin (`grant_credit_batch` RPC) | Configurable (default: 10 years) |
 | **Add-on credits** | From consumable add-ons assigned to user | Per add-on config |
 
 ### Consumption Order (FIFO)
@@ -457,3 +457,67 @@ Stripe enforces that refunds cannot exceed the amount charged:
 | `usePlanAccess` | Program access check including payment plan locking | `src/hooks/usePlanAccess.ts` |
 | `useEntitlements` | Feature access merging 5 sources (plan, program, add-on, track, org) | `src/hooks/useEntitlements.ts` |
 | `useLowBalance` | Low balance detection with system threshold | `src/components/credits/LowBalanceAlert.tsx` |
+
+---
+
+## 11. Credit Expiry Policy (decided 2026-03-04)
+
+### Policy Summary
+
+| Credit Type | Expiry | Rollover | Rationale |
+|-------------|--------|----------|-----------|
+| **Plan credits** (monthly allowance) | Resets each billing period | No rollover | Creates natural scarcity; drives top-up purchases for larger actions. Industry standard (Canva, ChatGPT, etc.). |
+| **Purchased credits** (individual top-ups) | 10 years from purchase | N/A (long-lived) | User paid real money — expiring paid credits erodes trust and discourages purchasing. 10-year expiry avoids permanent deferred revenue liability while being functionally permanent. |
+| **Org credit bundles** | 10 years from purchase | N/A (long-lived) | Same reasoning as individual top-ups — paid credits should persist. |
+| **Admin grants** | Configurable (default: 10 years) | N/A | Admin can set any expiry. Default matches purchased credits. |
+| **Program credits** | Tied to enrollment duration | N/A | Expires when enrollment ends. |
+| **Add-on credits** | Per add-on config | N/A | Depends on the add-on's validity period. |
+
+### Rationale: Why Purchased Credits Should Not Effectively Expire
+
+1. **Users paid real money.** Expiring something someone paid for on top of their subscription feels punitive and erodes trust. It's fundamentally different from a free monthly allowance that resets.
+
+2. **Simpler mental model.** Plan credits = monthly reset. Purchased credits = yours effectively forever. No confusion about "will I use them in time?"
+
+3. **Encourages purchasing.** Users are more likely to buy larger packages upfront (especially before program enrollment) when they know credits won't expire before they're ready to use them.
+
+4. **FIFO protects the business.** Plan credits are consumed first (Priority 1 in `consume_credits_fifo`). Purchased credits only get touched after the free monthly allowance is exhausted. There's no risk of users hoarding free credits — only paid ones persist.
+
+5. **Industry precedent.** Most platforms that sell credit packs (gaming, cloud computing) either don't expire them or give very long windows (2-5 years). 12 months is unusually aggressive for a coaching platform where programs can last 6-12 months.
+
+### Rationale: Why Plan Credits Should NOT Roll Over
+
+1. **Creates natural scarcity.** Monthly reset encourages users to use credits or lose them, driving engagement and preventing stockpiling that would reduce top-up revenue.
+
+2. **Industry standard.** Most SaaS platforms reset monthly allowances without rollover. Users understand and expect this.
+
+3. **FIFO already preserves purchased credits.** Since plan credits are consumed first, any purchased credits are naturally protected — the system already favours spending the "free" ones first.
+
+4. **Simplifies accounting.** No need to track rollover amounts, caps, or cascading expiry chains.
+
+### Technical: 10 Years Instead of Truly "Never"
+
+We use `expires_at = NOW() + INTERVAL '10 years'` instead of `expires_at = NULL` because:
+
+- The `consume_credits_fifo` function orders batches by `expires_at NULLS LAST`. NULL expiry would always be consumed last, even after batches expiring in 9 years. This is incorrect — FIFO should be by `created_at` for same-priority batches.
+- `get_user_credit_summary_v2` uses `expires_at` to calculate `expiring_soon`. NULL values would need special handling.
+- A 10-year horizon is functionally permanent for users while keeping the DB schema and queries clean.
+- From an accounting perspective, a defined (if distant) expiry avoids creating a permanent deferred revenue liability.
+
+### Implementation Status
+
+- ⬜ **Migration needed:** Update `grant_credit_batch` RPC and all edge functions that grant credits to use 10-year expiry for `source_type = 'purchase'`. Currently hardcoded to 12 months.
+- ⬜ **Retroactive fix:** Update existing `credit_batches` with `source_type = 'purchase'` to extend `expires_at` to 10 years from `granted_at`.
+- ⬜ **Seed data:** Update `credit_topup_packages.validity_months` from 12 to 120.
+- ✅ **No FIFO changes needed:** `consume_credits_fifo` orders by `expires_at NULLS LAST, created_at` — 10-year expiry works correctly with existing logic.
+- ✅ **No plan credit changes needed:** Plan credits are virtual (calculated, not batched) and already reset each billing period.
+
+### 2B.13 Credit Expiry Awareness (planned)
+
+Even with long expiry on purchased credits, users benefit from awareness of their credit lifecycle:
+
+| Component | What | Effort | Priority |
+|-----------|------|--------|----------|
+| **Dashboard expiry banner** | Banner showing credits expiring within 30 days (plan credits at billing reset, any expiring batches). Similar to `LowBalanceAlert`. | Low (1-2 days) | 🔴 High |
+| **Email notification cron** | Scheduled notification 7 days before credits expire. Notification type `credits_expiring` already exists in seed data but no cron sends it. Add to `subscription-reminders` or new cron. | Low (1-2 days) | 🟠 High |
+| **AI spend suggestions** | When credits are about to expire, suggest actions based on user context: "You have 45 credits expiring. Book a coaching session (200 cr), generate AI insights (2 cr each), or explore [program]." | Medium (1 week) | 🟡 Later (Phase 3 AI) |

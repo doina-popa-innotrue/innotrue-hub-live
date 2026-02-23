@@ -194,9 +194,11 @@ This metadata persists on the Stripe subscription object and is available in all
 
 > **Full specification:** See [`CREDIT_ECONOMY_AND_PAYMENTS.md`](CREDIT_ECONOMY_AND_PAYMENTS.md) for the complete unified credit economy spec including pricing tables, enrollment flows, installment plans, and discount/voucher system.
 
-Credits are a separate dimension from plans. Plans provide a monthly `credit_allowance` that auto-refills, while purchased credits are stored in `credit_batches` with expiry dates.
+Credits are a separate dimension from plans. Plans provide a monthly `credit_allowance` that auto-refills (no rollover, resets each billing period), while purchased credits are stored in `credit_batches` with a 10-year expiry (effectively permanent — users paid real money, so purchased credits should persist).
 
 **Base ratio: 1 EUR = 2 credits** (unified across all pricing — plans, top-ups, org bundles, services).
+
+**Credit expiry policy (decided 2026-03-04):** Plan credits reset monthly (use-it-or-lose-it). Purchased/org credits expire after 10 years (functionally permanent). FIFO consumption uses plan credits first, protecting purchased credits. Full rationale in [`CREDIT_ECONOMY_AND_PAYMENTS.md` Section 11](CREDIT_ECONOMY_AND_PAYMENTS.md#11-credit-expiry-policy-decided-2026-03-04).
 
 ### Credit Scale (at 2:1 ratio)
 
@@ -251,7 +253,7 @@ Return to /credits?success=true&session_id={ID}
 confirm-credit-topup (edge function)
   → stripe.checkout.sessions.retrieve (verify payment)
   → Update purchase to status: completed
-  → grant_credit_batch RPC (adds credits with 12-month expiry)
+  → grant_credit_batch RPC (adds credits with 10-year expiry)
       ↓
 Toast: "Credits Added! X credits have been added to your account."
 ```
@@ -456,7 +458,7 @@ FROM credit_grant_batches
 WHERE owner_id = (SELECT id FROM auth.users WHERE email = 'sarah.johnson@demo.innotrue.com')
   AND source_type = 'topup'
 ORDER BY created_at DESC LIMIT 1;
--- Expected: amount = 150, expires_at ~12 months from now
+-- Expected: amount = 150, expires_at ~10 years from now
 ```
 
 ### Test E: Payment Failure (declined card)
@@ -578,6 +580,58 @@ Credit packages auto-create their Stripe products/prices on first purchase — n
 - Admin: `ClientDetail.tsx` shows alumni access expiry countdown
 - **Continuation plan deprecated** (`is_active = false`)
 
+### Enrollment Lifecycle: Duration, Feature Visibility & Loss Communication (decided 2026-03-04)
+
+Three related features that complete the enrollment lifecycle beyond Alumni:
+
+**2B.10 — Enrollment Duration & Deadline Enforcement (🔴 High)**
+
+Problem: Enrollments stay `active` indefinitely. `client_enrollments.end_date` exists but is unenforced. Users could enroll, access premium features via `program_plan_id`, and never complete.
+
+Plan:
+- Add `programs.default_duration_days` (nullable INT). `enroll_with_credits` auto-calculates `end_date`.
+- Cron job (extend `alumni-lifecycle`) transitions past-due enrollments to `completed` → triggers alumni grace.
+- Expiry warnings at 30 days, 7 days, and on expiry (email + dashboard banner).
+- Admin can extend `end_date` per-enrollment. `NULL` duration = self-paced (no deadline).
+
+Foundation already exists: `end_date` column, `completed_at` trigger, `alumni-lifecycle` cron.
+
+**2B.11 — Feature Loss Communication (🟠 High)**
+
+Problem: When enrollment completes, program plan features silently disappear from `useEntitlements` (only fetches `status = 'active'`). No warning.
+
+Plan:
+- Pre-completion warning when last module finishes: list features that will be lost.
+- Post-completion dashboard notice for 7-14 days: features lost + upgrade CTA.
+- Alumni grace banner on program content pages: "Alumni access — X days remaining (read-only)."
+- New `useRecentlyLostFeatures()` hook comparing current entitlements vs recently completed enrollments.
+
+Foundation: `useEntitlements().getAccessSource()` returns `"program_plan"`, `useAlumniAccess().days_remaining`.
+
+**2B.12 — Feature Gain Visibility (🟡 Medium)**
+
+Problem: Users don't know which features come from their program vs subscription. No visibility into the temporary feature boost.
+
+Plan:
+- "What's included" section on program detail page (pre-enroll) — shows program plan features.
+- Dashboard feature attribution badges: "Via [Program Name]" tags on feature cards.
+- Subscription page: note which features user already has via active enrollment.
+
+Foundation: `getAccessSource()`, `program_plan_features` table, existing subscription comparison grid.
+
+### Credit Expiry Policy & Awareness (decided 2026-03-04)
+
+**Policy change:** Purchased credits (individual top-ups + org bundles) changed from 12-month expiry to **10-year expiry** (effectively permanent). Plan credits continue to reset monthly with no rollover.
+
+**Rationale:** Users paid real money for top-up credits — expiring them after 12 months erodes trust and discourages purchasing. FIFO consumption already protects the business (plan credits consumed first). 10-year horizon avoids permanent deferred revenue liability while being functionally permanent.
+
+Full rationale and implementation details in [`CREDIT_ECONOMY_AND_PAYMENTS.md` Section 11](CREDIT_ECONOMY_AND_PAYMENTS.md#11-credit-expiry-policy-decided-2026-03-04).
+
+**2B.13 — Credit Expiry Awareness (planned):**
+- Dashboard expiry banner (data exists via `get_user_credit_summary_v2`, UI needed)
+- Email notification cron (notification type `credits_expiring` exists, no cron sends it)
+- AI spend suggestions (future, Phase 3)
+
 ### Coach/Instructor Revenue Model (decided 2026-02-21)
 
 **Phase 1 (MVP) — ✅ IMPLEMENTED (2026-03-01):** See `completed-work.md` for full details.
@@ -640,13 +694,13 @@ Credit packages auto-create their Stripe products/prices on first purchase — n
 
 ## Future Improvements (Technical)
 
-### 1. ~~Programs/Continuation Plan Deprecation~~ ✅ PARTIALLY DONE (2026-03-01)
-- ✅ Alumni lifecycle implemented as Continuation replacement (2B.1)
+### 1. ~~Programs/Continuation Plan Deprecation~~ ✅ FULLY DONE (2026-03-04)
+- ✅ Alumni lifecycle implemented as Continuation replacement (2B.1, 2026-03-01)
 - ✅ Continuation plan set `is_active = false` (migration `20260301130000_pricing_update.sql`)
-- ⬜ ContinuationBanner still triggers on `plan_key === 'continuation'` — should migrate to enrollment status + grace period
-- ⬜ "Move to Continuation" admin action still exists in ProgramCompletions — should be removed
-- ⬜ Existing users on continuation plan need migration to Free
-- ⬜ `programs` plan still active for admin-assigned users — evaluate if still needed
+- ✅ ContinuationBanner deleted (2026-03-04)
+- ✅ "Move to Continuation" admin action removed from ProgramCompletions (2026-03-04)
+- ✅ Remaining users migrated to Free (migration `20260304100000_remove_continuation_plan.sql`)
+- `programs` plan still active for admin-assigned users — this is intentional (not Continuation)
 
 ### 2. Fallback Plan Activation
 The `fallback_plan_id` field exists on the `plans` table with a validation trigger, but no code executes the fallback. This could be wired to `stripe-webhook` on `customer.subscription.deleted` to downgrade to the plan's configured fallback instead of always defaulting to Free.

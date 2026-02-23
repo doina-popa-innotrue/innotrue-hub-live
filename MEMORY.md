@@ -67,7 +67,7 @@
   - **Program plans** (`program_plans`, per-enrollment features) — auto-resolved from enrollment tier, never set manually
   - `enroll_with_credits` RPC auto-resolves both: Step 0c defaults tier from `programs.tiers[0]`, Step 0d resolves `program_plan_id` from `program_tier_plans` → `programs.default_program_plan_id`
 - `useEntitlements` merges 5 sources: subscription, program plan, add-ons, tracks, org-sponsored (highest wins)
-- Credits additive: `plans.credit_allowance` + `program_plans.credit_allowance` + top-ups
+- Credits additive: `plans.credit_allowance` (monthly, no rollover) + `program_plans.credit_allowance` + top-ups (10-year expiry, effectively permanent). FIFO consumes plan credits first.
 
 ## Three Assessment Systems (share `assessment_categories`)
 | System | Table | Scoring | Visualization |
@@ -156,7 +156,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - ~~**CT3b: Cross-Program Completion**~~ ✅ — `content_completions` table. `xapi-statements` writes completion on xAPI verb. `useCrossProgramCompletion` extended with 3rd data source. Client `ModuleDetail` auto-accepts completion from shared content. `CanonicalCodesManagement` now shows content packages tab.
 - **`canonical_code` override** — kept as manual override for different content that should count as equivalent.
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → 2B.5 Certification → Phase 5 remaining → 3-AI/Engagement
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → 2B.5 Certification → 2B.10 Enrollment Duration → 2B.13 Credit Expiry Policy → 2B.11 Feature Loss Communication → 2B.12 Feature Gain Visibility → Phase 5 remaining → 3-AI/Engagement
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
@@ -317,7 +317,15 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - Stripe webhook (`stripe-webhook/index.ts`) — installment lifecycle handlers (invoice.paid, payment_failed, subscription.deleted)
 - **Remove Continuation Plan (2026-03-04):** Deleted ContinuationBanner component, removed continuation state from ClientDashboard, rewrote ProgramCompletions as read-only view (no "Move to Continuation"), updated AdminFAQ/PlansManagement/platformDocumentation/seed.sql. Safety-net migration `20260304100000_remove_continuation_plan.sql` moves any remaining Continuation users to Free. Alumni lifecycle (2B.1) handles completed programs — alumni is an enrollment-level state, not a plan change.
 - **Stripe Webhook Config (2026-03-04):** Webhooks configured in both preprod (test mode) and production (live mode) with all 5 events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`. `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` set in both environments. Stripe price IDs auto-created on first checkout per environment.
-- **Next steps:** 2B.5 Certification → Phase 5 remaining (Wheel pipeline, bulk import) → Phase 3 AI
+- **Enrollment Lifecycle Features (decided 2026-03-04):** Three new roadmap items:
+  - **2B.10 Enrollment Duration & Deadline Enforcement** (🔴 High) — `programs.default_duration_days` → auto-calculate `end_date` → cron enforces expiry → alumni grace starts. Prevents indefinite feature freeloading. Foundation: `end_date` column exists but unenforced, `alumni-lifecycle` cron extensible.
+  - **2B.11 Feature Loss Communication** (🟠 High) — pre-completion warning (features you'll lose), post-completion dashboard notice, alumni grace banner with days remaining, `useRecentlyLostFeatures()` hook. Foundation: `useEntitlements().getAccessSource()`, `useAlumniAccess().days_remaining`.
+  - **2B.12 Feature Gain Visibility** (🟡 Medium) — "What's included" on program page, dashboard feature attribution badges ("Via [Program]"), subscription page context. Foundation: `getAccessSource()`, `program_plan_features` table.
+- **Credit Expiry Policy (decided 2026-03-04):** Purchased credits (top-ups + org bundles) changed from 12-month to **10-year expiry** (effectively permanent). Plan credits continue monthly reset with no rollover. Rationale: users paid real money — expiring paid credits erodes trust; FIFO already consumes plan credits first so purchased are naturally protected; 10-year avoids permanent deferred revenue liability. Migration needed to update `grant_credit_batch`, edge functions, and existing batches. Full spec in `docs/CREDIT_ECONOMY_AND_PAYMENTS.md` Section 11.
+  - **2B.13 Credit Expiry Awareness** (🟠 High) — dashboard expiry banner (data exists via `get_user_credit_summary_v2`), email notification cron (`credits_expiring` notification type exists but no cron sends it), AI spend suggestions (future, Phase 3).
+- **Admin Features Management UX (noted 2026-03-04):** Deny checkbox (`plan_features.is_restrictive`) is fully implemented end-to-end but **only takes effect for org-sponsored plans** — `useEntitlements` checks `is_restrictive` only in `fetchOrgSponsoredFeatures`. UI needs clarification. Also: "Programs" plan column needs explanation (admin-only, features come from per-program config not this grid), non-purchasable plans should be moved to end of table with separator.
+  - **2B.14 Admin Features UX** (🟡 Medium) — deny scope tooltip, Programs plan info banner, column reordering (purchasable first, special plans at end), Enterprise legacy note if present.
+- **Next steps:** 2B.5 Certification → 2B.10 Enrollment Duration → 2B.13 Credit Expiry Policy Migration → 2B.11 Feature Loss Communication → Phase 5 remaining (Wheel pipeline, bulk import) → Phase 3 AI
 
 ## npm Scripts
 ```
