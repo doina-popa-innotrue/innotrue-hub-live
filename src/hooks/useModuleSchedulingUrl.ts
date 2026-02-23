@@ -20,7 +20,7 @@ interface ModuleSchedulingResult {
  * based on the module's type and hierarchical instructor assignment.
  *
  * Resolution Priority:
- * 1. Enrollment-specific instructor (enrollment_module_staff) → their child event type
+ * 1. Enrollment-specific staff (enrollment_module_staff, prefers instructor role) → their child event type
  * 2. Module-level instructor (module_instructors) → their child event type
  * 3. Program-level instructor (program_instructors) → their child event type
  * 4. Direct scheduling_url from calcom_event_type_mappings (if set)
@@ -103,17 +103,19 @@ export function useModuleSchedulingUrl({
         return null;
       };
 
-      // 1. Check enrollment-specific instructor assignment (highest priority for personalized modules)
+      // 1. Check enrollment-specific staff assignment (highest priority for personalized modules)
+      // Prefer instructor over coach for scheduling purposes
       if (enrollmentId) {
         const { data: enrollmentStaff } = await supabase
           .from("enrollment_module_staff")
-          .select("instructor_id, coach_id")
+          .select("staff_user_id, role")
           .eq("enrollment_id", enrollmentId)
-          .eq("module_id", moduleId)
-          .maybeSingle();
+          .eq("module_id", moduleId);
 
-        if (enrollmentStaff) {
-          const staffId = enrollmentStaff.instructor_id || enrollmentStaff.coach_id;
+        if (enrollmentStaff && enrollmentStaff.length > 0) {
+          // Prefer instructor role for scheduling, fall back to coach
+          const instructor = enrollmentStaff.find((s) => s.role === "instructor");
+          const staffId = instructor?.staff_user_id || enrollmentStaff[0].staff_user_id;
           if (staffId) {
             const result = await getInstructorBookingUrl(staffId);
             if (result) return result;

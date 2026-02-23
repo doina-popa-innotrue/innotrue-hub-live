@@ -304,8 +304,8 @@ export const generateTechnicalDocumentation = (): Document => {
               ["program_plans", "Program tiers", "id, program_id, name, credit_allowance"],
               [
                 "enrollment_module_staff",
-                "Staff assignments to modules",
-                "enrollment_id, module_id, staff_id",
+                "Per-client staff assignments to modules (many-to-many)",
+                "enrollment_id, module_id, staff_user_id, role",
               ],
             ],
           ),

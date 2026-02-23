@@ -47,8 +47,8 @@ interface EnrollmentModuleStaff {
   id: string;
   enrollment_id: string;
   module_id: string;
-  instructor_id: string | null;
-  coach_id: string | null;
+  staff_user_id: string;
+  role: string;
   created_at: string;
   updated_at: string;
 }
@@ -77,8 +77,8 @@ export function EnrollmentModuleStaffManager({ enrollmentId, programId, clientNa
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     module_id: "",
-    instructor_id: "",
-    coach_id: "",
+    staff_user_id: "",
+    role: "" as "instructor" | "coach" | "",
   });
 
   // Fetch existing assignments for this enrollment
@@ -162,9 +162,7 @@ export function EnrollmentModuleStaffManager({ enrollmentId, programId, clientNa
   const { data: profileMap = new Map() } = useQuery({
     queryKey: ["profiles-for-enrollment-staff", assignments],
     queryFn: async () => {
-      const ids = assignments
-        .flatMap((a) => [a.instructor_id, a.coach_id])
-        .filter(Boolean) as string[];
+      const ids = assignments.map((a) => a.staff_user_id);
       if (ids.length === 0) return new Map();
 
       const { data } = await supabase.from("profiles").select("id, name, avatar_url").in("id", ids);
@@ -193,28 +191,23 @@ export function EnrollmentModuleStaffManager({ enrollmentId, programId, clientNa
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const insertData: any = {
+      const { error } = await supabase.from("enrollment_module_staff").insert({
         enrollment_id: enrollmentId,
         module_id: data.module_id,
-      };
-
-      if (data.instructor_id) insertData.instructor_id = data.instructor_id;
-      if (data.coach_id) insertData.coach_id = data.coach_id;
-
-      const { error } = await supabase.from("enrollment_module_staff").insert(insertData);
+        staff_user_id: data.staff_user_id,
+        role: data.role,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["enrollment-module-staff", enrollmentId] });
       toast.success("Staff assignment created");
       setDialogOpen(false);
-      setFormData({ module_id: "", instructor_id: "", coach_id: "" });
+      setFormData({ module_id: "", staff_user_id: "", role: "" });
     },
     onError: (error: any) => {
       if (error.code === "23505") {
-        toast.error("This module already has a staff assignment for this enrollment");
-      } else if (error.message?.includes("at_least_one_staff")) {
-        toast.error("Please select at least an instructor or a coach");
+        toast.error("This staff member is already assigned to this module");
       } else {
         toast.error("Failed to create assignment");
       }
@@ -241,15 +234,19 @@ export function EnrollmentModuleStaffManager({ enrollmentId, programId, clientNa
       toast.error("Please select a module");
       return;
     }
-    if (!formData.instructor_id && !formData.coach_id) {
-      toast.error("Please select at least an instructor or a coach");
+    if (!formData.staff_user_id) {
+      toast.error("Please select a staff member");
+      return;
+    }
+    if (!formData.role) {
+      toast.error("Please select a role");
       return;
     }
     createMutation.mutate(formData);
   };
 
-  // Get modules that don't already have assignments
-  const availableModules = modules.filter((m) => !assignments.some((a) => a.module_id === m.id));
+  // Get available staff based on selected role
+  const availableStaff = formData.role === "coach" ? coaches : formData.role === "instructor" ? instructors : [];
 
   if (isLoading) {
     return (
@@ -276,123 +273,115 @@ export function EnrollmentModuleStaffManager({ enrollmentId, programId, clientNa
             Assign specific instructors/coaches per module for this client (overrides program and module defaults)
           </CardDescription>
         </div>
-        {availableModules.length > 0 && (
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" variant="outline" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Assign Staff
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Assign Staff to Module</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Module *</Label>
-                  <Select
-                    value={formData.module_id}
-                    onValueChange={(value) => setFormData({ ...formData, module_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a module" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableModules.map((module) => (
-                        <SelectItem key={module.id} value={module.id}>
-                          <div className="flex items-center gap-2">
-                            <BookOpen className="h-4 w-4 text-muted-foreground" />
-                            {module.title}
-                            {module.module_type && (
-                              <Badge variant="outline" className="text-xs ml-1">
-                                {module.module_type}
-                              </Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="outline" className="gap-2">
+              <Plus className="h-4 w-4" />
+              Assign Staff
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Assign Staff to Module</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Module *</Label>
+                <Select
+                  value={formData.module_id}
+                  onValueChange={(value) => setFormData({ ...formData, module_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a module" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {modules.map((module) => (
+                      <SelectItem key={module.id} value={module.id}>
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-4 w-4 text-muted-foreground" />
+                          {module.title}
+                          {module.module_type && (
+                            <Badge variant="outline" className="text-xs ml-1">
+                              {module.module_type}
+                            </Badge>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Instructor</Label>
-                  <Select
-                    value={formData.instructor_id || "__none__"}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, instructor_id: value === "__none__" ? "" : value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select instructor (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">No specific instructor</SelectItem>
-                      {instructors.map((instructor) => (
-                        <SelectItem key={instructor.id} value={instructor.id}>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-5 w-5">
-                              <AvatarImage src={instructor.avatar_url || undefined} />
-                              <AvatarFallback className="text-xs">
-                                {instructor.name?.charAt(0) || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            {instructor.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label>Role *</Label>
+                <Select
+                  value={formData.role || "__none__"}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      role: value === "__none__" ? "" : (value as "instructor" | "coach"),
+                      staff_user_id: "", // Reset staff when role changes
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Select role...</SelectItem>
+                    <SelectItem value="instructor">Instructor</SelectItem>
+                    <SelectItem value="coach">Coach</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Coach</Label>
-                  <Select
-                    value={formData.coach_id || "__none__"}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, coach_id: value === "__none__" ? "" : value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select coach (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">No specific coach</SelectItem>
-                      {coaches.map((coach) => (
-                        <SelectItem key={coach.id} value={coach.id}>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-5 w-5">
-                              <AvatarImage src={coach.avatar_url || undefined} />
-                              <AvatarFallback className="text-xs">
-                                {coach.name?.charAt(0) || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            {coach.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label>Staff Member *</Label>
+                <Select
+                  value={formData.staff_user_id || "__none__"}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, staff_user_id: value === "__none__" ? "" : value })
+                  }
+                  disabled={!formData.role}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={formData.role ? "Select staff member" : "Select a role first"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Select staff member...</SelectItem>
+                    {availableStaff.map((staff) => (
+                      <SelectItem key={staff.id} value={staff.id}>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={staff.avatar_url || undefined} />
+                            <AvatarFallback className="text-xs">
+                              {staff.name?.charAt(0) || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          {staff.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <p className="text-xs text-muted-foreground">
-                  At least one instructor or coach must be selected. These assignments override
-                  module and program-level defaults.
-                </p>
+              <p className="text-xs text-muted-foreground">
+                You can assign multiple staff members per module. These assignments override
+                module and program-level defaults for this client.
+              </p>
 
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={createMutation.isPending}>
-                    {createMutation.isPending ? "Assigning..." : "Assign Staff"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        )}
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending}>
+                  {createMutation.isPending ? "Assigning..." : "Assign Staff"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </CardHeader>
       <CardContent>
         {assignments.length === 0 ? (
@@ -405,18 +394,15 @@ export function EnrollmentModuleStaffManager({ enrollmentId, programId, clientNa
             <TableHeader>
               <TableRow>
                 <TableHead>Module</TableHead>
-                <TableHead>Instructor</TableHead>
-                <TableHead>Coach</TableHead>
+                <TableHead>Staff Member</TableHead>
+                <TableHead>Role</TableHead>
                 <TableHead className="w-[60px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {assignments.map((assignment) => {
                 const module = moduleMap.get(assignment.module_id);
-                const instructor = assignment.instructor_id
-                  ? profileMap.get(assignment.instructor_id)
-                  : null;
-                const coach = assignment.coach_id ? profileMap.get(assignment.coach_id) : null;
+                const staff = profileMap.get(assignment.staff_user_id);
 
                 return (
                   <TableRow key={assignment.id}>
@@ -429,34 +415,24 @@ export function EnrollmentModuleStaffManager({ enrollmentId, programId, clientNa
                       )}
                     </TableCell>
                     <TableCell>
-                      {instructor ? (
+                      {staff ? (
                         <div className="flex items-center gap-2">
                           <Avatar className="h-6 w-6">
-                            <AvatarImage src={instructor.avatar_url || undefined} />
+                            <AvatarImage src={staff.avatar_url || undefined} />
                             <AvatarFallback className="text-xs">
-                              {instructor.name?.charAt(0) || "?"}
+                              {staff.name?.charAt(0) || "?"}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-sm">{instructor.name}</span>
+                          <span className="text-sm">{staff.name}</span>
                         </div>
                       ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
+                        <span className="text-muted-foreground text-sm">Unknown</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      {coach ? (
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={coach.avatar_url || undefined} />
-                            <AvatarFallback className="text-xs">
-                              {coach.name?.charAt(0) || "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm">{coach.name}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
-                      )}
+                      <Badge variant={assignment.role === "instructor" ? "default" : "secondary"}>
+                        {assignment.role === "instructor" ? "Instructor" : "Coach"}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <AlertDialog>

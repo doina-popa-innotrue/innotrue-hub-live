@@ -574,6 +574,42 @@ export type Database = {
         }
         Relationships: []
       }
+      alumni_touchpoints: {
+        Row: {
+          enrollment_id: string
+          id: string
+          sent_at: string | null
+          touchpoint_type: string
+        }
+        Insert: {
+          enrollment_id: string
+          id?: string
+          sent_at?: string | null
+          touchpoint_type: string
+        }
+        Update: {
+          enrollment_id?: string
+          id?: string
+          sent_at?: string | null
+          touchpoint_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alumni_touchpoints_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "client_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alumni_touchpoints_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "staff_enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analytics_events: {
         Row: {
           created_at: string
@@ -636,35 +672,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      alumni_touchpoints: {
-        Row: {
-          enrollment_id: string
-          id: string
-          sent_at: string
-          touchpoint_type: string
-        }
-        Insert: {
-          enrollment_id: string
-          id?: string
-          sent_at?: string
-          touchpoint_type: string
-        }
-        Update: {
-          enrollment_id?: string
-          id?: string
-          sent_at?: string
-          touchpoint_type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "alumni_touchpoints_enrollment_id_fkey"
-            columns: ["enrollment_id"]
-            isOneToOne: false
-            referencedRelation: "client_enrollments"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       announcement_categories: {
         Row: {
@@ -2019,6 +2026,7 @@ export type Database = {
           referred_by: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["enrollment_status"]
+          stripe_subscription_id: string | null
           tier: string | null
           updated_at: string | null
         }
@@ -2046,6 +2054,7 @@ export type Database = {
           referred_by?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["enrollment_status"]
+          stripe_subscription_id?: string | null
           tier?: string | null
           updated_at?: string | null
         }
@@ -2073,6 +2082,7 @@ export type Database = {
           referred_by?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["enrollment_status"]
+          stripe_subscription_id?: string | null
           tier?: string | null
           updated_at?: string | null
         }
@@ -2374,36 +2384,51 @@ export type Database = {
       coach_instructor_requests: {
         Row: {
           admin_notes: string | null
+          bio: string | null
+          certifications: string | null
           created_at: string | null
           id: string
           message: string | null
           request_type: string
           reviewed_at: string | null
           reviewed_by: string | null
+          scheduling_url: string | null
+          source_type: string | null
+          specialties: string | null
           status: string
           updated_at: string | null
           user_id: string
         }
         Insert: {
           admin_notes?: string | null
+          bio?: string | null
+          certifications?: string | null
           created_at?: string | null
           id?: string
           message?: string | null
           request_type: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          scheduling_url?: string | null
+          source_type?: string | null
+          specialties?: string | null
           status?: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
           admin_notes?: string | null
+          bio?: string | null
+          certifications?: string | null
           created_at?: string | null
           id?: string
           message?: string | null
           request_type?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          scheduling_url?: string | null
+          source_type?: string | null
+          specialties?: string | null
           status?: string
           updated_at?: string | null
           user_id?: string
@@ -2502,44 +2527,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      cohort_waitlist: {
-        Row: {
-          id: string
-          user_id: string
-          cohort_id: string
-          position: number
-          notified: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          cohort_id: string
-          position: number
-          notified?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          cohort_id?: string
-          position?: number
-          notified?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "cohort_waitlist_cohort_id_fkey"
-            columns: ["cohort_id"]
-            isOneToOne: false
-            referencedRelation: "program_cohorts"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       cohort_session_attendance: {
         Row: {
@@ -2705,6 +2692,44 @@ export type Database = {
             columns: ["module_id"]
             isOneToOne: false
             referencedRelation: "program_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cohort_waitlist: {
+        Row: {
+          cohort_id: string
+          created_at: string | null
+          id: string
+          notified: boolean | null
+          position: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cohort_id: string
+          created_at?: string | null
+          id?: string
+          notified?: boolean | null
+          position: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cohort_id?: string
+          created_at?: string | null
+          id?: string
+          notified?: boolean | null
+          position?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cohort_waitlist_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "program_cohorts"
             referencedColumns: ["id"]
           },
         ]
@@ -4674,54 +4699,33 @@ export type Database = {
       }
       enrollment_module_staff: {
         Row: {
-          coach_id: string | null
           created_at: string
           enrollment_id: string
           id: string
-          instructor_id: string | null
           module_id: string
+          role: string
+          staff_user_id: string
           updated_at: string
         }
         Insert: {
-          coach_id?: string | null
           created_at?: string
           enrollment_id: string
           id?: string
-          instructor_id?: string | null
           module_id: string
+          role: string
+          staff_user_id: string
           updated_at?: string
         }
         Update: {
-          coach_id?: string | null
           created_at?: string
           enrollment_id?: string
           id?: string
-          instructor_id?: string | null
           module_id?: string
+          role?: string
+          staff_user_id?: string
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "enrollment_module_staff_coach_id_fkey"
-            columns: ["coach_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_module_staff_coach_id_fkey"
-            columns: ["coach_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_module_staff_coach_id_fkey"
-            columns: ["coach_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "enrollment_module_staff_enrollment_id_fkey"
             columns: ["enrollment_id"]
@@ -4737,31 +4741,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "enrollment_module_staff_instructor_id_fkey"
-            columns: ["instructor_id"]
+            foreignKeyName: "enrollment_module_staff_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "program_modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_module_staff_staff_user_id_fkey"
+            columns: ["staff_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "enrollment_module_staff_instructor_id_fkey"
-            columns: ["instructor_id"]
+            foreignKeyName: "enrollment_module_staff_staff_user_id_fkey"
+            columns: ["staff_user_id"]
             isOneToOne: false
             referencedRelation: "profiles_safe"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "enrollment_module_staff_instructor_id_fkey"
-            columns: ["instructor_id"]
+            foreignKeyName: "enrollment_module_staff_staff_user_id_fkey"
+            columns: ["staff_user_id"]
             isOneToOne: false
             referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollment_module_staff_module_id_fkey"
-            columns: ["module_id"]
-            isOneToOne: false
-            referencedRelation: "program_modules"
             referencedColumns: ["id"]
           },
         ]
@@ -9080,7 +9084,7 @@ export type Database = {
         Row: {
           code: string
           cohort_id: string | null
-          created_at: string
+          created_at: string | null
           current_uses: number
           discount_percent: number | null
           expires_at: string | null
@@ -9092,12 +9096,12 @@ export type Database = {
           max_uses: number | null
           partner_id: string
           program_id: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           code: string
           cohort_id?: string | null
-          created_at?: string
+          created_at?: string | null
           current_uses?: number
           discount_percent?: number | null
           expires_at?: string | null
@@ -9109,12 +9113,12 @@ export type Database = {
           max_uses?: number | null
           partner_id: string
           program_id: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           code?: string
           cohort_id?: string | null
-          created_at?: string
+          created_at?: string | null
           current_uses?: number
           discount_percent?: number | null
           expires_at?: string | null
@@ -9126,21 +9130,21 @@ export type Database = {
           max_uses?: number | null
           partner_id?: string
           program_id?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "partner_codes_program_id_fkey"
-            columns: ["program_id"]
-            isOneToOne: false
-            referencedRelation: "programs"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "partner_codes_cohort_id_fkey"
             columns: ["cohort_id"]
             isOneToOne: false
             referencedRelation: "program_cohorts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_codes_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
             referencedColumns: ["id"]
           },
         ]
@@ -9241,7 +9245,7 @@ export type Database = {
       }
       partner_referrals: {
         Row: {
-          created_at: string
+          created_at: string | null
           enrollment_id: string | null
           id: string
           partner_code_id: string
@@ -9251,7 +9255,7 @@ export type Database = {
           status: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           enrollment_id?: string | null
           id?: string
           partner_code_id: string
@@ -9261,7 +9265,7 @@ export type Database = {
           status?: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           enrollment_id?: string | null
           id?: string
           partner_code_id?: string
@@ -9272,17 +9276,111 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "partner_referrals_partner_code_id_fkey"
-            columns: ["partner_code_id"]
+            foreignKeyName: "partner_referrals_enrollment_id_fkey"
+            columns: ["enrollment_id"]
             isOneToOne: false
-            referencedRelation: "partner_codes"
+            referencedRelation: "client_enrollments"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "partner_referrals_enrollment_id_fkey"
             columns: ["enrollment_id"]
             isOneToOne: false
+            referencedRelation: "staff_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_referrals_partner_code_id_fkey"
+            columns: ["partner_code_id"]
+            isOneToOne: false
+            referencedRelation: "partner_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_schedules: {
+        Row: {
+          amount_paid_cents: number
+          cancelled_at: string | null
+          completed_at: string | null
+          created_at: string
+          credit_package_id: string | null
+          credits_granted: number
+          currency: string
+          enrollment_id: string
+          id: string
+          installment_amount_cents: number
+          installment_count: number
+          installments_paid: number
+          metadata: Json | null
+          next_payment_date: string | null
+          started_at: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string
+          total_amount_cents: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_paid_cents?: number
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          credit_package_id?: string | null
+          credits_granted?: number
+          currency?: string
+          enrollment_id: string
+          id?: string
+          installment_amount_cents: number
+          installment_count: number
+          installments_paid?: number
+          metadata?: Json | null
+          next_payment_date?: string | null
+          started_at?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id: string
+          total_amount_cents: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_paid_cents?: number
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          credit_package_id?: string | null
+          credits_granted?: number
+          currency?: string
+          enrollment_id?: string
+          id?: string
+          installment_amount_cents?: number
+          installment_count?: number
+          installments_paid?: number
+          metadata?: Json | null
+          next_payment_date?: string | null
+          started_at?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string
+          total_amount_cents?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_schedules_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
             referencedRelation: "client_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_schedules_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "staff_enrollments"
             referencedColumns: ["id"]
           },
         ]
@@ -9641,11 +9739,14 @@ export type Database = {
           plan_id: string | null
           preferred_meeting_times: Json | null
           real_email: string | null
+          registration_status: string | null
           scheduling_url: string | null
           tagline: string | null
           timezone: string | null
           updated_at: string | null
           username: string | null
+          verification_status: string | null
+          verified_at: string | null
           x_url: string | null
           youtube_url: string | null
         }
@@ -9677,11 +9778,14 @@ export type Database = {
           plan_id?: string | null
           preferred_meeting_times?: Json | null
           real_email?: string | null
+          registration_status?: string | null
           scheduling_url?: string | null
           tagline?: string | null
           timezone?: string | null
           updated_at?: string | null
           username?: string | null
+          verification_status?: string | null
+          verified_at?: string | null
           x_url?: string | null
           youtube_url?: string | null
         }
@@ -9713,11 +9817,14 @@ export type Database = {
           plan_id?: string | null
           preferred_meeting_times?: Json | null
           real_email?: string | null
+          registration_status?: string | null
           scheduling_url?: string | null
           tagline?: string | null
           timezone?: string | null
           updated_at?: string | null
           username?: string | null
+          verification_status?: string | null
+          verified_at?: string | null
           x_url?: string | null
           youtube_url?: string | null
         }
@@ -10557,6 +10664,7 @@ export type Database = {
           default_program_plan_id: string | null
           description: string | null
           id: string
+          installment_options: Json | null
           is_active: boolean | null
           logo_url: string | null
           min_plan_tier: number | null
@@ -10567,6 +10675,7 @@ export type Database = {
           slug: string
           tiers: Json | null
           updated_at: string | null
+          upfront_discount_percent: number | null
         }
         Insert: {
           allow_repeat_enrollment?: boolean
@@ -10578,6 +10687,7 @@ export type Database = {
           default_program_plan_id?: string | null
           description?: string | null
           id?: string
+          installment_options?: Json | null
           is_active?: boolean | null
           logo_url?: string | null
           min_plan_tier?: number | null
@@ -10588,6 +10698,7 @@ export type Database = {
           slug: string
           tiers?: Json | null
           updated_at?: string | null
+          upfront_discount_percent?: number | null
         }
         Update: {
           allow_repeat_enrollment?: boolean
@@ -10599,6 +10710,7 @@ export type Database = {
           default_program_plan_id?: string | null
           description?: string | null
           id?: string
+          installment_options?: Json | null
           is_active?: boolean | null
           logo_url?: string | null
           min_plan_tier?: number | null
@@ -10609,6 +10721,7 @@ export type Database = {
           slug?: string
           tiers?: Json | null
           updated_at?: string | null
+          upfront_discount_percent?: number | null
         }
         Relationships: [
           {
@@ -12086,32 +12199,38 @@ export type Database = {
       }
       signup_verification_requests: {
         Row: {
+          context_data: Json | null
           created_at: string | null
           email: string
           expires_at: string
           id: string
           ip_address: string | null
           name: string
+          plan_interest: string | null
           user_id: string
           verification_token: string
         }
         Insert: {
+          context_data?: Json | null
           created_at?: string | null
           email: string
           expires_at: string
           id?: string
           ip_address?: string | null
           name: string
+          plan_interest?: string | null
           user_id: string
           verification_token: string
         }
         Update: {
+          context_data?: Json | null
           created_at?: string | null
           email?: string
           expires_at?: string
           id?: string
           ip_address?: string | null
           name?: string
+          plan_interest?: string | null
           user_id?: string
           verification_token?: string
         }
@@ -14465,14 +14584,16 @@ export type Database = {
         Args: { _field_name: string; _profile_user_id: string }
         Returns: boolean
       }
+      check_alumni_access: {
+        Args: { p_program_id: string; p_user_id: string }
+        Returns: Json
+      }
       check_assessment_file_share_access: {
         Args: { file_name: string }
         Returns: boolean
       }
-      check_alumni_access: {
-        Args: { p_user_id: string; p_program_id: string }
-        Returns: Json
-      }
+      check_cohort_capacity: { Args: { p_cohort_id: string }; Returns: Json }
+      check_program_capacity: { Args: { p_program_id: string }; Returns: Json }
       check_resource_access: {
         Args: { p_org_id?: string; p_resource_id: string; p_user_id: string }
         Returns: Json
@@ -14516,18 +14637,6 @@ export type Database = {
           p_notes?: string
           p_service_id: string
           p_user_id: string
-        }
-        Returns: Json
-      }
-      check_cohort_capacity: {
-        Args: {
-          p_cohort_id: string
-        }
-        Returns: Json
-      }
-      check_program_capacity: {
-        Args: {
-          p_program_id: string
         }
         Returns: Json
       }
@@ -14817,12 +14926,7 @@ export type Database = {
         Args: { p_session_id: string; p_user_id: string }
         Returns: boolean
       }
-      join_cohort_waitlist: {
-        Args: {
-          p_cohort_id: string
-        }
-        Returns: Json
-      }
+      join_cohort_waitlist: { Args: { p_cohort_id: string }; Returns: Json }
       module_type_has_session_capability: {
         Args: { _module_type: string }
         Returns: boolean
@@ -14854,6 +14958,15 @@ export type Database = {
       staff_has_client_relationship: {
         Args: { _client_user_id: string; _staff_id: string }
         Returns: boolean
+      }
+      update_installment_payment_status: {
+        Args: {
+          p_installment_amount_cents?: number
+          p_new_status: string
+          p_next_payment_date?: string
+          p_stripe_subscription_id: string
+        }
+        Returns: Json
       }
       update_plan_rollover: {
         Args: {

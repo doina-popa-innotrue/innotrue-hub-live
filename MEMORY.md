@@ -87,7 +87,7 @@
 - **Session participants:** `session_participants` with attendance workflow (invited → registered → confirmed → attended/no_show)
 - **Groups:** `groups` + `group_memberships` + tasks, check-ins, notes, peer assessments, member links
 - **Scheduling:** Cal.com (SSO, booking, webhook), Google Calendar (sync, iCal feeds), Calendly support
-- **Staff assignment (3 tiers):** Program-level (`program_instructors`, `program_coaches`), Module-level (`module_instructors`, `module_coaches`), Enrollment-level (`enrollment_module_staff` — per-client per-module, overrides above)
+- **Staff assignment (3 tiers):** Program-level (`program_instructors`, `program_coaches`), Module-level (`module_instructors`, `module_coaches`), Enrollment-level (`enrollment_module_staff` — per-client per-module, many-to-many via `staff_user_id` + `role`, overrides above)
 - **Direct client assignment:** `client_instructors`, `client_coaches`
 - **Notifications:** 25+ types, 8 categories, email queue with retry, in-app notifications, announcements
 
@@ -325,6 +325,8 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - **2B.13 Credit Expiry Awareness** (🟠 High) — dashboard expiry banner (data exists via `get_user_credit_summary_v2`), email notification cron (`credits_expiring` notification type exists but no cron sends it), AI spend suggestions (future, Phase 3).
 - **Admin Features Management UX (noted 2026-03-04):** Deny checkbox (`plan_features.is_restrictive`) is fully implemented end-to-end but **only takes effect for org-sponsored plans** — `useEntitlements` checks `is_restrictive` only in `fetchOrgSponsoredFeatures`. UI needs clarification. Also: "Programs" plan column needs explanation (admin-only, features come from per-program config not this grid), non-purchasable plans should be moved to end of table with separator.
   - **2B.14 Admin Features UX** (🟡 Medium) — deny scope tooltip, Programs plan info banner, column reordering (purchasable first, special plans at end), Enterprise legacy note if present.
+- **enrollment_module_staff Unified Schema (2026-03-23):** Restructured from `instructor_id`/`coach_id` columns (one row per enrollment+module) to `staff_user_id` + `role` pattern (many-to-many). Migration `20260323100000_enrollment_module_staff_unified.sql`. Updated: `EnrollmentModuleStaffManager.tsx` (admin), `useModuleSchedulingUrl.ts`, `types.ts` regenerated. RLS policies recreated with staff self-service (view/update/insert). `client_can_view_staff_profile` function and `instructor_calcom_event_types` policy updated. Code in `ModuleTeamContact.tsx`, `TransferAssignmentDialog.tsx`, `PendingAssignments.tsx`, `notify-assignment-submitted` already used `staff_user_id`/`role` — DB now matches.
+- **Schema Change Prevention Protocol (2026-03-23):** Added to CLAUDE.md. All DB changes MUST go through migrations + type regeneration + verify. Never apply schema changes directly to Supabase dashboard without a migration file.
 - **Next steps:** 2B.5 Certification → 2B.10 Enrollment Duration → 2B.13 Credit Expiry Policy Migration → 2B.11 Feature Loss Communication → Phase 5 remaining (Wheel pipeline, bulk import) → Phase 3 AI
 
 ## npm Scripts
