@@ -135,12 +135,14 @@ serve(async (req) => {
     }
 
     // 7. Call enroll_with_credits RPC (atomic: creates enrollment, handles credits)
+    //    Pass grants_tier from the partner code; the RPC defaults to the
+    //    program's lowest tier when NULL.
     const { data: enrollResult, error: enrollError } = await supabase.rpc(
       "enroll_with_credits",
       {
         p_client_user_id: userId,
         p_program_id: programId,
-        p_tier: null,
+        p_tier: codeValidation.grants_tier || null,
         p_program_plan_id: null,
         p_discount_percent: codeValidation.is_free
           ? 100

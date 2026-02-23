@@ -9084,6 +9084,7 @@ export type Database = {
           current_uses: number
           discount_percent: number | null
           expires_at: string | null
+          grants_tier: string | null
           id: string
           is_active: boolean
           is_free: boolean
@@ -9100,6 +9101,7 @@ export type Database = {
           current_uses?: number
           discount_percent?: number | null
           expires_at?: string | null
+          grants_tier?: string | null
           id?: string
           is_active?: boolean
           is_free?: boolean
@@ -9116,6 +9118,7 @@ export type Database = {
           current_uses?: number
           discount_percent?: number | null
           expires_at?: string | null
+          grants_tier?: string | null
           id?: string
           is_active?: boolean
           is_free?: boolean

@@ -35,6 +35,7 @@ interface ValidationResult {
   program_description: string | null;
   is_free: boolean;
   discount_percent: number | null;
+  grants_tier: string | null;
   cohort_id: string | null;
   partner_id: string;
   error?: string;
@@ -364,6 +365,10 @@ export default function RedeemPartnerCode() {
               ) : null}
 
               <Badge variant="secondary">Partner Referral</Badge>
+
+              {validation?.grants_tier && (
+                <Badge variant="secondary">{validation.grants_tier} tier</Badge>
+              )}
             </div>
           </div>
 

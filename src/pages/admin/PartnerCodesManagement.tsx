@@ -79,6 +79,7 @@ interface PartnerCode {
   cohort_id: string | null;
   code: string;
   label: string | null;
+  grants_tier: string | null;
   discount_percent: number | null;
   is_free: boolean;
   max_uses: number | null;
@@ -98,6 +99,7 @@ interface PartnerCode {
 interface Program {
   id: string;
   name: string;
+  tiers: string[] | null;
 }
 
 interface Cohort {
@@ -121,6 +123,7 @@ const defaultFormData = {
   partner_id: "",
   program_id: "",
   cohort_id: "" as string,
+  grants_tier: "",
   label: "",
   is_free: true,
   discount_percent: "",
@@ -154,7 +157,7 @@ export default function PartnerCodesManagement() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("programs")
-        .select("id, name")
+        .select("id, name, tiers")
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
@@ -232,6 +235,7 @@ export default function PartnerCodesManagement() {
       partner_id: item.partner_id,
       program_id: item.program_id,
       cohort_id: item.cohort_id || "",
+      grants_tier: item.grants_tier || "",
       label: item.label || "",
       is_free: item.is_free,
       discount_percent: item.discount_percent?.toString() || "",
@@ -338,6 +342,7 @@ export default function PartnerCodesManagement() {
         partner_id: data.partner_id,
         program_id: data.program_id,
         cohort_id: data.cohort_id || null,
+        grants_tier: data.grants_tier || null,
         label: data.label.trim() || null,
         is_free: data.is_free,
         discount_percent:
@@ -374,6 +379,7 @@ export default function PartnerCodesManagement() {
           partner_id: data.partner_id,
           program_id: data.program_id,
           cohort_id: data.cohort_id || null,
+          grants_tier: data.grants_tier || null,
           label: data.label.trim() || null,
           is_free: data.is_free,
           discount_percent:
@@ -447,6 +453,7 @@ export default function PartnerCodesManagement() {
       partner_id: item.partner_id,
       program_id: item.program_id,
       cohort_id: item.cohort_id || "",
+      grants_tier: item.grants_tier || "",
       label: item.label || "",
       is_free: item.is_free,
       discount_percent: item.discount_percent?.toString() || "",
@@ -468,6 +475,10 @@ export default function PartnerCodesManagement() {
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
+  // Get tiers from selected program (for dialog)
+  const selectedProgram = (programs || []).find((p) => p.id === formData.program_id);
+  const availableTiers: string[] = selectedProgram?.tiers || [];
 
   // -----------------------------------------------------------------------
   // Status badge helper
@@ -668,8 +679,13 @@ export default function PartnerCodesManagement() {
                             <div className="text-muted-foreground text-xs">{profile?.email}</div>
                           </div>
                         </TableCell>
-                        <TableCell className="max-w-[150px] truncate">
-                          {item.program_name}
+                        <TableCell className="max-w-[150px]">
+                          <div className="truncate">{item.program_name}</div>
+                          {item.grants_tier && (
+                            <span className="text-xs text-muted-foreground">
+                              {item.grants_tier} tier
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {item.label || "—"}
@@ -819,6 +835,34 @@ export default function PartnerCodesManagement() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+
+            {/* Grants Tier (optional) */}
+            {formData.program_id && availableTiers.length > 0 && (
+              <div className="space-y-2">
+                <Label>Grants Tier (optional)</Label>
+                <Select
+                  value={formData.grants_tier || "none"}
+                  onValueChange={(v) =>
+                    setFormData({ ...formData, grants_tier: v === "none" ? "" : v })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Default (lowest) tier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Default (lowest) tier</SelectItem>
+                    {availableTiers.map((tier) => (
+                      <SelectItem key={tier} value={tier}>
+                        {tier}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  If not set, the enrollee gets the program's lowest tier.
+                </p>
               </div>
             )}
 
