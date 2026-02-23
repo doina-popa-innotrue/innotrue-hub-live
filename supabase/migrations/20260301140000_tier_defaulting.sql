@@ -1,6 +1,7 @@
 -- ============================================================================
--- Tier defaulting: ensure every enrollment has an explicit tier when the
--- program defines tiers. Also add grants_tier to partner_codes.
+-- Tier & program-plan defaulting: ensure every enrollment has an explicit
+-- tier and program_plan_id when the program defines tiers.
+-- Also add grants_tier to partner_codes.
 -- ============================================================================
 
 -- 1. Add grants_tier column to partner_codes
@@ -121,6 +122,24 @@ BEGIN
   IF p_tier IS NULL THEN
     SELECT tiers->>0 INTO p_tier
     FROM programs WHERE id = p_program_id;
+  END IF;
+
+  -- Step 0d: Program-plan defaulting — if no program_plan_id specified but
+  -- a tier is set, look up the plan from program_tier_plans.
+  -- Falls back to programs.default_program_plan_id if no tier mapping exists.
+  IF p_program_plan_id IS NULL THEN
+    IF p_tier IS NOT NULL THEN
+      SELECT ptp.program_plan_id INTO p_program_plan_id
+      FROM program_tier_plans ptp
+      WHERE ptp.program_id = p_program_id
+        AND ptp.tier_name = p_tier;
+    END IF;
+
+    -- If still NULL (no tier mapping), use program default
+    IF p_program_plan_id IS NULL THEN
+      SELECT default_program_plan_id INTO p_program_plan_id
+      FROM programs WHERE id = p_program_id;
+    END IF;
   END IF;
 
   -- Step 1: Consume credits if cost > 0

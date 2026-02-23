@@ -193,13 +193,16 @@ serve(async (req) => {
     }
 
     // 7. Call enroll_with_credits RPC (atomic: creates enrollment, handles credits)
+    //    Note: p_program_plan_id is NULL — the RPC resolves it automatically
+    //    from program_tier_plans based on the tier (Step 0d).
+    //    enrollCode.grants_plan_id is a subscription plan FK, NOT a program plan.
     const { data: enrollResult, error: enrollError } = await supabase.rpc(
       "enroll_with_credits",
       {
         p_client_user_id: userId,
         p_program_id: enrollCode.program_id,
         p_tier: enrollCode.grants_tier || null,
-        p_program_plan_id: enrollCode.grants_plan_id || null,
+        p_program_plan_id: null,
         p_discount_percent: enrollCode.is_free
           ? 100
           : enrollCode.discount_percent || null,
