@@ -61,11 +61,10 @@ VALUES
   ((SELECT id FROM plans WHERE key = 'elite'), 'month', 9900, true)
 ON CONFLICT (plan_id, billing_interval) DO NOTHING;
 
--- Programs and Continuation plans (non-purchasable)
+-- Programs plan (non-purchasable, admin-assigned)
 INSERT INTO public.plans (key, name, description, is_active, is_free, tier_level, is_purchasable)
 VALUES
-  ('programs', 'Programs', 'For users who have purchased individual programs. Access to purchased program content without a monthly subscription.', true, true, 0, false),
-  ('continuation', 'Continuation', 'Continue accessing your completed programs while deciding on your next steps. Upgrade to Pro for full platform access and new programs.', true, true, 0, false)
+  ('programs', 'Programs', 'For users who have purchased individual programs. Access to purchased program content without a monthly subscription.', true, true, 0, false)
 ON CONFLICT (key) DO UPDATE SET
   name = EXCLUDED.name,
   description = EXCLUDED.description,

@@ -407,7 +407,7 @@ export const generatePlatformDocumentation = (): Document => {
           createParagraph("Personal overview of enrolled programs and progress"),
           createParagraph("Quick access to current modules and upcoming sessions"),
           createParagraph("Notifications and reminders"),
-          createParagraph("Continuation banner for returning users"),
+          createParagraph("Alumni access banner for completed programs"),
           createParagraph("Announcements widget for platform news"),
           createParagraph("Journey progress widget with feature gating"),
 
@@ -899,7 +899,7 @@ export const generatePlatformDocumentation = (): Document => {
           createTable(
             ["Tier Level", "Typical Name", "Description"],
             [
-              ["0", "Continuation", "Free/limited access for returning users"],
+              ["0", "Free", "Base access level"],
               ["1", "Free", "Basic access to public content"],
               ["2", "Base/Training", "Standard paid subscription"],
               ["3", "Pro/Coaching", "Enhanced features with coaching support"],

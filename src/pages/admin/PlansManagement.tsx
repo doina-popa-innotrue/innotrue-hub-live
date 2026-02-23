@@ -723,7 +723,7 @@ export default function PlansManagement() {
               <div>
                 <Label htmlFor="is_purchasable">Purchasable</Label>
                 <p className="text-xs text-muted-foreground">
-                  Shown in subscription checkout. Turn off for admin-assigned plans (e.g. Programs, Continuation).
+                  Shown in subscription checkout. Turn off for admin-assigned plans (e.g. Programs).
                 </p>
               </div>
               <Switch

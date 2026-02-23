@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, isAfter, isBefore, addDays, addWeeks, addMonths } from "date-fns";
-import { ContinuationBanner } from "@/components/dashboard/ContinuationBanner";
 import { WeeklyReflectionCard } from "@/components/dashboard/WeeklyReflectionCard";
 import { JourneyProgressWidget } from "@/components/dashboard/JourneyProgressWidget";
 import { RecentGradedAssignmentsWidget } from "@/components/dashboard/RecentGradedAssignmentsWidget";
@@ -220,7 +219,6 @@ export default function ClientDashboard() {
   const [skillsSummary, setSkillsSummary] = useState<SkillsSummary>({ total: 0, acquired: 0 });
   const [loading, setLoading] = useState(true);
   const [refetchTrigger, setRefetchTrigger] = useState(0); // Used to trigger refetch from realtime
-  const [isOnContinuationPlan, setIsOnContinuationPlan] = useState(false);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [nextCohortSession, setNextCohortSession] = useState<{
     session: CohortSession;
@@ -237,24 +235,14 @@ export default function ClientDashboard() {
     async function fetchDashboardData() {
       if (!user) return;
 
-      // Check if user is on Continuation plan + get profile name for welcome card
+      // Get profile name for welcome card
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("plan_id, name")
+        .select("name")
         .eq("id", user.id)
         .single();
 
       setProfileName(profileData?.name || null);
-
-      if (profileData?.plan_id) {
-        const { data: planData } = await supabase
-          .from("plans")
-          .select("key")
-          .eq("id", profileData.plan_id)
-          .single();
-
-        setIsOnContinuationPlan(planData?.key === "continuation");
-      }
 
       // Fetch enrollments with tier
       const { data: enrollmentsData } = await supabase
@@ -706,7 +694,6 @@ export default function ClientDashboard() {
       <h1 className="text-3xl font-bold">My Dashboard</h1>
 
       {/* Section 1: Alerts & Banners */}
-      {isOnContinuationPlan && <ContinuationBanner />}
       {hasFeature("credits") && <LowBalanceAlert threshold={10} />}
 
       {/* Section 2: Recent Notifications */}

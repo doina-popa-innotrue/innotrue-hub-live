@@ -192,7 +192,7 @@ export default function AdminFAQ() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">Tier 0</Badge>
-                      <span className="text-sm">Continuation (free/limited)</span>
+                      <span className="text-sm">Free (base access)</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">Tier 1</Badge>
