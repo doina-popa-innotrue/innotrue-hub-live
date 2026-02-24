@@ -336,7 +336,21 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - ✅ Sprint 3 (MEDIUM): `calendar-feed` fully rewritten — uses `module_session_participants` → `module_sessions`, `group_memberships` → `group_sessions`, `client_enrollments` → `cohort_sessions` (new), batch instructor name lookup, removed broken assignment section
   - ✅ Types regenerated from preprod after migration push, `credit-maintenance` daily cron added (`daily-credit-expiry`, 2 AM UTC)
   - ⚠️ Remaining: Lovable type mismatch — 20+ files use `as string` casts. Resolves when updated `types.ts` is pushed to Lovable. Not blocking.
-- **Next steps:** 2B.5 Certification → 2B.10 Enrollment Duration → 2B.13 Credit Expiry Policy Migration → 2B.11 Feature Loss Communication → Phase 5 remaining (Wheel pipeline, bulk import) → Phase 3 AI
+- **2B.13 Credit Expiry Policy + Awareness (2026-03-24):** ✅ Completed.
+  - Migration `20260324110000_credit_expiry_10year.sql`: system_settings `purchased_credit_expiry_months` = 120, updated `credit_source_types`, `credit_topup_packages`, `org_credit_packages`, retroactively extended existing batches.
+  - Fixed 3 edge functions: `confirm-credit-topup` (source_type, param name, hardcoded expiry), `org-confirm-credit-purchase` (param name, hardcoded expiry), `stripe-webhook` (wrong RPC params). All now use `system_settings` as single source of truth.
+  - `CreditExpiryAlert` component on ClientDashboard + Credits page. Credits page enhanced with per-batch expiry display.
+  - `credit-expiry-notifications` edge function + cron migration `20260324110001_credit_expiry_notification_cron.sql` (daily 3 AM UTC). Users: 7-day window. Orgs: 30-day window → admin notifications. Deduplication built-in.
+- **2B.11 Feature Loss Communication (2026-03-24):** ✅ Completed.
+  - `useFeatureLossPreview()` hook — computes features at risk when access source removed. Uses `useEntitlements()` internally.
+  - `AlumniGraceBanner` — amber/red banner for alumni grace period. Integrated in ClientDashboard (recently completed enrollments) + ProgramDetail.
+  - `CompletionFeatureWarning` — pre-completion info alert when progress > 80%. Integrated in ProgramDetail after progress bar.
+  - Post-completion dashboard notice with congratulations + grace period info.
+- **2B.12 Feature Gain Visibility (2026-03-24):** ✅ Completed.
+  - `FeatureSourceBadge` — color-coded badges ("Via Plan", "Via Program", "Via Add-on", "Via Track", "Via Org"). Integrated in Subscription page feature lists.
+  - `ProgramFeatureList` — "What's Included" card fetching `program_plan_features`. Integrated in ProgramDetail with resolved program_plan_id (enrollment → tier mapping → program default).
+  - Subscription page enhanced with source context per feature.
+- **Next steps:** 2B.5 Certification → 2B.10 Enrollment Duration → Phase 5 remaining (Wheel pipeline, bulk import) → Phase 3 AI
 
 ## npm Scripts
 ```

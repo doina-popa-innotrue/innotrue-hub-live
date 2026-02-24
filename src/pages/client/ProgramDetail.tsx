@@ -47,6 +47,9 @@ import { TierUpgradeDialog } from "@/components/programs/TierUpgradeDialog";
 import { useQuery } from "@tanstack/react-query";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { CompletionFeatureWarning } from "@/components/enrollment/CompletionFeatureWarning";
+import { AlumniGraceBanner } from "@/components/alumni/AlumniGraceBanner";
+import { ProgramFeatureList } from "@/components/program/ProgramFeatureList";
 
 interface ModuleLink {
   name: string;
@@ -107,6 +110,7 @@ export default function ProgramDetail() {
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [isSubmittingUpgrade, setIsSubmittingUpgrade] = useState(false);
   const [pendingUpgradeRequest, setPendingUpgradeRequest] = useState<any>(null);
+  const [resolvedProgramPlanId, setResolvedProgramPlanId] = useState<string | undefined>(undefined);
   const { progress: talentLmsProgress, syncing, syncProgress } = useTalentLmsProgress(user?.id);
   const {
     checkProgramAccess,
@@ -244,6 +248,28 @@ export default function ProgramDetail() {
       }
       setProgram(programData);
       setEnrollment(enrollmentData);
+
+      // Resolve program_plan_id for ProgramFeatureList
+      // Priority: enrollment.program_plan_id > tier mapping > program.default_program_plan_id
+      if (enrollmentData && programData) {
+        let planId = enrollmentData.program_plan_id as string | null;
+
+        if (!planId && enrollmentData.tier) {
+          const { data: tierPlan } = await supabase
+            .from("program_tier_plans")
+            .select("program_plan_id")
+            .eq("program_id", id)
+            .eq("tier_name", enrollmentData.tier)
+            .maybeSingle();
+          planId = tierPlan?.program_plan_id || null;
+        }
+
+        if (!planId) {
+          planId = programData.default_program_plan_id || null;
+        }
+
+        setResolvedProgramPlanId(planId || undefined);
+      }
 
       // Load cohort info if enrollment has a cohort
       if (enrollmentData?.cohort_id) {
@@ -654,6 +680,15 @@ export default function ProgramDetail() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Alumni grace period banner — shows when enrollment ended, in grace period */}
+        <AlumniGraceBanner programId={id!} programName={program.name} />
+
+        {/* Pre-completion warning — shows when near program completion */}
+        <CompletionFeatureWarning progressPercent={accessibleProgressPercentage} />
+
+        {/* What's Included — program plan features */}
+        <ProgramFeatureList programPlanId={resolvedProgramPlanId} />
 
         {/* Program Team Contact */}
         <ProgramTeamContact

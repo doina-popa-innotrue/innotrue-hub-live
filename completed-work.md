@@ -1,5 +1,105 @@
 # Completed Work — Detailed History
 
+## 2B.13 Credit Expiry Policy + 2B.11 Feature Loss + 2B.12 Feature Gain (2026-03-24)
+
+Three related roadmap features implemented end-to-end and deployed to all environments.
+
+### 2B.13 Credit Expiry Policy + Awareness
+
+**Migration: `20260324110000_credit_expiry_10year.sql`**
+- Added `system_settings.purchased_credit_expiry_months` = 120 (10 years) as single source of truth
+- Updated `credit_source_types.default_expiry_months` for purchase, admin_grant, addon
+- Updated `credit_topup_packages.validity_months` and `org_credit_packages.validity_months` from 12 → 120
+- Retroactively extended existing batches using dynamic PL/pgSQL (reads from system setting, no hardcoded values)
+
+**Edge Function Bug Fixes (3 functions):**
+- `confirm-credit-topup/index.ts` — 3 bugs: `p_source_type: 'topup'` → `'purchase'`, `p_notes` → `p_description`, hardcoded 12-month expiry → `metadata.expires_at` with system setting fallback via `getDefaultPurchaseExpiry()`
+- `org-confirm-credit-purchase/index.ts` — 2 bugs: `p_notes` → `p_description`, hardcoded 12-month expiry → dynamic (same pattern)
+- `stripe-webhook/index.ts` — `p_user_id` → `p_owner_type: 'user', p_owner_id: userId` + added `p_feature_key: null, p_source_reference_id: null`
+
+**UI — CreditExpiryAlert:**
+- New `src/components/credits/CreditExpiryAlert.tsx` — amber banner when credits expiring within 7 days
+- Two variants: `"inline"` and `"banner"` (following `LowBalanceAlert` pattern)
+- Integrated in `ClientDashboard.tsx` and `Credits.tsx`
+
+**UI — Credits Page Enhancements:**
+- `src/pages/client/Credits.tsx` — enhanced "Expiring Soon" card with per-batch details (source type, remaining credits, days left, color-coded urgency)
+- Added new "Purchased & Bonus Credits" section showing all bonus batches with expiry dates
+
+**Notification Cron:**
+- New `supabase/functions/credit-expiry-notifications/index.ts` — daily cron (3 AM UTC)
+- Users: notified when batches expire within 7 days. Orgs: notified when batches expire within 30 days (org admins)
+- Deduplication: only one notification per user per day
+- Migration `20260324110001_credit_expiry_notification_cron.sql` schedules cron
+- Added to `supabase/config.toml` with `verify_jwt = false`
+
+### 2B.11 Feature Loss Communication
+
+**Hook: `useFeatureLossPreview()`**
+- New `src/hooks/useFeatureLossPreview.ts` — computes features at risk when a specific `AccessSource` is removed
+- Uses `useEntitlements()` internally: `getAllEnabledFeatures()` + `getAccessSource()`
+- Returns `{ featuresToLose, featuresRetained, isLoading }`
+
+**AlumniGraceBanner:**
+- New `src/components/alumni/AlumniGraceBanner.tsx`
+- Amber banner when `daysRemaining > 7`, red/destructive when `<= 7`
+- Shows features at risk via `useFeatureLossPreview("program_plan")`
+- CTA: "Explore Plans" → `/subscription`
+- Integrated in `ClientDashboard.tsx` (recently completed enrollments loop) and `ProgramDetail.tsx`
+
+**CompletionFeatureWarning:**
+- New `src/components/enrollment/CompletionFeatureWarning.tsx`
+- Info alert shown when `progressPercent > 80%` (configurable via `showAfterPercent` prop)
+- Shows features retained vs features at risk, fetches alumni grace period from system_settings
+- Integrated in `ProgramDetail.tsx` after the progress bar section
+
+**Post-completion Dashboard Notice:**
+- Added query for recently completed enrollments (last 30 days) in `ClientDashboard.tsx`
+- Shows `AlumniGraceBanner` for each completed enrollment with grace period info
+
+### 2B.12 Feature Gain Visibility
+
+**FeatureSourceBadge:**
+- New `src/components/features/FeatureSourceBadge.tsx`
+- Color-coded badges: "Via Plan" (blue), "Via Program" (purple), "Via Add-on" (green), "Via Track" (orange), "Via Org" (teal)
+- Uses `useEntitlements().getAccessSource(featureKey)`
+- Integrated in `Subscription.tsx` feature lists
+
+**ProgramFeatureList:**
+- New `src/components/program/ProgramFeatureList.tsx`
+- "What's Included" card fetching `program_plan_features` with joined `features` table
+- Two modes: full card or compact inline list
+- Resolves `program_plan_id` via: enrollment → tier mapping → program default
+- Integrated in `ProgramDetail.tsx`
+
+**Subscription Page Enhancement:**
+- Added `FeatureSourceBadge` to plan feature list items in `Subscription.tsx`
+- Updated query to include `features.key` for badge lookup
+
+### Files Modified/Created (22 total)
+
+| File | Action |
+|------|--------|
+| `supabase/migrations/20260324110000_credit_expiry_10year.sql` | NEW |
+| `supabase/migrations/20260324110001_credit_expiry_notification_cron.sql` | NEW |
+| `supabase/functions/confirm-credit-topup/index.ts` | FIX |
+| `supabase/functions/org-confirm-credit-purchase/index.ts` | FIX |
+| `supabase/functions/stripe-webhook/index.ts` | FIX |
+| `supabase/functions/credit-expiry-notifications/index.ts` | NEW |
+| `supabase/config.toml` | MODIFY |
+| `src/components/credits/CreditExpiryAlert.tsx` | NEW |
+| `src/pages/client/Credits.tsx` | MODIFY |
+| `src/pages/client/ClientDashboard.tsx` | MODIFY |
+| `src/hooks/useFeatureLossPreview.ts` | NEW |
+| `src/components/alumni/AlumniGraceBanner.tsx` | NEW |
+| `src/components/enrollment/CompletionFeatureWarning.tsx` | NEW |
+| `src/components/features/FeatureSourceBadge.tsx` | NEW |
+| `src/components/program/ProgramFeatureList.tsx` | NEW |
+| `src/pages/Subscription.tsx` | MODIFY |
+| `src/pages/client/ProgramDetail.tsx` | MODIFY |
+
+---
+
 ## Schema Drift Fixes — All 3 Sprints (2026-03-24)
 
 Fixed all code-to-DB mismatches identified in the Schema Drift Audit (`docs/SCHEMA_DRIFT_AUDIT.md`). 18 files modified/created, 4 migrations. `npm run verify` passed after each sprint. All migrations pushed to preprod, types.ts regenerated.
