@@ -138,6 +138,15 @@ INSERT INTO public.features (key, name, description) VALUES
   ('development_timeline', 'Development Timeline', 'View development progress over time')
 ON CONFLICT (key) DO NOTHING;
 
+-- Additional gating features
+INSERT INTO public.features (key, name, description) VALUES
+  ('resource_library', 'Resource Library', 'Access to unified resource discovery and downloads'),
+  ('feedback_reviews', 'Feedback Reviews', 'View feedback from coaches and instructors'),
+  ('development_profile', 'Development Profile', 'Unified view of strengths, gaps, and development progress'),
+  ('export_reports', 'Export Reports', 'Export data as PDF reports and calendar files'),
+  ('certificates', 'Certificates', 'View and download earned certificates')
+ON CONFLICT (key) DO NOTHING;
+
 -- Mark system features (protected from deletion/rename in admin UI)
 UPDATE public.features SET is_system = true WHERE key IN (
   'decision_toolkit_basic', 'decision_toolkit_advanced',
@@ -147,7 +156,9 @@ UPDATE public.features SET is_system = true WHERE key IN (
   'assessments', 'learning_analytics', 'programs',
   'credits', 'skills_map', 'services', 'usage',
   'guided_paths', 'external_courses',
-  'tasks', 'development_items', 'development_timeline'
+  'tasks', 'development_items', 'development_timeline',
+  'resource_library', 'feedback_reviews', 'development_profile',
+  'export_reports', 'certificates'
 );
 
 -- Plan-features mappings
@@ -184,10 +195,10 @@ FROM plan_ids p
 CROSS JOIN feature_ids f
 WHERE
   (p.key = 'free' AND f.key IN ('decision_toolkit_basic', 'ai_coach', 'ai_insights', 'session_coaching', 'goals', 'credits', 'usage', 'tasks', 'wheel_of_life', 'development_items', 'development_timeline'))
-  OR (p.key = 'base' AND f.key IN ('decision_toolkit_basic', 'ai_coach', 'ai_insights', 'session_coaching', 'session_group', 'goals', 'courses_free', 'credits', 'usage', 'services', 'tasks', 'wheel_of_life', 'skills_map', 'development_items', 'development_timeline', 'assessments'))
-  OR (p.key = 'pro' AND f.key IN ('decision_toolkit_advanced', 'ai_coach', 'ai_insights', 'coach_dashboard', 'session_coaching', 'session_group', 'session_workshop', 'session_peer_coaching', 'goals', 'programs_base', 'courses_free', 'credits', 'usage', 'services', 'tasks', 'wheel_of_life', 'skills_map', 'guided_paths', 'external_courses', 'learning_analytics', 'development_items', 'development_timeline', 'assessments'))
-  OR (p.key = 'advanced' AND f.key IN ('decision_toolkit_advanced', 'ai_coach', 'ai_insights', 'ai_recommendations', 'coach_dashboard', 'session_coaching', 'session_group', 'session_workshop', 'session_peer_coaching', 'session_review_board', 'goals', 'programs_base', 'programs_pro', 'courses_free', 'credits', 'usage', 'services', 'tasks', 'wheel_of_life', 'skills_map', 'guided_paths', 'external_courses', 'community', 'learning_analytics', 'development_items', 'development_timeline', 'assessments'))
-  OR (p.key = 'elite' AND f.key IN ('decision_toolkit_advanced', 'ai_coach', 'ai_insights', 'ai_recommendations', 'coach_dashboard', 'org_analytics', 'session_coaching', 'session_group', 'session_workshop', 'session_peer_coaching', 'session_review_board', 'goals', 'programs_base', 'programs_pro', 'programs_advanced', 'courses_free', 'sf_cta_rbm_full_asynch', 'sf_cta_rbm_full_live', 'credits', 'usage', 'services', 'tasks', 'wheel_of_life', 'skills_map', 'guided_paths', 'external_courses', 'community', 'learning_analytics', 'development_items', 'development_timeline', 'assessments'))
+  OR (p.key = 'base' AND f.key IN ('decision_toolkit_basic', 'ai_coach', 'ai_insights', 'session_coaching', 'session_group', 'goals', 'courses_free', 'credits', 'usage', 'services', 'tasks', 'wheel_of_life', 'skills_map', 'development_items', 'development_timeline', 'assessments', 'resource_library', 'feedback_reviews', 'export_reports'))
+  OR (p.key = 'pro' AND f.key IN ('decision_toolkit_advanced', 'ai_coach', 'ai_insights', 'coach_dashboard', 'session_coaching', 'session_group', 'session_workshop', 'session_peer_coaching', 'goals', 'programs_base', 'courses_free', 'credits', 'usage', 'services', 'tasks', 'wheel_of_life', 'skills_map', 'guided_paths', 'external_courses', 'learning_analytics', 'development_items', 'development_timeline', 'assessments', 'resource_library', 'feedback_reviews', 'export_reports', 'development_profile', 'certificates'))
+  OR (p.key = 'advanced' AND f.key IN ('decision_toolkit_advanced', 'ai_coach', 'ai_insights', 'ai_recommendations', 'coach_dashboard', 'session_coaching', 'session_group', 'session_workshop', 'session_peer_coaching', 'session_review_board', 'goals', 'programs_base', 'programs_pro', 'courses_free', 'credits', 'usage', 'services', 'tasks', 'wheel_of_life', 'skills_map', 'guided_paths', 'external_courses', 'community', 'learning_analytics', 'development_items', 'development_timeline', 'assessments', 'resource_library', 'feedback_reviews', 'export_reports', 'development_profile', 'certificates'))
+  OR (p.key = 'elite' AND f.key IN ('decision_toolkit_advanced', 'ai_coach', 'ai_insights', 'ai_recommendations', 'coach_dashboard', 'org_analytics', 'session_coaching', 'session_group', 'session_workshop', 'session_peer_coaching', 'session_review_board', 'goals', 'programs_base', 'programs_pro', 'programs_advanced', 'courses_free', 'sf_cta_rbm_full_asynch', 'sf_cta_rbm_full_live', 'credits', 'usage', 'services', 'tasks', 'wheel_of_life', 'skills_map', 'guided_paths', 'external_courses', 'community', 'learning_analytics', 'development_items', 'development_timeline', 'assessments', 'resource_library', 'feedback_reviews', 'export_reports', 'development_profile', 'certificates'))
 ON CONFLICT (plan_id, feature_id) DO UPDATE SET
   enabled = EXCLUDED.enabled,
   limit_value = EXCLUDED.limit_value;

@@ -217,7 +217,7 @@ export function AppSidebar() {
       url: "/feedback",
       icon: MessageSquare,
       tourId: "client-feedback",
-      featureKey: null, // Always visible
+      featureKey: "feedback_reviews",
     },
     {
       title: "Guided Paths",
@@ -358,6 +358,7 @@ export function AppSidebar() {
       url: "/development-profile",
       icon: BarChart3,
       tourId: "client-development-profile",
+      featureKey: "development_profile",
     },
     {
       title: "Development Items",
@@ -370,6 +371,7 @@ export function AppSidebar() {
       url: "/my-resources",
       icon: FolderOpen,
       tourId: "client-my-resources",
+      featureKey: "resource_library",
     },
     {
       title: "Timeline",

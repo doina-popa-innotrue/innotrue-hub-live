@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { FeatureGate } from "@/components/FeatureGate";
 import { MyReadiness } from "@/components/development-profile/MyReadiness";
 import { StrengthsGapsMatrix } from "@/components/development-profile/StrengthsGapsMatrix";
 import { PsychometricScores } from "@/components/development-profile/PsychometricScores";
@@ -14,6 +15,7 @@ export default function DevelopmentProfile() {
   if (!user) return null;
 
   return (
+    <FeatureGate featureKey="development_profile">
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <BarChart3 className="h-7 w-7 text-primary" />
@@ -49,5 +51,6 @@ export default function DevelopmentProfile() {
       {/* Section G: My Readiness */}
       <MyReadiness userId={user.id} />
     </div>
+    </FeatureGate>
   );
 }

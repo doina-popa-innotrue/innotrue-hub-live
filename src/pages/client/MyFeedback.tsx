@@ -9,6 +9,7 @@ import {
   ArrowRight,
   Inbox,
 } from "lucide-react";
+import { FeatureGate } from "@/components/FeatureGate";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ export default function MyFeedback() {
     activeTab === "all" ? items : items.filter((item) => item.type === activeTab);
 
   return (
+    <FeatureGate featureKey="feedback_reviews">
     <div className="space-y-6">
       {/* Page Header */}
       <div>
@@ -153,5 +155,6 @@ export default function MyFeedback() {
         </TabsContent>
       </Tabs>
     </div>
+    </FeatureGate>
   );
 }
