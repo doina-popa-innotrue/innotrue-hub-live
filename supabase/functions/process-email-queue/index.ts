@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { checkEmailRecipientStatus, getStagingRecipient, getStagingSubject } from '../_shared/email-utils.ts';
+import { checkEmailRecipientStatus, isGlobalEmailMuted, getStagingRecipient, getStagingSubject } from '../_shared/email-utils.ts';
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
@@ -17,6 +17,12 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check global email mute — skip all processing if enabled
+    if (await isGlobalEmailMuted(supabase)) {
+      console.log('[GLOBAL_MUTE] Email sending is muted. Skipping email queue processing.');
+      return successResponse.ok({ message: 'Global email mute is enabled — queue processing skipped' }, cors);
+    }
 
     // Fetch pending emails
     const { data: pendingEmails, error: fetchError } = await supabase

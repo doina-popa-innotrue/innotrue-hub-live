@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { checkUserEmailStatus, isAdminNotificationType, ADMIN_NOTIFICATION_TYPES, getStagingRecipients, getStagingSubject } from "../_shared/email-utils.ts";
+import { checkUserEmailStatus, isAdminNotificationType, isGlobalEmailMuted, ADMIN_NOTIFICATION_TYPES, getStagingRecipients, getStagingSubject } from "../_shared/email-utils.ts";
 import { isValidEmail } from "../_shared/validation.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { errorResponse, successResponse } from "../_shared/error-response.ts";
@@ -241,6 +241,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Create admin Supabase client for fetching templates
     const supabaseAdmin = createClient(supabaseUrl, expectedServiceKey!);
+
+    // Check global email mute — skip all emails if enabled
+    if (await isGlobalEmailMuted(supabaseAdmin)) {
+      console.log(`[GLOBAL_MUTE] Email sending is muted. Skipping ${type} notification to ${email || userId}`);
+      return new Response(
+        JSON.stringify({ skipped: true, reason: 'Global email mute is enabled' }),
+        { status: 200, headers: { "Content-Type": "application/json", ...cors } }
+      );
+    }
 
     // If userId is provided instead of email, fetch email
     let recipientEmail = email;

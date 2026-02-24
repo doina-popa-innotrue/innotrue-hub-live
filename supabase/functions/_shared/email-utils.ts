@@ -161,6 +161,31 @@ export function isAdminNotificationType(notificationType: string): boolean {
   return ADMIN_NOTIFICATION_TYPES.includes(notificationType);
 }
 
+/**
+ * Check if global email mute is enabled via system_settings.
+ * When muted, ALL outbound emails are suppressed platform-wide.
+ *
+ * @param supabase - Supabase client with service role
+ * @returns true if emails are globally muted
+ */
+export async function isGlobalEmailMuted(
+  supabase: SupabaseClient
+): Promise<boolean> {
+  try {
+    const { data } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'global_email_mute')
+      .single();
+
+    return data?.value === 'true';
+  } catch (error) {
+    console.error('Error checking global email mute:', error);
+    // Default to NOT muted on error to avoid blocking legitimate emails
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Staging Email Override
 // ---------------------------------------------------------------------------

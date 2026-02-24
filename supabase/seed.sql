@@ -17,7 +17,8 @@ INSERT INTO public.system_settings (key, value, description) VALUES
   ('ai_alert_sent_this_month', 'false', 'Flag to track if alert was already sent this month'),
   ('platform_name', 'InnoTrue Hub', 'Display name for the platform'),
   ('support_email', 'support@innotrue.com', 'Support contact email'),
-  ('default_timezone', 'Europe/Amsterdam', 'Default timezone for the platform')
+  ('default_timezone', 'Europe/Amsterdam', 'Default timezone for the platform'),
+  ('global_email_mute', 'false', 'When "true", ALL outbound emails are suppressed platform-wide. Useful during maintenance, testing, or migrations. In-app notifications are still created.')
 ON CONFLICT (key) DO UPDATE SET description = EXCLUDED.description;
 
 -- =============================================================================

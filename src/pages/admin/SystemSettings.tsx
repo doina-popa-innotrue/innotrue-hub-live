@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { Settings, Save, Loader2 } from "lucide-react";
+import { Settings, Save, Loader2, AlertTriangle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -108,6 +109,8 @@ export default function SystemSettings() {
       max_recurrence_occurrences: "Max Recurring Session Instances",
       program_terms_retention_years: "Program Terms Retention (Years)",
       org_terms_retention_years: "Organization Terms Retention (Years)",
+      global_email_mute: "Global Email Mute",
+      purchased_credit_expiry_months: "Purchased Credit Expiry (Months)",
     };
     return labels[key] || key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   };
@@ -130,6 +133,10 @@ export default function SystemSettings() {
 
   const isUserIdSelect = (key: string): boolean => {
     return key === "activecampaign_sync_admin_user_id";
+  };
+
+  const isBooleanToggle = (key: string): boolean => {
+    return key === "global_email_mute";
   };
 
   if (isLoading) {
@@ -160,6 +167,25 @@ export default function SystemSettings() {
                 {setting.description && <CardDescription>{setting.description}</CardDescription>}
               </CardHeader>
               <CardContent>
+                {isBooleanToggle(setting.key) ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {currentValue === "true" && (
+                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      )}
+                      <span className={`text-sm font-medium ${currentValue === "true" ? "text-amber-600" : "text-muted-foreground"}`}>
+                        {currentValue === "true" ? "All outbound emails are suppressed" : "Emails are sending normally"}
+                      </span>
+                    </div>
+                    <Switch
+                      checked={currentValue === "true"}
+                      onCheckedChange={(checked) => {
+                        updateMutation.mutate({ key: setting.key, value: checked ? "true" : "false" });
+                      }}
+                      disabled={updateMutation.isPending}
+                    />
+                  </div>
+                ) : (
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <Label htmlFor={setting.key} className="sr-only">
@@ -213,6 +239,7 @@ export default function SystemSettings() {
                     </Button>
                   )}
                 </div>
+                )}
               </CardContent>
             </Card>
           );
