@@ -9,6 +9,22 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[CONFIRM-CREDIT-TOPUP] ${step}${detailsStr}`);
 };
 
+/**
+ * Get default purchase credit expiry from system_settings.
+ * Single source of truth — no hardcoded durations.
+ */
+async function getDefaultPurchaseExpiry(supabase: ReturnType<typeof createClient>): Promise<string> {
+  const { data } = await supabase
+    .from('system_settings')
+    .select('value')
+    .eq('key', 'purchased_credit_expiry_months')
+    .single();
+  const months = parseInt(data?.value || '120', 10);
+  const d = new Date();
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString();
+}
+
 serve(async (req) => {
   const cors = getCorsHeaders(req);
 
@@ -149,20 +165,20 @@ serve(async (req) => {
 
       logStep("Purchase marked as completed", { purchaseId: pendingPurchase.id });
 
-      // Calculate expiry date (12 months from now for purchased credits)
-      const expiresAt = new Date();
-      expiresAt.setMonth(expiresAt.getMonth() + 12);
+      // Use expires_at from Stripe metadata (set by purchase-credit-topup from package.validity_months)
+      // Fall back to system setting (single source of truth for purchased credit expiry)
+      const expiresAt = metadata.expires_at || await getDefaultPurchaseExpiry(supabaseClient);
 
       // Add credits using the consolidated grant_credit_batch function
       const { data: batchId, error: creditError } = await supabaseClient.rpc('grant_credit_batch', {
         p_owner_type: 'user',
         p_owner_id: user.id,
         p_amount: pendingPurchase.credits_purchased,
-        p_expires_at: expiresAt.toISOString(),
-        p_source_type: 'topup',
+        p_expires_at: expiresAt,
+        p_source_type: 'purchase',
         p_feature_key: null,
         p_source_reference_id: pendingPurchase.id,
-        p_notes: `Credit top-up: ${pendingPurchase.credits_purchased} credits`,
+        p_description: `Credit top-up: ${pendingPurchase.credits_purchased} credits`,
       });
 
       if (creditError) {
@@ -206,20 +222,20 @@ serve(async (req) => {
         throw new Error(`Failed to create purchase record: ${insertError.message}`);
       }
 
-      // Calculate expiry date (12 months from now for purchased credits)
-      const purchaseExpiresAt = new Date();
-      purchaseExpiresAt.setMonth(purchaseExpiresAt.getMonth() + 12);
+      // Use expires_at from Stripe metadata (set by purchase-credit-topup from package.validity_months)
+      // Fall back to system setting (single source of truth for purchased credit expiry)
+      const purchaseExpiresAt = expiresAt || await getDefaultPurchaseExpiry(supabaseClient);
 
       // Add credits using the consolidated grant_credit_batch function
       const { data: batchId, error: creditError } = await supabaseClient.rpc('grant_credit_batch', {
         p_owner_type: 'user',
         p_owner_id: user.id,
         p_amount: creditValue,
-        p_expires_at: purchaseExpiresAt.toISOString(),
-        p_source_type: 'topup',
+        p_expires_at: purchaseExpiresAt,
+        p_source_type: 'purchase',
         p_feature_key: null,
         p_source_reference_id: newPurchase.id,
-        p_notes: `Credit top-up: ${creditValue} credits`,
+        p_description: `Credit top-up: ${creditValue} credits`,
       });
 
       if (creditError) {

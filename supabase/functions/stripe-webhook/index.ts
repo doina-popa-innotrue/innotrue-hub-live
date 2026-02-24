@@ -351,9 +351,12 @@ async function handleInstallmentCheckoutCompleted(
 
   // 1. Grant FULL credits to user wallet via grant_credit_batch RPC
   const { error: grantError } = await supabase.rpc("grant_credit_batch", {
-    p_user_id: userId,
+    p_owner_type: "user",
+    p_owner_id: userId,
     p_amount: creditValue,
     p_source_type: "purchase",
+    p_feature_key: null,
+    p_source_reference_id: null,
     p_description: `Installment purchase: ${creditValue} credits (${installmentCount} monthly payments)`,
     p_expires_at: expiresAt || null,
   });

@@ -33,10 +33,12 @@ import {
   calculatePackageBonus,
   formatCreditsAsEur,
 } from "@/hooks/useUserCredits";
+import { useCreditBatches } from "@/hooks/useCreditBatches";
+import { CreditExpiryAlert } from "@/components/credits/CreditExpiryAlert";
 import { useProgramEnrollment } from "@/hooks/useProgramEnrollment";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
+import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { toast } from "sonner";
@@ -76,6 +78,8 @@ export default function Credits() {
 
   const { resumePendingEnrollment, isEnrolling, checkPendingEnrollment } =
     useProgramEnrollment();
+
+  const { summary: batchSummary, expiringBatches } = useCreditBatches();
 
   const [pendingEnrollment, setPendingEnrollment] = useState<PendingEnrollmentData | null>(null);
   const [showAllPackages, setShowAllPackages] = useState(false);
@@ -287,6 +291,9 @@ export default function Credits() {
         </Button>
       </div>
 
+      {/* Credit Expiry Alert */}
+      <CreditExpiryAlert />
+
       {/* Pending Enrollment Banner */}
       {pendingEnrollment && shortfall > 0 && (
         <Alert className="border-primary/50 bg-primary/5">
@@ -418,8 +425,29 @@ export default function Credits() {
                   {formatCredits(expiringSoon)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Credits expiring in the next 30 days
+                  Credits expiring in the next 7 days
                 </p>
+                {expiringBatches.length > 0 && (
+                  <div className="mt-3 space-y-1.5">
+                    {expiringBatches.map((batch) => {
+                      const daysLeft = differenceInDays(new Date(batch.expires_at), new Date());
+                      return (
+                        <div
+                          key={batch.id}
+                          className="flex items-center justify-between text-xs"
+                        >
+                          <span className="text-muted-foreground capitalize">
+                            {batch.source_type.replace("_", " ")}
+                          </span>
+                          <span className={daysLeft <= 3 ? "text-destructive font-medium" : "text-amber-600"}>
+                            {formatCredits(batch.remaining)} cr &middot;{" "}
+                            {daysLeft <= 0 ? "today" : `${daysLeft}d left`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -627,6 +655,81 @@ export default function Credits() {
           )}
         </CardContent>
       </Card>
+
+      {/* Bonus Credit Batches with Expiry */}
+      {batchSummary?.bonus_batches && batchSummary.bonus_batches.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5" />
+              Purchased &amp; Bonus Credits
+            </CardTitle>
+            <CardDescription>
+              Your active purchased, granted, and bonus credit batches
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {batchSummary.bonus_batches.map((batch) => {
+                const expiresDate = new Date(batch.expires_at);
+                const daysUntil = differenceInDays(expiresDate, new Date());
+                const isExpiringSoon = daysUntil <= 30;
+                const isUrgent = daysUntil <= 7;
+
+                return (
+                  <div
+                    key={batch.id}
+                    className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                      isUrgent
+                        ? "border-destructive/50 bg-destructive/5"
+                        : isExpiringSoon
+                          ? "border-amber-500/50 bg-amber-50 dark:bg-amber-950/20"
+                          : "bg-card hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-full bg-primary/10 text-primary">
+                        <Coins className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="font-medium capitalize text-sm">
+                          {batch.source_type.replace("_", " ")}
+                        </div>
+                        {batch.description && (
+                          <div className="text-xs text-muted-foreground">{batch.description}</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-semibold text-sm">
+                        {formatCredits(batch.remaining)}
+                        <span className="text-muted-foreground font-normal">
+                          {" "}/ {formatCredits(batch.original)}
+                        </span>
+                      </div>
+                      <div
+                        className={`text-xs ${
+                          isUrgent
+                            ? "text-destructive font-medium"
+                            : isExpiringSoon
+                              ? "text-amber-600 dark:text-amber-500"
+                              : "text-muted-foreground"
+                        }`}
+                      >
+                        {isUrgent
+                          ? daysUntil <= 0
+                            ? "Expires today"
+                            : `Expires in ${daysUntil} day${daysUntil !== 1 ? "s" : ""}`
+                          : `Expires ${format(expiresDate, "MMM d, yyyy")}`}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Transaction History */}
       <Card>

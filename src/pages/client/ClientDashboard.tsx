@@ -26,6 +26,8 @@ import { RecentGradedAssignmentsWidget } from "@/components/dashboard/RecentGrad
 import { RecentNotificationsWidget } from "@/components/dashboard/RecentNotificationsWidget";
 import { RecentFeedbackWidget } from "@/components/dashboard/RecentFeedbackWidget";
 import { LowBalanceAlert } from "@/components/credits/LowBalanceAlert";
+import { CreditExpiryAlert } from "@/components/credits/CreditExpiryAlert";
+import { AlumniGraceBanner } from "@/components/alumni/AlumniGraceBanner";
 import { AnnouncementsWidget } from "@/components/dashboard/AnnouncementsWidget";
 import { DevelopmentHubWidget } from "@/components/dashboard/DevelopmentHubWidget";
 import { DevelopmentItemsSection } from "@/components/dashboard/DevelopmentItemsSection";
@@ -217,6 +219,9 @@ export default function ClientDashboard() {
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[]>([]);
   const [groups, setGroups] = useState<GroupMembership[]>([]);
   const [skillsSummary, setSkillsSummary] = useState<SkillsSummary>({ total: 0, acquired: 0 });
+  const [recentlyCompletedEnrollments, setRecentlyCompletedEnrollments] = useState<
+    { programId: string; programName: string; completedAt: string; graceExpiresAt: string | null }[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [refetchTrigger, setRefetchTrigger] = useState(0); // Used to trigger refetch from realtime
   const [profileName, setProfileName] = useState<string | null>(null);
@@ -306,6 +311,34 @@ export default function ClientDashboard() {
           }),
         );
         setEnrollments(enrichedEnrollments as Enrollment[]);
+      }
+
+      // Fetch recently completed enrollments (within last 30 days) for alumni grace banners
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const { data: completedEnrollments } = await supabase
+        .from("client_enrollments")
+        .select(`
+          id,
+          status,
+          completed_at,
+          programs!inner (id, name)
+        `)
+        .eq("client_user_id", user.id)
+        .eq("status", "completed")
+        .gte("completed_at", thirtyDaysAgo.toISOString())
+        .order("completed_at", { ascending: false })
+        .limit(5);
+
+      if (completedEnrollments && completedEnrollments.length > 0) {
+        setRecentlyCompletedEnrollments(
+          completedEnrollments.map((e) => ({
+            programId: e.programs.id,
+            programName: e.programs.name,
+            completedAt: e.completed_at ?? "",
+            graceExpiresAt: null, // AlumniGraceBanner fetches this via useAlumniAccess
+          })),
+        );
       }
 
       // Fetch active goals
@@ -695,6 +728,14 @@ export default function ClientDashboard() {
 
       {/* Section 1: Alerts & Banners */}
       {hasFeature("credits") && <LowBalanceAlert threshold={10} />}
+      {hasFeature("credits") && <CreditExpiryAlert />}
+      {recentlyCompletedEnrollments.map((enrollment) => (
+        <AlumniGraceBanner
+          key={enrollment.programId}
+          programId={enrollment.programId}
+          programName={enrollment.programName}
+        />
+      ))}
 
       {/* Section 2: Recent Notifications */}
       <RecentNotificationsWidget />

@@ -51,6 +51,9 @@ verify_jwt = false
 [functions.create-client-development-item]
 verify_jwt = false
 
+[functions.credit-expiry-notifications]
+verify_jwt = false
+
 [functions.credit-maintenance]
 verify_jwt = false
 

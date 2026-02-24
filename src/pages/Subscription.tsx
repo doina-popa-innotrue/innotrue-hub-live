@@ -24,6 +24,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrackSelector } from "@/components/tracks/TrackSelector";
+import { FeatureSourceBadge } from "@/components/features/FeatureSourceBadge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,6 +59,7 @@ interface PlanFeature {
   enabled: boolean;
   limit_value: number | null;
   features: {
+    key: string;
     name: string;
     description: string | null;
   };
@@ -128,6 +130,7 @@ export default function Subscription() {
               enabled,
               limit_value,
               features!inner (
+                key,
                 name,
                 description
               )
@@ -594,6 +597,7 @@ export default function Subscription() {
                               (up to {feature.limit_value})
                             </span>
                           )}
+                          <FeatureSourceBadge featureKey={feature.features.key} />
                           {feature.features.description && (
                             <Tooltip>
                               <TooltipTrigger asChild>
