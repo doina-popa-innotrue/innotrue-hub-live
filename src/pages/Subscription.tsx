@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ import {
   Loader2,
   AlertTriangle,
   Info,
+  Coins,
+  ArrowRight,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
@@ -75,8 +78,11 @@ interface UsageData {
 interface AddOn {
   id: string;
   name: string;
+  display_name: string | null;
   description: string | null;
   price_cents: number | null;
+  is_consumable: boolean;
+  initial_quantity: number | null;
 }
 
 interface UserAddOn {
@@ -86,6 +92,7 @@ interface UserAddOn {
 
 export default function Subscription() {
   const { user, userRoles } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
@@ -209,7 +216,7 @@ export default function Subscription() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("add_ons")
-        .select("id, name, description, price_cents")
+        .select("id, name, display_name, description, price_cents, is_consumable, initial_quantity")
         .eq("is_active", true)
         .order("name");
 
@@ -695,13 +702,25 @@ export default function Subscription() {
                 <Card key={addOn.id} className={isOwned ? "border-primary" : ""}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle>{addOn.name}</CardTitle>
-                      {isOwned && <Badge variant="default">Active</Badge>}
+                      <CardTitle className="text-lg">{addOn.display_name || addOn.name}</CardTitle>
+                      <div className="flex gap-2">
+                        {addOn.is_consumable && addOn.initial_quantity && (
+                          <Badge variant="outline" className="text-xs">
+                            ×{addOn.initial_quantity}
+                          </Badge>
+                        )}
+                        {isOwned && <Badge variant="default">Active</Badge>}
+                      </div>
                     </div>
                     <CardDescription>{addOn.description}</CardDescription>
-                    {addOn.price_cents && (
+                    {addOn.price_cents != null && addOn.price_cents > 0 && (
                       <div className="pt-2">
                         <span className="text-2xl font-bold">{formatPrice(addOn.price_cents)}</span>
+                        {addOn.is_consumable && addOn.initial_quantity && (
+                          <span className="text-sm text-muted-foreground ml-1">
+                            ({formatPrice(Math.round(addOn.price_cents / addOn.initial_quantity))} each)
+                          </span>
+                        )}
                       </div>
                     )}
                   </CardHeader>
@@ -730,6 +749,30 @@ export default function Subscription() {
           </div>
         </>
       )}
+
+      {/* Credit Top-Ups */}
+      <Separator className="my-8" />
+      <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+        <CardContent className="py-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Coins className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Need More Credits?</h2>
+                <p className="text-sm text-muted-foreground">
+                  Purchase credit top-ups for AI insights, coaching sessions, and more.
+                </p>
+              </div>
+            </div>
+            <Button onClick={() => navigate("/credits")} className="shrink-0">
+              View Credit Packages
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Track Selection */}
       <Separator className="my-8" />

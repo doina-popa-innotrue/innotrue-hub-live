@@ -420,6 +420,51 @@ INSERT INTO public.org_platform_tiers (name, slug, description, annual_fee_cents
 ON CONFLICT (slug) DO NOTHING;
 
 -- =============================================================================
+-- SECTION 6B: ADD-ONS
+-- =============================================================================
+-- Add-ons are purchasable extras that grant features beyond a user's plan.
+-- Users request add-ons via the Subscription page; admins approve and grant.
+
+INSERT INTO public.add_ons (key, name, display_name, description, price_cents, is_consumable, initial_quantity, is_active) VALUES
+  ('ai_power_pack',       'AI Power Pack',        'AI Power Pack',
+   'Unlock AI-powered insights and recommendations for your goals, decisions, and progress.',
+   2900, false, NULL, true),
+  ('coaching_sessions_5', 'Coaching Session Pack', 'Coaching Session Pack (5)',
+   'Five additional one-on-one coaching sessions with certified coaches.',
+   14900, true, 5, true),
+  ('group_sessions_3',    'Group Session Pack',    'Group Session Pack (3)',
+   'Three group coaching or mastermind sessions to learn with peers.',
+   7900, true, 3, true),
+  ('advanced_analytics',  'Advanced Analytics',    'Advanced Analytics',
+   'Enterprise-level analytics and learning progress insights for deeper visibility into your development.',
+   4900, false, NULL, true),
+  ('community_access',    'Community & Groups',    'Community & Groups',
+   'Access to community discussions, peer groups, and collaboration features.',
+   1900, false, NULL, true),
+  ('export_reports_addon','Export & Reports',       'Export & Reports',
+   'Export your data as PDF reports and downloadable summaries.',
+   990, false, NULL, true)
+ON CONFLICT (key) DO UPDATE SET
+  name = EXCLUDED.name,
+  display_name = EXCLUDED.display_name,
+  description = EXCLUDED.description,
+  price_cents = EXCLUDED.price_cents,
+  is_consumable = EXCLUDED.is_consumable,
+  initial_quantity = EXCLUDED.initial_quantity;
+
+-- Link add-ons to features
+INSERT INTO public.add_on_features (add_on_id, feature_id)
+SELECT a.id, f.id
+FROM public.add_ons a, public.features f
+WHERE (a.key = 'ai_power_pack' AND f.key IN ('ai_insights', 'ai_recommendations'))
+   OR (a.key = 'coaching_sessions_5' AND f.key = 'session_coaching')
+   OR (a.key = 'group_sessions_3' AND f.key = 'session_group')
+   OR (a.key = 'advanced_analytics' AND f.key IN ('org_analytics', 'learning_analytics'))
+   OR (a.key = 'community_access' AND f.key IN ('community', 'groups'))
+   OR (a.key = 'export_reports_addon' AND f.key = 'export_reports')
+ON CONFLICT (add_on_id, feature_id) DO NOTHING;
+
+-- =============================================================================
 -- SECTION 7: NOTIFICATION SYSTEM
 -- =============================================================================
 
