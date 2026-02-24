@@ -1,0 +1,8 @@
+#!/bin/bash
+branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+if [ "$branch" = "main" ] || [ "$branch" = "preprod" ]; then
+  echo ""
+  echo "⚠️  You're on '$branch' — remember to switch back to develop!"
+  echo "   Run: git checkout develop"
+  echo ""
+fi

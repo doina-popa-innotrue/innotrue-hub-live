@@ -53,6 +53,16 @@ This is the standard flow for any change, from idea to production:
 2. Think about which files will be affected
 3. If it's complex, ask Cursor AI or Claude Code to explore the codebase first
 
+### Phase 1b: First-Time Setup (once per machine)
+
+If this is your first time working on the repo, run:
+```bash
+npm install --legacy-peer-deps
+```
+This installs dependencies **and** git hooks (via the `prepare` script). The hooks provide:
+- **Lovable merge protection** — blocks accidental merges from the Lovable remote
+- **Branch safety warning** — reminds you to switch back to `develop` when on `main`/`preprod`
+
 ### Phase 2: Code (in Cursor)
 
 1. **Open Cursor** with the project at `/Users/doina/.../Work_GDrive/innotrue-hub-live`
@@ -457,6 +467,7 @@ npm run sync:lovable -- --scope src/components # Scope to specific dirs
 - Code always flows through the live repo's branch pipeline (`develop` → `preprod` → `main`)
 - The sync script auto-excludes config files (vite.config, package.json, client.ts, types.ts)
 - After `update:lovable`, Lovable IDE may need a refresh/pull to see new code
+- **A `pre-merge-commit` git hook blocks `git merge lovable/main`** — prevents Lovable's `as any` casts and stale types from polluting the codebase. Cherry-pick individual commits if needed.
 - Full docs: `docs/LOVABLE_IMPORT_QUICKSTART.md` and `docs/LOVABLE_INTEGRATION.md`
 
 ### Scenario G: Sync config data or storage between environments
@@ -641,6 +652,7 @@ Usually means the test user's credentials changed or expired on preprod:
 
 | What | Command / Action |
 |------|-----------------|
+| First-time setup (installs deps + hooks) | `npm install --legacy-peer-deps` |
 | Start dev server | `npm run dev` |
 | Run all quality checks | `npm run verify` or Cursor > Run Task > "CI: Full Quality Check" |
 | Run E2E tests | Cursor > Terminal > Run Task > "E2E: Run All Tests" |
@@ -684,6 +696,7 @@ Usually means the test user's credentials changed or expired on preprod:
 | Integration setup guide | `docs/INTEGRATION_SETUP_GUIDE.md` |
 | Supabase ops quickstart | `docs/SUPABASE_OPS_QUICKSTART.md` |
 | Lovable sync quickstart | `docs/LOVABLE_IMPORT_QUICKSTART.md` |
+| Git hooks (committed source) | `scripts/hooks/` |
 | CI pipeline | `.github/workflows/ci.yml` |
 | E2E tests | `e2e/tests/` |
 | Unit tests | `src/lib/__tests__/` |

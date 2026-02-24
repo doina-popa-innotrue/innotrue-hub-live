@@ -14,7 +14,14 @@ ALWAYS work in this repo (`innotrue-hub-live`). NEVER work in the Backups folder
 - Deploy pipeline: `develop` → `preprod` → `main` → `npm run update:lovable`
 - Edge functions deployed separately via `npm run deploy:functions`
 - Keep MEMORY.md updated when resolving issues from the roadmap
-- **NEVER merge lovable into main.** Lovable is a one-way push target only.
+- **NEVER merge lovable into main.** Lovable is a one-way push target only. A `pre-merge-commit` git hook enforces this.
+
+## Git Hooks (auto-installed)
+Git hooks in `scripts/hooks/` are installed automatically via `npm install` (`prepare` script → `scripts/setup-hooks.sh`).
+- **`pre-merge-commit`** — blocks merges from the Lovable remote (prevents `as any` pollution from Lovable's stale types)
+- **`post-checkout`** — warns when on `main` or `preprod` (reminder to switch back to `develop`)
+
+To add a new hook: create it in `scripts/hooks/`, make it executable. It will be installed for all developers on their next `npm install`.
 
 ## Edge Function Standards (MANDATORY)
 All 71 edge functions use shared utilities. New functions MUST follow the same patterns:

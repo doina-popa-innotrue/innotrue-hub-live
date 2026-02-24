@@ -350,6 +350,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - `FeatureSourceBadge` — color-coded badges ("Via Plan", "Via Program", "Via Add-on", "Via Track", "Via Org"). Integrated in Subscription page feature lists.
   - `ProgramFeatureList` — "What's Included" card fetching `program_plan_features`. Integrated in ProgramDetail with resolved program_plan_id (enrollment → tier mapping → program default).
   - Subscription page enhanced with source context per feature.
+- **Git Hooks Infrastructure (2026-03-24):** Committed hooks in `scripts/hooks/`, auto-installed via `npm install` → `prepare` script → `scripts/setup-hooks.sh`. Two hooks: `pre-merge-commit` (blocks Lovable merges) and `post-checkout` (branch safety warning). Protects against Lovable's `as any` type pollution from its stale `types.ts` regeneration.
 - **Next steps:** 2B.5 Certification → 2B.10 Enrollment Duration → Phase 5 remaining (Wheel pipeline, bulk import) → Phase 3 AI
 
 ## npm Scripts

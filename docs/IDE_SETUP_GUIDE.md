@@ -117,6 +117,17 @@ npm install --legacy-peer-deps
 
 > `--legacy-peer-deps` is required due to a react-day-picker peer dependency conflict. Always use this flag.
 
+This also **automatically installs git hooks** via the `prepare` script. You'll see:
+```
+✓ Installed 2 git hook(s) from scripts/hooks/
+```
+
+The hooks provide safety guardrails:
+- **`pre-merge-commit`** — blocks merges from the Lovable remote (one-way push only)
+- **`post-checkout`** — warns when you're on `main` or `preprod` (remind to switch back to `develop`)
+
+Hook source files are committed in `scripts/hooks/` so every developer gets them automatically.
+
 ### 6. Verify the setup
 
 ```bash
@@ -250,10 +261,11 @@ Ensure `.gitignore` includes (already present in this repo):
 
 It is fine for different team members to use different IDEs. The repo is IDE-agnostic. What matters is:
 
-1. **All team members run `npm run verify` before every commit** — this is the shared quality gate regardless of IDE
-2. **Follow `.cursorrules`** — read it once, refer back as needed
-3. **Do not commit IDE config files** — `.vscode/` is gitignored; Eclipse files must also stay out
-4. **Use the same git workflow** — see `docs/CURSOR_AND_WORKFLOW_GUIDE.md`
+1. **All team members run `npm install --legacy-peer-deps` after cloning** — this installs dependencies AND git hooks
+2. **All team members run `npm run verify` before every commit** — this is the shared quality gate regardless of IDE
+3. **Follow `.cursorrules`** — read it once, refer back as needed
+4. **Do not commit IDE config files** — `.vscode/` is gitignored; Eclipse files must also stay out
+5. **Use the same git workflow** — see `docs/CURSOR_AND_WORKFLOW_GUIDE.md`
 
 ### Current team setup
 

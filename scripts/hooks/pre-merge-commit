@@ -1,0 +1,26 @@
+#!/bin/bash
+# Block merges from Lovable remote into the live repo.
+# Lovable is a ONE-WAY push target. Its "as any" type fixes and
+# regenerated types.ts would pollute the codebase.
+
+MERGE_HEAD=$(cat .git/MERGE_HEAD 2>/dev/null)
+if [ -z "$MERGE_HEAD" ]; then
+  exit 0
+fi
+
+# Check if the commit being merged is reachable from any lovable remote ref
+if git merge-base --is-ancestor "$MERGE_HEAD" refs/remotes/lovable/main 2>/dev/null; then
+  echo ""
+  echo "🚫  BLOCKED: Merging from Lovable into the live repo is not allowed."
+  echo ""
+  echo "   Lovable is a one-way push target only."
+  echo "   Use 'npm run update:lovable' to push live → Lovable."
+  echo "   Never pull Lovable → live."
+  echo ""
+  echo "   If you really need a specific Lovable change, cherry-pick it manually:"
+  echo "     git cherry-pick <commit-sha>"
+  echo ""
+  exit 1
+fi
+
+exit 0

@@ -265,15 +265,26 @@ Paste the JSON to Claude Code with this prompt:
 
 ## Critical Rules
 
-1. **NEVER copy Lovable migrations** into the live repo. Lovable generates migration files with different IDs that will conflict. Instead, recreate schema changes as new migrations: `supabase migration new my_change`
+1. **NEVER merge Lovable into the live repo.** Lovable is a one-way push target. A `pre-merge-commit` git hook enforces this — `git merge lovable/main` is blocked automatically. If you need a specific Lovable change, cherry-pick it: `git cherry-pick <commit-sha>`.
 
-2. **NEVER copy edge functions wholesale.** Lovable edge functions lack the live repo's CORS config, auth patterns, staging email override, and AI provider setup. Import file-by-file and adapt to match `supabase/functions/_shared/` patterns.
+2. **NEVER copy Lovable migrations** into the live repo. Lovable generates migration files with different IDs that will conflict. Instead, recreate schema changes as new migrations: `supabase migration new my_change`
 
-3. **NEVER connect Lovable to production Supabase.** Lovable's Supabase must be a completely separate project.
+3. **NEVER copy edge functions wholesale.** Lovable edge functions lack the live repo's CORS config, auth patterns, staging email override, and AI provider setup. Import file-by-file and adapt to match `supabase/functions/_shared/` patterns.
 
-4. **NEVER skip the cleanup step.** Lovable code with `any` types and missing null checks will break the strict TypeScript build.
+4. **NEVER connect Lovable to production Supabase.** Lovable's Supabase must be a completely separate project.
 
-5. **NEVER push directly to `main` or `preprod`.** Always go through: feature branch → `develop` → `preprod` → `main`.
+5. **NEVER skip the cleanup step.** Lovable code with `any` types and missing null checks will break the strict TypeScript build.
+
+6. **NEVER push directly to `main` or `preprod`.** Always go through: feature branch → `develop` → `preprod` → `main`.
+
+### Why merging from Lovable is dangerous
+
+Lovable regenerates `types.ts` from its own database snapshot, which is often stale. When it encounters type errors from missing tables/columns, it applies `(supabase as any).from(...)` casts across dozens of files. Merging these changes would:
+- Destroy type safety across ~25+ files
+- Hide real bugs (wrong column names silently return null)
+- Conflict with every future merge from the live repo
+
+The `pre-merge-commit` hook (installed automatically via `npm install`) prevents this. Source: `scripts/hooks/pre-merge-commit`.
 
 ---
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -85,7 +85,7 @@ interface UserAddOn {
 }
 
 export default function Subscription() {
-  const { user } = useAuth();
+  const { user, userRoles } = useAuth();
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
@@ -152,7 +152,16 @@ export default function Subscription() {
 
   // Separate purchasable and non-purchasable plans
   const purchasablePlans = plans?.filter((p) => p.is_purchasable !== false) || [];
-  const specialPlans = plans?.filter((p) => p.is_purchasable === false) || [];
+  const allSpecialPlans = plans?.filter((p) => p.is_purchasable === false) || [];
+
+  // Only show special plans to admins, or if the user is currently on a special plan
+  const isAdmin = userRoles.includes("admin");
+  const visibleSpecialPlans = useMemo(() => {
+    if (isAdmin) return allSpecialPlans;
+    // Non-admins only see the special plan they're currently on
+    if (!profile?.plan_id) return [];
+    return allSpecialPlans.filter((p) => p.id === profile.plan_id);
+  }, [isAdmin, allSpecialPlans, profile?.plan_id]);
 
   const { data: usageData } = useQuery({
     queryKey: ["usage-tracking", user?.id],
@@ -635,8 +644,8 @@ export default function Subscription() {
         })}
       </div>
 
-      {/* Special Plans (Non-purchasable - FYI only) */}
-      {specialPlans.length > 0 && (
+      {/* Special Plans (Non-purchasable - visible to admins or users on a special plan) */}
+      {visibleSpecialPlans.length > 0 && (
         <>
           <Separator className="my-8" />
           <div>
@@ -646,7 +655,7 @@ export default function Subscription() {
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            {specialPlans.map((plan) => {
+            {visibleSpecialPlans.map((plan) => {
               const isCurrent = plan.id === profile?.plan_id;
 
               return (
