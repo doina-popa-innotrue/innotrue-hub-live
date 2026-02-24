@@ -91,6 +91,9 @@ export default function ClientDetail() {
   const [savingGoogleDrive, setSavingGoogleDrive] = useState(false);
   const [statusMarker, setStatusMarker] = useState<string | null>(null);
   const [statusMarkers, setStatusMarkers] = useState<{ id: string; name: string }[]>([]);
+  const [enrollmentProgress, setEnrollmentProgress] = useState<
+    Record<string, { completed: number; inProgress: number; total: number }>
+  >({});
   const { progress: talentLmsProgress, syncing, syncProgress, refetch } = useTalentLmsProgress(id);
 
   useEffect(() => {
@@ -288,6 +291,58 @@ export default function ClientDetail() {
     }
     fetchCohorts();
   }, [selectedProgram]);
+
+  // Batch-fetch module progress for all enrollments (at-a-glance progress bars)
+  useEffect(() => {
+    async function fetchEnrollmentProgress() {
+      if (enrollments.length === 0) {
+        setEnrollmentProgress({});
+        return;
+      }
+
+      const enrollmentIds = enrollments.map((e) => e.id);
+      const programIds = [...new Set(enrollments.map((e) => e.program_id || e.programs?.id))].filter(Boolean);
+
+      const [progressResult, modulesResult] = await Promise.all([
+        supabase
+          .from("module_progress")
+          .select("enrollment_id, status")
+          .in("enrollment_id", enrollmentIds),
+        supabase
+          .from("program_modules")
+          .select("program_id, id")
+          .in("program_id", programIds),
+      ]);
+
+      // Count modules per program
+      const modulesPerProgram: Record<string, number> = {};
+      (modulesResult.data || []).forEach((m) => {
+        modulesPerProgram[m.program_id] = (modulesPerProgram[m.program_id] || 0) + 1;
+      });
+
+      // Aggregate progress per enrollment
+      const progressMap: Record<string, { completed: number; inProgress: number }> = {};
+      (progressResult.data || []).forEach((p) => {
+        if (!progressMap[p.enrollment_id]) {
+          progressMap[p.enrollment_id] = { completed: 0, inProgress: 0 };
+        }
+        if (p.status === "completed") progressMap[p.enrollment_id].completed++;
+        else if (p.status === "in_progress") progressMap[p.enrollment_id].inProgress++;
+      });
+
+      // Build final map with totals
+      const result: Record<string, { completed: number; inProgress: number; total: number }> = {};
+      enrollments.forEach((e) => {
+        const progId = e.program_id || e.programs?.id;
+        const total = modulesPerProgram[progId] || 0;
+        const prog = progressMap[e.id] || { completed: 0, inProgress: 0 };
+        result[e.id] = { ...prog, total };
+      });
+
+      setEnrollmentProgress(result);
+    }
+    fetchEnrollmentProgress();
+  }, [enrollments]);
 
   async function assignCoach() {
     if (!selectedCoach) return;
@@ -1146,6 +1201,27 @@ export default function ClientDetail() {
                         {enrollment.status}
                       </Badge>
                     </CardDescription>
+                    {enrollmentProgress[enrollment.id] && enrollmentProgress[enrollment.id].total > 0 && (
+                      <div className="mt-2 flex items-center gap-3">
+                        <Progress
+                          value={Math.round(
+                            (enrollmentProgress[enrollment.id].completed /
+                              enrollmentProgress[enrollment.id].total) *
+                              100,
+                          )}
+                          className="h-2 flex-1 max-w-[200px]"
+                        />
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {enrollmentProgress[enrollment.id].completed} of{" "}
+                          {enrollmentProgress[enrollment.id].total} modules completed
+                        </span>
+                        {enrollmentProgress[enrollment.id].inProgress > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            {enrollmentProgress[enrollment.id].inProgress} in progress
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2">
