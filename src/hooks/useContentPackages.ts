@@ -61,11 +61,11 @@ export function useContentPackages() {
       if (uploaderIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
-          .select("id, full_name, email")
+          .select("id, name, email")
           .in("id", uploaderIds);
 
         for (const p of profiles || []) {
-          uploaderNames.set(p.id, p.full_name || p.email || "Unknown");
+          uploaderNames.set(p.id, p.name || p.email || "Unknown");
         }
       }
 

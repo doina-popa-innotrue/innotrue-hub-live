@@ -27,7 +27,7 @@ export default function StudentDevelopmentProfile() {
         .select(
           `
           id, client_user_id,
-          profiles:client_user_id(full_name, avatar_url)
+          profiles:client_user_id(name, avatar_url)
         `,
         )
         .eq("id", enrollmentId)
@@ -67,7 +67,7 @@ export default function StudentDevelopmentProfile() {
 
   const clientUserId = enrollment.client_user_id;
   const clientName =
-    (enrollment.profiles as any)?.full_name || "Student";
+    (enrollment.profiles as any)?.name || "Student";
 
   return (
     <div className="space-y-6">

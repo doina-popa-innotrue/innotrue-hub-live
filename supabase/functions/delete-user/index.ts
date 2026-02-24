@@ -126,6 +126,9 @@ serve(async (req) => {
         throw disableError;
       }
 
+      // Belt+suspenders: also update profiles.is_disabled (trigger on auth.users handles this too)
+      await supabaseAdmin.from('profiles').update({ is_disabled: true }).eq('id', userId);
+
       console.log(`Successfully disabled user ${userId}`);
       return successResponse.ok({ success: true, message: 'User disabled successfully' }, cors);
     } else if (action === 'enable') {
@@ -140,6 +143,9 @@ serve(async (req) => {
         console.error('Error enabling user:', enableError);
         throw enableError;
       }
+
+      // Belt+suspenders: also update profiles.is_disabled (trigger on auth.users handles this too)
+      await supabaseAdmin.from('profiles').update({ is_disabled: false }).eq('id', userId);
 
       console.log(`Successfully enabled user ${userId}`);
       return successResponse.ok({ success: true, message: 'User enabled successfully' }, cors);

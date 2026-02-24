@@ -179,9 +179,10 @@ serve(async (req) => {
 
     // If email was updated, also update username in profiles and send notification
     if (newEmail) {
+      // Belt+suspenders: sync both username and email (trigger on auth.users handles email too)
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
-        .update({ username: newEmail })
+        .update({ username: newEmail, email: newEmail })
         .eq('id', userIdToUpdate);
 
       if (profileError) {

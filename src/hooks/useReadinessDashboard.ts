@@ -116,15 +116,28 @@ export function useReadinessDashboard() {
     queryFn: async (): Promise<ClientReadiness[]> => {
       if (!user) return [];
 
-      // 1. Get coach's assigned programs
-      const { data: assignments } = await supabase
-        .from("instructor_assignments")
-        .select("program_id")
-        .eq("user_id", user.id);
+      // 1. Get coach's/instructor's assigned programs (union of both roles)
+      const [{ data: instructorAssignments }, { data: coachAssignments }] =
+        await Promise.all([
+          supabase
+            .from("program_instructors")
+            .select("program_id")
+            .eq("instructor_id", user.id),
+          supabase
+            .from("program_coaches")
+            .select("program_id")
+            .eq("coach_id", user.id),
+        ]);
 
-      if (!assignments || assignments.length === 0) return [];
+      const allAssignments = [
+        ...(instructorAssignments || []),
+        ...(coachAssignments || []),
+      ];
+      if (allAssignments.length === 0) return [];
 
-      const programIds = assignments.map((a) => a.program_id);
+      const programIds = [
+        ...new Set(allAssignments.map((a) => a.program_id)),
+      ];
 
       // 2. Get all enrollments for these programs
       const { data: enrollments } = await supabase

@@ -45,9 +45,9 @@ async function fetchScenarioFeedback(userId: string): Promise<FeedbackItem[]> {
   if (evaluatorIds.length > 0) {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, full_name")
+      .select("id, name")
       .in("id", evaluatorIds);
-    profiles?.forEach((p) => profileMap.set(p.id, p.full_name || "Instructor"));
+    profiles?.forEach((p) => profileMap.set(p.id, p.name || "Instructor"));
   }
 
   return assignments
@@ -99,9 +99,9 @@ async function fetchModuleFeedback(userId: string): Promise<FeedbackItem[]> {
   if (coachIds.length > 0) {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, full_name")
+      .select("id, name")
       .in("id", coachIds);
-    profiles?.forEach((p) => profileMap.set(p.id, p.full_name || "Coach"));
+    profiles?.forEach((p) => profileMap.set(p.id, p.name || "Coach"));
   }
 
   return userFeedback.map((f) => ({
@@ -152,9 +152,9 @@ async function fetchAssignmentFeedback(userId: string): Promise<FeedbackItem[]> 
   if (scorerIds.length > 0) {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, full_name")
+      .select("id, name")
       .in("id", scorerIds);
-    profiles?.forEach((p) => profileMap.set(p.id, p.full_name || "Instructor"));
+    profiles?.forEach((p) => profileMap.set(p.id, p.name || "Instructor"));
   }
 
   return userAssignments
@@ -202,9 +202,9 @@ async function fetchGoalComments(userId: string): Promise<FeedbackItem[]> {
   if (commenterIds.length > 0) {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, full_name")
+      .select("id, name")
       .in("id", commenterIds);
-    profiles?.forEach((p) => profileMap.set(p.id, p.full_name || "Coach"));
+    profiles?.forEach((p) => profileMap.set(p.id, p.name || "Coach"));
   }
 
   return relevantComments.map((c) => ({

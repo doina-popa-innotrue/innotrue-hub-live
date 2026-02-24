@@ -383,7 +383,7 @@ async function handleInstallmentCheckoutCompleted(
     .from("payment_schedules")
     .insert({
       user_id: userId,
-      enrollment_id: null as unknown as string, // Will be linked after enrollment completes
+      enrollment_id: null, // Nullable — will be linked after enrollment completes
       stripe_subscription_id: subscriptionId,
       stripe_customer_id: stripeCustomerId,
       total_amount_cents: totalAmountCents || (installmentAmountCents * installmentCount),

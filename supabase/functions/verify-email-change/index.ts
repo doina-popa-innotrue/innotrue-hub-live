@@ -138,7 +138,13 @@ const handler = async (req: Request): Promise<Response> => {
     if (profile?.username === request.current_email) {
       await supabaseAdmin
         .from('profiles')
-        .update({ username: request.new_email })
+        .update({ username: request.new_email, email: request.new_email })
+        .eq('id', request.user_id);
+    } else {
+      // Belt+suspenders: always sync profiles.email (trigger on auth.users handles this too)
+      await supabaseAdmin
+        .from('profiles')
+        .update({ email: request.new_email })
         .eq('id', request.user_id);
     }
 

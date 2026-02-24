@@ -65,7 +65,7 @@ serve(async (req) => {
       ] = await Promise.all([
         supabase.from("features").select("id, key, name, is_consumable, is_system, is_active"),
         supabase.from("plans").select("id, key, name, display_name, tier_level"),
-        supabase.from("program_plans").select("id, name, display_name, program:programs(name)"),
+        supabase.from("program_plans").select("id, name, display_name"),
         supabase.from("tracks").select("id, key, name, display_name"),
         supabase.from("add_ons").select("id, key, name, display_name, is_active"),
         supabase.from("plan_features").select("plan_id, feature_id, enabled, limit_value"),

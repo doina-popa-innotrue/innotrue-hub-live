@@ -60,21 +60,21 @@ serve(async (req) => {
     if (action === 'all' || action === 'rollover') {
       console.log('Processing credit rollovers...');
       
-      // Get user and org subscriptions that support rollover
+      // Get users with active plans (individual subscriptions use profiles.plan_id)
       const { data: subscriptions, error: subError } = await supabase
-        .from('user_subscriptions')
+        .from('profiles')
         .select(`
-          user_id,
+          id,
           plan_id,
           plans:plan_id (
             name,
             credit_allowance
           )
         `)
-        .eq('status', 'active');
+        .not('plan_id', 'is', null);
 
       if (subError) {
-        console.error('Error fetching subscriptions for rollover:', subError);
+        console.error('Error fetching user plans for rollover:', subError);
         results.rollover = { success: false, error: subError.message };
       } else {
         let rolloversProcessed = 0;
@@ -86,31 +86,31 @@ serve(async (req) => {
 
           // Calculate max rollover (50% of monthly allowance by default)
           const maxRollover = Math.floor((plan.credit_allowance || 0) * 0.5);
-          
+
           if (maxRollover <= 0) continue;
 
           try {
             const { data: rolloverResult, error: rolloverError } = await supabase.rpc('process_credit_rollover', {
               p_owner_type: 'user',
-              p_owner_id: sub.user_id,
+              p_owner_id: sub.id,
               p_max_rollover: maxRollover,
             });
 
             if (rolloverError) {
-              console.error(`Rollover error for user ${sub.user_id}:`, rolloverError);
+              console.error(`Rollover error for user ${sub.id}:`, rolloverError);
             } else if (rolloverResult && rolloverResult > 0) {
-              console.log(`Rolled over ${rolloverResult} credits for user ${sub.user_id}`);
+              console.log(`Rolled over ${rolloverResult} credits for user ${sub.id}`);
               rolloversProcessed++;
               totalRolledOver += rolloverResult;
             }
           } catch (error: any) {
-            console.error(`Error processing rollover for user ${sub.user_id}:`, error);
+            console.error(`Error processing rollover for user ${sub.id}:`, error);
           }
         }
 
-        // Process org rollovers
+        // Process org rollovers (correct table: org_platform_subscriptions)
         const { data: orgSubs, error: orgSubError } = await supabase
-          .from('organization_subscriptions')
+          .from('org_platform_subscriptions')
           .select(`
             organization_id,
             plan_id,

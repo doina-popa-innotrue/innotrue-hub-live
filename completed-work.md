@@ -1,5 +1,58 @@
 # Completed Work — Detailed History
 
+## Schema Drift Fixes — All 3 Sprints (2026-03-24)
+
+Fixed all code-to-DB mismatches identified in the Schema Drift Audit (`docs/SCHEMA_DRIFT_AUDIT.md`). 18 files modified/created, 3 new migrations. `npm run verify` passed after each sprint.
+
+### Sprint 1 — CRITICAL: Profiles + DB Functions
+
+**Migration `20260324100000_profiles_email_and_disabled.sql`:**
+- Added `profiles.email` TEXT + `profiles.is_disabled` BOOLEAN columns
+- Backfilled from `auth.users` (email from `auth.users.email`, is_disabled from `banned_until`)
+- Created `sync_auth_to_profiles()` trigger on `auth.users` (auto-syncs email + ban changes)
+- Updated `handle_new_user()` to set `profiles.email` on signup
+- Fixed `create_notification()` — `full_name` → `name`
+
+**Migration `20260324100001_fix_session_and_staff_functions.sql`:**
+- Fixed `notify_session_participant_added()` — removed phantom `ms.coach_id`, uses `ms.instructor_id`
+- Fixed `staff_has_client_relationship()` — added `enrollment_module_staff` EXISTS check
+
+**Edge function belt+suspenders (3 files):**
+- `delete-user/index.ts` — updates `profiles.is_disabled` after ban/unban
+- `verify-email-change/index.ts` — updates `profiles.email` alongside username
+- `update-user-email/index.ts` — updates `profiles.email` alongside username
+
+**`full_name` → `name` fixes (4 frontend files):**
+- `PartnerCodesManagement.tsx` — interface, queries, display
+- `StudentDevelopmentProfile.tsx` — select + property access
+- `useFeedbackInbox.ts` — 4 fetch functions
+- `useContentPackages.ts` — select + property access
+
+### Sprint 2 — HIGH: Wrong Table Names + Phantom Tables
+
+| File | Fix |
+|------|-----|
+| `accept-org-invite/index.ts` | `user_organization_sharing_consent` → `organization_sharing_consent`, fixed columns |
+| `useReadinessDashboard.ts` | `instructor_assignments` → union of `program_instructors` + `program_coaches` |
+| `generate-reflection-prompt/index.ts` | `wheel_of_life_scores` → `wheel_of_life_snapshots`, restructured columns |
+| `credit-maintenance/index.ts` | `user_subscriptions` → `profiles`, `organization_subscriptions` → `org_platform_subscriptions` |
+| `stripe-webhook/index.ts` | `enrollment_id: null as unknown as string` → `null` (+ migration to make nullable) |
+| `check-org-seat-limits/index.ts` | Removed phantom `platform_tier_id` column |
+| `export-feature-config/index.ts` | Removed broken `program:programs(name)` FK join |
+
+**Migration `20260324100002_schema_drift_fixes.sql`:** Made `payment_schedules.enrollment_id` nullable.
+
+### Sprint 3 — MEDIUM: calendar-feed Full Rewrite
+
+**`calendar-feed/index.ts`** — complete rewrite of data-fetching section:
+- `client_sessions` (doesn't exist) → `module_session_participants` + `module_sessions`
+- `scheduled_at` → `session_date` everywhere
+- `group_members` (doesn't exist) → `group_memberships`
+- `full_name` → `name` in profile type/queries/access
+- Added cohort sessions (via `client_enrollments.cohort_id` → `cohort_sessions`)
+- Instructor names via batch `profiles` lookup (no FK from `module_sessions.instructor_id`)
+- Removed broken assignments section (`module_assignments` has no `due_date`/`client_id`)
+
 ## Remove Continuation Plan (2026-03-04)
 
 Removed the deprecated Continuation plan and all code remnants. The Continuation plan was an old concept where clients who finished a program were moved to a special tier-0 plan — replaced by Alumni Lifecycle (2B.1) where alumni is an enrollment-level state, not a plan change. 1 new migration, 1 deleted component, 6 modified files. `npm run verify` passed.

@@ -1,7 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { errorResponse, successResponse } from "../_shared/error-response.ts";
 
 function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
@@ -123,7 +122,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    let profile: { id: string; full_name: string | null; calendar_sync_enabled: boolean } | null = null;
+    let profile: { id: string; name: string | null; calendar_sync_enabled: boolean } | null = null;
 
     // New HMAC-signed URL format
     if (paramUserId && paramTimestamp && paramSignature && hmacSecret) {
@@ -149,7 +148,7 @@ serve(async (req) => {
       // Fetch profile by user ID
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, calendar_sync_enabled')
+        .select('id, name, calendar_sync_enabled')
         .eq('id', paramUserId)
         .single();
 
@@ -165,7 +164,7 @@ serve(async (req) => {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, calendar_sync_enabled')
+        .select('id, name, calendar_sync_enabled')
         .eq('calendar_token', legacyToken)
         .single();
 
@@ -182,112 +181,143 @@ serve(async (req) => {
     }
 
     const currentUserId = profile.id;
-    const userName = profile.full_name || 'User';
+    const userName = profile.name || 'User';
 
-    // Fetch events from various sources
-    const [sessionsResult, groupSessionsResult, assignmentsResult] = await Promise.all([
-      // Individual sessions
+    const now = new Date().toISOString();
+
+    // Step 1: Get user context — session participations, group memberships, cohort enrollments
+    const [participationsResult, groupMembershipsResult, enrollmentsResult] = await Promise.all([
       supabase
-        .from('client_sessions')
-        .select(`
-          id, 
-          scheduled_at, 
-          duration_minutes,
-          session_types (name),
-          instructor:profiles!client_sessions_instructor_id_fkey (full_name)
-        `)
-        .eq('client_id', currentUserId)
-        .gte('scheduled_at', new Date().toISOString())
-        .order('scheduled_at'),
-      
-      // Group sessions
+        .from('module_session_participants')
+        .select('session_id')
+        .eq('user_id', currentUserId),
       supabase
-        .from('group_sessions')
-        .select(`
-          id,
-          scheduled_at,
-          duration_minutes,
-          title,
-          groups!inner (
-            id,
-            name,
-            group_members!inner (user_id)
-          )
-        `)
-        .eq('groups.group_members.user_id', currentUserId)
-        .gte('scheduled_at', new Date().toISOString()),
-      
-      // Assignment due dates
+        .from('group_memberships')
+        .select('group_id')
+        .eq('user_id', currentUserId)
+        .eq('status', 'active'),
       supabase
-        .from('module_assignments')
-        .select(`
-          id,
-          due_date,
-          module_assignment_types (name),
-          modules (title)
-        `)
-        .eq('client_id', currentUserId)
-        .not('due_date', 'is', null)
-        .gte('due_date', new Date().toISOString()),
+        .from('client_enrollments')
+        .select('cohort_id')
+        .eq('client_user_id', currentUserId)
+        .not('cohort_id', 'is', null)
+        .in('status', ['active', 'enrolled']),
     ]);
 
-    // Build iCal content
+    const sessionIds = participationsResult.data?.map((p) => p.session_id) || [];
+    const groupIds = groupMembershipsResult.data?.map((g) => g.group_id) || [];
+    const cohortIds = enrollmentsResult.data?.map((e) => e.cohort_id!).filter(Boolean) || [];
+
+    // Step 2: Fetch actual sessions from all three session tables
+    const [moduleSessionsResult, groupSessionsResult, cohortSessionsResult] = await Promise.all([
+      // Module sessions (1:1 coaching + group module sessions)
+      sessionIds.length > 0
+        ? supabase
+            .from('module_sessions')
+            .select('id, session_date, duration_minutes, title, session_type, instructor_id, status')
+            .in('id', sessionIds)
+            .not('session_date', 'is', null)
+            .gte('session_date', now)
+            .neq('status', 'cancelled')
+        : Promise.resolve({ data: [] as any[] }),
+
+      // Group sessions (peer groups, study groups)
+      groupIds.length > 0
+        ? supabase
+            .from('group_sessions')
+            .select('id, session_date, duration_minutes, title, group_id, groups(name)')
+            .in('group_id', groupIds)
+            .gte('session_date', now)
+            .neq('status', 'cancelled')
+        : Promise.resolve({ data: [] as any[] }),
+
+      // Cohort sessions (cohort-level scheduled sessions)
+      cohortIds.length > 0
+        ? supabase
+            .from('cohort_sessions')
+            .select('id, session_date, title, description, instructor_id, cohort:program_cohorts(name)')
+            .in('cohort_id', cohortIds)
+            .gte('session_date', now)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+
+    // Step 3: Batch-fetch instructor names for module + cohort sessions
+    const instructorIds = new Set<string>();
+    for (const s of moduleSessionsResult.data || []) {
+      if (s.instructor_id) instructorIds.add(s.instructor_id);
+    }
+    for (const s of cohortSessionsResult.data || []) {
+      if (s.instructor_id) instructorIds.add(s.instructor_id);
+    }
+
+    const instructorMap = new Map<string, string>();
+    if (instructorIds.size > 0) {
+      const { data: instructors } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .in('id', [...instructorIds]);
+      for (const p of instructors || []) {
+        instructorMap.set(p.id, p.name || 'Instructor');
+      }
+    }
+
+    // Build iCal events
     const events: string[] = [];
 
-    // Add individual sessions
-    if (sessionsResult.data) {
-      for (const session of sessionsResult.data) {
-        const start = new Date(session.scheduled_at);
-        const end = new Date(start.getTime() + (session.duration_minutes || 60) * 60000);
-        
-        const sessionType = (session.session_types as any)?.name || 'Session';
-        const instructor = (session.instructor as any)?.full_name || 'Instructor';
-        
-        events.push(createEvent({
-          uid: `session-${session.id}@innotruehub`,
-          summary: `${sessionType} with ${instructor}`,
-          start,
-          end,
-          description: `Your scheduled ${sessionType.toLowerCase()} session`,
-        }));
-      }
+    // Module sessions
+    for (const session of moduleSessionsResult.data || []) {
+      const start = new Date(session.session_date);
+      const end = new Date(start.getTime() + (session.duration_minutes || 60) * 60000);
+      const instructor = session.instructor_id
+        ? instructorMap.get(session.instructor_id) || 'Instructor'
+        : '';
+      const summary = instructor
+        ? `${session.title || session.session_type || 'Session'} with ${instructor}`
+        : session.title || session.session_type || 'Session';
+
+      events.push(createEvent({
+        uid: `module-session-${session.id}@innotruehub`,
+        summary,
+        start,
+        end,
+        description: `Your scheduled ${(session.session_type || 'coaching').toLowerCase()} session`,
+      }));
     }
 
-    // Add group sessions
-    if (groupSessionsResult.data) {
-      for (const session of groupSessionsResult.data) {
-        const start = new Date(session.scheduled_at);
-        const end = new Date(start.getTime() + (session.duration_minutes || 60) * 60000);
-        
-        const groupName = (session.groups as any)?.name || 'Group';
-        
-        events.push(createEvent({
-          uid: `group-session-${session.id}@innotruehub`,
-          summary: session.title || `${groupName} Session`,
-          start,
-          end,
-          description: `Group session for ${groupName}`,
-        }));
-      }
+    // Group sessions
+    for (const session of groupSessionsResult.data || []) {
+      const start = new Date(session.session_date);
+      const end = new Date(start.getTime() + (session.duration_minutes || 60) * 60000);
+      const groupName = (session.groups as any)?.name || 'Group';
+
+      events.push(createEvent({
+        uid: `group-session-${session.id}@innotruehub`,
+        summary: session.title || `${groupName} Session`,
+        start,
+        end,
+        description: `Group session for ${groupName}`,
+      }));
     }
 
-    // Add assignment due dates
-    if (assignmentsResult.data) {
-      for (const assignment of assignmentsResult.data) {
-        const dueDate = new Date(assignment.due_date!);
-        
-        const assignmentType = (assignment.module_assignment_types as any)?.name || 'Assignment';
-        const moduleName = (assignment.modules as any)?.title || 'Module';
-        
-        events.push(createEvent({
-          uid: `assignment-${assignment.id}@innotruehub`,
-          summary: `${assignmentType} Due: ${moduleName}`,
-          start: dueDate,
-          end: dueDate,
-          allDay: true,
-          description: `${assignmentType} due for ${moduleName}`,
-        }));
-      }
+    // Cohort sessions
+    for (const session of cohortSessionsResult.data || []) {
+      const start = new Date(session.session_date);
+      const end = new Date(start.getTime() + 90 * 60000);
+      const cohortName = (session.cohort as any)?.name || 'Cohort';
+      const instructor = session.instructor_id
+        ? instructorMap.get(session.instructor_id) || ''
+        : '';
+      const summary = instructor
+        ? `${session.title} with ${instructor}`
+        : session.title;
+
+      events.push(createEvent({
+        uid: `cohort-session-${session.id}@innotruehub`,
+        summary,
+        start,
+        end,
+        description: session.description || `Cohort session for ${cohortName}`,
+      }));
     }
 
     // Build complete iCal

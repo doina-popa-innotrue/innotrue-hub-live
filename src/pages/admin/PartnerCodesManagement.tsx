@@ -110,7 +110,7 @@ interface Cohort {
 
 interface Partner {
   user_id: string;
-  full_name: string | null;
+  name: string | null;
   email: string | null;
   role: string;
 }
@@ -173,13 +173,13 @@ export default function PartnerCodesManagement() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_roles")
-        .select("user_id, role, profiles:user_id(full_name, email)")
+        .select("user_id, role, profiles:user_id(name, email)")
         .in("role", ["coach", "instructor"])
         .order("role");
       if (error) throw error;
       return (data || []).map((r: any) => ({
         user_id: r.user_id,
-        full_name: r.profiles?.full_name || null,
+        name: r.profiles?.name || null,
         email: r.profiles?.email || null,
         role: r.role,
       })) as Partner[];
@@ -277,12 +277,12 @@ export default function PartnerCodesManagement() {
       if (!partnerIds.length) return {};
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, email")
+        .select("id, name, email")
         .in("id", partnerIds);
       if (error) throw error;
       const map: Record<string, { name: string; email: string }> = {};
       (data || []).forEach((p: any) => {
-        map[p.id] = { name: p.full_name || "Unknown", email: p.email || "" };
+        map[p.id] = { name: p.name || "Unknown", email: p.email || "" };
       });
       return map;
     },
@@ -542,7 +542,7 @@ export default function PartnerCodesManagement() {
                 <SelectContent>
                   {(partners || []).map((p) => (
                     <SelectItem key={p.user_id} value={p.user_id}>
-                      {p.full_name || p.email || p.user_id} ({p.role})
+                      {p.name || p.email || p.user_id} ({p.role})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -609,7 +609,7 @@ export default function PartnerCodesManagement() {
             <SelectItem value="">All partners</SelectItem>
             {(partners || []).map((p) => (
               <SelectItem key={p.user_id} value={p.user_id}>
-                {p.full_name || p.email || p.user_id}
+                {p.name || p.email || p.user_id}
               </SelectItem>
             ))}
           </SelectContent>
@@ -786,7 +786,7 @@ export default function PartnerCodesManagement() {
                 <SelectContent>
                   {(partners || []).map((p) => (
                     <SelectItem key={p.user_id} value={p.user_id}>
-                      {p.full_name || p.email || p.user_id} ({p.role})
+                      {p.name || p.email || p.user_id} ({p.role})
                     </SelectItem>
                   ))}
                 </SelectContent>

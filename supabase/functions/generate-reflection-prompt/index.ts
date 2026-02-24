@@ -126,13 +126,14 @@ serve(async (req) => {
       .order('created_at', { ascending: false })
       .limit(3);
 
-    // Latest wheel of life scores
-    const { data: wheelScores } = await supabase
-      .from('wheel_of_life_scores')
-      .select('domain, score')
+    // Latest wheel of life snapshot (structured columns, not key-value)
+    const { data: wheelSnapshot } = await supabase
+      .from('wheel_of_life_snapshots')
+      .select('health_fitness, career_business, finances, relationships, personal_growth, fun_recreation, physical_environment, family_friends, romance, contribution, created_at')
       .eq('user_id', user.id)
-      .order('assessed_at', { ascending: false })
-      .limit(10);
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     // Upcoming deadlines (next 14 days)
     const fourteenDaysFromNow = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
@@ -164,10 +165,18 @@ serve(async (req) => {
         content: truncateString(r.content, 200),
         created_at: r.created_at,
       })), 5),
-      wheelDomains: truncateArray((wheelScores || []).map(w => ({
-        name: w.domain,
-        score: w.score,
-      })), 10),
+      wheelDomains: wheelSnapshot ? [
+        { name: 'Health & Fitness', score: wheelSnapshot.health_fitness || 0 },
+        { name: 'Career & Business', score: wheelSnapshot.career_business || 0 },
+        { name: 'Finances', score: wheelSnapshot.finances || 0 },
+        { name: 'Relationships', score: wheelSnapshot.relationships || 0 },
+        { name: 'Personal Growth', score: wheelSnapshot.personal_growth || 0 },
+        { name: 'Fun & Recreation', score: wheelSnapshot.fun_recreation || 0 },
+        { name: 'Physical Environment', score: wheelSnapshot.physical_environment || 0 },
+        { name: 'Family & Friends', score: wheelSnapshot.family_friends || 0 },
+        { name: 'Romance', score: wheelSnapshot.romance || 0 },
+        { name: 'Contribution', score: wheelSnapshot.contribution || 0 },
+      ].filter(d => d.score > 0) : [],
       upcomingDeadlines: truncateArray((upcomingDeadlines || []).map(d => ({
         title: truncateString(d.title, 200),
         due_date: d.target_date || '',

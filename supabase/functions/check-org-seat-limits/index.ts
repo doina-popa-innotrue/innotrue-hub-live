@@ -44,8 +44,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from("organizations")
       .select(`
         id,
-        name,
-        platform_tier_id
+        name
       `)
       .eq("is_active", true);
 

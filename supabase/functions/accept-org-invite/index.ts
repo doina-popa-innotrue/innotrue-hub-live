@@ -122,19 +122,20 @@ serve(async (req) => {
     // Initialize organization sharing consent with conservative defaults
     // User starts with all sharing disabled - they can enable via settings
     const { error: consentError } = await supabaseClient
-      .from('user_organization_sharing_consent')
+      .from('organization_sharing_consent')
       .upsert({
         user_id: userData.user.id,
         organization_id: invite.organization_id,
-        share_profile: false,
-        share_enrollments: false,
+        share_goals: false,
+        share_decisions: false,
+        share_tasks: false,
         share_progress: false,
         share_assessments: false,
-        share_goals: false,
+        share_development_items: false,
+        share_assignments: false,
         consent_given_at: null, // Not consented yet - just initialized
       }, {
         onConflict: 'user_id,organization_id',
-        ignoreDuplicates: true, // Don't overwrite if already exists
       });
 
     if (consentError) {
