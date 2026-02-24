@@ -351,6 +351,10 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - `ProgramFeatureList` — "What's Included" card fetching `program_plan_features`. Integrated in ProgramDetail with resolved program_plan_id (enrollment → tier mapping → program default).
   - Subscription page enhanced with source context per feature.
 - **Git Hooks Infrastructure (2026-03-24):** Committed hooks in `scripts/hooks/`, auto-installed via `npm install` → `prepare` script → `scripts/setup-hooks.sh`. Two hooks: `pre-merge-commit` (blocks Lovable merges) and `post-checkout` (branch safety warning). Protects against Lovable's `as any` type pollution from its stale `types.ts` regeneration.
+- **Credit Top-Up Packages Admin UI (2026-03-24):** New admin page at `/admin/credit-topup-packages` with full CRUD. Previously packages could only be managed via seed.sql. Sidebar entry: "Credit Packages".
+- **Features Audit + admin_notes (2026-03-24):** Migration adds `admin_notes` column to `features` table. Marked `ai_coach`, `coach_dashboard`, `org_analytics` as system features. Populated admin_notes for all 34 features with operational context (gating, plan availability, integration details). Notes visible in Features Management admin page only.
+- **Credits Page — Show All Packages (2026-03-24):** Removed `LARGE_PACKAGE_THRESHOLD_CENTS` filter. All packages always visible to users.
+- **Migration Push Protocol (2026-03-24):** Documented `npm run push:migrations` as the ONLY way to apply migrations. NEVER use the Supabase dashboard SQL editor (risks type drift). Script handles project linking across all 3 environments.
 - **Next steps:** 2B.5 Certification → 2B.10 Enrollment Duration → Phase 5 remaining (Wheel pipeline, bulk import) → Phase 3 AI
 
 ## npm Scripts

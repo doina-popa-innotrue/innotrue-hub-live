@@ -46,15 +46,23 @@ Schema changes MUST follow this process to prevent code/DB drift:
 
 1. **NEVER apply schema changes directly** to the Supabase dashboard SQL editor without also creating a migration file
 2. **Every schema change** (columns, constraints, indexes, RLS policies, functions) MUST have a migration in `supabase/migrations/`
-3. **After applying any migration** (`supabase db push`), ALWAYS regenerate types:
+3. **Push migrations using the migration script** (NOT `supabase db push` directly, NOT the Supabase dashboard SQL editor):
+   ```bash
+   npm run push:migrations                # Push to prod (default)
+   npm run push:migrations -- preprod     # Push to preprod only
+   npm run push:migrations -- all         # Push to all 3 envs (preprod → prod → sandbox)
+   npm run push:migrations -- --dry-run   # Preview pending migrations
+   ```
+   The script (`scripts/supabase-push.sh`) handles project linking, applies migrations, and restores the original project link. Using the Supabase dashboard SQL editor risks type drift.
+4. **After applying any migration**, ALWAYS regenerate types from preprod:
    ```
    npx supabase gen types typescript --project-id jtzcrirqflfnagceendt > src/integrations/supabase/types.ts
    ```
-4. **After regenerating types**, run `npm run verify` to catch any type mismatches between code and DB
-5. **Code that references DB columns** must match the generated types — never use column names that don't exist in `types.ts`
-6. Migration naming convention: `YYYYMMDDHHMMSS_descriptive_name.sql`
+5. **After regenerating types**, run `npm run verify` to catch any type mismatches between code and DB
+6. **Code that references DB columns** must match the generated types — never use column names that don't exist in `types.ts`
+7. Migration naming convention: `YYYYMMDDHHMMSS_descriptive_name.sql`
 
-Why: Schema drift causes silent failures (queries return empty results for non-existent columns) and Lovable build failures when it regenerates types from the live DB.
+Why: Schema drift causes silent failures (queries return empty results for non-existent columns) and Lovable build failures when it regenerates types from the live DB. The Supabase dashboard SQL editor is especially dangerous because it applies SQL without tracking in `supabase_migrations`, causing `db push` to skip or re-apply migrations.
 
 ## Frontend Standards
 - Use `@/` import alias for all imports
