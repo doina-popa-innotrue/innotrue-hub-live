@@ -156,7 +156,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - ~~**CT3b: Cross-Program Completion**~~ ✅ — `content_completions` table. `xapi-statements` writes completion on xAPI verb. `useCrossProgramCompletion` extended with 3rd data source. Client `ModuleDetail` auto-accepts completion from shared content. `CanonicalCodesManagement` now shows content packages tab.
 - **`canonical_code` override** — kept as manual override for different content that should count as equivalent.
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → 2B.5 Certification → 2B.10 Enrollment Duration → 2B.13 Credit Expiry Policy → 2B.11 Feature Loss Communication → 2B.12 Feature Gain Visibility → Phase 5 remaining → 3-AI/Engagement
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → ~~Enrollment Scale + Bulk Enrollment~~ ✅ → SC-1 Critical Indexes → SC-2 N+1 Rewrites → 2B.5 Certification → 2B.10 Enrollment Duration → SC-3 Pagination → Phase 5 remaining → SC-4 Organisation Audit → SC-5 Retention → 3-AI/Engagement
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
@@ -356,7 +356,115 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Credits Page — Show All Packages (2026-03-24):** Removed `LARGE_PACKAGE_THRESHOLD_CENTS` filter. All packages always visible to users.
 - **Migration Push Protocol (2026-03-24):** Documented `npm run push:migrations` as the ONLY way to apply migrations. NEVER use the Supabase dashboard SQL editor (risks type drift). Script handles project linking across all 3 environments.
 - **Feature Gating — 5 New System Features (2026-03-24):** Added `resource_library`, `feedback_reviews`, `development_profile`, `export_reports`, `certificates` as system features with admin_notes. Plan mappings: resource_library/feedback_reviews/export_reports → Base+; development_profile/certificates → Pro+. FeatureGate wrappers added to MyFeedback.tsx, MyResources.tsx, DevelopmentProfile.tsx. Sidebar entries updated with featureKey for lock icon gating. Migration: `20260324130000_add_new_gating_features.sql`.
-- **Next steps:** 2B.5 Certification → 2B.10 Enrollment Duration → Phase 5 remaining (Wheel pipeline, bulk import) → Phase 3 AI
+- **Enrollment Scale & Bulk Enrollment (2026-03-24):** Performance indexes migration (`20260324170000`) adds 8 critical indexes on `client_enrollments`, `program_instructors`, `program_coaches`, `module_progress`. EnrolmentsManagement fully rewritten with React Query, server-side pagination (25/page), server-side filters, progress column. New `BulkEnrollmentDialog` (4-step: program→clients→confirm→result) with `enroll_with_credits` RPC + `p_force=true`. ClientDetail enrollment cards now show inline progress bars (batch-queried module_progress).
+- **Scalability & Performance Audit (2026-03-24):** Comprehensive audit of all data-heavy areas. Full findings documented below in "Scalability Audit" section. Key patterns found: N+1 queries in 14+ admin pages, missing indexes on 6 critical tables, no server-side pagination on most admin list pages, unbounded summary queries loading entire tables client-side. Roadmap items SC-1 through SC-5 created.
+- **Next steps:** SC-1 Critical indexes → SC-2 N+1 rewrites → 2B.5 Certification → 2B.10 Enrollment Duration → SC-3 Pagination → Phase 5 remaining → SC-4 Organisation audit → Phase 3 AI
+
+## Scalability & Performance Audit (2026-03-24)
+
+Comprehensive audit of all data-heavy areas. Findings grouped by severity with roadmap items.
+
+### SC-1: Critical Missing Indexes (🔴 ~1 day)
+Database tables queried on hot paths with NO indexes on frequently-filtered columns.
+
+| Table | Missing Indexes | Used By |
+|-------|----------------|---------|
+| `module_assignments` | `module_progress_id`, `status`, `(status, updated_at)`, `scored_at` | Assignments.tsx, PendingAssignments.tsx |
+| `module_sessions` | `module_id`, `enrollment_id`, `session_date` | Calendar.tsx, ModuleSessionManager.tsx |
+| `module_instructors` | `(module_id, instructor_id)` composite for RLS | module_sessions RLS, module_progress RLS |
+| `module_coaches` | `(module_id, coach_id)` composite for RLS | module_sessions RLS, module_progress RLS |
+| `capability_assessments` | `is_active`, `program_id`, `slug` | Client assessment pages, RLS policies |
+| `assessment_responses` | `user_id`, `assessment_id` | MyAssessments.tsx |
+| `assessment_questions` | `assessment_id` | AssessmentBuilderDetail.tsx |
+| `module_progress` | `module_id`, composite `(enrollment_id, module_id)` | Progress queries, RLS policies |
+| `calcom_webhook_logs` | `created_at` | Cleanup queries |
+| `user_credit_transactions` | composite `(user_id, created_at DESC)` | Transaction history queries |
+
+**Already indexed (recent):** `client_enrollments` (8 indexes via `20260324170000`), `program_instructors`, `program_coaches`, `module_progress(enrollment_id)`.
+
+### SC-2: N+1 Query Rewrites (🔴 ~3-5 days)
+Pages that make O(N) database calls where N is the number of records. Must be rewritten with batch queries or JOINs.
+
+| Severity | Page | Pattern | Queries per N |
+|----------|------|---------|---------------|
+| **Critical** | `admin/StaffAssignments.tsx` | 4 nested loops (per instructor/coach × per program/module) | 4+ per staff member |
+| **Critical** | `admin/UsersManagement.tsx` | Per-user: roles + qualifications + prefs + email | 4 per user |
+| **Critical** | `admin/ClientsList.tsx` | Per-client: profile + client_profile + enrollment count + coach | 4 per client |
+| **Critical** | `admin/ProgramCompletions.tsx` | Sequential `for` loop (not even parallel) querying enrollments per user | 1 per user (serial!) |
+| **High** | `admin/CoachesList.tsx` | Per-coach: profile + plan + client count | 3 per coach |
+| **High** | `admin/InstructorsList.tsx` | Per-instructor: profile + plan + client count | 3 per instructor |
+| **High** | `admin/ProgramsList.tsx` | Per-program: module count query | 1 per program |
+| **High** | `admin/AssessmentInterestRegistrations.tsx` | Per-registration: profile lookup | 1 per registration |
+| **High** | `admin/CapabilityAssessmentsManagement.tsx` | Downloads ALL snapshots to count client-side | Full table scan |
+| **High** | `client/ProgramDetail.tsx` | Per-module: module_progress query | 1 per module |
+| **High** | `client/ExplorePrograms.tsx` | Per-program: program_skills query for recommendations | 1 per program |
+| **High** | `client/CapabilityAssessments.tsx` | Per-snapshot: evaluator name lookup | 1 per snapshot |
+| **Medium** | `admin/GroupsManagement.tsx` | Per-group: member count query | 1 per group |
+| **Low** | `admin/AdminDashboard.tsx` | 4 loops of 5 items each for profile names | 20 total (bounded) |
+
+### SC-3: Server-Side Pagination Needed (🟠 ~3-5 days)
+Admin pages that load ALL records client-side with no `.range()` or `.limit()`.
+
+| Severity | Page | Current State | Fix |
+|----------|------|---------------|-----|
+| **High** | `admin/NotificationsManagement.tsx` | `.limit(500)`, no pagination controls | Server-side pagination like EnrolmentsManagement |
+| **High** | `admin/CapabilityAssessmentDetail.tsx` | Loads ALL snapshots (with ratings+notes) for an assessment | Paginate snapshot list |
+| **High** | `client/Calendar.tsx` | 6 sequential unbounded queries | Date-range bounded + parallel queries |
+| **High** | `client/Assignments.tsx` | Loads ALL assignments into memory | Server-side pagination + filters |
+| **High** | `admin/ConsumptionAnalytics.tsx` | Loads ALL credit transactions to sum client-side | Server-side aggregate RPC |
+| **Medium** | `admin/EmailQueueManagement.tsx` | `.limit(200)`, no pagination controls | Add pagination |
+| **Medium** | `instructor/PendingAssignments.tsx` | Pending tab has no limit | Add limit + pagination |
+| **Medium** | `admin/DataCleanupManager.tsx` | Loads ALL session_ids + categories to count client-side | Server-side COUNT aggregate |
+
+**Already paginated (model to follow):** `EnrolmentsManagement.tsx` (React Query + `.range()` + count queries).
+
+### SC-4: Organisation Functionality Audit (🟡 Future — mark for assessment)
+Organisation-related tables and pages will grow significantly as org billing, multi-tenant features, and enterprise clients scale. **Not yet audited.** Items to assess in future:
+
+- `organizations`, `organization_members`, `organization_invitations` — membership queries, admin detail pages
+- `org_credit_packages`, `org_credit_purchases` — org billing, bulk credit management
+- `organization_subscriptions` — org-level subscription management
+- `OrganizationsManagement.tsx`, `OrganizationDetail.tsx` — N+1 patterns already detected in OrganizationDetail
+- Organisation-sponsored features (`fetchOrgSponsoredFeatures` in useEntitlements) — scales with org member count
+- Multi-org support — cross-org queries, org switching
+
+### SC-5: Retention & Cleanup Policies (🟡 ~1 day)
+Append-only tables that grow indefinitely without cleanup.
+
+| Table | Current State | Risk |
+|-------|---------------|------|
+| `admin_audit_logs` | No cleanup. Well-indexed. | Medium — compliance may require keeping, but needs archival strategy |
+| `coach_access_logs` | No cleanup. Well-indexed. | Medium — every coach page view generates a row |
+| `calcom_webhook_logs` | Manual cleanup UI only. Missing `created_at` index. | Medium |
+| `credit_consumption_log` | No cleanup. Well-indexed. | Low — bounded by credit usage |
+| `analytics_events` | Manual cleanup only. No automated cron. | Medium — grows with every page view |
+| `notifications` | ✅ Has `cleanup_old_notifications()` + edge function + configurable retention. **Verify daily cron is active.** | Low if cron verified |
+
+### SC-6: RLS Policy Performance (🟡 Medium priority)
+Complex RLS policies that may slow down as data grows.
+
+| Policy | Concern |
+|--------|---------|
+| `is_session_instructor_or_coach()` on `sessions` | 5-way UNION called per-row. Expensive with many sessions. |
+| `module_progress` SELECT policy | 6 OR branches with correlated EXISTS subqueries per-row |
+| `user_has_feature()` | 4-way UNION ALL across 8 tables. Called per-row on `capability_assessments`. |
+| `module_assignments` | **May lack RLS entirely** — no policies found in migrations. Security + performance concern. |
+
+### SC-7: Search Performance (🟢 Low priority, future)
+All search uses `ilike '%term%'` (leading wildcard = sequential scan). At thousands of records, consider adding GIN trigram indexes on `profiles.name`, `notifications.title`, and other frequently-searched text columns.
+
+### Positive Findings (well-designed areas)
+- ✅ `EnrolmentsManagement.tsx` — model for server-side pagination (React Query + `.range()` + parallel count queries)
+- ✅ `useCreditBatches.ts` — uses server-side RPC for summary calculation
+- ✅ `useNotifications.ts` — `.limit(50)` + realtime subscription
+- ✅ `UserBehaviorAnalytics.tsx` — server-side aggregation RPC
+- ✅ `notifications` table — composite + partial indexes, retention policy with cleanup function
+- ✅ Credit tables — comprehensive index coverage (9+ indexes)
+- ✅ Session tables — good index coverage on `sessions`, `session_participants`, `group_sessions`, `cohort_sessions`
+- ✅ `client_enrollments` — 8 indexes (added 2026-03-24)
+
+### Roadmap Priority Order
+**SC-1** (indexes, ~1 day) → **SC-2** (N+1 rewrites, ~3-5 days) → **SC-3** (pagination, ~3-5 days) → **SC-5** (retention, ~1 day) → **SC-6** (RLS, ~1-2 days) → **SC-4** (org audit, future) → **SC-7** (search, future)
 
 ## npm Scripts
 ```
