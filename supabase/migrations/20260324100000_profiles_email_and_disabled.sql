@@ -76,7 +76,7 @@ CREATE OR REPLACE FUNCTION public.create_notification(
   p_user_id UUID,
   p_type_key TEXT,
   p_title TEXT,
-  p_message TEXT,
+  p_message TEXT DEFAULT NULL,
   p_link TEXT DEFAULT NULL,
   p_metadata JSONB DEFAULT '{}'::jsonb
 )

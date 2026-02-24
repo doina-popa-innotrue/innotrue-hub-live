@@ -9307,7 +9307,7 @@ export type Database = {
           credit_package_id: string | null
           credits_granted: number
           currency: string
-          enrollment_id: string
+          enrollment_id: string | null
           id: string
           installment_amount_cents: number
           installment_count: number
@@ -9330,7 +9330,7 @@ export type Database = {
           credit_package_id?: string | null
           credits_granted?: number
           currency?: string
-          enrollment_id: string
+          enrollment_id?: string | null
           id?: string
           installment_amount_cents: number
           installment_count: number
@@ -9353,7 +9353,7 @@ export type Database = {
           credit_package_id?: string | null
           credits_granted?: number
           currency?: string
-          enrollment_id?: string
+          enrollment_id?: string | null
           id?: string
           installment_amount_cents?: number
           installment_count?: number
@@ -9724,12 +9724,14 @@ export type Database = {
           desired_target_role: string | null
           desired_target_role_private: boolean
           education: Json | null
+          email: string | null
           external_credential_profiles: Json | null
           facebook_url: string | null
           future_vision: string | null
           future_vision_private: boolean
           id: string
           instagram_url: string | null
+          is_disabled: boolean
           is_hidden: boolean | null
           job_title: string | null
           linkedin_url: string | null
@@ -9763,12 +9765,14 @@ export type Database = {
           desired_target_role?: string | null
           desired_target_role_private?: boolean
           education?: Json | null
+          email?: string | null
           external_credential_profiles?: Json | null
           facebook_url?: string | null
           future_vision?: string | null
           future_vision_private?: boolean
           id: string
           instagram_url?: string | null
+          is_disabled?: boolean
           is_hidden?: boolean | null
           job_title?: string | null
           linkedin_url?: string | null
@@ -9802,12 +9806,14 @@ export type Database = {
           desired_target_role?: string | null
           desired_target_role_private?: boolean
           education?: Json | null
+          email?: string | null
           external_credential_profiles?: Json | null
           facebook_url?: string | null
           future_vision?: string | null
           future_vision_private?: boolean
           id?: string
           instagram_url?: string | null
+          is_disabled?: boolean
           is_hidden?: boolean | null
           job_title?: string | null
           linkedin_url?: string | null

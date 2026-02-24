@@ -2,7 +2,13 @@
 
 ## Schema Drift Fixes — All 3 Sprints (2026-03-24)
 
-Fixed all code-to-DB mismatches identified in the Schema Drift Audit (`docs/SCHEMA_DRIFT_AUDIT.md`). 18 files modified/created, 3 new migrations. `npm run verify` passed after each sprint.
+Fixed all code-to-DB mismatches identified in the Schema Drift Audit (`docs/SCHEMA_DRIFT_AUDIT.md`). 18 files modified/created, 4 migrations. `npm run verify` passed after each sprint. All migrations pushed to preprod, types.ts regenerated.
+
+### Post-Sprint: Deployment & Cron
+
+- All 4 migrations pushed to preprod (`jtzcrirqflfnagceendt`) successfully
+- `types.ts` regenerated from preprod — `profiles.email` and `profiles.is_disabled` now in generated types
+- **Migration `20260324100003_credit_expiry_cron.sql`:** Added `daily-credit-expiry` pg_cron job (2 AM UTC daily) calling `expire_credit_batches()`. Previously, batch expiration only happened lazily when users checked their credits — inactive users' batches could stay "active" past expiry.
 
 ### Sprint 1 — CRITICAL: Profiles + DB Functions
 

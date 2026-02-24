@@ -334,7 +334,8 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - ✅ Sprint 1 (CRITICAL): `profiles.email` + `profiles.is_disabled` columns added via migration + sync trigger, `full_name` → `name` in 5 files + 2 DB functions, `notify_session_participant_added` + `staff_has_client_relationship` fixed, 3 edge functions belt-and-suspenders
   - ✅ Sprint 2 (HIGH): 7 files fixed — phantom tables (`client_sessions`, `user_subscriptions`, `organization_subscriptions`, `wheel_of_life_scores`, `user_organization_sharing_consent`, `instructor_assignments`) replaced with correct tables, `payment_schedules.enrollment_id` made nullable, `platform_tier_id` phantom column removed
   - ✅ Sprint 3 (MEDIUM): `calendar-feed` fully rewritten — uses `module_session_participants` → `module_sessions`, `group_memberships` → `group_sessions`, `client_enrollments` → `cohort_sessions` (new), batch instructor name lookup, removed broken assignment section
-  - ⚠️ Remaining: Lovable type mismatch (resolves with `types.ts` push), `credit-maintenance` cron trigger (no scheduler configured)
+  - ✅ Types regenerated from preprod after migration push, `credit-maintenance` daily cron added (`daily-credit-expiry`, 2 AM UTC)
+  - ⚠️ Remaining: Lovable type mismatch — 20+ files use `as string` casts. Resolves when updated `types.ts` is pushed to Lovable. Not blocking.
 - **Next steps:** 2B.5 Certification → 2B.10 Enrollment Duration → 2B.13 Credit Expiry Policy Migration → 2B.11 Feature Loss Communication → Phase 5 remaining (Wheel pipeline, bulk import) → Phase 3 AI
 
 ## npm Scripts
