@@ -121,6 +121,7 @@ const OrganizationProgramsManagement = lazy(
 const OrganizationsManagement = lazy(() => import("./pages/admin/OrganizationsManagement"));
 const OrganizationDetail = lazy(() => import("./pages/admin/OrganizationDetail"));
 const NotificationsManagement = lazy(() => import("./pages/admin/NotificationsManagement"));
+const NotificationTypesManagement = lazy(() => import("./pages/admin/NotificationTypesManagement"));
 const AnnouncementsManagement = lazy(() => import("./pages/admin/AnnouncementsManagement"));
 const AnnouncementCategoriesManagement = lazy(
   () => import("./pages/admin/AnnouncementCategoriesManagement"),
@@ -1112,6 +1113,16 @@ const App = () => (
                       <ProtectedRoute requireRole="admin">
                         <DashboardLayout>
                           <NotificationsManagement />
+                        </DashboardLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/notification-types"
+                    element={
+                      <ProtectedRoute requireRole="admin">
+                        <DashboardLayout>
+                          <NotificationTypesManagement />
                         </DashboardLayout>
                       </ProtectedRoute>
                     }

@@ -516,6 +516,12 @@ export function AppSidebar() {
       tourId: "admin-notifications",
     },
     {
+      title: "Notification Types",
+      url: "/admin/notification-types",
+      icon: ListChecks,
+      tourId: "admin-notification-types",
+    },
+    {
       title: "Announcements",
       url: "/admin/announcements",
       icon: Megaphone,

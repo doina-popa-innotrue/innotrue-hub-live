@@ -7989,6 +7989,7 @@ export type Database = {
           icon: string | null
           id: string
           is_active: boolean | null
+          is_system: boolean
           key: string
           name: string
           order_index: number | null
@@ -8000,6 +8001,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_active?: boolean | null
+          is_system?: boolean
           key: string
           name: string
           order_index?: number | null
@@ -8011,6 +8013,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_active?: boolean | null
+          is_system?: boolean
           key?: string
           name?: string
           order_index?: number | null
@@ -8093,6 +8096,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_critical: boolean | null
+          is_system: boolean
           key: string
           name: string
           order_index: number | null
@@ -8109,6 +8113,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_critical?: boolean | null
+          is_system?: boolean
           key: string
           name: string
           order_index?: number | null
@@ -8125,6 +8130,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_critical?: boolean | null
+          is_system?: boolean
           key?: string
           name?: string
           order_index?: number | null
