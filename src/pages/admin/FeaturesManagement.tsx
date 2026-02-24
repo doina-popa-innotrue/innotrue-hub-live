@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { useToast } from "@/hooks/use-toast";
@@ -69,6 +70,7 @@ interface Feature {
   key: string;
   name: string;
   description: string | null;
+  admin_notes: string | null;
   is_consumable: boolean;
   is_system: boolean;
   category_id: string | null;
@@ -106,6 +108,7 @@ export default function FeaturesManagement() {
     key: "",
     name: "",
     description: "",
+    admin_notes: "",
     is_consumable: false,
     category_id: "" as string | null,
   });
@@ -295,7 +298,7 @@ export default function FeaturesManagement() {
   });
 
   const resetFeatureForm = () => {
-    setFeatureForm({ key: "", name: "", description: "", is_consumable: false, category_id: null });
+    setFeatureForm({ key: "", name: "", description: "", admin_notes: "", is_consumable: false, category_id: null });
   };
 
   const resetCategoryForm = () => {
@@ -309,6 +312,7 @@ export default function FeaturesManagement() {
         key: feature.key,
         name: feature.name,
         description: feature.description || "",
+        admin_notes: feature.admin_notes || "",
         is_consumable: feature.is_consumable,
         category_id: feature.category_id,
       });
@@ -583,6 +587,11 @@ export default function FeaturesManagement() {
                                   />
                                 ) : (
                                   "—"
+                                )}
+                                {feature.admin_notes && (
+                                  <p className="text-xs text-amber-600 mt-1 italic">
+                                    {feature.admin_notes}
+                                  </p>
                                 )}
                               </TableCell>
                               <TableCell className="text-right">
@@ -920,6 +929,20 @@ export default function FeaturesManagement() {
                   onChange={(value) => setFeatureForm({ ...featureForm, description: value })}
                   placeholder="Advanced decision-making tools and analytics"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Admin Notes</Label>
+                <Textarea
+                  value={featureForm.admin_notes}
+                  onChange={(e) => setFeatureForm({ ...featureForm, admin_notes: e.target.value })}
+                  placeholder="Internal notes: purpose, gating behavior, plan availability..."
+                  rows={3}
+                  className="text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Internal only — not visible to clients or staff. Documents purpose, gating, and configuration.
+                </p>
               </div>
 
               <div className="flex items-center space-x-2 pt-2">

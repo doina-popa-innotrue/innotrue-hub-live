@@ -18,8 +18,6 @@ import {
   Gift,
   CheckCircle,
   ShoppingCart,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import {
   RadioGroup,
@@ -52,8 +50,6 @@ interface PendingEnrollmentData {
   returnUrl?: string;
 }
 
-/** Threshold in cents above which packages are "large" and hidden by default */
-const LARGE_PACKAGE_THRESHOLD_CENTS = 150000; // EUR 1,500
 
 interface InstallmentOption {
   months: number;
@@ -82,7 +78,6 @@ export default function Credits() {
   const { summary: batchSummary, expiringBatches } = useCreditBatches();
 
   const [pendingEnrollment, setPendingEnrollment] = useState<PendingEnrollmentData | null>(null);
-  const [showAllPackages, setShowAllPackages] = useState(false);
   const [autoEnrolling, setAutoEnrolling] = useState(false);
   const [installmentOptions, setInstallmentOptions] = useState<InstallmentOption[]>([]);
   const [upfrontDiscountPercent, setUpfrontDiscountPercent] = useState(0);
@@ -138,27 +133,11 @@ export default function Credits() {
       if (pendingStr) {
         const data = JSON.parse(pendingStr) as PendingEnrollmentData;
         setPendingEnrollment(data);
-        // If there's a pending enrollment needing large packages, auto-show them
-        if (data.creditCost > 0) {
-          const availableCredits = summary?.available_credits ?? 0;
-          const shortfall = Math.max(0, data.creditCost - availableCredits);
-          // Show all packages if shortfall requires a large package
-          if (shortfall > 0) {
-            const needsLargePackage = !packages?.some(
-              (pkg) =>
-                pkg.credit_value >= shortfall &&
-                pkg.price_cents < LARGE_PACKAGE_THRESHOLD_CENTS,
-            );
-            if (needsLargePackage) {
-              setShowAllPackages(true);
-            }
-          }
-        }
       }
     } catch {
       // Ignore parse errors
     }
-  }, [summary?.available_credits, packages]);
+  }, []);
 
   // Handle return from Stripe checkout — confirm purchase then auto-enroll
   useEffect(() => {
@@ -231,26 +210,9 @@ export default function Credits() {
       }
     }
 
-    // Contextual display: hide large packages unless:
-    // 1. User explicitly expanded them
-    // 2. A pending enrollment needs them (auto-expanded in useEffect)
-    // 3. The recommended package is a large one
-    const visible = showAllPackages
-      ? sorted
-      : sorted.filter(
-          (pkg) =>
-            pkg.price_cents < LARGE_PACKAGE_THRESHOLD_CENTS || pkg.id === recId,
-        );
+    return { visiblePackages: sorted, recommendedPackageId: recId };
+  }, [packages, shortfall]);
 
-    return { visiblePackages: visible, recommendedPackageId: recId };
-  }, [packages, shortfall, showAllPackages]);
-
-  // Count hidden large packages
-  const hiddenCount = useMemo(() => {
-    if (!packages) return 0;
-    const totalCount = packages.length;
-    return totalCount - visiblePackages.length;
-  }, [packages, visiblePackages]);
 
   if (isLoading) {
     return (
@@ -606,47 +568,6 @@ export default function Credits() {
                 })}
               </div>
 
-              {/* Show/hide large packages toggle */}
-              {hiddenCount > 0 && (
-                <div className="text-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAllPackages(true)}
-                    className="text-muted-foreground"
-                  >
-                    <ChevronDown className="h-4 w-4 mr-1" />
-                    Show {hiddenCount} larger package{hiddenCount > 1 ? "s" : ""} (up to EUR
-                    8,500)
-                  </Button>
-                </div>
-              )}
-              {showAllPackages && hiddenCount === 0 && packages && packages.length > visiblePackages.length && (
-                <div className="text-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAllPackages(false)}
-                    className="text-muted-foreground"
-                  >
-                    <ChevronUp className="h-4 w-4 mr-1" />
-                    Show fewer packages
-                  </Button>
-                </div>
-              )}
-              {showAllPackages && !pendingEnrollment && (
-                <div className="text-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAllPackages(false)}
-                    className="text-muted-foreground"
-                  >
-                    <ChevronUp className="h-4 w-4 mr-1" />
-                    Show fewer packages
-                  </Button>
-                </div>
-              )}
             </>
           ) : (
             <p className="text-muted-foreground text-center py-8">

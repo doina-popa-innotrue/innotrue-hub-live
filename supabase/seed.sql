@@ -141,7 +141,8 @@ ON CONFLICT (key) DO NOTHING;
 -- Mark system features (protected from deletion/rename in admin UI)
 UPDATE public.features SET is_system = true WHERE key IN (
   'decision_toolkit_basic', 'decision_toolkit_advanced',
-  'ai_insights', 'ai_recommendations',
+  'ai_coach', 'ai_insights', 'ai_recommendations',
+  'coach_dashboard', 'org_analytics',
   'goals', 'groups', 'wheel_of_life', 'community',
   'assessments', 'learning_analytics', 'programs',
   'credits', 'skills_map', 'services', 'usage',

@@ -776,6 +776,12 @@ export function AppSidebar() {
       tourId: "admin-user-add-ons",
     },
     {
+      title: "Credit Packages",
+      url: "/admin/credit-topup-packages",
+      icon: Coins,
+      tourId: "admin-credit-packages",
+    },
+    {
       title: "Credit Services",
       url: "/admin/credit-services",
       icon: Coins,

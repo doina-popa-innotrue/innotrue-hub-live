@@ -52,6 +52,9 @@ const DecisionCapabilitiesManagement = lazy(
 );
 const AddOnsManagement = lazy(() => import("./pages/admin/AddOnsManagement"));
 const UserAddOnsManagement = lazy(() => import("./pages/admin/UserAddOnsManagement"));
+const CreditTopupPackagesManagement = lazy(
+  () => import("./pages/admin/CreditTopupPackagesManagement"),
+);
 const FeedbackTemplatesManagement = lazy(() => import("./pages/admin/FeedbackTemplatesManagement"));
 const SystemSettings = lazy(() => import("./pages/admin/SystemSettings"));
 const AccountDeletionRequests = lazy(() => import("./pages/admin/AccountDeletionRequests"));
@@ -643,6 +646,16 @@ const App = () => (
                       <ProtectedRoute requireRole="admin">
                         <DashboardLayout>
                           <UserAddOnsManagement />
+                        </DashboardLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/credit-topup-packages"
+                    element={
+                      <ProtectedRoute requireRole="admin">
+                        <DashboardLayout>
+                          <CreditTopupPackagesManagement />
                         </DashboardLayout>
                       </ProtectedRoute>
                     }

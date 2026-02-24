@@ -5023,6 +5023,7 @@ export type Database = {
       }
       features: {
         Row: {
+          admin_notes: string | null
           category_id: string | null
           created_at: string
           description: string | null
@@ -5035,6 +5036,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_notes?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -5047,6 +5049,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_notes?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
