@@ -156,7 +156,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - ~~**CT3b: Cross-Program Completion**~~ ✅ — `content_completions` table. `xapi-statements` writes completion on xAPI verb. `useCrossProgramCompletion` extended with 3rd data source. Client `ModuleDetail` auto-accepts completion from shared content. `CanonicalCodesManagement` now shows content packages tab.
 - **`canonical_code` override** — kept as manual override for different content that should count as equivalent.
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → ~~Enrollment Scale + Bulk Enrollment~~ ✅ → SC-1 Critical Indexes → SC-2 N+1 Rewrites → 2B.5 Certification → 2B.10 Enrollment Duration → SC-3 Pagination → Phase 5 remaining → SC-4 Organisation Audit → SC-5 Retention → 3-AI/Engagement
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → ~~Enrollment Scale + Bulk Enrollment~~ ✅ → ~~SC-1 Critical Indexes~~ ✅ → SC-2 N+1 Rewrites → 2B.5 Certification → 2B.10 Enrollment Duration → SC-3 Pagination → Phase 5 remaining → SC-4 Organisation Audit → SC-5 Retention → 3-AI/Engagement
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
@@ -358,14 +358,15 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Feature Gating — 5 New System Features (2026-03-24):** Added `resource_library`, `feedback_reviews`, `development_profile`, `export_reports`, `certificates` as system features with admin_notes. Plan mappings: resource_library/feedback_reviews/export_reports → Base+; development_profile/certificates → Pro+. FeatureGate wrappers added to MyFeedback.tsx, MyResources.tsx, DevelopmentProfile.tsx. Sidebar entries updated with featureKey for lock icon gating. Migration: `20260324130000_add_new_gating_features.sql`.
 - **Enrollment Scale & Bulk Enrollment (2026-03-24):** Performance indexes migration (`20260324170000`) adds 8 critical indexes on `client_enrollments`, `program_instructors`, `program_coaches`, `module_progress`. EnrolmentsManagement fully rewritten with React Query, server-side pagination (25/page), server-side filters, progress column. New `BulkEnrollmentDialog` (4-step: program→clients→confirm→result) with `enroll_with_credits` RPC + `p_force=true`. ClientDetail enrollment cards now show inline progress bars (batch-queried module_progress).
 - **Scalability & Performance Audit (2026-03-24):** Comprehensive audit of all data-heavy areas. Full findings documented below in "Scalability Audit" section. Key patterns found: N+1 queries in 14+ admin pages, missing indexes on 6 critical tables, no server-side pagination on most admin list pages, unbounded summary queries loading entire tables client-side. Roadmap items SC-1 through SC-5 created.
-- **Next steps:** SC-1 Critical indexes → SC-2 N+1 rewrites → 2B.5 Certification → 2B.10 Enrollment Duration → SC-3 Pagination → Phase 5 remaining → SC-4 Organisation audit → Phase 3 AI
+- **SC-1 Critical Missing Indexes (2026-03-24):** Migration `20260324180000_sc1_critical_missing_indexes.sql` adds 17 indexes across 8 tables: module_assignments (4), module_sessions (3), capability_assessments (3), assessment_responses (2), assessment_questions (1), module_progress (2), calcom_webhook_logs (1), user_credit_transactions (1 composite). Pushed to all 3 environments.
+- **Next steps:** SC-2 N+1 rewrites → 2B.5 Certification → 2B.10 Enrollment Duration → SC-3 Pagination → Phase 5 remaining → SC-4 Organisation audit → Phase 3 AI
 
 ## Scalability & Performance Audit (2026-03-24)
 
 Comprehensive audit of all data-heavy areas. Findings grouped by severity with roadmap items.
 
-### SC-1: Critical Missing Indexes (🔴 ~1 day)
-Database tables queried on hot paths with NO indexes on frequently-filtered columns.
+### ~~SC-1: Critical Missing Indexes~~ ✅ DONE (2026-03-24)
+17 indexes added via migration `20260324180000_sc1_critical_missing_indexes.sql`. Pushed to all 3 environments.
 
 | Table | Missing Indexes | Used By |
 |-------|----------------|---------|
