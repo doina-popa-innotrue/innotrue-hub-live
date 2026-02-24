@@ -355,6 +355,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Features Audit + admin_notes (2026-03-24):** Migration adds `admin_notes` column to `features` table. Marked `ai_coach`, `coach_dashboard`, `org_analytics` as system features. Populated admin_notes for all 34 features with operational context (gating, plan availability, integration details). Notes visible in Features Management admin page only.
 - **Credits Page — Show All Packages (2026-03-24):** Removed `LARGE_PACKAGE_THRESHOLD_CENTS` filter. All packages always visible to users.
 - **Migration Push Protocol (2026-03-24):** Documented `npm run push:migrations` as the ONLY way to apply migrations. NEVER use the Supabase dashboard SQL editor (risks type drift). Script handles project linking across all 3 environments.
+- **Feature Gating — 5 New System Features (2026-03-24):** Added `resource_library`, `feedback_reviews`, `development_profile`, `export_reports`, `certificates` as system features with admin_notes. Plan mappings: resource_library/feedback_reviews/export_reports → Base+; development_profile/certificates → Pro+. FeatureGate wrappers added to MyFeedback.tsx, MyResources.tsx, DevelopmentProfile.tsx. Sidebar entries updated with featureKey for lock icon gating. Migration: `20260324130000_add_new_gating_features.sql`.
 - **Next steps:** 2B.5 Certification → 2B.10 Enrollment Duration → Phase 5 remaining (Wheel pipeline, bulk import) → Phase 3 AI
 
 ## npm Scripts
