@@ -1847,6 +1847,14 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 | ~~Priority 0 — Development Profile (DP6-DP7)~~ | ~~2 phases~~ | ✅ DONE (2026-02-24) |
 | ~~Priority 0 — Content Delivery Tier 2~~ | ~~xAPI direct~~ | ✅ DONE (2026-02-22) |
 | ~~**Priority 0 — Content Delivery Tier 3 (CT3)**~~ ✅ | ~~Shared content packages + cross-program completion~~ | ~~HIGH~~ DONE |
+| ~~**Enrollment Scale & Bulk Enrollment**~~ ✅ | ~~Performance indexes, pagination, bulk enrollment dialog, inline progress~~ | ✅ DONE (2026-03-24) |
+| **Scalability Audit — SC-1 Critical Indexes** | 10 tables missing indexes on hot-path columns | 🔴 ~1 day |
+| **Scalability Audit — SC-2 N+1 Rewrites** | 14+ admin pages with O(N) DB calls per record | 🔴 ~3-5 days |
+| **Scalability Audit — SC-3 Pagination** | 8 admin/client pages loading all records client-side | 🟠 ~3-5 days |
+| **Scalability Audit — SC-4 Organisation Audit** | Org tables/pages not yet audited — mark for future | 🟡 Future |
+| **Scalability Audit — SC-5 Retention & Cleanup** | 5 append-only tables growing indefinitely | 🟡 ~1 day |
+| **Scalability Audit — SC-6 RLS Performance** | 4 complex per-row policies, 1 table may lack RLS | 🟡 ~1-2 days |
+| **Scalability Audit — SC-7 Search Performance** | All search uses ilike with leading wildcard | 🟢 Future |
 | Phase 1 — Onboarding/UX | 8 items | 2-3 weeks |
 | Phase 2 — Assessment Intelligence | 7 items | 3-4 weeks |
 | Phase 3 — AI & Engagement | 8 items | 3-4 weeks |
@@ -1874,8 +1882,15 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 14. ~~G8 Self-Enrollment Codes~~ ✅ DONE (2026-02-25) — `enrollment_codes` table, admin management page, public enrollment page, `redeem-enrollment-code` edge function
 15. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
 16. ~~Development Profile (DP6-DP7)~~ ✅ DONE (2026-02-24) — psychometric structured results (schema definition + score entry + profile card), readiness dashboard (coach view + client widget)
-17. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
-18. Remaining phases based on business priorities
+17. **SC-1 Critical Indexes** (~1 day) — 10 tables missing indexes on hot-path columns (module_assignments, module_sessions, capability_assessments, module_progress, etc.)
+18. **SC-2 N+1 Query Rewrites** (~3-5 days) — 14+ pages with O(N) DB calls: StaffAssignments (4 nested loops), UsersManagement/ClientsList (4 queries per record), ProgramCompletions (serial for loop), ProgramDetail (per-module progress), etc.
+19. 2B.5 Certification → 2B.10 Enrollment Duration
+20. **SC-3 Server-Side Pagination** (~3-5 days) — NotificationsManagement, Calendar, Assignments, ConsumptionAnalytics, CapabilityAssessmentDetail, etc.
+21. Phase 5 remaining (Wheel pipeline, bulk import)
+22. **SC-4 Organisation Functionality Audit** (future) — org tables/pages not yet audited, will grow with enterprise adoption
+23. **SC-5 Retention & Cleanup** (~1 day) — admin_audit_logs, coach_access_logs, analytics_events, calcom_webhook_logs
+24. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
+25. Remaining phases based on business priorities
 
 ### 11.8 New Data Tables Required by Roadmap
 
