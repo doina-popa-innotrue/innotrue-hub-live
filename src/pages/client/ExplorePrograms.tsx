@@ -45,6 +45,7 @@ import { PlanLockBadge } from "@/components/programs/PlanLockBadge";
 import { useExploreModuleCompletions } from "@/hooks/useExploreModuleCompletions";
 import { useProgramEnrollment } from "@/hooks/useProgramEnrollment";
 import { formatCredits, formatCreditsAsEur } from "@/hooks/useUserCredits";
+import { useCreditRatio } from "@/hooks/useCreditRatio";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface CrossProgramModule {
@@ -118,6 +119,7 @@ interface Instructor {
 
 export default function ExplorePrograms() {
   const { user } = useAuth();
+  const { creditRatio } = useCreditRatio();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
@@ -812,7 +814,7 @@ export default function ExplorePrograms() {
               </Badge>
             )}
             {program.credit_cost != null && program.credit_cost > 0 && !program.isEnrolled && (
-              <Badge variant="outline" className="text-xs" title={formatCreditsAsEur(program.credit_cost)}>
+              <Badge variant="outline" className="text-xs" title={formatCreditsAsEur(program.credit_cost, creditRatio)}>
                 <Coins className="h-3 w-3 mr-1" />
                 {formatCredits(program.credit_cost)} credits
               </Badge>

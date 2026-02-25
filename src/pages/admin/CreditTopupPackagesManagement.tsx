@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Coins, Star, Loader2 } from "lucide-react";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { useCreditRatio, formatRatioText } from "@/hooks/useCreditRatio";
 
 interface TopupPackage {
   id: string;
@@ -62,6 +63,7 @@ const defaultFormData = {
 
 export default function CreditTopupPackagesManagement() {
   const queryClient = useQueryClient();
+  const { creditRatio } = useCreditRatio();
   const [formData, setFormData] = useState(defaultFormData);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<TopupPackage | null>(null);
@@ -208,9 +210,8 @@ export default function CreditTopupPackagesManagement() {
   };
 
   const calculateBonus = (priceCents: number, credits: number) => {
-    // Base ratio is 2 credits per EUR (1 EUR = 200 cents = 2 credits)
-    const baseCredits = (priceCents / 100) * 2;
-    if (credits <= baseCredits) return null;
+    const baseCredits = (priceCents / 100) * creditRatio;
+    if (baseCredits === 0 || credits <= baseCredits) return null;
     const bonusPct = Math.round(((credits - baseCredits) / baseCredits) * 100);
     return bonusPct > 0 ? bonusPct : null;
   };
@@ -241,7 +242,7 @@ export default function CreditTopupPackagesManagement() {
           <CardTitle>Packages</CardTitle>
           <CardDescription>
             {packages?.length ?? 0} package{(packages?.length ?? 0) !== 1 ? "s" : ""} configured.
-            Base ratio: 1 EUR = 2 credits. Packages may include volume bonuses.
+            Base ratio: {formatRatioText(creditRatio)}. Packages may include volume bonuses.
           </CardDescription>
         </CardHeader>
         <CardContent>

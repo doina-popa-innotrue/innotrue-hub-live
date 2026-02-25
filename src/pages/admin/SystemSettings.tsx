@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AdminRefreshControl } from "@/components/admin/AdminRefreshControl";
+import { CreditScaleDialog } from "@/components/admin/CreditScaleDialog";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 interface SystemSetting {
   id: string;
@@ -27,6 +28,7 @@ interface SystemSetting {
 export default function SystemSettings() {
   const queryClient = useQueryClient();
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
+  const [scaleDialogOpen, setScaleDialogOpen] = useState(false);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["system-settings"],
@@ -111,6 +113,7 @@ export default function SystemSettings() {
       org_terms_retention_years: "Organization Terms Retention (Years)",
       global_email_mute: "Global Email Mute",
       purchased_credit_expiry_months: "Purchased Credit Expiry (Months)",
+      credit_to_eur_ratio: "Credit-to-EUR Ratio",
     };
     return labels[key] || key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   };
@@ -121,7 +124,8 @@ export default function SystemSettings() {
       key.includes("limit") ||
       key.includes("percent") ||
       key.includes("years") ||
-      key.includes("occurrences")
+      key.includes("occurrences") ||
+      key === "credit_to_eur_ratio"
     )
       return "number";
     return "text";
@@ -240,10 +244,38 @@ export default function SystemSettings() {
                   )}
                 </div>
                 )}
+
+                {/* Scale Credit Balances button for credit_to_eur_ratio */}
+                {setting.key === "credit_to_eur_ratio" && (
+                  <div className="mt-3 pt-3 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setScaleDialogOpen(true)}
+                      className="w-full"
+                    >
+                      Scale Credit Balances
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Proportionally adjust all credit balances when changing the ratio.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           );
         })}
+
+        {/* Credit Scale Dialog */}
+        <CreditScaleDialog
+          open={scaleDialogOpen}
+          onOpenChange={setScaleDialogOpen}
+          currentRatio={
+            parseFloat(
+              settings?.find((s) => s.key === "credit_to_eur_ratio")?.value || "2",
+            ) || 2
+          }
+        />
 
         {settings?.length === 0 && (
           <Card>

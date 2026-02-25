@@ -30,6 +30,7 @@ import { getTierDisplayName } from "@/lib/tierUtils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSupportEmail } from "@/hooks/useSupportEmail";
 import { formatCredits, formatCreditsAsEur } from "@/hooks/useUserCredits";
+import { useCreditRatio } from "@/hooks/useCreditRatio";
 interface ScheduledDate {
   id: string;
   date: string;
@@ -110,6 +111,7 @@ export function ExpressInterestDialog({
   discountValidationError,
   onClearDiscount,
 }: ExpressInterestDialogProps) {
+  const { creditRatio } = useCreditRatio();
   const hasScheduledDates = scheduledDates.length > 0;
   const hasTiers = availableTiers.length > 0;
   const [selection, setSelection] = useState<string>(
@@ -237,7 +239,7 @@ export function ExpressInterestDialog({
                               {formatCredits(tierCreditCosts[tier]!)} credits
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {formatCreditsAsEur(tierCreditCosts[tier]!)}
+                              {formatCreditsAsEur(tierCreditCosts[tier]!, creditRatio)}
                             </div>
                           </div>
                         )}

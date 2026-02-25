@@ -17,6 +17,7 @@ import { Loader2, Shield, Package, Gem, AlertTriangle, Coins, RotateCcw, CreditC
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useCreditRatio, formatRatioText } from "@/hooks/useCreditRatio";
 
 interface Plan {
   id: string;
@@ -56,6 +57,7 @@ export function ProgramPlanConfig({
   currentAllowRepeatEnrollment = false,
   onUpdate,
 }: ProgramPlanConfigProps) {
+  const { creditRatio } = useCreditRatio();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [programPlans, setProgramPlans] = useState<ProgramPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string>(currentPlanId || "none");
@@ -504,7 +506,7 @@ export function ProgramPlanConfig({
                 <Label className="text-sm font-medium">Tier Configuration</Label>
               </div>
               <p className="text-xs text-muted-foreground">
-                Assign program plans and set credit costs (pricing) for each tier. 2 credits = €1.
+                Assign program plans and set credit costs (pricing) for each tier. {formatRatioText(creditRatio)}.
               </p>
 
               <div className="space-y-4">
@@ -536,7 +538,7 @@ export function ProgramPlanConfig({
                           </Select>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Credit Cost (€)</Label>
+                          <Label className="text-xs text-muted-foreground">Credit Cost</Label>
                           <Input
                             type="number"
                             min="0"

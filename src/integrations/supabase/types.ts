@@ -14975,6 +14975,14 @@ export type Database = {
       process_monthly_credit_rollovers: { Args: never; Returns: Json }
       process_monthly_rollover: { Args: never; Returns: undefined }
       purge_expired_terms_acceptances: { Args: never; Returns: number }
+      scale_credit_batches: {
+        Args: {
+          p_admin_user_id: string
+          p_new_ratio: number
+          p_old_ratio: number
+        }
+        Returns: Json
+      }
       send_cohort_session_reminders: { Args: never; Returns: Json }
       staff_has_client_relationship: {
         Args: { _client_user_id: string; _staff_id: string }

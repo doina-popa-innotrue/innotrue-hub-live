@@ -31,6 +31,7 @@ import {
   calculatePackageBonus,
   formatCreditsAsEur,
 } from "@/hooks/useUserCredits";
+import { useCreditRatio, formatRatioText } from "@/hooks/useCreditRatio";
 import { useCreditBatches } from "@/hooks/useCreditBatches";
 import { CreditExpiryAlert } from "@/components/credits/CreditExpiryAlert";
 import { useProgramEnrollment } from "@/hooks/useProgramEnrollment";
@@ -71,6 +72,8 @@ export default function Credits() {
     confirmTopup,
     isConfirming,
   } = useUserCredits();
+
+  const { creditRatio } = useCreditRatio();
 
   const { resumePendingEnrollment, isEnrolling, checkPendingEnrollment } =
     useProgramEnrollment();
@@ -244,7 +247,7 @@ export default function Credits() {
           </h1>
           <p className="text-muted-foreground">
             Manage your credits and purchase top-ups
-            <span className="ml-2 text-xs">(2 credits = EUR 1)</span>
+            <span className="ml-2 text-xs">({formatRatioText(creditRatio)})</span>
           </p>
         </div>
         <Button variant="outline" onClick={() => navigate("/subscription")}>
@@ -267,11 +270,11 @@ export default function Credits() {
             <p>
               You need{" "}
               <strong>{formatCredits(pendingEnrollment.creditCost)} credits</strong>{" "}
-              ({formatCreditsAsEur(pendingEnrollment.creditCost)}) to enroll.
+              ({formatCreditsAsEur(pendingEnrollment.creditCost, creditRatio)}) to enroll.
               You currently have{" "}
               <strong>{formatCredits(availableCredits)}</strong> — you need{" "}
               <strong>{formatCredits(shortfall)} more credits</strong>{" "}
-              ({formatCreditsAsEur(shortfall)}).
+              ({formatCreditsAsEur(shortfall, creditRatio)}).
             </p>
             <p className="text-xs mt-1 text-muted-foreground">
               After purchasing, your enrollment will complete automatically.
@@ -319,7 +322,7 @@ export default function Credits() {
               {formatCredits(availableCredits)}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              {formatCreditsAsEur(availableCredits)} equivalent
+              {formatCreditsAsEur(availableCredits, creditRatio)} equivalent
             </div>
             {totalAllowance > 0 && (
               <div className="mt-2">
@@ -431,7 +434,7 @@ export default function Credits() {
           <CardDescription>
             Add more credits to your account for enrollments and premium features.
             All packages use a{" "}
-            <span className="font-medium">2 credits = EUR 1</span> ratio.
+            <span className="font-medium">{formatRatioText(creditRatio)}</span> ratio.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -439,7 +442,7 @@ export default function Credits() {
             <>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {visiblePackages.map((pkg) => {
-                  const bonus = calculatePackageBonus(pkg.price_cents, pkg.credit_value);
+                  const bonus = calculatePackageBonus(pkg.price_cents, pkg.credit_value, creditRatio);
                   const isRecommended = pkg.id === recommendedPackageId;
                   const coversEnrollment =
                     pendingEnrollment && pkg.credit_value + availableCredits >= pendingEnrollment.creditCost;
@@ -727,7 +730,7 @@ export default function Credits() {
         <CardContent className="space-y-4 text-sm text-muted-foreground">
           <p>
             Credits are the platform currency for enrollments, sessions, and premium features.
-            <strong> 2 credits = EUR 1</strong> — easy to convert mentally.
+            <strong> {formatRatioText(creditRatio)}</strong> — easy to convert mentally.
             You receive credits from your subscription plan, program enrollments, or by purchasing
             top-up packages.
           </p>
