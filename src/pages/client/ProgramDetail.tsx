@@ -350,73 +350,6 @@ export default function ProgramDetail() {
     fetchUpgradeRequest();
   }, [user, enrollment]);
 
-  // Helper to check if a module is accessible based on tier, plan, prerequisites, and time-gate
-  const isModuleAccessible = (module: Module): boolean => {
-    const programTiers = program?.tiers as string[] | undefined;
-    const isTierLocked = !hasTierAccess(programTiers, enrollment?.tier, module.tier_required);
-    const isModulePlanLocked = modulePlanAccessMap[module.id] === false;
-    const moduleTimeGated = isTimeGated(module);
-    const prereqsMet = arePrerequisitesMet(module);
-    return !isTierLocked && !isModulePlanLocked && !moduleTimeGated && prereqsMet;
-  };
-
-  // Calculate progress based on accessible modules only
-  const accessibleModules = modules.filter((m) => isModuleAccessible(m));
-  const accessibleCompletedCount = accessibleModules.filter(
-    (m) => m.progress?.status === "completed",
-  ).length;
-  const accessibleProgressPercentage =
-    accessibleModules.length > 0 ? (accessibleCompletedCount / accessibleModules.length) * 100 : 0;
-
-  // Total modules stats (for reference)
-  const totalCompletedCount = modules.filter((m) => m.progress?.status === "completed").length;
-  const lockedModulesCount = modules.length - accessibleModules.length;
-
-  // Filter modules for display
-  const displayedModules = showOnlyAccessible
-    ? modules.filter((m) => isModuleAccessible(m))
-    : modules;
-
-  // Handle tier upgrade request
-  const handleTierUpgradeRequest = async (selectedTier: string, reason: string) => {
-    if (!user || !enrollment) return;
-
-    setIsSubmittingUpgrade(true);
-    try {
-      const { error } = await supabase.from("tier_upgrade_requests").insert({
-        user_id: user.id,
-        enrollment_id: enrollment.id,
-        current_tier: enrollment.tier || "essentials",
-        requested_tier: selectedTier,
-        reason: reason || null,
-      });
-
-      if (error) throw error;
-
-      toast.success("Upgrade request submitted! An administrator will review your request.");
-      setShowUpgradeDialog(false);
-
-      // Refresh pending request
-      const { data } = await supabase
-        .from("tier_upgrade_requests")
-        .select("*")
-        .eq("enrollment_id", enrollment.id)
-        .eq("status", "pending")
-        .maybeSingle();
-
-      setPendingUpgradeRequest(data);
-    } catch (error: any) {
-      console.error("Error submitting upgrade request:", error);
-      if (error.code === "23505") {
-        toast.error("You already have a pending upgrade request for this program.");
-      } else {
-        toast.error("Failed to submit upgrade request. Please try again.");
-      }
-    } finally {
-      setIsSubmittingUpgrade(false);
-    }
-  };
-
   const getTalentLmsCourseId = (module: Module): string | null => {
     const talentLmsLink = module.links?.find((link) => link.type === "talentlms");
     if (!talentLmsLink) return null;
@@ -492,6 +425,73 @@ export default function ProgramDetail() {
       if (!latestDate || d > latestDate) latestDate = d;
     }
     return latestDate;
+  };
+
+  // Helper to check if a module is accessible based on tier, plan, prerequisites, and time-gate
+  const isModuleAccessible = (module: Module): boolean => {
+    const programTiers = program?.tiers as string[] | undefined;
+    const isTierLocked = !hasTierAccess(programTiers, enrollment?.tier, module.tier_required);
+    const isModulePlanLocked = modulePlanAccessMap[module.id] === false;
+    const moduleTimeGated = isTimeGated(module);
+    const prereqsMet = arePrerequisitesMet(module);
+    return !isTierLocked && !isModulePlanLocked && !moduleTimeGated && prereqsMet;
+  };
+
+  // Calculate progress based on accessible modules only
+  const accessibleModules = modules.filter((m) => isModuleAccessible(m));
+  const accessibleCompletedCount = accessibleModules.filter(
+    (m) => m.progress?.status === "completed",
+  ).length;
+  const accessibleProgressPercentage =
+    accessibleModules.length > 0 ? (accessibleCompletedCount / accessibleModules.length) * 100 : 0;
+
+  // Total modules stats (for reference)
+  const totalCompletedCount = modules.filter((m) => m.progress?.status === "completed").length;
+  const lockedModulesCount = modules.length - accessibleModules.length;
+
+  // Filter modules for display
+  const displayedModules = showOnlyAccessible
+    ? modules.filter((m) => isModuleAccessible(m))
+    : modules;
+
+  // Handle tier upgrade request
+  const handleTierUpgradeRequest = async (selectedTier: string, reason: string) => {
+    if (!user || !enrollment) return;
+
+    setIsSubmittingUpgrade(true);
+    try {
+      const { error } = await supabase.from("tier_upgrade_requests").insert({
+        user_id: user.id,
+        enrollment_id: enrollment.id,
+        current_tier: enrollment.tier || "essentials",
+        requested_tier: selectedTier,
+        reason: reason || null,
+      });
+
+      if (error) throw error;
+
+      toast.success("Upgrade request submitted! An administrator will review your request.");
+      setShowUpgradeDialog(false);
+
+      // Refresh pending request
+      const { data } = await supabase
+        .from("tier_upgrade_requests")
+        .select("*")
+        .eq("enrollment_id", enrollment.id)
+        .eq("status", "pending")
+        .maybeSingle();
+
+      setPendingUpgradeRequest(data);
+    } catch (error: any) {
+      console.error("Error submitting upgrade request:", error);
+      if (error.code === "23505") {
+        toast.error("You already have a pending upgrade request for this program.");
+      } else {
+        toast.error("Failed to submit upgrade request. Please try again.");
+      }
+    } finally {
+      setIsSubmittingUpgrade(false);
+    }
   };
 
   if (loading) return <PageLoadingState message="Loading program..." />;
