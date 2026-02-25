@@ -1,5 +1,149 @@
 # Completed Work — Detailed History
 
+## Configurable Credit-to-EUR Ratio + Scaling Tool (2026-03-25)
+
+Made the hardcoded 2:1 credit-to-EUR ratio configurable via `system_settings.credit_to_eur_ratio`. Added admin scaling tool to proportionally adjust all credit balances when the ratio changes. 3 new files, 7 modified files, 2 migrations. `npm run verify` passed. Deployed to all environments.
+
+### Migration: `20260325120000_configurable_credit_ratio.sql`
+
+**Setting insert:**
+- `credit_to_eur_ratio` = '2' in `system_settings` with description
+
+**`scale_credit_batches` RPC (SECURITY DEFINER):**
+- Accepts: `p_old_ratio NUMERIC`, `p_new_ratio NUMERIC`, `p_admin_user_id UUID`
+- Calculates `scale_factor = new_ratio / old_ratio`
+- Scales with `CEIL` rounding (fair to users):
+  - `credit_batches` where `remaining_amount > 0 AND is_expired = false` (both `remaining_amount` and `original_amount`)
+  - `credit_topup_packages.credit_value` (active packages)
+  - `org_credit_packages.credit_value` (active packages)
+  - `plans.credit_allowance` (where > 0)
+  - `program_plans.credit_allowance` (where > 0)
+  - `program_tier_plans.credit_cost` (where > 0)
+- Updates `system_settings` value to new ratio
+- Inserts audit log into `admin_audit_logs`
+- Returns `{ success, batches_affected, total_old_credits, total_new_credits, scale_factor }`
+- Uses `FOR UPDATE` row locking for atomicity
+
+### New Hook: `src/hooks/useCreditRatio.ts`
+- `useCreditRatio()` — React Query hook reading `credit_to_eur_ratio` from `system_settings` (5-min staleTime)
+- `creditsToEur(credits, ratio)` — pure function with default fallback
+- `formatCreditsAsEur(credits, ratio)` — formatted EUR string
+- `calculatePackageBonus(priceCents, creditValue, ratio)` — bonus percentage calculation
+- `formatRatioText(ratio)` — returns "2 credits = EUR 1" dynamically
+
+### New Component: `src/components/admin/CreditScaleDialog.tsx`
+- 3-step admin dialog (configure → confirm → result) following `BulkCreditGrantDialog` pattern
+- Step 1: current ratio, new ratio input, preview with scale factor and examples
+- Step 2: destructive warning listing all affected entities, type "SCALE" to confirm
+- Step 3: shows batches_affected, total_old/new_credits, scale_factor
+- Calls `supabase.rpc("scale_credit_batches", ...)` and invalidates all credit-related React Query keys
+
+### Updated Consuming Components (5 files)
+- `Credits.tsx` — 3× "2 credits = EUR 1" → `formatRatioText(creditRatio)`, `creditRatio` passed to utility functions
+- `CreditTopupPackagesManagement.tsx` — `calculateBonus` uses `creditRatio` instead of `* 2`, description text dynamic
+- `ProgramPlanConfig.tsx` — help text uses `formatRatioText(creditRatio)`
+- `ExplorePrograms.tsx` — `creditRatio` passed to `formatCreditsAsEur()`
+- `ExpressInterestDialog.tsx` — `creditRatio` passed to `formatCreditsAsEur()`
+
+### Updated: `src/hooks/useUserCredits.ts`
+- Removed 3 hardcoded utility functions (`calculatePackageBonus`, `creditsToEur`, `formatCreditsAsEur`)
+- Re-exported from `useCreditRatio.ts` for backward compatibility
+
+### Updated: `src/pages/admin/SystemSettings.tsx`
+- Added "Credit-to-EUR Ratio" label, number input type
+- Added "Scale Credit Balances" button below ratio setting
+- Renders `CreditScaleDialog` with current ratio
+
+### System Settings RLS Whitelist: `20260325140000_public_system_settings_whitelist.sql`
+- `useCreditRatio()` hook queries `system_settings` from client-facing pages
+- Non-admin users were blocked by admin-only RLS → API errors (silent fallback to default)
+- Whitelist RLS policy allows authenticated users to SELECT only `credit_to_eur_ratio` and `support_email`
+- All other system_settings keys remain admin-only
+
+---
+
+## 2B.5 Certification — Auto-Badge, Verification & PDF Certificates (2026-03-25)
+
+Complete certification system with automatic badge creation on program completion, public verification page, and downloadable PDF certificates. 1 migration, 2 new edge functions, 1 new page, multiple modified files. `npm run verify` passed. Deployed to all environments.
+
+### Migration: `20260325100000_certification_auto_badge.sql`
+- `client_badges.expires_at` TIMESTAMPTZ column
+- `program_badges.renewal_period_months` INTEGER column
+- 3 indexes: `client_badges(user_id, badge_id)`, `client_badges(status)`, `client_badges(expires_at)`
+- 3 notification types: `badge_pending_approval`, `badge_issued`, `badge_expiring`
+- Email template: `notification_badge_pending`
+- `trg_auto_create_badge_on_completion` — AFTER trigger on `client_enrollments` auto-creates `client_badges` with `pending_approval` status when enrollment changes to `completed`
+
+### New Edge Functions
+- `verify-badge/index.ts` — public (no JWT), returns badge data for issued+public badges. Verification URL: `/verify/badge/:badgeId`
+- `generate-certificate-pdf/index.ts` — auth required, generates A4 landscape PDF via pdf-lib. InnoTrue branded certificate with recipient name, program, date, unique badge ID
+
+### New Page: `src/pages/public/BadgeVerification.tsx`
+- Public `/verify/badge/:badgeId` route — certificate-style display with issuer, program, date, status
+
+### Key UI Changes
+- **ClientBadgesSection** — was fully built but never imported. Now displayed in DevelopmentProfile and ClientDashboard (compact, gated behind `certificates` feature)
+- Pending badges notice with Clock icon
+- Expiry display for expired/expiring_soon badges
+- Download Certificate (PDF) button
+- LinkedIn expiry params passed when sharing
+
+### Admin Changes
+- **ProgramBadgeManager** — `renewal_period_months` field for badge expiry configuration
+- **BadgeApproval** — calculates `expires_at` per badge on issuance
+- **send-notification-email** — added `badge_pending_approval` type mapping
+
+---
+
+## SC-2 N+1 Query Rewrites (2026-03-25)
+
+Rewrote 13 admin and client pages to replace O(N) per-record database calls with batch `.in()` queries and lookup maps. `npm run verify` passed.
+
+### Critical (4 pages)
+- `StaffAssignments.tsx` — 4 nested loops (programs→modules→staff→enrollments) → 6 parallel sources + 1 batch enrollment query with Map lookup
+- `UsersManagement.tsx` — 4N queries (roles, qualifications, preferences, module_types per user) → 4 batch queries + parallel email resolution
+- `ClientsList.tsx` — 5N queries → 5 batch queries (profiles, client_profiles, enrollments, coaches, coach profiles)
+- `ProgramCompletions.tsx` — sequential for loop → 1 batch enrollment query grouped by user in JS
+
+### High (7 pages)
+- `CoachesList.tsx` — batch profiles with plan JOINs + batch client_coaches count
+- `InstructorsList.tsx` — batch profiles with plan JOINs + batch program_instructors count
+- `ProgramsList.tsx` — 1 batch program_modules query → Map count
+- `AssessmentInterestRegistrations.tsx` — 1 batch profiles query → Map lookup
+- `ProgramDetail.tsx` (client) — 1 batch module_progress query → Map lookup
+- `ExplorePrograms.tsx` — 1 batch program_skills query → Map lookup for recommendation scoring
+- `CapabilityAssessments.tsx` — 1 batch evaluator profiles query → Map lookup
+
+### Medium/Low (2 pages)
+- `GroupsManagement.tsx` — 1 batch group_memberships query → Map count
+- `AdminDashboard.tsx` — 4 data fetches in parallel + 1 batch profiles query
+
+---
+
+## Admin User Management & Users List Fixes (2026-03-25)
+
+Two performance/correctness fixes for admin user management. `npm run verify` passed.
+
+### Edge Function Error Extraction Fix
+- `supabase.functions.invoke` returns `data: null` and `error.context` (Response object) on non-2xx responses
+- Created `extractFnError()` helper that extracts actual error message via `await error.context.json()`
+- Applied to all 7 edge function calls in `UsersManagement.tsx` (create, delete, ban, unban, etc.)
+- Previously showed generic "Edge Function returned a non-2xx status code" instead of actual error
+
+### Admin User Creation Password Fix
+- Auto-generated password (`Math.random().toString(36)`) didn't meet `validatePassword` requirements (uppercase + lowercase + digit + special)
+- New generator produces 12-char passwords with all required character classes
+
+### Users List N+1 Elimination
+- Eliminated N individual `get-user-email` edge function calls (one per user row)
+- Reads `email` and `is_disabled` directly from `profiles` table (synced from `auth.users` by `sync_auth_to_profiles` trigger from Sprint 1)
+- Changed profiles SELECT to include `email, is_disabled` columns
+
+### Files Modified
+- `src/pages/admin/UsersManagement.tsx` — `extractFnError()` helper, password generator, profiles query updated
+
+---
+
 ## 2B.13 Credit Expiry Policy + 2B.11 Feature Loss + 2B.12 Feature Gain (2026-03-24)
 
 Three related roadmap features implemented end-to-end and deployed to all environments.

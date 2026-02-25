@@ -4,14 +4,18 @@
 
 ## 1. Credit Economy Overview
 
-### Base Ratio: 1 EUR = 2 Credits
+### Base Ratio: Configurable (default 2:1)
 
-All pricing across the platform uses a unified **2:1 credit-to-euro ratio**. This creates a platform currency that is psychologically distinct from direct pricing while remaining intuitive.
+The credit-to-EUR ratio is stored in `system_settings.credit_to_eur_ratio` (default: 2) and read dynamically via the `useCreditRatio()` hook. All frontend components display the ratio from the setting rather than hardcoding it.
+
+**Current default: 1 EUR = 2 Credits**
 
 **Why 2:1 (not 1:1 or 10:1):**
 - At 1:1, credits feel like "euros with extra steps" — no psychological benefit
 - At 10:1+, mental math becomes difficult and feels manipulative for a professional audience
 - At 2:1, services feel substantial (coaching session = 200 credits, not 1 or 1000), small services aren't trivially cheap (AI = 2 credits, not 0.01), and the ratio is easy to mentally convert
+
+**Changing the ratio:** Admins can change the ratio via `/admin/settings`. When changing, use the "Scale Credit Balances" button to proportionally adjust all existing credit balances, packages, plan allowances, and program costs — otherwise existing values would be inconsistent with the new ratio. The scaling is atomic (single RPC with row locking) and audited.
 
 ### Credit Sources
 
@@ -58,10 +62,7 @@ Plans provide monthly credit allowances plus feature access (AI limits, session 
 | **Premium Program** | 4,500 | 9,000 | 2.00:1 | Mid-tier program enrollment |
 | **Immersion** | 8,500 | 17,000 | 2.00:1 | Premium program (CTA Immersion etc.) |
 
-**Display strategy:** The Micro, Session, and Module packages are always visible. The Program, Premium Program, and Immersion packages are shown:
-- When the client is redirected from an enrollment flow (contextual)
-- Behind a "Show all packages" toggle on the Credits page
-- With a "Recommended" badge on the smallest package that covers the shortfall
+**Display strategy:** All packages are always visible on the Credits page. When the client is redirected from an enrollment flow, the smallest package that covers the credit shortfall gets a "Recommended" badge.
 
 ### 2c. Organization Credit Bundles
 
@@ -148,7 +149,7 @@ After Stripe payment succeeds:
   → Toast: "Successfully enrolled!"
 ```
 
-### 3c. Installment Plan Enrollment (future — Phase 3)
+### 3c. Installment Plan Enrollment (✅ implemented)
 
 ```
 Client clicks "Enrol" on CTA Immersion Premium (16,896 credits)
@@ -294,33 +295,33 @@ The admin page at `/admin/discount-codes` provides:
 
 ## 5. Payment Plan / Installment System
 
-### 5a. Current State
+### 5a. Current State (✅ fully implemented)
 
-**Database scaffolding exists, implementation does not.**
+All installment plan infrastructure is built and deployed (Phase 3 of Credit Economy Redesign, 2026-03-03).
 
-Existing columns on `client_enrollments`:
+**Columns on `client_enrollments`:**
 - `payment_type` TEXT — CHECK ('upfront' | 'payment_plan' | 'free'). Default: 'upfront'
 - `payment_status` TEXT — CHECK ('paid' | 'outstanding' | 'overdue'). Default: 'paid'
+- `stripe_subscription_id` TEXT — links to Stripe subscription for installment plans
 
-Existing access control (fully built):
+**Access control:**
 - `usePlanAccess` hook: `payment_plan + outstanding/overdue → isLocked=true, reason='payment_outstanding'`
 - `has_program_plan_access()` DB function: mirrors the same logic server-side
 - Content access denied when locked (serve-content-package, xapi-launch check access)
 
-### 5b. What Needs to Be Built (Phase 3)
+### 5b. Implemented Components
 
-| Component | Description |
-|-----------|------------|
-| **`payment_schedules` table** | `enrollment_id`, `stripe_subscription_id`, `total_amount_cents`, `installment_count`, `installment_amount_cents`, `installments_paid`, `next_payment_date`, `status` (active/completed/defaulted) |
-| **Per-program installment config** | Admin UI: allowed installment options per program (e.g., [1, 3, 6, 12]), whether upfront discount applies |
-| **`create-installment-checkout` edge function** | Creates Stripe Subscription with `cancel_at`, grants full credits on first payment, creates payment_schedules record |
-| **Webhook: `invoice.paid` for instalments** | Updates `installments_paid`, keeps `payment_status: 'paid'`. On final payment: marks complete |
-| **Webhook: `invoice.payment_failed` for instalments** | Sets `payment_status: 'outstanding'` → access locked |
-| **Webhook: subscription recovery** | On retry success: `payment_status: 'paid'` → access restored |
-| **Webhook: subscription cancelled** | Sets `payment_status: 'overdue'` → stays locked, admin notified |
-| **Client UI: payment plan selector** | In top-up flow: "Pay in full" / "3 instalments" / "6 instalments" / "12 instalments" |
-| **Client UI: payment status banner** | On program detail: "Payment overdue" banner with Stripe portal link when locked |
-| **Admin UI: installment tracking** | View active payment plans, status, next due date, manual override |
+| Component | Status | Description |
+|-----------|--------|------------|
+| **`payment_schedules` table** | ✅ | Migration `20260303010000`. enrollment_id, stripe_subscription_id, total/installment amounts, installments_paid, next_payment_date, status, credits_granted |
+| **Per-program installment config** | ✅ | `programs.installment_options` JSONB + `programs.upfront_discount_percent` NUMERIC. Admin UI in `ProgramPlanConfig.tsx` (3/6/12 month checkboxes) |
+| **`create-installment-checkout` edge function** | ✅ | Creates Stripe Subscription with `cancel_at` for fixed-term. Grants full credits on first payment. Creates payment_schedules record |
+| **Webhook: `invoice.paid` for instalments** | ✅ | `handleInvoicePaid()` — updates installments_paid, keeps payment_status 'paid'. Skips first invoice (billing_reason === 'subscription_create') |
+| **Webhook: `invoice.payment_failed`** | ✅ | Sets payment_status to 'outstanding' → access locked |
+| **Webhook: `subscription.deleted`** | ✅ | `handleInstallmentSubscriptionDeleted()` — marks completed (all paid) or defaulted (not all paid, locks enrollment) |
+| **Client UI: payment plan selector** | ✅ | RadioGroup in Credits.tsx: "Pay in full (X% discount)" / "3 monthly" / "6 monthly" / "12 monthly" |
+| **Client UI: payment status banner** | ✅ | `PlanLockOverlay.tsx` — "Payment overdue" with Contact Support + Manage Billing buttons |
+| **Admin UI: installment tracking** | ✅ | `PaymentSchedulesManagement.tsx` at `/admin/payment-schedules` — summary cards, progress bars, status badges |
 
 ### 5c. Refund Handling
 
@@ -364,8 +365,8 @@ Stripe enforces that refunds cannot exceed the amount charged:
 
 | Table | Purpose |
 |-------|---------|
-| `client_enrollments` | Enrollments with `payment_type`, `payment_status`, discount fields |
-| `payment_schedules` | **FUTURE** — installment tracking per enrollment |
+| `client_enrollments` | Enrollments with `payment_type`, `payment_status`, `stripe_subscription_id`, discount fields |
+| `payment_schedules` | Installment tracking per enrollment (status, progress, amounts, Stripe subscription ID) |
 
 ### Stripe Integration Tables
 
@@ -394,7 +395,7 @@ Stripe enforces that refunds cannot exceed the amount charged:
 | `org-confirm-credit-purchase` | Verify org credit on return | One-time |
 | `org-platform-subscription` | Org subscription checkout | Subscription |
 | `subscription-reminders` | Renewal reminder emails (cron) | -- |
-| `create-installment-checkout` | **FUTURE** — installment subscription | Subscription (fixed-term) |
+| `create-installment-checkout` | Installment subscription (fixed-term with `cancel_at`) | Subscription (fixed-term) |
 
 ---
 
@@ -410,39 +411,45 @@ Stripe enforces that refunds cannot exceed the amount charged:
 | `LowBalanceAlert.tsx` | Low/zero credit warning banner | `useCreditBatches`, configurable threshold |
 | `/admin/org-billing` (`OrgBillingManagement.tsx`) | Admin: org credit packages + platform tiers | Direct CRUD on `org_credit_packages` |
 | `/admin/discount-codes` (`DiscountCodesManagement.tsx`) | Admin: discount code CRUD + referral generator | Direct CRUD on `discount_codes` |
-| `ProgramPlanConfig.tsx` | Admin: per-program per-tier credit cost config | Direct CRUD on `program_tier_plans` |
+| `ProgramPlanConfig.tsx` | Admin: per-program per-tier credit cost config, installment options | Direct CRUD on `program_tier_plans`, `programs.installment_options` |
+| `/admin/credit-topup-packages` (`CreditTopupPackagesManagement.tsx`) | Admin: credit top-up package CRUD | Direct CRUD on `credit_topup_packages` |
+| `/admin/payment-schedules` (`PaymentSchedulesManagement.tsx`) | Admin: installment plan tracking dashboard | Reads `payment_schedules` with `profiles` joins |
+| `CreditScaleDialog.tsx` | Admin: proportional credit scaling when ratio changes | Calls `scale_credit_batches` RPC |
+| `CreditExpiryAlert.tsx` | Dashboard/Credits page expiry warning | Reads `credit_batches` expiry data |
 
 ---
 
 ## 9. Implementation Phases
 
-### Phase 1: Credit Recalibration (data migration)
-- Recalibrate plan allowances to 2:1 ratio
-- Replace 3 individual top-up packages with 6 (EUR 10 to EUR 8,500)
-- Recalibrate org bundles to 2:1 base + volume bonuses
-- Recalibrate credit service costs
-- Update seed.sql for fresh environments
-- Reset `stripe_price_id` on changed packages
+### Phase 1: Credit Recalibration ✅ (2026-03-02)
+- Recalibrated all plan allowances, packages, services, program costs to 2:1 ratio
+- 6 individual top-up packages (EUR 10 to EUR 8,500)
+- 8 org bundles with volume bonuses (5-40%)
+- seed.sql updated for fresh environments
 
-### Phase 2: Top Up & Enrol UX
-- Smart package recommendation when redirected from enrollment
-- Contextual display of large packages
-- One-click "Top Up & Enrol" resume flow
-- Discount code input field in enrollment dialog
-- Credit cost display on program cards and preview
-- Add `/admin/org-billing` to admin sidebar
+### Phase 2: Top Up & Enrol UX ✅ (2026-03-02)
+- Smart package recommendation on Credits page
+- One-click "Top Up & Enrol" resume flow via sessionStorage
+- Credit cost badges on program cards
+- Discount code props wired in enrollment dialog
 
-### Phase 3: Installment Plans (future)
-- `payment_schedules` table
+### Phase 3: Installment Plans ✅ (2026-03-03)
+- `payment_schedules` table (migration `20260303010000`)
 - `create-installment-checkout` edge function
-- Webhook handlers for instalment lifecycle
-- Client UI: payment plan selector, overdue banner
-- Admin UI: installment tracking dashboard
+- Webhook handlers for instalment lifecycle (invoice.paid, payment_failed, subscription.deleted)
+- Client UI: payment plan selector (RadioGroup)
+- Admin UI: `PaymentSchedulesManagement.tsx` dashboard
 
-### Phase 4: Documentation & Polish
-- Update MEMORY.md, completed-work.md
-- Update SUBSCRIPTIONS_AND_PLANS.md
-- Add this document to MEMORY.md key docs table
+### Phase 4: Documentation & Polish ✅ (2026-03-03)
+- Updated MEMORY.md, completed-work.md, SUBSCRIPTIONS_AND_PLANS.md
+
+### Phase 5: Configurable Ratio + Scaling ✅ (2026-03-25)
+- `credit_to_eur_ratio` in `system_settings` (configurable, default: 2)
+- `useCreditRatio()` hook with 5-min cache + utility functions
+- All 5 consuming components updated for dynamic ratio
+- `scale_credit_batches` RPC for atomic bulk scaling
+- `CreditScaleDialog` admin tool on System Settings page
+- System Settings RLS whitelist for non-admin access to public settings
 
 ---
 
@@ -456,6 +463,7 @@ Stripe enforces that refunds cannot exceed the amount charged:
 | `useDiscountCode` | Discount code validation + recording | `src/hooks/useDiscountCode.ts` |
 | `usePlanAccess` | Program access check including payment plan locking | `src/hooks/usePlanAccess.ts` |
 | `useEntitlements` | Feature access merging 5 sources (plan, program, add-on, track, org) | `src/hooks/useEntitlements.ts` |
+| `useCreditRatio` | Dynamic credit-to-EUR ratio from system_settings + utility functions | `src/hooks/useCreditRatio.ts` |
 | `useLowBalance` | Low balance detection with system threshold | `src/components/credits/LowBalanceAlert.tsx` |
 
 ---
@@ -504,20 +512,19 @@ We use `expires_at = NOW() + INTERVAL '10 years'` instead of `expires_at = NULL`
 - A 10-year horizon is functionally permanent for users while keeping the DB schema and queries clean.
 - From an accounting perspective, a defined (if distant) expiry avoids creating a permanent deferred revenue liability.
 
-### Implementation Status
+### Implementation Status (✅ all done — 2026-03-24)
 
-- ⬜ **Migration needed:** Update `grant_credit_batch` RPC and all edge functions that grant credits to use 10-year expiry for `source_type = 'purchase'`. Currently hardcoded to 12 months.
-- ⬜ **Retroactive fix:** Update existing `credit_batches` with `source_type = 'purchase'` to extend `expires_at` to 10 years from `granted_at`.
-- ⬜ **Seed data:** Update `credit_topup_packages.validity_months` from 12 to 120.
-- ✅ **No FIFO changes needed:** `consume_credits_fifo` orders by `expires_at NULLS LAST, created_at` — 10-year expiry works correctly with existing logic.
-- ✅ **No plan credit changes needed:** Plan credits are virtual (calculated, not batched) and already reset each billing period.
+- ✅ **Migration:** `20260324110000_credit_expiry_10year.sql` — system_settings `purchased_credit_expiry_months` = 120, updated `credit_source_types.default_expiry_months`, updated `credit_topup_packages.validity_months` and `org_credit_packages.validity_months` from 12 → 120, retroactively extended existing batches
+- ✅ **Edge functions fixed:** `confirm-credit-topup`, `org-confirm-credit-purchase`, `stripe-webhook` — all now use system_settings as single source of truth for expiry
+- ✅ **No FIFO changes needed:** `consume_credits_fifo` orders by `expires_at NULLS LAST, created_at` — 10-year expiry works correctly with existing logic
+- ✅ **No plan credit changes needed:** Plan credits are virtual (calculated, not batched) and already reset each billing period
+- ✅ **Daily expiry cron:** `daily-credit-expiry` pg_cron job (2 AM UTC) calls `expire_credit_batches()` — no longer relies solely on lazy check when users view credits
 
-### 2B.13 Credit Expiry Awareness (planned)
+### 2B.13 Credit Expiry Awareness (✅ done — 2026-03-24)
 
-Even with long expiry on purchased credits, users benefit from awareness of their credit lifecycle:
-
-| Component | What | Effort | Priority |
-|-----------|------|--------|----------|
-| **Dashboard expiry banner** | Banner showing credits expiring within 30 days (plan credits at billing reset, any expiring batches). Similar to `LowBalanceAlert`. | Low (1-2 days) | 🔴 High |
-| **Email notification cron** | Scheduled notification 7 days before credits expire. Notification type `credits_expiring` already exists in seed data but no cron sends it. Add to `subscription-reminders` or new cron. | Low (1-2 days) | 🟠 High |
-| **AI spend suggestions** | When credits are about to expire, suggest actions based on user context: "You have 45 credits expiring. Book a coaching session (200 cr), generate AI insights (2 cr each), or explore [program]." | Medium (1 week) | 🟡 Later (Phase 3 AI) |
+| Component | Status | Description |
+|-----------|--------|------------|
+| **Dashboard expiry banner** | ✅ | `CreditExpiryAlert` on ClientDashboard + Credits page. Amber banner when credits expiring within 7 days. |
+| **Credits page per-batch expiry** | ✅ | Enhanced "Expiring Soon" card with per-batch details (source type, remaining credits, days left, color-coded urgency) |
+| **Email notification cron** | ✅ | `credit-expiry-notifications` edge function + cron (3 AM UTC daily). Users: 7-day window. Orgs: 30-day → admin notifications. Deduplication built-in. |
+| **AI spend suggestions** | ⬜ | Future (Phase 3 AI) — suggest actions when credits about to expire |
