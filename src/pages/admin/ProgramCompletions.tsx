@@ -45,50 +45,62 @@ export default function ProgramCompletions() {
 
       if (!usersOnProgramsPlan || usersOnProgramsPlan.length === 0) return [];
 
-      // For each user, check their enrollments
+      const userIds = usersOnProgramsPlan.map((u) => u.id);
+
+      // Batch-fetch ALL enrollments for all these users in ONE query (replaces N+1 sequential loop)
+      const { data: allEnrollments } = await supabase
+        .from("client_enrollments")
+        .select(
+          `
+          id,
+          client_user_id,
+          status,
+          updated_at,
+          programs!inner (
+            name
+          )
+        `,
+        )
+        .in("client_user_id", userIds);
+
+      if (!allEnrollments || allEnrollments.length === 0) return [];
+
+      // Group enrollments by user
+      const enrollmentsByUser = new Map<string, typeof allEnrollments>();
+      for (const e of allEnrollments) {
+        const list = enrollmentsByUser.get(e.client_user_id!) || [];
+        list.push(e);
+        enrollmentsByUser.set(e.client_user_id!, list);
+      }
+
+      // Build user name map
+      const userNameMap = new Map<string, string>();
+      usersOnProgramsPlan.forEach((u) => userNameMap.set(u.id, u.name || "Unknown"));
+
+      // Check each user's enrollments for completion
       const completedUsers: CompletedUser[] = [];
 
-      for (const profile of usersOnProgramsPlan) {
-        // Get all enrollments for this user
-        const { data: enrollments } = await supabase
-          .from("client_enrollments")
-          .select(
-            `
-            id,
-            status,
-            updated_at,
-            programs!inner (
-              name
-            )
-          `,
-          )
-          .eq("client_user_id", profile.id);
-
-        if (!enrollments || enrollments.length === 0) continue;
-
-        // Check if all enrollments are completed
+      for (const [userId, enrollments] of enrollmentsByUser) {
         const allCompleted = enrollments.every((e) => e.status === "completed");
+        if (!allCompleted) continue;
 
-        if (allCompleted) {
-          const completedPrograms = enrollments.map((e) => ({
-            program_name: ((e.programs as any)?.name as string) ?? "",
-            completed_at: (e.updated_at as string) ?? "",
-          }));
+        const completedPrograms = enrollments.map((e) => ({
+          program_name: ((e.programs as any)?.name as string) ?? "",
+          completed_at: (e.updated_at as string) ?? "",
+        }));
 
-          // Find the most recent completion date
-          const lastCompletionDate = completedPrograms.reduce(
-            (latest: string, p) =>
-              new Date(p.completed_at) > new Date(latest) ? p.completed_at : latest,
-            completedPrograms[0].completed_at,
-          );
+        const lastCompletionDate = completedPrograms.reduce(
+          (latest: string, p) =>
+            new Date(p.completed_at) > new Date(latest) ? p.completed_at : latest,
+          completedPrograms[0].completed_at,
+        );
 
-          completedUsers.push({
-            user_id: profile.id,
-            user_name: profile.name || "Unknown",
-            completed_programs: completedPrograms,
-            last_completion_date: lastCompletionDate,
-          });
-        }
+        completedUsers.push({
+          user_id: userId,
+          user_name: userNameMap.get(userId) || "Unknown",
+          completed_programs: completedPrograms,
+          last_completion_date: lastCompletionDate,
+        });
       }
 
       // Sort by most recent completion first

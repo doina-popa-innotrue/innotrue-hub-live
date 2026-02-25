@@ -148,73 +148,88 @@ export default function UsersManagement() {
   const availableRoles = ["admin", "instructor", "coach", "client"];
 
   async function fetchUsers() {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, name, username, real_email, is_hidden");
+    // Batch-fetch all data in parallel instead of N+1 per-user queries
+    const [
+      { data: profiles },
+      { data: allRoles },
+      { data: allQualifications },
+      { data: allNotifPrefs },
+      { data: types },
+    ] = await Promise.all([
+      supabase.from("profiles").select("id, name, username, real_email, is_hidden"),
+      supabase.from("user_roles").select("user_id, role"),
+      supabase
+        .from("user_qualifications")
+        .select("user_id, module_type_id, module_types(name)"),
+      supabase
+        .from("notification_preferences")
+        .select("user_id, program_assignments, session_scheduled, session_requests"),
+      supabase.from("module_types").select("*").order("name"),
+    ]);
+
+    if (types) setModuleTypes(types);
 
     if (profiles) {
-      const enrichedUsers = await Promise.all(
-        profiles.map(async (profile) => {
-          // Fetch roles, qualifications, email in parallel
-          const [rolesResult, qualificationsResult, notifPrefsResult, emailResult] =
-            await Promise.all([
-              supabase.from("user_roles").select("role").eq("user_id", profile.id),
-              supabase
-                .from("user_qualifications")
-                .select("module_type_id, module_types(name)")
-                .eq("user_id", profile.id),
-              supabase
-                .from("notification_preferences")
-                .select("program_assignments, session_scheduled, session_requests")
-                .eq("user_id", profile.id)
-                .single(),
-              // Fetch email from auth.users via edge function
-              supabase.functions
-                .invoke("get-user-email", {
-                  body: { userId: profile.id },
-                })
-                .catch((): { data: null } => ({ data: null })),
-            ]);
+      // Build lookup maps for O(1) access
+      const rolesMap = new Map<string, string[]>();
+      allRoles?.forEach((r) => {
+        const list = rolesMap.get(r.user_id) || [];
+        list.push(r.role);
+        rolesMap.set(r.user_id, list);
+      });
 
-          const roles = rolesResult.data;
-          const qualifications = qualificationsResult.data;
-          const notifPrefs = notifPrefsResult.data;
-          const authEmail = emailResult?.data?.email || profile.username || "N/A";
-          const isDisabled = emailResult?.data?.isDisabled === true;
+      const qualsMap = new Map<string, string[]>();
+      allQualifications?.forEach((q) => {
+        const list = qualsMap.get(q.user_id) || [];
+        const name = (q.module_types as any)?.name;
+        if (name) list.push(name);
+        qualsMap.set(q.user_id, list);
+      });
 
-          // Detect if this is a placeholder user (system email format)
-          const isPlaceholder =
-            authEmail.includes("@system.internal") || authEmail.includes("placeholder_");
+      const notifMap = new Map<string, { program_assignments: boolean; session_scheduled: boolean; session_requests: boolean }>();
+      allNotifPrefs?.forEach((n) => {
+        notifMap.set(n.user_id, n);
+      });
 
-          // Consider notifications enabled if key preferences are on
-          const notificationsEnabled = notifPrefs
-            ? notifPrefs.program_assignments ||
-              notifPrefs.session_scheduled ||
-              notifPrefs.session_requests
-            : true; // Default to true if no prefs exist
-
-          return {
-            id: profile.id,
-            name: profile.name,
-            email: authEmail,
-            realEmail: profile.real_email,
-            isPlaceholder,
-            isHidden: profile.is_hidden || false,
-            isDisabled,
-            roles: roles?.map((r) => r.role) || [],
-            qualifications:
-              qualifications?.map((q) => (q.module_types as any)?.name).filter(Boolean) || [],
-            notificationsEnabled,
-          };
-        }),
+      // Fetch emails from auth.users via edge function — still per-user but done in parallel
+      const emailResults = await Promise.all(
+        profiles.map((profile) =>
+          supabase.functions
+            .invoke("get-user-email", { body: { userId: profile.id } })
+            .catch((): { data: null } => ({ data: null })),
+        ),
       );
+
+      const enrichedUsers = profiles.map((profile, idx) => {
+        const emailResult = emailResults[idx];
+        const authEmail = emailResult?.data?.email || profile.username || "N/A";
+        const isDisabled = emailResult?.data?.isDisabled === true;
+        const isPlaceholder =
+          authEmail.includes("@system.internal") || authEmail.includes("placeholder_");
+
+        const notifPrefs = notifMap.get(profile.id);
+        const notificationsEnabled = notifPrefs
+          ? notifPrefs.program_assignments ||
+            notifPrefs.session_scheduled ||
+            notifPrefs.session_requests
+          : true;
+
+        return {
+          id: profile.id,
+          name: profile.name,
+          email: authEmail,
+          realEmail: profile.real_email,
+          isPlaceholder,
+          isHidden: profile.is_hidden || false,
+          isDisabled,
+          roles: rolesMap.get(profile.id) || [],
+          qualifications: qualsMap.get(profile.id) || [],
+          notificationsEnabled,
+        };
+      });
 
       setUsers(enrichedUsers as User[]);
     }
-
-    const { data: types } = await supabase.from("module_types").select("*").order("name");
-
-    if (types) setModuleTypes(types);
 
     setLoading(false);
   }

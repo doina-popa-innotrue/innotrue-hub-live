@@ -224,26 +224,25 @@ export default function ProgramDetail() {
       });
 
       if (modulesData && enrollmentData) {
-        const enrichedModules = await Promise.all(
-          modulesData.map(async (module) => {
-            const { data: progressData } = await supabase
-              .from("module_progress")
-              .select("*")
-              .eq("enrollment_id", enrollmentData.id)
-              .eq("module_id", module.id)
-              .maybeSingle();
-            return {
-              ...module,
-              links: (module.links as unknown as ModuleLink[]) || [],
-              progress: progressData,
-              prerequisites: prereqMap.get(module.id) || [],
-              plan_id: module.plan_id,
-              min_plan_tier: module.min_plan_tier || 0,
-              available_from_date: module.available_from_date,
-              unlock_after_days: module.unlock_after_days,
-            };
-          }),
-        );
+        // Batch-fetch all module progress for this enrollment in one query (replaces N+1 per-module)
+        const { data: allProgress } = await supabase
+          .from("module_progress")
+          .select("*")
+          .eq("enrollment_id", enrollmentData.id);
+
+        const progressMap = new Map<string, any>();
+        allProgress?.forEach((p) => progressMap.set(p.module_id, p));
+
+        const enrichedModules = modulesData.map((module) => ({
+          ...module,
+          links: (module.links as unknown as ModuleLink[]) || [],
+          progress: progressMap.get(module.id) || null,
+          prerequisites: prereqMap.get(module.id) || [],
+          plan_id: module.plan_id,
+          min_plan_tier: module.min_plan_tier || 0,
+          available_from_date: module.available_from_date,
+          unlock_after_days: module.unlock_after_days,
+        }));
         setModules(enrichedModules as Module[]);
       }
       setProgram(programData);

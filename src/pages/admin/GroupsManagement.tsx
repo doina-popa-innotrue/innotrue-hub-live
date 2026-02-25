@@ -91,20 +91,24 @@ export default function GroupsManagement() {
 
       if (error) throw error;
 
-      // Get member counts
-      const groupsWithCounts = await Promise.all(
-        (data || []).map(async (group) => {
-          const { count } = await supabase
-            .from("group_memberships")
-            .select("*", { count: "exact", head: true })
-            .eq("group_id", group.id)
-            .eq("status", "active");
+      // Batch-fetch all active memberships in one query (replaces N+1 per-group count queries)
+      const groupIds = (data || []).map((g) => g.id);
+      const memberCountMap = new Map<string, number>();
+      if (groupIds.length > 0) {
+        const { data: memberships } = await supabase
+          .from("group_memberships")
+          .select("group_id")
+          .in("group_id", groupIds)
+          .eq("status", "active");
 
-          return { ...group, member_count: count || 0 } as Group;
-        }),
+        memberships?.forEach((m) => {
+          memberCountMap.set(m.group_id, (memberCountMap.get(m.group_id) || 0) + 1);
+        });
+      }
+
+      return (data || []).map(
+        (group) => ({ ...group, member_count: memberCountMap.get(group.id) || 0 }) as Group,
       );
-
-      return groupsWithCounts;
     },
   });
 

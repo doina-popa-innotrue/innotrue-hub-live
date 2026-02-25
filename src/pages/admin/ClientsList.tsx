@@ -71,76 +71,111 @@ export default function ClientsList() {
   const navigate = useNavigate();
 
   async function fetchClients() {
-    // Fetch status markers
-    const { data: markers } = await supabase
-      .from("status_markers")
-      .select("id, name")
-      .eq("is_active", true)
-      .order("display_order");
-    setStatusMarkers(markers || []);
-
-    // Get all users with client role from user_roles table
+    // Get all users with client role
     const { data: clientRoles } = await supabase
       .from("user_roles")
       .select("user_id")
       .eq("role", "client");
 
     if (!clientRoles || clientRoles.length === 0) {
+      setStatusMarkers([]);
       setClients([]);
-    } else {
-      const enrichedClients = await Promise.all(
-        clientRoles.map(async (roleEntry) => {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("name, id, plan_id, plans(id, name, key)")
-            .eq("id", roleEntry.user_id)
-            .single();
-
-          const { data: clientProfile } = await supabase
-            .from("client_profiles")
-            .select("id, status, status_marker")
-            .eq("user_id", roleEntry.user_id)
-            .maybeSingle();
-
-          const { count } = await supabase
-            .from("client_enrollments")
-            .select("id", { count: "exact", head: true })
-            .eq("client_user_id", roleEntry.user_id)
-            .eq("status", "active");
-
-          // Get assigned coaches
-          const { data: coachRelations } = await supabase
-            .from("client_coaches")
-            .select("coach_id")
-            .eq("client_id", roleEntry.user_id);
-
-          let coaches: { id: string; name: string }[] = [];
-          if (coachRelations && coachRelations.length > 0) {
-            const coachIds = coachRelations.map((c) => c.coach_id);
-            const { data: coachProfiles } = await supabase
-              .from("profiles")
-              .select("id, name")
-              .in("id", coachIds);
-            coaches = coachProfiles || [];
-          }
-
-          return {
-            id: clientProfile?.id || roleEntry.user_id,
-            user_id: roleEntry.user_id,
-            status: clientProfile?.status || "active",
-            status_marker: clientProfile?.status_marker || null,
-            profiles: { name: profile?.name || "Unknown", id: roleEntry.user_id },
-            user_email: "",
-            enrollmentCount: count || 0,
-            coaches,
-            plan: profile?.plans || null,
-          };
-        }),
-      );
-
-      setClients(enrichedClients as Client[]);
+      setLoading(false);
+      return;
     }
 
+    const clientUserIds = clientRoles.map((r) => r.user_id);
+
+    // Batch-fetch ALL related data in parallel (replaces N+1 per-client queries)
+    const [
+      { data: markers },
+      { data: allProfiles },
+      { data: allClientProfiles },
+      { data: allActiveEnrollments },
+      { data: allCoachRelations },
+    ] = await Promise.all([
+      supabase
+        .from("status_markers")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("display_order"),
+      supabase
+        .from("profiles")
+        .select("id, name, plan_id, plans(id, name, key)")
+        .in("id", clientUserIds),
+      supabase
+        .from("client_profiles")
+        .select("id, user_id, status, status_marker")
+        .in("user_id", clientUserIds),
+      supabase
+        .from("client_enrollments")
+        .select("client_user_id")
+        .eq("status", "active")
+        .in("client_user_id", clientUserIds),
+      supabase
+        .from("client_coaches")
+        .select("client_id, coach_id")
+        .in("client_id", clientUserIds),
+    ]);
+
+    setStatusMarkers(markers || []);
+
+    // Build lookup maps
+    const profileMap = new Map<string, any>();
+    allProfiles?.forEach((p) => profileMap.set(p.id, p));
+
+    const clientProfileMap = new Map<string, any>();
+    allClientProfiles?.forEach((cp) => clientProfileMap.set(cp.user_id, cp));
+
+    // Count active enrollments per client
+    const enrollmentCountMap = new Map<string, number>();
+    allActiveEnrollments?.forEach((e) => {
+      enrollmentCountMap.set(e.client_user_id!, (enrollmentCountMap.get(e.client_user_id!) || 0) + 1);
+    });
+
+    // Group coach relations by client
+    const coachIdsByClient = new Map<string, string[]>();
+    allCoachRelations?.forEach((cr) => {
+      const list = coachIdsByClient.get(cr.client_id) || [];
+      list.push(cr.coach_id);
+      coachIdsByClient.set(cr.client_id, list);
+    });
+
+    // Batch-fetch all coach profiles in one query
+    const allCoachIds = new Set<string>();
+    allCoachRelations?.forEach((cr) => allCoachIds.add(cr.coach_id));
+    const coachProfileMap = new Map<string, { id: string; name: string }>();
+    if (allCoachIds.size > 0) {
+      const { data: coachProfiles } = await supabase
+        .from("profiles")
+        .select("id, name")
+        .in("id", Array.from(allCoachIds));
+      coachProfiles?.forEach((cp) => coachProfileMap.set(cp.id, cp));
+    }
+
+    // Assemble client list using lookup maps (zero additional queries)
+    const enrichedClients = clientUserIds.map((userId) => {
+      const profile = profileMap.get(userId);
+      const clientProfile = clientProfileMap.get(userId);
+      const coachIds = coachIdsByClient.get(userId) || [];
+      const coaches = coachIds
+        .map((id) => coachProfileMap.get(id))
+        .filter(Boolean) as { id: string; name: string }[];
+
+      return {
+        id: clientProfile?.id || userId,
+        user_id: userId,
+        status: clientProfile?.status || "active",
+        status_marker: clientProfile?.status_marker || null,
+        profiles: { name: profile?.name || "Unknown", id: userId },
+        user_email: "",
+        enrollmentCount: enrollmentCountMap.get(userId) || 0,
+        coaches,
+        plan: profile?.plans || null,
+      };
+    });
+
+    setClients(enrichedClients as Client[]);
     setLoading(false);
   }
 

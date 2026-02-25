@@ -48,55 +48,47 @@ export default function InstructorsList() {
       return;
     }
 
-    const enrichedInstructors = await Promise.all(
-      instructorRoles.map(async (roleEntry) => {
-        const { data: profile } = await supabase
+    const instructorUserIds = instructorRoles.map((r) => r.user_id);
+
+    // Batch-fetch all profiles with plan JOINs and program counts in parallel
+    const [{ data: allProfiles }, { data: allProgramInstructors }, ...emailResults] =
+      await Promise.all([
+        supabase
           .from("profiles")
-          .select("name, id, plan_id")
-          .eq("id", roleEntry.user_id)
-          .single();
+          .select("id, name, plan_id, plans(id, name)")
+          .in("id", instructorUserIds),
+        supabase
+          .from("program_instructors")
+          .select("instructor_id")
+          .in("instructor_id", instructorUserIds),
+        // Fetch emails in parallel (edge function per user, but all run concurrently)
+        ...instructorUserIds.map((userId) =>
+          supabase.functions
+            .invoke("get-user-email", { body: { userId } })
+            .catch((): { data: null } => ({ data: null })),
+        ),
+      ]);
 
-        let plan: { id: string; name: string } | null = null;
-        if (profile?.plan_id) {
-          const { data: planData } = await supabase
-            .from("plans")
-            .select("id, name")
-            .eq("id", profile.plan_id)
-            .single();
-          plan = planData;
-        }
+    // Build lookup maps
+    const profileMap = new Map<string, any>();
+    allProfiles?.forEach((p) => profileMap.set(p.id, p));
 
-        // Get email via edge function
-        let email = "";
-        try {
-          const { data: emailData } = await supabase.functions.invoke("get-user-email", {
-            body: { userId: roleEntry.user_id },
-          });
-          email = emailData?.email || "";
-        } catch {
-          // Ignore email fetch errors
-        }
+    const programCountMap = new Map<string, number>();
+    allProgramInstructors?.forEach((pi) => {
+      programCountMap.set(pi.instructor_id, (programCountMap.get(pi.instructor_id) || 0) + 1);
+    });
 
-        // Count programs where user is instructor
-        let programCount = 0;
-        try {
-          const result = await (supabase.from("program_instructors") as any)
-            .select("id")
-            .eq("user_id", roleEntry.user_id);
-          programCount = result.data?.length || 0;
-        } catch {
-          // Ignore count errors
-        }
-
-        return {
-          user_id: roleEntry.user_id,
-          name: profile?.name || "Unknown",
-          email,
-          programCount,
-          plan,
-        };
-      }),
-    );
+    const enrichedInstructors = instructorUserIds.map((userId, idx) => {
+      const profile = profileMap.get(userId);
+      const emailResult = emailResults[idx];
+      return {
+        user_id: userId,
+        name: profile?.name || "Unknown",
+        email: emailResult?.data?.email || "",
+        programCount: programCountMap.get(userId) || 0,
+        plan: profile?.plans || null,
+      };
+    });
 
     setInstructors(enrichedInstructors);
     setLoading(false);

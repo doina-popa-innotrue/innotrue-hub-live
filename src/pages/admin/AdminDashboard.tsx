@@ -131,135 +131,97 @@ export default function AdminDashboard() {
       totalAssessments: assessmentsRes.count || 0,
     });
 
-    // Fetch recent registrations
-    const { data: recentRegsData } = await supabase
-      .from("program_interest_registrations")
-      .select(
-        `
-        id,
-        status,
-        created_at,
-        user_id,
-        programs!inner (name)
-      `,
-      )
-      .eq("status", "pending")
-      .order("created_at", { ascending: false })
-      .limit(5);
+    // Fetch recent data in parallel (instead of sequential)
+    const [
+      { data: recentRegsData },
+      { data: recentEnrollData },
+      { data: deletionData },
+      { data: badgeData },
+    ] = await Promise.all([
+      supabase
+        .from("program_interest_registrations")
+        .select("id, status, created_at, user_id, programs!inner(name)")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("client_enrollments")
+        .select("id, created_at, client_user_id, programs!inner(name)")
+        .order("created_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("account_deletion_requests")
+        .select("id, user_id, created_at, reason")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("client_badges")
+        .select("id, user_id, program_badges!inner(name, programs!inner(name))")
+        .eq("status", "pending")
+        .limit(5),
+    ]);
 
-    if (recentRegsData) {
-      const regsWithNames = await Promise.all(
-        recentRegsData.map(async (reg: any) => {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("name")
-            .eq("id", reg.user_id)
-            .single();
-          return {
-            id: reg.id,
-            user_name: profile?.name || "Unknown",
-            program_name: reg.programs?.name || "",
-            created_at: reg.created_at,
-            status: reg.status,
-          };
-        }),
-      );
-      setRecentRegistrations(regsWithNames);
+    // Collect all unique user_ids and batch-fetch profiles in ONE query (replaces 4 N+1 loops)
+    const allUserIds = new Set<string>();
+    recentRegsData?.forEach((r: any) => allUserIds.add(r.user_id));
+    recentEnrollData?.forEach((e: any) => allUserIds.add(e.client_user_id));
+    deletionData?.forEach((d) => allUserIds.add(d.user_id));
+    badgeData?.forEach((b: any) => allUserIds.add(b.user_id));
+
+    const profileNameMap = new Map<string, string>();
+    if (allUserIds.size > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, name")
+        .in("id", Array.from(allUserIds));
+      profiles?.forEach((p) => profileNameMap.set(p.id, p.name || "Unknown"));
     }
 
-    // Fetch recent enrollments
-    const { data: recentEnrollData } = await supabase
-      .from("client_enrollments")
-      .select(
-        `
-        id,
-        created_at,
-        client_user_id,
-        programs!inner (name)
-      `,
-      )
-      .order("created_at", { ascending: false })
-      .limit(5);
+    // Map registrations using batch-fetched profiles
+    if (recentRegsData) {
+      setRecentRegistrations(
+        recentRegsData.map((reg: any) => ({
+          id: reg.id,
+          user_name: profileNameMap.get(reg.user_id) || "Unknown",
+          program_name: reg.programs?.name || "",
+          created_at: reg.created_at,
+          status: reg.status,
+        })),
+      );
+    }
 
     if (recentEnrollData) {
-      const enrollsWithNames = await Promise.all(
-        recentEnrollData.map(async (enroll: any) => {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("name")
-            .eq("id", enroll.client_user_id)
-            .single();
-          return {
-            id: enroll.id,
-            user_name: profile?.name || "Unknown",
-            program_name: enroll.programs?.name || "",
-            created_at: enroll.created_at,
-          };
-        }),
+      setRecentEnrollments(
+        recentEnrollData.map((enroll: any) => ({
+          id: enroll.id,
+          user_name: profileNameMap.get(enroll.client_user_id) || "Unknown",
+          program_name: enroll.programs?.name || "",
+          created_at: enroll.created_at,
+        })),
       );
-      setRecentEnrollments(enrollsWithNames);
     }
-
-    // Fetch pending deletion requests
-    const { data: deletionData } = await supabase
-      .from("account_deletion_requests")
-      .select("id, user_id, created_at, reason")
-      .eq("status", "pending")
-      .order("created_at", { ascending: false })
-      .limit(5);
 
     if (deletionData) {
-      const deletionsWithNames = await Promise.all(
-        deletionData.map(async (del) => {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("name")
-            .eq("id", del.user_id)
-            .single();
-          return {
-            id: del.id,
-            user_name: profile?.name || "Unknown",
-            created_at: del.created_at,
-            reason: del.reason,
-          };
-        }),
+      setPendingDeletions(
+        deletionData.map((del) => ({
+          id: del.id,
+          user_name: profileNameMap.get(del.user_id) || "Unknown",
+          created_at: del.created_at,
+          reason: del.reason,
+        })),
       );
-      setPendingDeletions(deletionsWithNames);
     }
 
-    // Fetch pending badges
-    const { data: badgeData } = await supabase
-      .from("client_badges")
-      .select(
-        `
-        id,
-        user_id,
-        program_badges!inner (
-          name,
-          programs!inner (name)
-        )
-      `,
-      )
-      .eq("status", "pending")
-      .limit(5);
-
     if (badgeData) {
-      const badgesWithNames = await Promise.all(
-        badgeData.map(async (badge: any) => {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("name")
-            .eq("id", badge.user_id)
-            .single();
-          return {
-            id: badge.id,
-            user_name: profile?.name || "Unknown",
-            badge_name: badge.program_badges?.name || "",
-            program_name: badge.program_badges?.programs?.name || "",
-          };
-        }),
+      setPendingBadges(
+        badgeData.map((badge: any) => ({
+          id: badge.id,
+          user_name: profileNameMap.get(badge.user_id) || "Unknown",
+          badge_name: badge.program_badges?.name || "",
+          program_name: badge.program_badges?.programs?.name || "",
+        })),
       );
-      setPendingBadges(badgesWithNames);
     }
 
     setLoading(false);

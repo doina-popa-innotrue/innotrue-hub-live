@@ -152,20 +152,21 @@ export default function CapabilityAssessments() {
 
       if (error) throw error;
 
-      // Fetch evaluator names separately if needed
-      const snapshotsWithEvaluators = await Promise.all(
-        data.map(async (s) => {
-          if (s.evaluator_id) {
-            const { data: evaluator } = await supabase
-              .from("profiles")
-              .select("name")
-              .eq("id", s.evaluator_id)
-              .single();
-            return { ...s, evaluator };
-          }
-          return { ...s, evaluator: null };
-        }),
-      );
+      // Batch-fetch all evaluator profiles in one query (replaces N+1 per-snapshot lookups)
+      const evaluatorIds = [...new Set(data.filter((s) => s.evaluator_id).map((s) => s.evaluator_id!))];
+      const evaluatorMap = new Map<string, { name: string | null }>();
+      if (evaluatorIds.length > 0) {
+        const { data: evaluators } = await supabase
+          .from("profiles")
+          .select("id, name")
+          .in("id", evaluatorIds);
+        evaluators?.forEach((e) => evaluatorMap.set(e.id, { name: e.name }));
+      }
+
+      const snapshotsWithEvaluators = data.map((s) => ({
+        ...s,
+        evaluator: s.evaluator_id ? evaluatorMap.get(s.evaluator_id) || null : null,
+      }));
 
       return snapshotsWithEvaluators as Snapshot[];
     },

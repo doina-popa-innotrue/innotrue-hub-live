@@ -119,15 +119,83 @@ export default function StaffAssignments() {
     try {
       const allAssignments: Assignment[] = [];
 
-      // 1. Direct client-instructor assignments
-      const { data: directInstructors } = await supabase.from("client_instructors").select(`
-          id,
-          instructor_id,
-          client_id,
+      // Fetch all 6 assignment sources in parallel (instead of sequential + N+1)
+      const [
+        { data: directInstructors },
+        { data: directCoaches },
+        { data: programInstructors },
+        { data: programCoaches },
+        { data: moduleInstructors },
+        { data: moduleCoaches },
+      ] = await Promise.all([
+        supabase.from("client_instructors").select(`
+          id, instructor_id, client_id,
           instructor:profiles!client_instructors_instructor_id_fkey(id, name, email, avatar_url),
           client:profiles!client_instructors_client_id_fkey(id, name, email, avatar_url)
-        `);
+        `),
+        supabase.from("client_coaches").select(`
+          id, coach_id, client_id,
+          coach:profiles!client_coaches_coach_id_fkey(id, name, email, avatar_url),
+          client:profiles!client_coaches_client_id_fkey(id, name, email, avatar_url)
+        `),
+        supabase.from("program_instructors").select(`
+          id, instructor_id, program_id,
+          instructor:profiles!program_instructors_instructor_id_fkey(id, name, email, avatar_url),
+          program:programs!program_instructors_program_id_fkey(id, name, slug)
+        `),
+        supabase.from("program_coaches").select(`
+          id, coach_id, program_id,
+          coach:profiles!program_coaches_coach_id_fkey(id, name, email, avatar_url),
+          program:programs!program_coaches_program_id_fkey(id, name, slug)
+        `),
+        supabase.from("module_instructors").select(`
+          id, instructor_id, module_id,
+          instructor:profiles!module_instructors_instructor_id_fkey(id, name, email, avatar_url),
+          module:program_modules!module_instructors_module_id_fkey(id, title, program_id)
+        `),
+        supabase.from("module_coaches").select(`
+          id, coach_id, module_id,
+          coach:profiles!module_coaches_coach_id_fkey(id, name, email, avatar_url),
+          module:program_modules!module_coaches_module_id_fkey(id, title, program_id)
+        `),
+      ]);
 
+      // Collect all program IDs that need enrollment lookups
+      const programIds = new Set<string>();
+      programInstructors?.forEach((pi) => programIds.add(pi.program_id));
+      programCoaches?.forEach((pc) => programIds.add(pc.program_id));
+      moduleInstructors?.forEach((mi) => {
+        if (mi.module) programIds.add((mi.module as any).program_id);
+      });
+      moduleCoaches?.forEach((mc) => {
+        if (mc.module) programIds.add((mc.module as any).program_id);
+      });
+
+      // Batch-fetch ALL enrollments for these programs in ONE query (replaces N+1 loops)
+      let enrollmentsByProgram = new Map<
+        string,
+        { client_user_id: string | null; client: any }[]
+      >();
+      if (programIds.size > 0) {
+        const { data: allEnrollments } = await supabase
+          .from("client_enrollments")
+          .select(
+            `client_user_id, program_id,
+            client:profiles!client_enrollments_client_user_id_fkey(id, name, email, avatar_url)`,
+          )
+          .in("program_id", Array.from(programIds))
+          .not("client_user_id", "is", null);
+
+        if (allEnrollments) {
+          for (const e of allEnrollments) {
+            const list = enrollmentsByProgram.get(e.program_id) || [];
+            list.push(e);
+            enrollmentsByProgram.set(e.program_id, list);
+          }
+        }
+      }
+
+      // 1. Direct client-instructor assignments
       if (directInstructors) {
         for (const di of directInstructors) {
           if (di.instructor && di.client) {
@@ -151,14 +219,6 @@ export default function StaffAssignments() {
       }
 
       // 2. Direct client-coach assignments
-      const { data: directCoaches } = await supabase.from("client_coaches").select(`
-          id,
-          coach_id,
-          client_id,
-          coach:profiles!client_coaches_coach_id_fkey(id, name, email, avatar_url),
-          client:profiles!client_coaches_client_id_fkey(id, name, email, avatar_url)
-        `);
-
       if (directCoaches) {
         for (const dc of directCoaches) {
           if (dc.coach && dc.client) {
@@ -181,190 +241,111 @@ export default function StaffAssignments() {
         }
       }
 
-      // 3. Program-level instructor assignments (derived from enrollments)
-      const { data: programInstructors } = await supabase.from("program_instructors").select(`
-          id,
-          instructor_id,
-          program_id,
-          instructor:profiles!program_instructors_instructor_id_fkey(id, name, email, avatar_url),
-          program:programs!program_instructors_program_id_fkey(id, name, slug)
-        `);
-
+      // 3. Program-level instructor assignments (using batch enrollment map)
       if (programInstructors) {
         for (const pi of programInstructors) {
-          // Get all clients enrolled in this program
-          const { data: enrollments } = await supabase
-            .from("client_enrollments")
-            .select(
-              `
-              client_user_id,
-              client:profiles!client_enrollments_client_user_id_fkey(id, name, email, avatar_url)
-            `,
-            )
-            .eq("program_id", pi.program_id)
-            .not("client_user_id", "is", null);
-
-          if (enrollments && pi.instructor) {
-            for (const enroll of enrollments) {
-              if (enroll.client) {
-                allAssignments.push({
-                  id: `prog-inst-${pi.id}-${enroll.client_user_id}`,
-                  staffId: pi.instructor_id,
-                  staffName: (pi.instructor as any).name || "Unknown",
-                  staffEmail: (pi.instructor as any).email || "",
-                  staffAvatar: (pi.instructor as any).avatar_url,
-                  clientId: enroll.client_user_id!,
-                  clientName: (enroll.client as any).name || "Unknown",
-                  clientEmail: (enroll.client as any).email || "",
-                  clientAvatar: (enroll.client as any).avatar_url,
-                  role: "instructor",
-                  source: "program",
-                  sourceId: pi.program_id,
-                  sourceName: (pi.program as any)?.name || "Unknown Program",
-                });
-              }
+          if (!pi.instructor) continue;
+          const enrollments = enrollmentsByProgram.get(pi.program_id) || [];
+          for (const enroll of enrollments) {
+            if (enroll.client) {
+              allAssignments.push({
+                id: `prog-inst-${pi.id}-${enroll.client_user_id}`,
+                staffId: pi.instructor_id,
+                staffName: (pi.instructor as any).name || "Unknown",
+                staffEmail: (pi.instructor as any).email || "",
+                staffAvatar: (pi.instructor as any).avatar_url,
+                clientId: enroll.client_user_id!,
+                clientName: (enroll.client as any).name || "Unknown",
+                clientEmail: (enroll.client as any).email || "",
+                clientAvatar: (enroll.client as any).avatar_url,
+                role: "instructor",
+                source: "program",
+                sourceId: pi.program_id,
+                sourceName: (pi.program as any)?.name || "Unknown Program",
+              });
             }
           }
         }
       }
 
-      // 4. Program-level coach assignments
-      const { data: programCoaches } = await supabase.from("program_coaches").select(`
-          id,
-          coach_id,
-          program_id,
-          coach:profiles!program_coaches_coach_id_fkey(id, name, email, avatar_url),
-          program:programs!program_coaches_program_id_fkey(id, name, slug)
-        `);
-
+      // 4. Program-level coach assignments (using batch enrollment map)
       if (programCoaches) {
         for (const pc of programCoaches) {
-          const { data: enrollments } = await supabase
-            .from("client_enrollments")
-            .select(
-              `
-              client_user_id,
-              client:profiles!client_enrollments_client_user_id_fkey(id, name, email, avatar_url)
-            `,
-            )
-            .eq("program_id", pc.program_id)
-            .not("client_user_id", "is", null);
-
-          if (enrollments && pc.coach) {
-            for (const enroll of enrollments) {
-              if (enroll.client) {
-                allAssignments.push({
-                  id: `prog-coach-${pc.id}-${enroll.client_user_id}`,
-                  staffId: pc.coach_id,
-                  staffName: (pc.coach as any).name || "Unknown",
-                  staffEmail: (pc.coach as any).email || "",
-                  staffAvatar: (pc.coach as any).avatar_url,
-                  clientId: enroll.client_user_id!,
-                  clientName: (enroll.client as any).name || "Unknown",
-                  clientEmail: (enroll.client as any).email || "",
-                  clientAvatar: (enroll.client as any).avatar_url,
-                  role: "coach",
-                  source: "program",
-                  sourceId: pc.program_id,
-                  sourceName: (pc.program as any)?.name || "Unknown Program",
-                });
-              }
+          if (!pc.coach) continue;
+          const enrollments = enrollmentsByProgram.get(pc.program_id) || [];
+          for (const enroll of enrollments) {
+            if (enroll.client) {
+              allAssignments.push({
+                id: `prog-coach-${pc.id}-${enroll.client_user_id}`,
+                staffId: pc.coach_id,
+                staffName: (pc.coach as any).name || "Unknown",
+                staffEmail: (pc.coach as any).email || "",
+                staffAvatar: (pc.coach as any).avatar_url,
+                clientId: enroll.client_user_id!,
+                clientName: (enroll.client as any).name || "Unknown",
+                clientEmail: (enroll.client as any).email || "",
+                clientAvatar: (enroll.client as any).avatar_url,
+                role: "coach",
+                source: "program",
+                sourceId: pc.program_id,
+                sourceName: (pc.program as any)?.name || "Unknown Program",
+              });
             }
           }
         }
       }
 
-      // 5. Module-level instructor assignments
-      const { data: moduleInstructors } = await supabase.from("module_instructors").select(`
-          id,
-          instructor_id,
-          module_id,
-          instructor:profiles!module_instructors_instructor_id_fkey(id, name, email, avatar_url),
-          module:program_modules!module_instructors_module_id_fkey(id, title, program_id)
-        `);
-
+      // 5. Module-level instructor assignments (using batch enrollment map)
       if (moduleInstructors) {
         for (const mi of moduleInstructors) {
-          if (mi.module && mi.instructor) {
-            const { data: enrollments } = await supabase
-              .from("client_enrollments")
-              .select(
-                `
-                client_user_id,
-                client:profiles!client_enrollments_client_user_id_fkey(id, name, email, avatar_url)
-              `,
-              )
-              .eq("program_id", (mi.module as any).program_id)
-              .not("client_user_id", "is", null);
-
-            if (enrollments) {
-              for (const enroll of enrollments) {
-                if (enroll.client) {
-                  allAssignments.push({
-                    id: `mod-inst-${mi.id}-${enroll.client_user_id}`,
-                    staffId: mi.instructor_id,
-                    staffName: (mi.instructor as any).name || "Unknown",
-                    staffEmail: (mi.instructor as any).email || "",
-                    staffAvatar: (mi.instructor as any).avatar_url,
-                    clientId: enroll.client_user_id!,
-                    clientName: (enroll.client as any).name || "Unknown",
-                    clientEmail: (enroll.client as any).email || "",
-                    clientAvatar: (enroll.client as any).avatar_url,
-                    role: "instructor",
-                    source: "module",
-                    sourceId: mi.module_id,
-                    sourceName: (mi.module as any)?.title || "Unknown Module",
-                  });
-                }
-              }
+          if (!mi.module || !mi.instructor) continue;
+          const programId = (mi.module as any).program_id;
+          const enrollments = enrollmentsByProgram.get(programId) || [];
+          for (const enroll of enrollments) {
+            if (enroll.client) {
+              allAssignments.push({
+                id: `mod-inst-${mi.id}-${enroll.client_user_id}`,
+                staffId: mi.instructor_id,
+                staffName: (mi.instructor as any).name || "Unknown",
+                staffEmail: (mi.instructor as any).email || "",
+                staffAvatar: (mi.instructor as any).avatar_url,
+                clientId: enroll.client_user_id!,
+                clientName: (enroll.client as any).name || "Unknown",
+                clientEmail: (enroll.client as any).email || "",
+                clientAvatar: (enroll.client as any).avatar_url,
+                role: "instructor",
+                source: "module",
+                sourceId: mi.module_id,
+                sourceName: (mi.module as any)?.title || "Unknown Module",
+              });
             }
           }
         }
       }
 
-      // 6. Module-level coach assignments
-      const { data: moduleCoaches } = await supabase.from("module_coaches").select(`
-          id,
-          coach_id,
-          module_id,
-          coach:profiles!module_coaches_coach_id_fkey(id, name, email, avatar_url),
-          module:program_modules!module_coaches_module_id_fkey(id, title, program_id)
-        `);
-
+      // 6. Module-level coach assignments (using batch enrollment map)
       if (moduleCoaches) {
         for (const mc of moduleCoaches) {
-          if (mc.module && mc.coach) {
-            const { data: enrollments } = await supabase
-              .from("client_enrollments")
-              .select(
-                `
-                client_user_id,
-                client:profiles!client_enrollments_client_user_id_fkey(id, name, email, avatar_url)
-              `,
-              )
-              .eq("program_id", (mc.module as any).program_id)
-              .not("client_user_id", "is", null);
-
-            if (enrollments) {
-              for (const enroll of enrollments) {
-                if (enroll.client) {
-                  allAssignments.push({
-                    id: `mod-coach-${mc.id}-${enroll.client_user_id}`,
-                    staffId: mc.coach_id,
-                    staffName: (mc.coach as any).name || "Unknown",
-                    staffEmail: (mc.coach as any).email || "",
-                    staffAvatar: (mc.coach as any).avatar_url,
-                    clientId: enroll.client_user_id!,
-                    clientName: (enroll.client as any).name || "Unknown",
-                    clientEmail: (enroll.client as any).email || "",
-                    clientAvatar: (enroll.client as any).avatar_url,
-                    role: "coach",
-                    source: "module",
-                    sourceId: mc.module_id,
-                    sourceName: (mc.module as any)?.title || "Unknown Module",
-                  });
-                }
-              }
+          if (!mc.module || !mc.coach) continue;
+          const programId = (mc.module as any).program_id;
+          const enrollments = enrollmentsByProgram.get(programId) || [];
+          for (const enroll of enrollments) {
+            if (enroll.client) {
+              allAssignments.push({
+                id: `mod-coach-${mc.id}-${enroll.client_user_id}`,
+                staffId: mc.coach_id,
+                staffName: (mc.coach as any).name || "Unknown",
+                staffEmail: (mc.coach as any).email || "",
+                staffAvatar: (mc.coach as any).avatar_url,
+                clientId: enroll.client_user_id!,
+                clientName: (enroll.client as any).name || "Unknown",
+                clientEmail: (enroll.client as any).email || "",
+                clientAvatar: (enroll.client as any).avatar_url,
+                role: "coach",
+                source: "module",
+                sourceId: mc.module_id,
+                sourceName: (mc.module as any)?.title || "Unknown Module",
+              });
             }
           }
         }

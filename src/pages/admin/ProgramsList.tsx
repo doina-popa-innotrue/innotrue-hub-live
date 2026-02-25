@@ -144,16 +144,22 @@ export default function ProgramsList() {
       .order("created_at", { ascending: false });
 
     if (programsData) {
-      const enriched = await Promise.all(
-        programsData.map(async (program) => {
-          const { count } = await supabase
-            .from("program_modules")
-            .select("id", { count: "exact", head: true })
-            .eq("program_id", program.id);
+      // Batch-fetch all module counts in one query (replaces N+1 per-program count queries)
+      const programIds = programsData.map((p) => p.id);
+      const { data: allModules } = await supabase
+        .from("program_modules")
+        .select("program_id")
+        .in("program_id", programIds);
 
-          return { ...program, moduleCount: count || 0 };
-        }),
-      );
+      const moduleCountMap = new Map<string, number>();
+      allModules?.forEach((m) => {
+        moduleCountMap.set(m.program_id, (moduleCountMap.get(m.program_id) || 0) + 1);
+      });
+
+      const enriched = programsData.map((program) => ({
+        ...program,
+        moduleCount: moduleCountMap.get(program.id) || 0,
+      }));
 
       setPrograms(enriched as Program[]);
     }

@@ -48,55 +48,46 @@ export default function CoachesList() {
       return;
     }
 
-    const enrichedCoaches = await Promise.all(
-      coachRoles.map(async (roleEntry) => {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("name, id, plan_id")
-          .eq("id", roleEntry.user_id)
-          .single();
+    const coachUserIds = coachRoles.map((r) => r.user_id);
 
-        let plan: { id: string; name: string } | null = null;
-        if (profile?.plan_id) {
-          const { data: planData } = await supabase
-            .from("plans")
-            .select("id, name")
-            .eq("id", profile.plan_id)
-            .single();
-          plan = planData;
-        }
+    // Batch-fetch all profiles with plan JOINs and client counts in parallel
+    const [{ data: allProfiles }, { data: allCoachClients }, ...emailResults] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, name, plan_id, plans(id, name)")
+        .in("id", coachUserIds),
+      supabase
+        .from("client_coaches")
+        .select("coach_id")
+        .in("coach_id", coachUserIds),
+      // Fetch emails in parallel (edge function per user, but all run concurrently)
+      ...coachUserIds.map((userId) =>
+        supabase.functions
+          .invoke("get-user-email", { body: { userId } })
+          .catch((): { data: null } => ({ data: null })),
+      ),
+    ]);
 
-        // Get email via edge function
-        let email = "";
-        try {
-          const { data: emailData } = await supabase.functions.invoke("get-user-email", {
-            body: { userId: roleEntry.user_id },
-          });
-          email = emailData?.email || "";
-        } catch {
-          // Ignore email fetch errors
-        }
+    // Build lookup maps
+    const profileMap = new Map<string, any>();
+    allProfiles?.forEach((p) => profileMap.set(p.id, p));
 
-        // Count assigned clients
-        let clientCountVal = 0;
-        try {
-          const result = await (supabase.from("client_coaches") as any)
-            .select("id")
-            .eq("coach_id", roleEntry.user_id);
-          clientCountVal = result.data?.length || 0;
-        } catch {
-          // Ignore count errors
-        }
+    const clientCountMap = new Map<string, number>();
+    allCoachClients?.forEach((cc) => {
+      clientCountMap.set(cc.coach_id, (clientCountMap.get(cc.coach_id) || 0) + 1);
+    });
 
-        return {
-          user_id: roleEntry.user_id,
-          name: profile?.name || "Unknown",
-          email,
-          clientCount: clientCountVal,
-          plan,
-        };
-      }),
-    );
+    const enrichedCoaches = coachUserIds.map((userId, idx) => {
+      const profile = profileMap.get(userId);
+      const emailResult = emailResults[idx];
+      return {
+        user_id: userId,
+        name: profile?.name || "Unknown",
+        email: emailResult?.data?.email || "",
+        clientCount: clientCountMap.get(userId) || 0,
+        plan: profile?.plans || null,
+      };
+    });
 
     setCoaches(enrichedCoaches);
     setLoading(false);

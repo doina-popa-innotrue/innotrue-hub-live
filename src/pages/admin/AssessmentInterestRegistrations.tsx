@@ -78,21 +78,25 @@ export default function AssessmentInterestRegistrations() {
       console.error("Error fetching registrations:", error);
       toast({ title: "Error loading registrations", variant: "destructive" });
     } else {
-      const registrationsWithDetails = await Promise.all(
-        (data || []).map(async (reg: any) => {
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("name, username")
-            .eq("id", reg.user_id)
-            .single();
+      // Batch-fetch all profiles in one query (replaces N+1 per-registration profile lookups)
+      const userIds = [...new Set((data || []).map((r: any) => r.user_id))];
+      const profileMap = new Map<string, { name: string; username: string | null }>();
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, name, username")
+          .in("id", userIds);
+        profiles?.forEach((p) => profileMap.set(p.id, p));
+      }
 
-          return {
-            ...reg,
-            profiles: profileData ? { name: profileData.name } : null,
-            auth_users: profileData ? { email: profileData.username || "" } : null,
-          };
-        }),
-      );
+      const registrationsWithDetails = (data || []).map((reg: any) => {
+        const profile = profileMap.get(reg.user_id);
+        return {
+          ...reg,
+          profiles: profile ? { name: profile.name } : null,
+          auth_users: profile ? { email: profile.username || "" } : null,
+        };
+      });
       setRegistrations(registrationsWithDetails as Registration[]);
     }
     setLoading(false);

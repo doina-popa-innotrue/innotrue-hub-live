@@ -279,6 +279,21 @@ export default function ExplorePrograms() {
         });
       });
 
+      // Batch-fetch ALL program skills in one query (replaces N+1 per-program skills queries)
+      const allProgramIds = (programsData || []).map((p) => p.id);
+      const { data: allProgramSkills } = await supabase
+        .from("program_skills")
+        .select("program_id, skill_id")
+        .in("program_id", allProgramIds);
+
+      // Build skills-per-program map
+      const skillsByProgram = new Map<string, string[]>();
+      allProgramSkills?.forEach((ps) => {
+        const list = skillsByProgram.get(ps.program_id) || [];
+        list.push(ps.skill_id);
+        skillsByProgram.set(ps.program_id, list);
+      });
+
       // Calculate recommendation scores
       const recommendationScores = new Map<string, number>();
 
@@ -287,16 +302,12 @@ export default function ExplorePrograms() {
 
         let score = 0;
 
-        // Get program skills
-        const { data: programSkills } = await supabase
-          .from("program_skills")
-          .select("skill_id")
-          .eq("program_id", program.id);
+        // Use batch-fetched program skills
+        const programSkillIds = skillsByProgram.get(program.id) || [];
 
         // Score based on skill overlap
-        const matchingSkills =
-          programSkills?.filter((ps) => userSkills.has(ps.skill_id)).length || 0;
-        const totalSkills = programSkills?.length || 1;
+        const matchingSkills = programSkillIds.filter((id) => userSkills.has(id)).length;
+        const totalSkills = programSkillIds.length || 1;
         score += (matchingSkills / totalSkills) * 50;
 
         // Score based on category match with completed programs
