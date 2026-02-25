@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -36,6 +37,7 @@ import {
   AlertTriangle,
   PauseCircle,
   PlayCircle,
+  CalendarPlus,
 } from "lucide-react";
 import { AdminTrackAssignment } from "@/components/admin/AdminTrackAssignment";
 import { Input } from "@/components/ui/input";
@@ -47,6 +49,116 @@ import ClientStaffNotes from "@/components/admin/ClientStaffNotes";
 import { ClientCreditAudit } from "@/components/admin/ClientCreditAudit";
 import { EnrollmentModuleStaffManager } from "@/components/admin";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
+
+function ExtendDeadlineButton({
+  enrollmentId,
+  currentEndDate,
+  programName,
+  onSuccess,
+}: {
+  enrollmentId: string;
+  currentEndDate: string | null;
+  programName: string;
+  onSuccess: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [extensionDays, setExtensionDays] = useState(30);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const base = currentEndDate ? new Date(currentEndDate) : new Date();
+      base.setDate(base.getDate() + extensionDays);
+
+      const { error } = await supabase
+        .from("client_enrollments")
+        .update({ end_date: base.toISOString() })
+        .eq("id", enrollmentId);
+
+      if (error) throw error;
+
+      toast.success(
+        currentEndDate
+          ? `Deadline extended by ${extensionDays} days`
+          : `Deadline set to ${base.toLocaleDateString()}`,
+      );
+      setOpen(false);
+      onSuccess();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update deadline");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const previewDate = (() => {
+    const base = currentEndDate ? new Date(currentEndDate) : new Date();
+    base.setDate(base.getDate() + extensionDays);
+    return base;
+  })();
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <CalendarPlus className="h-4 w-4 mr-1" />
+          {currentEndDate ? "Extend Deadline" : "Set Deadline"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>
+            {currentEndDate ? "Extend" : "Set"} Deadline — {programName}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div>
+            <Label className="text-sm text-muted-foreground">Current deadline</Label>
+            <p className="font-medium">
+              {currentEndDate
+                ? new Date(currentEndDate).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })
+                : "None (self-paced)"}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="extend-days">
+              {currentEndDate ? "Extend by (days)" : "Set deadline in (days from today)"}
+            </Label>
+            <Input
+              id="extend-days"
+              type="number"
+              min="1"
+              max="1095"
+              value={extensionDays}
+              onChange={(e) => setExtensionDays(parseInt(e.target.value) || 30)}
+              className="w-32"
+            />
+            <p className="text-xs text-muted-foreground">
+              New deadline: {previewDate.toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? "Saving..." : "Save Deadline"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function ClientDetail() {
   const { id } = useParams() as { id: string };
@@ -1267,6 +1379,29 @@ export default function ClientDetail() {
               <CardContent>
                 <div className="text-sm text-muted-foreground mb-4 space-y-1">
                   <p>Started: {new Date(enrollment.start_date).toLocaleDateString()}</p>
+                  {enrollment.end_date && enrollment.status === "active" && (() => {
+                    const daysRemaining = Math.max(0, Math.ceil(
+                      (new Date(enrollment.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                    ));
+                    return (
+                      <p>
+                        Deadline: {new Date(enrollment.end_date).toLocaleDateString()}
+                        {" · "}
+                        <span className={`text-xs font-medium ${
+                          daysRemaining <= 7
+                            ? "text-red-600"
+                            : daysRemaining <= 30
+                              ? "text-amber-600"
+                              : "text-muted-foreground"
+                        }`}>
+                          {daysRemaining} day{daysRemaining !== 1 ? "s" : ""} remaining
+                        </span>
+                      </p>
+                    );
+                  })()}
+                  {!enrollment.end_date && enrollment.status === "active" && (
+                    <p className="text-xs text-muted-foreground">Self-paced (no deadline)</p>
+                  )}
                   {enrollment.status === "completed" && enrollment.completed_at && (
                     <p>
                       Completed: {new Date(enrollment.completed_at).toLocaleDateString()}
@@ -1316,6 +1451,21 @@ export default function ClientDetail() {
                         </>
                       )}
                     </Button>
+                  )}
+
+                  {enrollment.status === "active" && (
+                    <ExtendDeadlineButton
+                      enrollmentId={enrollment.id}
+                      currentEndDate={enrollment.end_date}
+                      programName={enrollment.programs?.name || "Program"}
+                      onSuccess={async () => {
+                        const { data: enrollmentData } = await supabase
+                          .from("client_enrollments")
+                          .select("*, programs(*), program_plans(id, name, tier_level)")
+                          .eq("client_user_id", id);
+                        setEnrollments(enrollmentData || []);
+                      }}
+                    />
                   )}
                 </div>
 

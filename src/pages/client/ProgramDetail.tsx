@@ -49,6 +49,7 @@ import { PageLoadingState } from "@/components/ui/page-loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { CompletionFeatureWarning } from "@/components/enrollment/CompletionFeatureWarning";
 import { AlumniGraceBanner } from "@/components/alumni/AlumniGraceBanner";
+import { EnrollmentDeadlineBanner } from "@/components/enrollment/EnrollmentDeadlineBanner";
 import { ProgramFeatureList } from "@/components/program/ProgramFeatureList";
 
 interface ModuleLink {
@@ -679,6 +680,14 @@ export default function ProgramDetail() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Enrollment deadline warning — shows for active enrollments approaching deadline */}
+        {enrollment?.end_date && enrollment?.status === "active" && (
+          <EnrollmentDeadlineBanner
+            endDate={enrollment.end_date}
+            programName={program.name}
+          />
+        )}
 
         {/* Alumni grace period banner — shows when enrollment ended, in grace period */}
         <AlumniGraceBanner programId={id!} programName={program.name} />

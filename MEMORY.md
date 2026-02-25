@@ -156,7 +156,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - ~~**CT3b: Cross-Program Completion**~~ ✅ — `content_completions` table. `xapi-statements` writes completion on xAPI verb. `useCrossProgramCompletion` extended with 3rd data source. Client `ModuleDetail` auto-accepts completion from shared content. `CanonicalCodesManagement` now shows content packages tab.
 - **`canonical_code` override** — kept as manual override for different content that should count as equivalent.
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → ~~Enrollment Scale + Bulk Enrollment~~ ✅ → ~~SC-1 Critical Indexes~~ ✅ → ~~SC-2 N+1 Rewrites~~ ✅ → ~~2B.5 Certification~~ ✅ → 2B.10 Enrollment Duration → SC-3 Pagination → Phase 5 remaining → SC-4 Organisation Audit → SC-5 Retention → 3-AI/Engagement
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → ~~Enrollment Scale + Bulk Enrollment~~ ✅ → ~~SC-1 Critical Indexes~~ ✅ → ~~SC-2 N+1 Rewrites~~ ✅ → ~~2B.5 Certification~~ ✅ → ~~2B.10 Enrollment Duration~~ ✅ → SC-3 Pagination → Phase 5 remaining → SC-4 Organisation Audit → SC-5 Retention → 3-AI/Engagement
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
@@ -217,7 +217,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Preprod Auth Email Hook (2026-02-14):** Incorrect Authorization header. Fixed with correct service role key.
 - **Profiles RLS recursion (2026-02-14):** Circular RLS on profiles. Fixed via `client_can_view_staff_profile()` SECURITY DEFINER function.
 
-## Current State (as of 2026-03-25, commit 44ed12b)
+## Current State (as of 2026-03-25)
 - All strict TypeScript flags enabled (including strictNullChecks). 0 errors.
 - **Self-registration enabled** (Phase 5 core). Signup form + Google OAuth active in Auth.tsx. New users choose role at `/complete-registration` (client immediate, coach/instructor via admin approval). All self-registered users get client role + free plan immediately.
 - 16 storage buckets on all 3 Supabase projects
@@ -369,7 +369,9 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **TDZ Crash Fix — Client ProgramDetail (2026-03-25):** Moved helper functions (`isTimeGated`, `arePrerequisitesMet`, etc.) before `isModuleAccessible` to fix temporal dead zone ReferenceError when `modules.filter()` invoked callback before const declarations. Commit `51894d1`.
 - **Add-On Edit Dialog Fix (2026-03-25):** Local `formData` state was shadowing the `useAdminCRUD` hook's state, so `openEdit` updated the hook's form but the dialog read from the empty local state. Now uses the hook's `formData`/`setFormData` directly. Commit `a9ccbab`.
 - **Multi-Role Route Enforcement (2026-03-25):** `ProtectedRoute` only checked `userRoles.includes(requireRole)` (access control), not whether the **selected** role matched the route group. Multi-role users (e.g. admin+client) could see the wrong dashboard after page refresh. Added role-route group sync check that maps roles to groups (admin/org_admin/teaching/client) and redirects to the correct dashboard when the route group doesn't match the selected role. Only applies to multi-role users (`userRoles.length > 1`). Commit `44ed12b`.
-- **Next steps:** 2B.10 Enrollment Duration → SC-3 Pagination → Phase 5 remaining → SC-4 Organisation audit → Phase 3 AI
+- **2B.10 Enrollment Duration & Deadline Enforcement (2026-03-25):** Time-bounded enrollments. Migration `20260325200000_enrollment_duration.sql` adds `programs.default_duration_days` (nullable INT), updates `enroll_with_credits` to auto-set `start_date = now()` and `end_date = start_date + duration_days`, backfills `start_date` on existing enrollments, creates `enrollment_deadline_touchpoints` table, 3 notification types, partial index, daily cron. New `enforce-enrollment-deadlines` edge function (5 AM UTC): 30d warning, 7d warning, expiry enforcement (transitions to `completed` → triggers alumni lifecycle). Admin: duration config in `ProgramPlanConfig.tsx` (Switch + days input), deadline display + `ExtendDeadlineButton` dialog in `ClientDetail.tsx`. Client: `EnrollmentDeadlineBanner.tsx` (amber 8-30d, red 1-7d) on `ProgramDetail.tsx` and `ClientDashboard.tsx`. NULL duration = self-paced. Deadline does not pause when enrollment paused (admin can extend manually).
+  - **Key new files:** `supabase/functions/enforce-enrollment-deadlines/index.ts`, `src/components/enrollment/EnrollmentDeadlineBanner.tsx`
+- **Next steps:** SC-3 Pagination → Phase 5 remaining → SC-4 Organisation audit → Phase 3 AI
 
 ## Scalability & Performance Audit (2026-03-24)
 

@@ -1,5 +1,86 @@
 # Completed Work — Detailed History
 
+## 2B.10 Enrollment Duration & Deadline Enforcement (2026-03-25)
+
+Time-bounded enrollment system. Admins can set a default duration per program; new enrollments get automatic deadlines with warnings and enforcement. 1 migration, 1 new edge function, 1 new component, 5 modified files. `npm run verify` passed. Deployed to all environments.
+
+### Migration: `20260325200000_enrollment_duration.sql`
+
+**New column:**
+- `programs.default_duration_days` INTEGER (nullable — NULL = self-paced, no deadline)
+
+**Updated `enroll_with_credits` RPC:**
+- Same 13-param signature (no breaking change)
+- New Step 0e: `v_start_date := now()`, looks up `programs.default_duration_days`, calculates `v_end_date := v_start_date + (duration || ' days')::interval` when non-null
+- `start_date` and `end_date` added to INSERT columns/values
+
+**Backfill:**
+- All existing enrollments get `start_date = COALESCE(created_at, now())` where NULL
+- Existing enrollments do NOT get `end_date` (stay self-paced)
+
+**Touchpoints table:** `enrollment_deadline_touchpoints` (enrollment_id, touchpoint_type, sent_at, UNIQUE constraint). Types: `deadline_warning_30d`, `deadline_warning_7d`, `deadline_expired`. RLS: admins manage all, users read own.
+
+**Notification types (3):** `enrollment_deadline_30d`, `enrollment_deadline_7d`, `enrollment_deadline_expired` in `programs` category.
+
+**Performance index:** Partial index on `client_enrollments(end_date) WHERE status = 'active' AND end_date IS NOT NULL`.
+
+**Cron:** `daily-enforce-enrollment-deadlines` at `0 5 * * *` (5 AM UTC) calling `enforce-enrollment-deadlines` edge function.
+
+### New Edge Function: `supabase/functions/enforce-enrollment-deadlines/index.ts`
+
+Daily cron with 3 phases:
+1. **30-day warnings** — active enrollments with `end_date` ~30 days from now → email + in-app notification + touchpoint record
+2. **7-day warnings** — active enrollments with `end_date` ~7 days from now → same
+3. **Expiry enforcement** — active enrollments where `end_date < now()` → transitions to `completed` (triggers `trg_set_enrollment_completed_at` + `trg_auto_create_badge_on_completion` + alumni lifecycle cron) → expiry notification + touchpoint record
+
+Follows `alumni-lifecycle/index.ts` pattern: touchpoint dedup, email via `send-notification-email`, in-app via `create_notification` RPC.
+
+### New Component: `src/components/enrollment/EnrollmentDeadlineBanner.tsx`
+
+Pure component (no RPC call — reads `endDate` prop directly from enrollment row):
+- Hidden when 30+ days remaining or expired
+- Amber Alert with Clock icon when 8-30 days remaining
+- Red/destructive Alert with ShieldAlert icon when 1-7 days remaining
+- Pattern follows `AlumniGraceBanner.tsx`
+
+### Modified: `src/components/admin/ProgramPlanConfig.tsx`
+
+New "Enrollment Duration" Card (between Premium Program and Repeat Enrollment):
+- Switch: "Enable Enrollment Deadline" (toggles `durationEnabled` state)
+- When enabled: number input for days (min 1, max 1095, placeholder "e.g. 90, 180, 365")
+- Info alert: "Existing enrollments are not affected"
+- Fetches `default_duration_days` in existing `fetchData()`, saves in existing `handleSave()` programs update
+
+### Modified: `src/pages/admin/ClientDetail.tsx`
+
+**Deadline display** in enrollment info section:
+- Shows "Deadline: {date} · {N} days remaining" (color-coded: red ≤7d, amber ≤30d, default otherwise)
+- Shows "Self-paced (no deadline)" when `end_date` is null
+
+**`ExtendDeadlineButton` component** (inline, before main export):
+- Dialog with current deadline display, "Extend by N days" input (default 30), preview of new deadline
+- Saves via `supabase.from("client_enrollments").update({ end_date })`
+- Shows "Set Deadline" when no current deadline, "Extend Deadline" when deadline exists
+
+### Modified: `src/pages/client/ProgramDetail.tsx`
+
+Added `EnrollmentDeadlineBanner` import. Renders before `AlumniGraceBanner` for active enrollments with `end_date`.
+
+### Modified: `src/pages/client/ClientDashboard.tsx`
+
+- Added `end_date: string | null` to `Enrollment` interface
+- Added `end_date` to enrollment select query
+- Renders `EnrollmentDeadlineBanner` for active enrollments within 30 days of expiry (after `CreditExpiryAlert`, before `AlumniGraceBanner`)
+
+### Key Design Decisions
+
+- **Separate edge function** (not extending `alumni-lifecycle`) — pre-completion enforcement vs post-completion nurture
+- **Deadline does NOT pause** when enrollment is paused — admin can manually extend to compensate
+- **No new enrollment status** — expired enrollments transition to `completed` (reuses existing triggers)
+- **NULL duration = self-paced** — opt-in enforcement, no breaking change
+
+---
+
 ## Bug Fixes (2026-03-25, commits 51894d1, a9ccbab, 44ed12b)
 
 ### TDZ Crash on Client ProgramDetail (`51894d1`)

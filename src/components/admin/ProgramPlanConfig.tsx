@@ -13,7 +13,7 @@ import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, Shield, Package, Gem, AlertTriangle, Coins, RotateCcw, CreditCard } from "lucide-react";
+import { Loader2, Shield, Package, Gem, AlertTriangle, Coins, RotateCcw, CreditCard, Timer } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -70,6 +70,8 @@ export function ProgramPlanConfig({
   const [allowRepeatEnrollment, setAllowRepeatEnrollment] = useState(currentAllowRepeatEnrollment);
   const [installmentMonths, setInstallmentMonths] = useState<number[]>([]);
   const [upfrontDiscountPercent, setUpfrontDiscountPercent] = useState(0);
+  const [durationEnabled, setDurationEnabled] = useState(false);
+  const [defaultDurationDays, setDefaultDurationDays] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -94,7 +96,7 @@ export function ProgramPlanConfig({
       // Fetch current program's default program plan and separate purchase flag
       const { data: programData } = await supabase
         .from("programs")
-        .select("default_program_plan_id, requires_separate_purchase, allow_repeat_enrollment, installment_options, upfront_discount_percent")
+        .select("default_program_plan_id, requires_separate_purchase, allow_repeat_enrollment, installment_options, upfront_discount_percent, default_duration_days")
         .eq("id", programId)
         .single();
 
@@ -115,6 +117,8 @@ export function ProgramPlanConfig({
         setInstallmentMonths(instOpts.map((o: { months: number }) => o.months).filter(Boolean));
       }
       setUpfrontDiscountPercent(programData?.upfront_discount_percent ?? 0);
+      setDefaultDurationDays(programData?.default_duration_days ?? null);
+      setDurationEnabled(programData?.default_duration_days != null);
 
       // Initialize tier plan mappings
       const mappings: TierPlanMapping[] = programTiers.map((tier) => {
@@ -195,6 +199,7 @@ export function ProgramPlanConfig({
           allow_repeat_enrollment: allowRepeatEnrollment,
           installment_options: installmentOptionsJson,
           upfront_discount_percent: upfrontDiscountPercent,
+          default_duration_days: durationEnabled ? defaultDurationDays : null,
         })
         .eq("id", programId);
 
@@ -291,6 +296,66 @@ export function ProgramPlanConfig({
                 granted only through manual enrollment by an admin.
               </AlertDescription>
             </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Enrollment Duration */}
+      <Card className={durationEnabled ? "border-indigo-500/50 bg-indigo-50/30 dark:bg-indigo-950/20" : ""}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Timer className="h-4 w-4 text-indigo-600" />
+            Enrollment Duration
+          </CardTitle>
+          <CardDescription>
+            Set a default duration for enrollments. When enabled, new enrollments get an automatic deadline.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="duration-enabled">Enable Enrollment Deadline</Label>
+              <p className="text-xs text-muted-foreground">
+                When disabled, enrollments are self-paced with no expiry date.
+              </p>
+            </div>
+            <Switch
+              id="duration-enabled"
+              checked={durationEnabled}
+              onCheckedChange={setDurationEnabled}
+            />
+          </div>
+
+          {durationEnabled && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="duration-days">Duration (days)</Label>
+                <Input
+                  id="duration-days"
+                  type="number"
+                  min="1"
+                  max="1095"
+                  placeholder="e.g. 90, 180, 365"
+                  value={defaultDurationDays ?? ""}
+                  onChange={(e) =>
+                    setDefaultDurationDays(e.target.value ? parseInt(e.target.value, 10) : null)
+                  }
+                  className="w-40"
+                />
+                <p className="text-xs text-muted-foreground">
+                  New enrollments will have end_date = start_date + this many days.
+                  Clients receive warnings at 30 days and 7 days before expiry.
+                </p>
+              </div>
+
+              <Alert className="bg-indigo-50 border-indigo-200 dark:bg-indigo-900/30 dark:border-indigo-700">
+                <Timer className="h-4 w-4 text-indigo-600" />
+                <AlertDescription className="text-indigo-800 dark:text-indigo-200 text-sm">
+                  Existing enrollments are not affected. Only new enrollments after saving will receive a
+                  deadline. Admins can extend individual deadlines from the client detail page.
+                </AlertDescription>
+              </Alert>
+            </>
           )}
         </CardContent>
       </Card>

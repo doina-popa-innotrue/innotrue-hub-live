@@ -28,6 +28,7 @@ import { RecentFeedbackWidget } from "@/components/dashboard/RecentFeedbackWidge
 import { LowBalanceAlert } from "@/components/credits/LowBalanceAlert";
 import { CreditExpiryAlert } from "@/components/credits/CreditExpiryAlert";
 import { AlumniGraceBanner } from "@/components/alumni/AlumniGraceBanner";
+import { EnrollmentDeadlineBanner } from "@/components/enrollment/EnrollmentDeadlineBanner";
 import { AnnouncementsWidget } from "@/components/dashboard/AnnouncementsWidget";
 import { DevelopmentHubWidget } from "@/components/dashboard/DevelopmentHubWidget";
 import { DevelopmentItemsSection } from "@/components/dashboard/DevelopmentItemsSection";
@@ -45,6 +46,7 @@ import { useUserTimezone } from "@/hooks/useUserTimezone";
 interface Enrollment {
   id: string;
   status: string;
+  end_date: string | null;
   programs: {
     id: string;
     name: string;
@@ -258,6 +260,7 @@ export default function ClientDashboard() {
           id,
           status,
           tier,
+          end_date,
           programs!inner (
             id,
             name,
@@ -730,6 +733,21 @@ export default function ClientDashboard() {
       {/* Section 1: Alerts & Banners */}
       {hasFeature("credits") && <LowBalanceAlert threshold={10} />}
       {hasFeature("credits") && <CreditExpiryAlert />}
+      {enrollments
+        .filter((e) => e.end_date && e.status === "active")
+        .filter((e) => {
+          const daysRemaining = Math.ceil(
+            (new Date(e.end_date!).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+          );
+          return daysRemaining <= 30 && daysRemaining >= 0;
+        })
+        .map((e) => (
+          <EnrollmentDeadlineBanner
+            key={`deadline-${e.id}`}
+            endDate={e.end_date!}
+            programName={e.programs.name}
+          />
+        ))}
       {recentlyCompletedEnrollments.map((enrollment) => (
         <AlumniGraceBanner
           key={enrollment.programId}

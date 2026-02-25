@@ -60,6 +60,9 @@ verify_jwt = false
 [functions.customer-portal]
 verify_jwt = false
 
+[functions.enforce-enrollment-deadlines]
+verify_jwt = false
+
 [functions.decision-insights]
 verify_jwt = false
 
