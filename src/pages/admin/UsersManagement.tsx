@@ -322,7 +322,10 @@ export default function UsersManagement() {
         },
       });
 
-      if (fnError) throw fnError;
+      if (fnError) {
+        // Extract specific error from response body, fall back to generic message
+        throw new Error(data?.error || fnError.message);
+      }
       if (data?.error) throw new Error(data.error);
       if (!data?.user) throw new Error("User creation failed");
 

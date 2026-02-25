@@ -134,18 +134,9 @@ const handler = async (req: Request): Promise<Response> => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Check if user already exists
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find(u => u.email === email);
-    
-    if (existingUser) {
-      return new Response(
-        JSON.stringify({ error: "A user with this email already exists" }),
-        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
-      );
-    }
-
     // Create user via admin API (this does NOT affect the current session)
+    // Note: createUser itself returns an error if the email is already taken,
+    // so we don't need a separate existence check (which was also broken for >50 users).
     const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
