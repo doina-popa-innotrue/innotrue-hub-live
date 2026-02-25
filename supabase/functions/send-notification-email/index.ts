@@ -10,7 +10,7 @@ interface NotificationRequest {
   email?: string;
   userId?: string;
   name: string;
-  type: "profile_update" | "password_change" | "email_change" | "email_change_old" | "email_change_new" | "email_change_verification" | "email_change_initiated" | "admin_email_change" | "program_assignment" | "talentlms_reconnect_request" | "tier_change" | "instructor_program_assignment" | "coach_program_assignment" | "instructor_module_assignment" | "coach_module_assignment" | "goal_shared" | "goal_feedback" | "program_interest_registration" | "schedule_reminder" | "waitlist_spot_available" | "registration_follow_up" | "account_deactivation_request" | "account_deletion_request" | "subscription_plan_request" | "subscription_addon_request" | "badge_issued" | "circle_connection_request" | "session_request" | "session_scheduled" | "session_rsvp_confirmation" | "org_seat_limit_warning" | "org_seat_limit_reached";
+  type: "profile_update" | "password_change" | "email_change" | "email_change_old" | "email_change_new" | "email_change_verification" | "email_change_initiated" | "admin_email_change" | "program_assignment" | "talentlms_reconnect_request" | "tier_change" | "instructor_program_assignment" | "coach_program_assignment" | "instructor_module_assignment" | "coach_module_assignment" | "goal_shared" | "goal_feedback" | "program_interest_registration" | "schedule_reminder" | "waitlist_spot_available" | "registration_follow_up" | "account_deactivation_request" | "account_deletion_request" | "subscription_plan_request" | "subscription_addon_request" | "badge_issued" | "badge_pending_approval" | "circle_connection_request" | "session_request" | "session_scheduled" | "session_rsvp_confirmation" | "org_seat_limit_warning" | "org_seat_limit_reached";
   timestamp: string;
   programName?: string;
   programDescription?: string;
@@ -80,6 +80,7 @@ const typeToTemplateKey: Record<string, string> = {
   subscription_plan_request: 'notification_subscription_plan',
   subscription_addon_request: 'notification_subscription_addon',
   badge_issued: 'notification_badge_issued',
+  badge_pending_approval: 'notification_badge_pending',
   circle_connection_request: 'notification_circle_connection',
   session_request: 'notification_session_request',
   session_scheduled: 'notification_session_scheduled',

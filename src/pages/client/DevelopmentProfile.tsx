@@ -8,6 +8,7 @@ import { AssessmentGoalProgress } from "@/components/development-profile/Assessm
 import { SkillsEarned } from "@/components/development-profile/SkillsEarned";
 import { GuidedPathProgress } from "@/components/development-profile/GuidedPathProgress";
 import { BarChart3 } from "lucide-react";
+import ClientBadgesSection from "@/components/badges/ClientBadgesSection";
 
 export default function DevelopmentProfile() {
   const { user } = useAuth();
@@ -44,6 +45,9 @@ export default function DevelopmentProfile() {
 
       {/* Section D: Skills Earned */}
       <SkillsEarned userId={user.id} />
+
+      {/* Section D2: Badges & Certifications */}
+      <ClientBadgesSection />
 
       {/* Section E: Guided Path Progress */}
       <GuidedPathProgress userId={user.id} />

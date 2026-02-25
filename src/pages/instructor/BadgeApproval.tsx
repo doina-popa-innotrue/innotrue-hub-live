@@ -53,6 +53,7 @@ interface PendingBadge {
     name: string;
     description: string | null;
     image_path: string | null;
+    renewal_period_months: number | null;
     program_badge_credentials: Array<{
       id: string;
       service_name: string;
@@ -134,19 +135,32 @@ export default function BadgeApproval() {
 
   const approveBadgesMutation = useMutation({
     mutationFn: async (badgeIds: string[]) => {
-      const now = new Date().toISOString();
+      const now = new Date();
+      const nowIso = now.toISOString();
 
-      // Update badges to approved/issued status
-      const { error: updateError } = await supabase
-        .from("client_badges")
-        .update({
-          status: "issued",
-          issued_at: now,
-          issued_by: user?.id,
-        })
-        .in("id", badgeIds);
+      // Update badges to approved/issued status, calculating expires_at per badge
+      for (const badgeId of badgeIds) {
+        const badge = pendingBadges?.find((b) => b.id === badgeId);
+        const renewalMonths = badge?.program_badges?.renewal_period_months;
+        let expiresAt: string | null = null;
+        if (renewalMonths) {
+          const expiry = new Date(now);
+          expiry.setMonth(expiry.getMonth() + renewalMonths);
+          expiresAt = expiry.toISOString();
+        }
 
-      if (updateError) throw updateError;
+        const { error: updateError } = await supabase
+          .from("client_badges")
+          .update({
+            status: "issued",
+            issued_at: nowIso,
+            issued_by: user?.id,
+            expires_at: expiresAt,
+          })
+          .eq("id", badgeId);
+
+        if (updateError) throw updateError;
+      }
 
       // Create client badge credentials with acceptance URLs
       const credentialsToInsert: Array<{
@@ -188,7 +202,7 @@ export default function BadgeApproval() {
                 userId: badge.user_id,
                 name: badge.profiles.name,
                 type: "badge_issued",
-                timestamp: now,
+                timestamp: nowIso,
                 programName: badge.client_enrollments.programs.name,
                 badgeName: badge.program_badges.name,
                 badgeDescription: badge.program_badges.description,
@@ -442,6 +456,11 @@ export default function BadgeApproval() {
                       <CardTitle className="text-base">{badge.profiles?.name}</CardTitle>
                       <CardDescription>
                         {badge.client_enrollments?.programs?.name} - {badge.program_badges?.name}
+                        {badge.program_badges?.renewal_period_months && (
+                          <span className="block text-xs mt-1">
+                            Badge will expire in {badge.program_badges.renewal_period_months} month{badge.program_badges.renewal_period_months !== 1 ? "s" : ""} from issuance
+                          </span>
+                        )}
                       </CardDescription>
                     </div>
                   </div>

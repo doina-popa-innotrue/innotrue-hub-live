@@ -35,6 +35,7 @@ import { MyGroupsSection } from "@/components/dashboard/MyGroupsSection";
 import { MyCoachesSection } from "@/components/dashboard/MyCoachesSection";
 import { hasTierAccess } from "@/lib/tierUtils";
 import { useEntitlements } from "@/hooks/useEntitlements";
+import ClientBadgesSection from "@/components/badges/ClientBadgesSection";
 import { usePageView } from "@/hooks/useAnalytics";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
@@ -1132,6 +1133,9 @@ export default function ClientDashboard() {
           </div>
         </div>
       )}
+
+      {/* Section 9b: Earned Badges (compact) */}
+      {hasFeature("certificates") && <ClientBadgesSection compact showPublicToggle={false} />}
 
       {/* Section 10: Weekly Reflection */}
       {hasFeature("ai_insights") && <WeeklyReflectionCard />}

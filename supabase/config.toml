@@ -218,3 +218,9 @@ verify_jwt = false
 
 [functions.xapi-statements]
 verify_jwt = false
+
+[functions.verify-badge]
+verify_jwt = false
+
+[functions.generate-certificate-pdf]
+verify_jwt = false

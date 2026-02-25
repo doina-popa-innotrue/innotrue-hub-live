@@ -6,7 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Award, ExternalLink, Loader2, Eye, EyeOff, Linkedin } from "lucide-react";
+import {
+  Award,
+  ExternalLink,
+  Loader2,
+  Eye,
+  EyeOff,
+  Linkedin,
+  Clock,
+  FileDown,
+  AlertTriangle,
+} from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,6 +28,7 @@ interface ClientBadge {
   status: string;
   image_path: string | null;
   issued_at: string | null;
+  expires_at: string | null;
   is_public: boolean;
   program_badges: {
     id: string;
@@ -43,6 +54,16 @@ interface ClientBadge {
   }>;
 }
 
+interface PendingBadge {
+  id: string;
+  program_badges: {
+    name: string;
+    programs: {
+      name: string;
+    };
+  };
+}
+
 interface Props {
   showPublicToggle?: boolean;
   compact?: boolean;
@@ -52,7 +73,9 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedBadge, setSelectedBadge] = useState<ClientBadge | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
+  // Fetch issued badges
   const { data: badges, isLoading } = useQuery({
     queryKey: ["client-badges", user?.id],
     queryFn: async () => {
@@ -83,6 +106,32 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
 
       if (error) throw error;
       return data as ClientBadge[];
+    },
+    enabled: !!user,
+  });
+
+  // Fetch pending badges (separate query)
+  const { data: pendingBadges } = useQuery({
+    queryKey: ["client-badges-pending", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from("client_badges")
+        .select(
+          `
+          id,
+          program_badges (
+            name,
+            programs (name)
+          )
+        `,
+        )
+        .eq("user_id", user.id)
+        .eq("status", "pending_approval");
+
+      if (error) throw error;
+      return data as PendingBadge[];
     },
     enabled: !!user,
   });
@@ -120,6 +169,45 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
     return null;
   };
 
+  const getExpiryStatus = (expiresAt: string | null) => {
+    if (!expiresAt) return null;
+    const expiry = new Date(expiresAt);
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    if (expiry < now) return "expired";
+    if (expiry < thirtyDaysFromNow) return "expiring_soon";
+    return "valid";
+  };
+
+  async function downloadCertificate(clientBadgeId: string) {
+    setIsDownloading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-certificate-pdf", {
+        body: { client_badge_id: clientBadgeId },
+      });
+
+      if (error) throw error;
+
+      // The response is a PDF blob
+      const blob = new Blob([data], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `certificate-${clientBadgeId.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download certificate:", err);
+      toast.error("Failed to download certificate");
+    } finally {
+      setIsDownloading(false);
+    }
+  }
+
+  const pendingCount = pendingBadges?.length || 0;
+  const hasBadges = (badges && badges.length > 0) || pendingCount > 0;
+
   if (isLoading) {
     return (
       <Card>
@@ -132,7 +220,7 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
     );
   }
 
-  if (!badges || badges.length === 0) {
+  if (!hasBadges) {
     if (compact) return null;
 
     return (
@@ -155,6 +243,9 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
     );
   }
 
+  // In compact mode, only show if there are issued badges
+  if (compact && (!badges || badges.length === 0)) return null;
+
   return (
     <>
       <Card>
@@ -162,61 +253,87 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
           <CardTitle className="flex items-center gap-2">
             <Award className="h-5 w-5" />
             My Badges
-            <Badge variant="secondary" className="ml-2">
-              {badges.length}
-            </Badge>
+            {badges && badges.length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {badges.length}
+              </Badge>
+            )}
           </CardTitle>
           {!compact && (
             <CardDescription>Badges you've earned from completing programs</CardDescription>
           )}
         </CardHeader>
-        <CardContent>
-          <div
-            className={`grid gap-4 ${compact ? "grid-cols-4" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"}`}
-          >
-            {badges.map((badge) => {
-              const imageUrl = getBadgeImageUrl(badge);
+        <CardContent className="space-y-4">
+          {/* Pending badges notice */}
+          {pendingCount > 0 && !compact && (
+            <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <Clock className="h-4 w-4 text-amber-600 flex-shrink-0" />
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                {pendingCount} badge{pendingCount !== 1 ? "s" : ""} pending instructor review
+              </p>
+            </div>
+          )}
 
-              return (
-                <div
-                  key={badge.id}
-                  className="relative group cursor-pointer"
-                  onClick={() => setSelectedBadge(badge)}
-                >
-                  <div className="border rounded-lg p-4 hover:border-primary transition-colors text-center">
-                    {imageUrl ? (
-                      <img
-                        src={imageUrl}
-                        alt={badge.program_badges.name}
-                        className="w-16 h-16 mx-auto object-contain mb-2"
-                      />
-                    ) : (
-                      <Award className="w-16 h-16 mx-auto text-primary mb-2" />
-                    )}
-                    {!compact && (
-                      <>
-                        <p className="font-medium text-sm line-clamp-2">
-                          {badge.program_badges.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {badge.program_badges.programs.name}
-                        </p>
-                      </>
-                    )}
-                    {showPublicToggle && (
-                      <div className="absolute top-2 right-2">
-                        {badge.is_public ? (
-                          <Eye className="h-4 w-4 text-primary" />
-                        ) : (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </div>
-                    )}
+          {/* Issued badges grid */}
+          {badges && badges.length > 0 && (
+            <div
+              className={`grid gap-4 ${compact ? "grid-cols-4" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"}`}
+            >
+              {badges.map((badge) => {
+                const imageUrl = getBadgeImageUrl(badge);
+                const expiryStatus = getExpiryStatus(badge.expires_at);
+
+                return (
+                  <div
+                    key={badge.id}
+                    className="relative group cursor-pointer"
+                    onClick={() => setSelectedBadge(badge)}
+                  >
+                    <div className="border rounded-lg p-4 hover:border-primary transition-colors text-center">
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={badge.program_badges.name}
+                          className="w-16 h-16 mx-auto object-contain mb-2"
+                        />
+                      ) : (
+                        <Award className="w-16 h-16 mx-auto text-primary mb-2" />
+                      )}
+                      {!compact && (
+                        <>
+                          <p className="font-medium text-sm line-clamp-2">
+                            {badge.program_badges.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {badge.program_badges.programs.name}
+                          </p>
+                          {expiryStatus === "expired" && (
+                            <Badge variant="destructive" className="mt-1 text-xs">
+                              Expired
+                            </Badge>
+                          )}
+                          {expiryStatus === "expiring_soon" && (
+                            <Badge variant="outline" className="mt-1 text-xs text-amber-600 border-amber-300">
+                              Expiring soon
+                            </Badge>
+                          )}
+                        </>
+                      )}
+                      {showPublicToggle && (
+                        <div className="absolute top-2 right-2">
+                          {badge.is_public ? (
+                            <Eye className="h-4 w-4 text-primary" />
+                          ) : (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -252,6 +369,23 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
                     <strong>Issued:</strong>{" "}
                     {new Date(selectedBadge.issued_at).toLocaleDateString()}
                   </p>
+                )}
+                {selectedBadge.expires_at && (
+                  <div className="text-sm">
+                    <strong>Expires:</strong>{" "}
+                    {new Date(selectedBadge.expires_at).toLocaleDateString()}
+                    {getExpiryStatus(selectedBadge.expires_at) === "expired" && (
+                      <Badge variant="destructive" className="ml-2 text-xs">
+                        Expired
+                      </Badge>
+                    )}
+                    {getExpiryStatus(selectedBadge.expires_at) === "expiring_soon" && (
+                      <Badge variant="outline" className="ml-2 text-xs text-amber-600 border-amber-300">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        Expiring soon
+                      </Badge>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -293,8 +427,23 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
                 </div>
               )}
 
-              {/* LinkedIn Add to Profile */}
-              <div className="pt-2">
+              {/* Download Certificate */}
+              <div className="pt-2 space-y-2">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  disabled={isDownloading}
+                  onClick={() => downloadCertificate(selectedBadge.id)}
+                >
+                  {isDownloading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <FileDown className="h-4 w-4 mr-2" />
+                  )}
+                  Download Certificate (PDF)
+                </Button>
+
+                {/* LinkedIn Add to Profile */}
                 <Button variant="outline" className="w-full" asChild>
                   <a
                     href={generateLinkedInAddToProfileUrl({
@@ -304,6 +453,12 @@ export default function ClientBadgesSection({ showPublicToggle = true, compact =
                         : undefined,
                       issueMonth: selectedBadge.issued_at
                         ? new Date(selectedBadge.issued_at).getMonth() + 1
+                        : undefined,
+                      expirationYear: selectedBadge.expires_at
+                        ? new Date(selectedBadge.expires_at).getFullYear()
+                        : undefined,
+                      expirationMonth: selectedBadge.expires_at
+                        ? new Date(selectedBadge.expires_at).getMonth() + 1
                         : undefined,
                       certificationUrl: generateBadgeVerificationUrl(selectedBadge.id),
                       certificationId: selectedBadge.id,

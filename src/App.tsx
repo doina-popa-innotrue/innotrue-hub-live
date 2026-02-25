@@ -233,6 +233,7 @@ const WheelAssessment = lazy(() => import("./pages/public/WheelAssessment"));
 const PublicAssessment = lazy(() => import("./pages/public/PublicAssessment"));
 const EnrollWithCode = lazy(() => import("./pages/public/EnrollWithCode"));
 const RedeemPartnerCode = lazy(() => import("./pages/public/RedeemPartnerCode"));
+const BadgeVerification = lazy(() => import("./pages/public/BadgeVerification"));
 const CompleteRegistration = lazy(() => import("./pages/CompleteRegistration"));
 
 const queryClient = new QueryClient({
@@ -287,6 +288,7 @@ const App = () => (
                   <Route path="/accept-invite" element={<AcceptInvite />} />
                   <Route path="/enroll" element={<EnrollWithCode />} />
                   <Route path="/partner" element={<RedeemPartnerCode />} />
+                  <Route path="/verify/badge/:badgeId" element={<BadgeVerification />} />
                   <Route path="/complete-registration" element={<CompleteRegistration />} />
 
                   {/* Org Admin Routes */}

@@ -1917,6 +1917,7 @@ export type Database = {
         Row: {
           created_at: string
           enrollment_id: string
+          expires_at: string | null
           id: string
           image_path: string | null
           is_private: boolean
@@ -1931,6 +1932,7 @@ export type Database = {
         Insert: {
           created_at?: string
           enrollment_id: string
+          expires_at?: string | null
           id?: string
           image_path?: string | null
           is_private?: boolean
@@ -1945,6 +1947,7 @@ export type Database = {
         Update: {
           created_at?: string
           enrollment_id?: string
+          expires_at?: string | null
           id?: string
           image_path?: string | null
           is_private?: boolean
@@ -9897,6 +9900,7 @@ export type Database = {
           is_active: boolean
           name: string
           program_id: string
+          renewal_period_months: number | null
           updated_at: string
         }
         Insert: {
@@ -9907,6 +9911,7 @@ export type Database = {
           is_active?: boolean
           name: string
           program_id: string
+          renewal_period_months?: number | null
           updated_at?: string
         }
         Update: {
@@ -9917,6 +9922,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           program_id?: string
+          renewal_period_months?: number | null
           updated_at?: string
         }
         Relationships: [

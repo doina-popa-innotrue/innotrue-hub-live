@@ -36,6 +36,7 @@ interface ProgramBadge {
   description: string | null;
   image_path: string | null;
   is_active: boolean;
+  renewal_period_months: number | null;
   created_at: string;
   program_badge_credentials: ProgramBadgeCredential[];
 }
@@ -63,6 +64,7 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
     name: "",
     description: "",
     is_active: true,
+    renewal_period_months: "" as string,
   });
 
   const [credentials, setCredentials] = useState<
@@ -100,6 +102,7 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
 
   const createBadgeMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      const renewalMonths = data.renewal_period_months ? parseInt(data.renewal_period_months, 10) : null;
       const { data: newBadge, error } = await supabase
         .from("program_badges")
         .insert({
@@ -107,6 +110,7 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
           name: data.name,
           description: data.description || null,
           is_active: data.is_active,
+          renewal_period_months: renewalMonths,
         })
         .select()
         .single();
@@ -144,12 +148,14 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
     mutationFn: async (data: typeof formData) => {
       if (!badge) return;
 
+      const renewalMonths = data.renewal_period_months ? parseInt(data.renewal_period_months, 10) : null;
       const { error } = await supabase
         .from("program_badges")
         .update({
           name: data.name,
           description: data.description || null,
           is_active: data.is_active,
+          renewal_period_months: renewalMonths,
         })
         .eq("id", badge.id);
 
@@ -205,7 +211,7 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
   });
 
   const resetForm = () => {
-    setFormData({ name: "", description: "", is_active: true });
+    setFormData({ name: "", description: "", is_active: true, renewal_period_months: "" });
     setCredentials([]);
     setNewCredential({ service_name: "", service_display_name: "", credential_template_url: "" });
   };
@@ -216,6 +222,7 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
         name: badge.name,
         description: badge.description || "",
         is_active: badge.is_active,
+        renewal_period_months: badge.renewal_period_months?.toString() || "",
       });
       setCredentials(
         badge.program_badge_credentials.map((c) => ({
@@ -393,6 +400,11 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
                 {badge.description && (
                   <p className="text-sm text-muted-foreground">{badge.description}</p>
                 )}
+                {badge.renewal_period_months && (
+                  <p className="text-xs text-muted-foreground">
+                    Renewal: every {badge.renewal_period_months} month{badge.renewal_period_months !== 1 ? "s" : ""}
+                  </p>
+                )}
 
                 {badge.program_badge_credentials.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
@@ -482,6 +494,22 @@ export default function ProgramBadgeManager({ programId, programName }: Props) {
                     rows={3}
                     maxLength={500}
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="renewal_period_months">Renewal Period (months)</Label>
+                  <Input
+                    id="renewal_period_months"
+                    type="number"
+                    min={1}
+                    max={120}
+                    value={formData.renewal_period_months}
+                    onChange={(e) => setFormData({ ...formData, renewal_period_months: e.target.value })}
+                    placeholder="Leave empty for non-expiring badges"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    How long the badge is valid after issuance. Leave empty for non-expiring badges.
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2">
