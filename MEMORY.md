@@ -359,7 +359,8 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Enrollment Scale & Bulk Enrollment (2026-03-24):** Performance indexes migration (`20260324170000`) adds 8 critical indexes on `client_enrollments`, `program_instructors`, `program_coaches`, `module_progress`. EnrolmentsManagement fully rewritten with React Query, server-side pagination (25/page), server-side filters, progress column. New `BulkEnrollmentDialog` (4-step: program→clients→confirm→result) with `enroll_with_credits` RPC + `p_force=true`. ClientDetail enrollment cards now show inline progress bars (batch-queried module_progress).
 - **Scalability & Performance Audit (2026-03-24):** Comprehensive audit of all data-heavy areas. Full findings documented below in "Scalability Audit" section. Key patterns found: N+1 queries in 14+ admin pages, missing indexes on 6 critical tables, no server-side pagination on most admin list pages, unbounded summary queries loading entire tables client-side. Roadmap items SC-1 through SC-5 created.
 - **SC-1 Critical Missing Indexes (2026-03-24):** Migration `20260324180000_sc1_critical_missing_indexes.sql` adds 17 indexes across 8 tables: module_assignments (4), module_sessions (3), capability_assessments (3), assessment_responses (2), assessment_questions (1), module_progress (2), calcom_webhook_logs (1), user_credit_transactions (1 composite). Pushed to all 3 environments.
-- **Next steps:** SC-2 N+1 rewrites → 2B.5 Certification → 2B.10 Enrollment Duration → SC-3 Pagination → Phase 5 remaining → SC-4 Organisation audit → Phase 3 AI
+- **SC-2 N+1 Query Rewrites (2026-02-25):** Rewrote 13 pages to replace O(N) per-record DB calls with batch `.in()` queries and lookup maps. Critical: StaffAssignments (4 nested loops → 1 batch), UsersManagement (4N → 4 batch), ClientsList (5N → 5 batch), ProgramCompletions (sequential for → 1 batch). High: CoachesList, InstructorsList, ProgramsList, AssessmentInterestRegistrations, ProgramDetail, ExplorePrograms, CapabilityAssessments. Medium/Low: GroupsManagement, AdminDashboard. CapabilityAssessmentsManagement snapshot count was already acceptable (single column fetch).
+- **Next steps:** 2B.5 Certification → 2B.10 Enrollment Duration → SC-3 Pagination → Phase 5 remaining → SC-4 Organisation audit → Phase 3 AI
 
 ## Scalability & Performance Audit (2026-03-24)
 
@@ -383,25 +384,26 @@ Comprehensive audit of all data-heavy areas. Findings grouped by severity with r
 
 **Already indexed (recent):** `client_enrollments` (8 indexes via `20260324170000`), `program_instructors`, `program_coaches`, `module_progress(enrollment_id)`.
 
-### SC-2: N+1 Query Rewrites (🔴 ~3-5 days)
-Pages that make O(N) database calls where N is the number of records. Must be rewritten with batch queries or JOINs.
+### ~~SC-2: N+1 Query Rewrites~~ ✅ DONE (2026-02-25)
+13 pages rewritten with batch `.in()` queries and lookup maps. All O(N) per-record queries eliminated.
 
-| Severity | Page | Pattern | Queries per N |
-|----------|------|---------|---------------|
-| **Critical** | `admin/StaffAssignments.tsx` | 4 nested loops (per instructor/coach × per program/module) | 4+ per staff member |
-| **Critical** | `admin/UsersManagement.tsx` | Per-user: roles + qualifications + prefs + email | 4 per user |
-| **Critical** | `admin/ClientsList.tsx` | Per-client: profile + client_profile + enrollment count + coach | 4 per client |
-| **Critical** | `admin/ProgramCompletions.tsx` | Sequential `for` loop (not even parallel) querying enrollments per user | 1 per user (serial!) |
-| **High** | `admin/CoachesList.tsx` | Per-coach: profile + plan + client count | 3 per coach |
-| **High** | `admin/InstructorsList.tsx` | Per-instructor: profile + plan + client count | 3 per instructor |
-| **High** | `admin/ProgramsList.tsx` | Per-program: module count query | 1 per program |
-| **High** | `admin/AssessmentInterestRegistrations.tsx` | Per-registration: profile lookup | 1 per registration |
-| **High** | `admin/CapabilityAssessmentsManagement.tsx` | Downloads ALL snapshots to count client-side | Full table scan |
-| **High** | `client/ProgramDetail.tsx` | Per-module: module_progress query | 1 per module |
-| **High** | `client/ExplorePrograms.tsx` | Per-program: program_skills query for recommendations | 1 per program |
-| **High** | `client/CapabilityAssessments.tsx` | Per-snapshot: evaluator name lookup | 1 per snapshot |
-| **Medium** | `admin/GroupsManagement.tsx` | Per-group: member count query | 1 per group |
-| **Low** | `admin/AdminDashboard.tsx` | 4 loops of 5 items each for profile names | 20 total (bounded) |
+| Severity | Page | Fix Applied |
+|----------|------|-------------|
+| **Critical** | `admin/StaffAssignments.tsx` | 6 sources fetched in parallel + 1 batch enrollment query with Map lookup |
+| **Critical** | `admin/UsersManagement.tsx` | 4 batch queries (roles, quals, prefs, module_types) + parallel email edge calls |
+| **Critical** | `admin/ClientsList.tsx` | 5 batch queries (profiles, client_profiles, enrollments, coaches, coach profiles) |
+| **Critical** | `admin/ProgramCompletions.tsx` | 1 batch enrollment query grouped by user in JS |
+| **High** | `admin/CoachesList.tsx` | Batch profiles with plan JOINs + batch client_coaches count |
+| **High** | `admin/InstructorsList.tsx` | Batch profiles with plan JOINs + batch program_instructors count |
+| **High** | `admin/ProgramsList.tsx` | 1 batch program_modules query → Map count |
+| **High** | `admin/AssessmentInterestRegistrations.tsx` | 1 batch profiles query → Map lookup |
+| **High** | `client/ProgramDetail.tsx` | 1 batch module_progress query → Map lookup |
+| **High** | `client/ExplorePrograms.tsx` | 1 batch program_skills query → Map lookup for recommendation scoring |
+| **High** | `client/CapabilityAssessments.tsx` | 1 batch evaluator profiles query → Map lookup |
+| **Medium** | `admin/GroupsManagement.tsx` | 1 batch group_memberships query → Map count |
+| **Low** | `admin/AdminDashboard.tsx` | 4 data fetches in parallel + 1 batch profiles query for all user IDs |
+
+**Skipped:** `CapabilityAssessmentsManagement.tsx` snapshot count — already fetches only `assessment_id` column, acceptable for current scale.
 
 ### SC-3: Server-Side Pagination Needed (🟠 ~3-5 days)
 Admin pages that load ALL records client-side with no `.range()` or `.limit()`.
