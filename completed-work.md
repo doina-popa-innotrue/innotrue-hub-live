@@ -1,5 +1,28 @@
 # Completed Work — Detailed History
 
+## Bug Fixes (2026-03-25, commits 51894d1, a9ccbab, 44ed12b)
+
+### TDZ Crash on Client ProgramDetail (`51894d1`)
+Helper functions (`isTimeGated`, `arePrerequisitesMet`, `isModuleAccessible`) were defined as `const` arrow functions but referenced before declaration inside a `modules.filter()` callback. Moved all helpers above `isModuleAccessible` to fix temporal dead zone ReferenceError. 1 file changed (67 lines reordered).
+
+### Add-On Edit Dialog Not Loading Existing Data (`a9ccbab`)
+`AddOnsManagement.tsx` had a local `formData` state that shadowed the `useAdminCRUD` hook's form state. When `openEdit()` was called, it updated the hook's `formData` but the dialog rendered from the empty local state. Fix: removed local state, now uses the hook's `formData`/`setFormData` directly. 1 file, 2 lines changed.
+
+### Multi-Role Users See Wrong Dashboard After Refresh (`44ed12b`)
+`ProtectedRoute` checked `userRoles.includes(requireRole)` (whether the user **has** the role) but not whether the **selected** role matched the route. For multi-role users (e.g. admin+client), both `/admin` and `/dashboard` passed the access check regardless of which role was selected via the sidebar. After page refresh, the URL could stay on a route that didn't match the selected role.
+
+**Fix:** Added role-route group sync check in `ProtectedRoute` (lines 142-160). Maps roles to route groups:
+- `admin` → "admin"
+- `org_admin` → "org_admin"
+- `instructor`/`coach` → "teaching"
+- everything else → "client"
+
+When `routeGroup(requireRole) !== routeGroup(userRole)` for a multi-role user, redirects to the selected role's dashboard. Single-role users are unaffected (`userRoles.length > 1` guard). Teaching routes without `requireRole` are unaffected.
+
+**Deployed to:** all 3 environments + Lovable sandbox.
+
+---
+
 ## Configurable Credit-to-EUR Ratio + Scaling Tool (2026-03-25)
 
 Made the hardcoded 2:1 credit-to-EUR ratio configurable via `system_settings.credit_to_eur_ratio`. Added admin scaling tool to proportionally adjust all credit balances when the ratio changes. 3 new files, 7 modified files, 2 migrations. `npm run verify` passed. Deployed to all environments.

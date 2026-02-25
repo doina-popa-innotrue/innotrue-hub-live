@@ -217,7 +217,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Preprod Auth Email Hook (2026-02-14):** Incorrect Authorization header. Fixed with correct service role key.
 - **Profiles RLS recursion (2026-02-14):** Circular RLS on profiles. Fixed via `client_can_view_staff_profile()` SECURITY DEFINER function.
 
-## Current State (as of 2026-03-25)
+## Current State (as of 2026-03-25, commit 44ed12b)
 - All strict TypeScript flags enabled (including strictNullChecks). 0 errors.
 - **Self-registration enabled** (Phase 5 core). Signup form + Google OAuth active in Auth.tsx. New users choose role at `/complete-registration` (client immediate, coach/instructor via admin approval). All self-registered users get client role + free plan immediately.
 - 16 storage buckets on all 3 Supabase projects
@@ -366,6 +366,9 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Configurable Credit-to-EUR Ratio + Scaling Tool (2026-03-25):** Made the credit-to-EUR ratio configurable via `system_settings.credit_to_eur_ratio` (default: 2) instead of hardcoded. New `useCreditRatio()` hook reads setting with 5-min cache. Utility functions (`creditsToEur`, `formatCreditsAsEur`, `calculatePackageBonus`, `formatRatioText`) all accept ratio parameter with default fallback. Updated 5 consuming components (Credits.tsx, CreditTopupPackagesManagement.tsx, ProgramPlanConfig.tsx, ExplorePrograms.tsx, ExpressInterestDialog.tsx). New `CreditScaleDialog` on System Settings page — 3-step admin tool (configure → confirm with "SCALE" typing → result) to proportionally scale all credit balances when changing the ratio. New `scale_credit_batches` RPC with atomic scaling (SECURITY DEFINER, FOR UPDATE row locking, CEIL rounding, audit logging) — scales credit_batches, credit_topup_packages, org_credit_packages, plans.credit_allowance, program_plans.credit_allowance, program_tier_plans.credit_cost.
   - **Key new files:** `src/hooks/useCreditRatio.ts`, `src/components/admin/CreditScaleDialog.tsx`, `supabase/migrations/20260325120000_configurable_credit_ratio.sql`
   - **System Settings RLS Whitelist:** Added RLS policy allowing authenticated users to SELECT only `credit_to_eur_ratio` and `support_email` from `system_settings`. All other keys remain admin-only. Migration `20260325140000_public_system_settings_whitelist.sql`.
+- **TDZ Crash Fix — Client ProgramDetail (2026-03-25):** Moved helper functions (`isTimeGated`, `arePrerequisitesMet`, etc.) before `isModuleAccessible` to fix temporal dead zone ReferenceError when `modules.filter()` invoked callback before const declarations. Commit `51894d1`.
+- **Add-On Edit Dialog Fix (2026-03-25):** Local `formData` state was shadowing the `useAdminCRUD` hook's state, so `openEdit` updated the hook's form but the dialog read from the empty local state. Now uses the hook's `formData`/`setFormData` directly. Commit `a9ccbab`.
+- **Multi-Role Route Enforcement (2026-03-25):** `ProtectedRoute` only checked `userRoles.includes(requireRole)` (access control), not whether the **selected** role matched the route group. Multi-role users (e.g. admin+client) could see the wrong dashboard after page refresh. Added role-route group sync check that maps roles to groups (admin/org_admin/teaching/client) and redirects to the correct dashboard when the route group doesn't match the selected role. Only applies to multi-role users (`userRoles.length > 1`). Commit `44ed12b`.
 - **Next steps:** 2B.10 Enrollment Duration → SC-3 Pagination → Phase 5 remaining → SC-4 Organisation audit → Phase 3 AI
 
 ## Scalability & Performance Audit (2026-03-24)
