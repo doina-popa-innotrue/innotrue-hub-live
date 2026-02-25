@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminCRUD } from "@/hooks/useAdminCRUD";
@@ -68,7 +67,6 @@ const defaultFormData = {
 
 export default function AddOnsManagement() {
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState(defaultFormData);
 
   const { data: features } = useQuery({
     queryKey: ["features"],
@@ -96,6 +94,8 @@ export default function AddOnsManagement() {
     editingItem,
     openCreate,
     openEdit,
+    formData,
+    setFormData,
     isMutating: isSubmitting,
   } = useAdminCRUD<AddOn, typeof defaultFormData>({
     queryKey: "add-ons",
