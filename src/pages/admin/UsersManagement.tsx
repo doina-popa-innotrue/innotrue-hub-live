@@ -156,7 +156,7 @@ export default function UsersManagement() {
       { data: allNotifPrefs },
       { data: types },
     ] = await Promise.all([
-      supabase.from("profiles").select("id, name, username, real_email, is_hidden"),
+      supabase.from("profiles").select("id, name, username, email, real_email, is_hidden, is_disabled"),
       supabase.from("user_roles").select("user_id, role"),
       supabase
         .from("user_qualifications")
@@ -191,19 +191,11 @@ export default function UsersManagement() {
         notifMap.set(n.user_id, n);
       });
 
-      // Fetch emails from auth.users via edge function — still per-user but done in parallel
-      const emailResults = await Promise.all(
-        profiles.map((profile) =>
-          supabase.functions
-            .invoke("get-user-email", { body: { userId: profile.id } })
-            .catch((): { data: null } => ({ data: null })),
-        ),
-      );
-
-      const enrichedUsers = profiles.map((profile, idx) => {
-        const emailResult = emailResults[idx];
-        const authEmail = emailResult?.data?.email || profile.username || "N/A";
-        const isDisabled = emailResult?.data?.isDisabled === true;
+      // Use email + is_disabled from profiles table (synced from auth.users by trigger)
+      // instead of N separate edge function calls to get-user-email
+      const enrichedUsers = profiles.map((profile) => {
+        const authEmail = profile.email || profile.username || "N/A";
+        const isDisabled = profile.is_disabled === true;
         const isPlaceholder =
           authEmail.includes("@system.internal") || authEmail.includes("placeholder_");
 
