@@ -362,7 +362,7 @@ The most important things the business must do to make the model work.
 
 | Partner | Role | Dependency Level | Substitutability |
 |---------|------|-----------------|------------------|
-| **Supabase** | Backend infrastructure (database, auth, storage, edge functions) | Critical | Low — deeply integrated (369+ tables, 71 edge functions, RLS policies). Migration would be major effort |
+| **Supabase** | Backend infrastructure (database, auth, storage, edge functions) | Critical | Low — deeply integrated (380+ tables, 76 edge functions, RLS policies). Migration would be major effort |
 | **Cloudflare** | Frontend hosting, CDN, custom domain | Medium | High — standard static hosting, easily switchable |
 | **Stripe** | Payment processing, subscription management, customer portal | High | Medium — standard payment integration, but billing logic is deeply integrated |
 | **Google Cloud (Vertex AI)** | AI inference (Gemini 3 Flash, EU/Frankfurt) | Medium | High — provider-agnostic architecture allows switching to Mistral, Azure OpenAI, or OpenAI |

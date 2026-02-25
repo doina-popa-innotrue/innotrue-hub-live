@@ -213,10 +213,15 @@ When Deny is checked:
 | `src/hooks/useCombinedFeatureAccess.ts` | Wraps useEntitlements + usage tracking for consumable features |
 | `src/hooks/usePlanAccess.ts` | Plan tier access — hybrid model, program/module/resource checks |
 | `src/hooks/useIsMaxPlan.ts` | Detects if user is on highest purchasable plan (for UI messaging) |
+| `src/hooks/useFeatureLossPreview.ts` | Compares current entitlements vs program plan to show which features will be lost on completion |
 | `src/lib/planUtils.ts` | Pure utility functions for plan filtering and tier comparison |
 | `src/components/FeatureGate.tsx` | UI gate component for feature-key-based access |
 | `src/components/decisions/CapabilityGate.tsx` | UI gate for decision toolkit capabilities |
-| `src/pages/admin/FeaturesManagement.tsx` | Admin UI for configuring features per plan |
+| `src/components/enrollment/CompletionFeatureWarning.tsx` | Pre-completion warning listing features that will be lost |
+| `src/components/alumni/AlumniGraceBanner.tsx` | Grace period countdown for completed enrollments |
+| `src/components/program/ProgramFeatureList.tsx` | "What's included" section showing program plan features |
+| `src/components/features/FeatureSourceBadge.tsx` | Attribution badge showing feature source ("Via [Program Name]") |
+| `src/pages/admin/FeaturesManagement.tsx` | Admin UI for configuring features per plan (includes `admin_notes` column) |
 
 ## Data Flow Summary
 
@@ -236,3 +241,21 @@ When Deny is checked:
 5. Result cached in React Query
 6. FeatureGate / CapabilityGate / hasFeature() read from cache
 ```
+
+## Feature Visibility & Loss Communication (2B.11, 2B.12)
+
+The entitlements system now communicates feature changes to users proactively:
+
+### Feature Gain Visibility (2B.12)
+When a user enrolls in a program, `ProgramFeatureList.tsx` shows a "What's included" section on the program detail page, listing features granted by the program plan. `FeatureSourceBadge.tsx` adds subtle attribution badges ("Via [Program Name]") to features that come from a program enrollment rather than the subscription.
+
+### Feature Loss Communication (2B.11)
+When a user is about to complete a program, `CompletionFeatureWarning.tsx` lists the features that will be lost upon completion. After completion, `AlumniGraceBanner.tsx` shows the grace period countdown (read-only content access for N days). The `useFeatureLossPreview` hook compares the user's current entitlements against their program plan features to identify exactly which features are at risk.
+
+### Feature-Gated Pages (updated 2026-03-24)
+The following client pages are now behind feature gates (configurable per plan):
+- **My Feedback** (`my_feedback`)
+- **My Resources** (`my_resources`)
+- **Development Profile** (`development_profile`)
+
+These join existing gated features like `goals`, `community`, `decision_toolkit_advanced`, `ai_reflection`, etc.

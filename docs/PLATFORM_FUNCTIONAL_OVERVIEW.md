@@ -135,7 +135,7 @@ Manages their organization's members and program access within the platform.
 │                    Supabase Backend                      │
 │  ┌─────────┐ ┌──────────┐ ┌─────────┐ ┌─────────────┐  │
 │  │  Auth    │ │ Database │ │ Storage │ │ Edge Funcs   │  │
-│  │  (OAuth) │ │ (Postgres│ │ (16     │ │ (65          │  │
+│  │  (OAuth) │ │ (Postgres│ │ (16     │ │ (76          │  │
 │  │         │ │  380+    │ │ buckets)│ │  functions)  │  │
 │  │         │ │  tables) │ │         │ │              │  │
 │  └─────────┘ └──────────┘ └─────────┘ └─────────────┘  │
@@ -165,7 +165,7 @@ Manages their organization's members and program access within the platform.
 - **Modules** — ordered learning units, each with a type (e.g., content, assignment, assessment, coaching, workshop)
 - **Assignments** — work products clients submit for instructor grading
 - **Scenarios** — multi-section practice exercises with AI debrief and instructor evaluation
-- **Badges** — completion milestones that instructors approve
+- **Badges & Certification** — completion milestones with auto-issue on program completion, PDF certificates, public verification at `/verify/:code`, LinkedIn sharing
 - **Cohorts** — time-bound groups of clients going through the program together
 
 **Module types** are configurable by admin (e.g., "Content Module," "Assignment Module," "Coaching Session," "Workshop"). Each type can require sessions, have tier-level access restrictions, and link to specific assessment frameworks.
@@ -177,6 +177,11 @@ Manages their organization's members and program access within the platform.
 2. Enrollment creates `module_progress` records for each module (status: not_started)
 3. Client sees the program in their dashboard with module progression
 4. Credits are consumed atomically during enrollment (transaction-safe)
+5. `start_date` is set to enrollment time; `end_date` auto-calculated from `programs.default_duration_days` (if set)
+
+**Enrollment duration & deadlines (2B.10):** Programs can have a `default_duration_days` (nullable). When set, `enroll_with_credits` auto-calculates `end_date`. A daily cron (`enforce-enrollment-deadlines`) sends 30-day and 7-day warning notifications, then transitions expired enrollments to `completed` (triggering alumni grace period). `EnrollmentDeadlineBanner` shows amber (8-30 days) or red (≤7 days) countdown on client dashboard and program detail. Admins can extend deadlines per-enrollment via `ExtendDeadlineButton` in ClientDetail.
+
+**Bulk enrollment:** `BulkEnrollmentDialog.tsx` in the enrollments management page allows admins to enroll multiple clients into a program at once with cohort and plan assignment.
 
 **Self-enrollment via codes (G8):** Admins generate shareable enrollment codes per program. Codes can be single-use or multi-use, optionally assign a cohort, grant a tier, and offer free enrollment or discounts. Authenticated users redeem codes at `/enroll?code=CODE` — the `redeem-enrollment-code` edge function validates the code, calls `enroll_with_credits` with zero cost (for free codes), and increments usage. Admin manages codes at `/admin/enrollment-codes` with a quick generator and full CRUD table.
 
@@ -418,20 +423,31 @@ The **Development Profile** (`/development-profile`) is a unified view connectin
 - Credits are the platform's internal currency for consuming services (AI features, premium resources, etc.)
 - Sources: plan allowance + program plan allowance + purchased top-ups
 - FIFO consumption with atomic transactions (`consume_credits_fifo` with `FOR UPDATE SKIP LOCKED`)
-- Credit batches with expiration dates
-- Stripe integration for purchasing top-ups
+- Credit batches with expiration dates: 10-year expiry for purchased credits, billing-period reset for plan allowance
+- Stripe integration for purchasing top-ups via `CreditTopupPackagesManagement.tsx` (admin CRUD)
+- Configurable credit-to-EUR ratio via `system_settings.credit_to_eur_ratio` (default 1.0) with admin `CreditScaleDialog.tsx` for bulk rescaling
+- `CreditExpiryAlert.tsx` banner warns users about credits expiring within 30 days
+- `credit-expiry-notifications` cron sends 7-day email warnings before credit expiry
 
 **Feature gating in the UI:**
 - `<FeatureGate>` and `<CapabilityGate>` components for conditional rendering
 - `useEntitlements()` hook for programmatic access checks
 - `useIsMaxPlan()` to detect max-plan users (show "Contact administrator" instead of "Upgrade")
 - Lock indicators in navigation for features beyond the user's plan
+- My Feedback, My Resources, and Development Profile are feature-gated (configurable per plan)
+
+**Feature visibility & communication:**
+- `ProgramFeatureList.tsx` — shows what features a program enrollment grants ("What's included")
+- `FeatureSourceBadge.tsx` — attribution badges showing feature source ("Via [Program Name]")
+- `CompletionFeatureWarning.tsx` — warns which features will be lost on program completion
+- `AlumniGraceBanner.tsx` — shows grace period countdown for completed enrollments
+- `useFeatureLossPreview` hook — compares entitlements before/after program completion
 
 ---
 
 ### 4.13 Notifications & Communication
 
-**25+ notification types across 8 categories:** programs, sessions, assignments, goals, groups, assessments, system, billing
+**31+ notification types across 8 categories:** programs, sessions, assignments, goals, groups, assessments, system, billing
 
 **Delivery channels:**
 - In-app notifications with read/unread tracking
@@ -443,6 +459,12 @@ The **Development Profile** (`/development-profile`) is a unified view connectin
 - Email assets management (images, logos for templates)
 - Email queue with processing and retry
 - Staging mode: all emails redirect to test recipients in non-production environments
+- Global email mute toggle (`system_settings.global_email_mute`) — suppresses all outgoing emails when enabled
+- `_shared/email-utils.ts` checks mute status before sending
+
+**Admin management:**
+- `NotificationTypesManagement.tsx` — admin UI for managing notification types and categories
+- `is_system` protection prevents accidental deletion of system-critical notification types
 
 **Announcements:** Platform-wide or category-targeted announcements visible on dashboards
 
@@ -616,7 +638,7 @@ Content packages can be uploaded once to a **shared library** (`content_packages
 
 ## 8. Admin Tooling
 
-The admin area is the most extensive part of the platform with 71 pages. Key areas:
+The admin area is the most extensive part of the platform with 75+ pages. Key areas:
 
 ### Program Management
 Programs, modules, module types, assignment types, scenario templates, guided paths, partner programs, tracks, skills/categories, feedback templates
@@ -647,15 +669,16 @@ Consumption analytics, user behavior analytics, program completions, system sett
 |--------|-------|
 | Database tables | 380+ |
 | Database enums | 25 |
-| Database migrations | 420 |
-| Edge functions | 65 |
-| Frontend pages | 164+ (71 admin, 58 client, 13 teaching, 9 org-admin, 13+ shared) |
-| React hooks | 69 |
+| Database migrations | 460 |
+| Edge functions | 76 |
+| Frontend pages | 181+ (71 admin, 58 client, 13 teaching, 9 org-admin, 13+ shared) |
+| React components | 273 |
+| React hooks | 76 |
 | Storage buckets | 16 |
-| Notification types | 25+ |
+| Notification types | 31+ |
 | Session types | 8 |
 | Session roles | 10 |
-| Unit tests | 303 (18 test files) |
+| Unit tests | 453 (20 test files) |
 | Environment variables | 41 |
 
 ### Tech Stack Summary

@@ -45,7 +45,7 @@
 │  │ RLS on all │  │ Email/Pass   │  │   Wheel PDFs       │   │
 │  └────────────┘  └──────────────┘  └───────────────────┘   │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │              65 Edge Functions (Deno)                 │   │
+│  │              76 Edge Functions (Deno)                 │   │
 │  │  Email (13) │ AI (5+) │ xAPI (3) │ Stripe │ Cal.com │   │
 │  └──────────────────────────────────────────────────────┘   │
 └──────────────────┬───────────────────────────────────────────┘
@@ -59,7 +59,7 @@
 **Stack:** React 18 + Vite 5 + TypeScript (strict) + Supabase + Tailwind CSS + shadcn/ui
 
 **Key design decisions:**
-- SPA with lazy-loaded routes (164+ pages, code-split to 977KB main bundle)
+- SPA with lazy-loaded routes (181+ pages, code-split to 977KB main bundle)
 - Supabase for backend (auth, database, storage, edge functions) — no custom server
 - Google Vertex AI for AI features (EU data residency in Frankfurt, europe-west3)
 - Resend for transactional email (13 edge functions)
@@ -109,9 +109,9 @@ fi && npm run build
 ### Supabase project details
 
 Both preprod and prod have:
-- 421+ database migrations applied (including Phase 5 self-registration)
+- 460+ database migrations applied (including Phase 5 self-registration, schema drift fixes, enrollment duration, certification, credit expiry)
 - Seed data loaded (`supabase/seed.sql`)
-- 71 edge functions deployed (including `complete-registration`, `redeem-enrollment-code`, `redeem-partner-code`, `alumni-lifecycle`)
+- 76 edge functions deployed (including `complete-registration`, `redeem-enrollment-code`, `redeem-partner-code`, `alumni-lifecycle`, `enforce-enrollment-deadlines`, `generate-certificate-pdf`, `verify-badge`, `credit-expiry-notifications`)
 - Google OAuth enabled (Phase 5)
 - Auth email hook pointing to `send-auth-email` edge function
 - Self-registration active: signup form + Google OAuth + role selection
@@ -168,14 +168,14 @@ After login, users must accept the current platform terms before accessing the a
 
 ### Schema overview
 
-- **380+ tables**, 20+ enum types, 420 migrations
+- **380+ tables**, 20+ enum types, 460 migrations
 - All public tables have **RLS enabled** (276 tables total, 41 with explicit policies, 235 locked to service_role only)
 - Key enums: `app_role`, `program_category`, `module_type`, `enrollment_status`, `decision_status`, `goal_category`
 
 ### Plans & features system
 
 - Plans: `key`, `name`, `tier_level` (0-4), `is_free`, `credit_allowance`, `is_purchasable`
-- Seed plans: Free (tier 0, 20 credits), Base (tier 1, 150), Pro (tier 2, 250), Advanced (tier 3, 500), Elite (tier 4, 750), Programs (tier 0), Continuation (tier 0)
+- Seed plans: Free (tier 0, 20 credits), Base (tier 1, 300), Pro (tier 2, 500), Advanced (tier 3, 1000), Elite (tier 4, 1500), Programs (tier 0), Continuation (tier 0, deprecated)
 - Features: `key`, `name`, `is_consumable`; linked to plans via `plan_features` (with `limit_value`)
 
 ### Credit system
@@ -208,7 +208,7 @@ All INSERTs use `ON CONFLICT` for idempotency.
 
 ### Overview
 
-66 Deno/TypeScript edge functions in `supabase/functions/`.
+76 Deno/TypeScript edge functions in `supabase/functions/`, plus 11 shared utilities in `_shared/`.
 
 All functions have `verify_jwt = false` in `supabase/config.toml` — they implement custom auth checks internally (checking the `Authorization` header via `supabase.auth.getUser()`).
 
@@ -220,8 +220,9 @@ All functions have `verify_jwt = false` in `supabase/config.toml` — they imple
 | `_shared/error-response.ts` | Typed error/success response helpers (`errorResponse.*`, `successResponse.*`) |
 | `_shared/ai-config.ts` | AI provider configuration (swappable: Vertex AI, Mistral, Azure, OpenAI) |
 | `_shared/ai-input-limits.ts` | Prompt truncation helpers (`truncateString`, `truncateArray`, `enforcePromptLimit`) |
-| `_shared/email-utils.ts` | Staging email override + user email status checks |
+| `_shared/email-utils.ts` | Staging email override + user email status checks + global mute flag |
 | `_shared/calcom-utils.ts` | Cal.com API helpers (booking cancellation) |
+| `_shared/content-access.ts` | Content access chain: staff → active enrollment → alumni grace → denied |
 
 ### CORS configuration
 
@@ -307,7 +308,7 @@ STAGING_EMAIL_OVERRIDE=your@email.com
 
 ### Code splitting
 
-All 164+ page components are lazy-loaded in `src/App.tsx`:
+All 181+ page components are lazy-loaded in `src/App.tsx`:
 ```typescript
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 ```
@@ -463,7 +464,7 @@ Auth endpoints are never cached.
 
 ### Unit tests (Vitest)
 
-- **303 tests** in `src/lib/__tests__/` (18 test files)
+- **453 tests** in `src/lib/__tests__/` (20 test files)
 - Run: `npm test` (single run), `npm run test:watch` (watch mode)
 - Coverage: `npm run test:coverage`
 

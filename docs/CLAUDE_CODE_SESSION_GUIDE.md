@@ -169,4 +169,4 @@ Given your deploy pipeline (develop → preprod → main), automated PR review c
 - **Claude Max** ($100/month) — covers Claude Code usage via Opus 4.6, no API billing
 - **Cursor Pro** ($20/month) — IDE features, tab completion, file viewer alongside Claude Code
 - **No Claude Mac app** — was causing unpredictable overages during heavy coding sessions; Claude Code replaces it entirely for coding work
-- **Opus 4.6 is non-negotiable** for InnoTrue Hub given: 380+ tables, 65 edge functions, 5-source entitlements system, complex RLS policies, and multi-phase interdependent roadmap. Sonnet carries real regression risk on architectural work at this complexity level.
+- **Opus 4.6 is non-negotiable** for InnoTrue Hub given: 380+ tables, 76 edge functions, 5-source entitlements system, complex RLS policies, and multi-phase interdependent roadmap. Sonnet carries real regression risk on architectural work at this complexity level.

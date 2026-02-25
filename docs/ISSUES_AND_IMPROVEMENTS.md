@@ -128,10 +128,10 @@ All core features work end-to-end: programs, modules, assignments, assessments, 
 | **Miro** | Sidebar placeholder only | No admin page, no backend, no SSO (removed dead link) |
 | **Mural** | Sidebar placeholder only | No admin page, no backend, no SSO (removed dead link) |
 
-### Intentionally Disabled (Pilot Mode)
-- **Self-registration** — signup form hidden, Google OAuth button hidden
-- **Google OAuth sign-in** — disabled in Supabase Dashboard + hidden in UI
-- Comments marked with `/* ... during pilot — re-enable when self-registration opens */`
+### Previously Disabled (Pilot Mode) — Now Re-enabled (Phase 5)
+- **Self-registration** — ✅ Re-enabled (Phase 5, 2026-02-21). Email + password signup with verification flow, complete-registration page with role selection + admin approval for non-client roles.
+- **Google OAuth sign-in** — ✅ Re-enabled (Phase 5). Works for existing users; new users go through complete-registration flow.
+- Legacy pilot-mode comments removed.
 
 ### Integration Enhancement Priority (if you want to deepen them)
 
@@ -149,13 +149,13 @@ These are architectural decisions and features that have been discussed and deci
 ### Priority order (updated 2026-03-04):
 1. ~~**2B.6 Waitlist / Cohort Management**~~ ✅ DONE (2026-03-01) — capacity enforcement + waitlist + enrollment attribution + admin management + notifications
 2. ~~**2B.2 Coach/Instructor Partner Codes**~~ ✅ DONE (2026-03-01) — partner codes + referral tracking + admin CRUD + public redemption + teaching dashboard stats
-3. **2B.5 Certification via Credly/Accredible** — key differentiator, foundation 70% built
+3. ~~**2B.5 Certification via Credly/Accredible**~~ ✅ DONE (2026-03-25) — auto-badge on completion + PDF certificates + public verification + LinkedIn share
 4. ~~**2B.1 Alumni Lifecycle**~~ ✅ DONE (2026-03-01) — grace period read-only access + content access gating + nurture emails + admin management
 5. ~~**2B.3 Pricing Update**~~ ✅ DONE (2026-03-01) — €49/99/179/249 monthly + annual 20% discount + 2x credits + continuation plan deprecated
-6. **2B.10 Program Enrollment Duration & Deadline Enforcement** — 🔴 prevents indefinite feature freeloading
-7. **2B.11 Feature Loss Communication** — 🟠 UX: warns users before/after program feature loss
-8. **2B.12 Feature Gain Visibility** — 🟡 shows users what extra features programs grant
-9. **2B.13 Credit Expiry Policy Update & Awareness** — 🟠 purchased credits to 10-year expiry + dashboard banner + email cron
+6. ~~**2B.10 Program Enrollment Duration & Deadline Enforcement**~~ ✅ DONE (2026-03-25) — duration config + auto-calculated end_date + cron enforcement + deadline banners + admin extend
+7. ~~**2B.11 Feature Loss Communication**~~ ✅ DONE (2026-03-24) — CompletionFeatureWarning + AlumniGraceBanner + useFeatureLossPreview
+8. ~~**2B.12 Feature Gain Visibility**~~ ✅ DONE (2026-03-24) — ProgramFeatureList + FeatureSourceBadge on ProgramDetail/Subscription
+9. ~~**2B.13 Credit Expiry Policy Update & Awareness**~~ ✅ DONE (2026-03-24) — 10-year purchased credit expiry + CreditExpiryAlert banner + credit-expiry-notifications cron
 10. **2B.14 Admin Features Management UX** — 🟡 deny scope clarification, Programs plan notes, column reordering
 11. **2B.8 Win-Back & ActiveCampaign Sync** — retention
 12. ~~**2B.7 Module Prerequisite UI**~~ ✅ DONE (2026-02-22) — lock icons + time-gating
@@ -181,28 +181,26 @@ These are architectural decisions and features that have been discussed and deci
 **Effort:** Medium (3 weeks). Needs new `program_seat_purchases` table, bulk enrollment API, org admin UI.
 **Priority:** Medium — needed when B2B pipeline grows.
 
-### 2B.5 Certification via Credly/Accredible — PARTIALLY BUILT
-**What:** Verifiable digital certifications issued through Credly and/or Accredible, with public verification URL and LinkedIn sharing.
+### 2B.5 Certification — ✅ DONE (2026-03-25)
+**What:** Verifiable digital certifications with auto-badge creation, PDF generation, public verification, and LinkedIn sharing.
 
-**What already exists (70% foundation):**
-- `program_badges` table — one badge per program (name, description, image)
+**Implemented:**
+- `program_badges` table — one badge per program (name, description, image), `auto_issue` column
 - `program_badge_credentials` table — multiple credential services per badge (Credly/Accredible template URLs stored)
 - `client_badges` table — individual badge instances (status: pending_approval → issued)
 - `client_badge_credentials` table — per-service acceptance links
-- Admin UI: `ProgramBadgeManager.tsx` — create badges, upload images, configure Credly/Accredible
+- Admin UI: `ProgramBadgeManager.tsx` — create badges, upload images, configure Credly/Accredible, toggle auto-issue
 - Instructor approval: `BadgeApproval.tsx` — review, enter credential URLs, approve
-- Client display: `ClientBadgesSection.tsx` — shows issued badges, LinkedIn share, visibility toggle
+- Client display: `ClientBadgesSection.tsx` — shows issued badges, LinkedIn share, visibility toggle, **PDF download**, **public verification link**
 - Certification requirements: `check_scenario_certification_requirements()` RPC + `useScenarioCertificationCheck` hook
+- **Auto-badge creation on program completion:** `trg_auto_create_badge_on_completion` trigger — when `client_enrollments.status` → `completed` and badge has `auto_issue = true`, auto-creates `client_badges` with `status = 'pending_approval'`
+- **Public verification page:** `BadgeVerification.tsx` at `/verify/:code` — shows certificate details without login, verification QR code
+- **`verify-badge` edge function:** validates badge code, returns public badge info
+- **PDF certificate generation:** `generate-certificate-pdf` edge function — branded PDF with client name, program name, completion date, verification URL
 
-**What's missing:**
-1. **Auto-badge creation on program completion** — edge function triggered when all modules + scenarios done → auto-creates `client_badges` with status `pending_approval`
-2. **Credly/Accredible API integration** — push credentials via API on approval, handle acceptance webhooks
-3. **Public verification page** — `/verify/:code` route showing cert details without login
-4. **PDF certificate generation** — branded PDF alongside digital badge
-5. **Badge expiry/renewal** — `expires_at` on `client_badges`, renewal flow for continuing education
-
-**Effort:** Medium (2-3 weeks for API integration + auto-creation + public page).
-**Priority:** High — key differentiator, foundation mostly built.
+**Remaining (future):**
+- Credly/Accredible API integration — push credentials via API on approval, handle acceptance webhooks
+- Badge expiry/renewal — `expires_at` on `client_badges`, renewal flow for continuing education
 
 ### 2B.6 Waitlist / Cohort Management — ✅ DONE (2026-03-01)
 **What:** Cohort-based program management with waitlist for full cohorts, capacity enforcement at both program and cohort level, enrollment source attribution, and admin override.
@@ -245,86 +243,62 @@ These are architectural decisions and features that have been discussed and deci
 **Effort:** Medium (2-3 weeks). Most data exists, needs aggregation views + visualization layer.
 **Priority:** Medium-High — critical for B2B retention and expansion.
 
-### 2B.10 Program Enrollment Duration & Deadline Enforcement — NEW (decided 2026-03-04)
-**Problem:** Enrollments stay `active` indefinitely. The `end_date` column exists on `client_enrollments` but is completely unenforced — no trigger, no cron, no UI. A user could enroll, access premium features via `program_plan_id`, and never complete — keeping those features forever with no incentive to finish.
+### 2B.10 Program Enrollment Duration & Deadline Enforcement — ✅ DONE (2026-03-25)
+**Problem:** Enrollments stayed `active` indefinitely. The `end_date` column existed on `client_enrollments` but was completely unenforced.
 
-**What:**
-1. **Program-level default duration:** Add `default_duration_days` (nullable INT) to `programs` table. When set, `enroll_with_credits` auto-calculates `end_date = start_date + default_duration_days`.
-2. **Enforcement cron:** New cron function (or extend `alumni-lifecycle`) that transitions active enrollments past `end_date` to `completed` (triggering `completed_at` → alumni grace period starts).
-3. **Expiry warnings:** Email + dashboard banner at 30 days before, 7 days before, and on expiry.
-4. **Admin flexibility:** Admin can extend `end_date` per-enrollment (button in ClientDetail). `default_duration_days = NULL` means self-paced with no deadline (opt-in enforcement).
-5. **Admin UI:** Duration config per program in ProgramPlanConfig.
+**Implemented:**
+1. **Program-level default duration:** `programs.default_duration_days` (nullable INT). When set, `enroll_with_credits` auto-calculates `start_date = now()` and `end_date = start_date + default_duration_days`. NULL means self-paced (no deadline).
+2. **Enforcement cron:** `enforce-enrollment-deadlines` edge function (separate from `alumni-lifecycle`) runs daily at 5 AM UTC via `pg_cron`. Three phases: 30-day warning, 7-day warning, expiry enforcement. Expired enrollments transition to `completed` (triggering existing `trg_set_enrollment_completed_at` → alumni grace period).
+3. **Expiry warnings:** Email + in-app notification at 30 days and 7 days before deadline. `enrollment_deadline_touchpoints` table with UNIQUE(enrollment_id, touchpoint_type) prevents duplicate notifications.
+4. **Admin flexibility:** `ExtendDeadlineButton` in `ClientDetail.tsx` lets admins extend `end_date` per-enrollment. Duration config per program in `ProgramPlanConfig.tsx`.
+5. **Client UI:** `EnrollmentDeadlineBanner.tsx` shown on `ProgramDetail.tsx` and `ClientDashboard.tsx` — amber for 8-30 days, red for ≤7 days.
+6. **Backfill:** Existing enrollments got `start_date` backfilled but NOT `end_date` (no retroactive deadlines).
 
-**Existing foundation:**
-- `client_enrollments.end_date` column exists (unused)
-- `client_enrollments.completed_at` trigger exists (fires on status → completed)
-- `alumni-lifecycle` cron function exists (can be extended)
-- Alumni grace period + nurture emails already handle post-completion lifecycle
+**Migration:** `20260325200000_enrollment_duration.sql`
+**Files:** 8 files changed, 867 insertions. New edge function + config.toml entry.
 
-**Effort:** Medium (1-2 weeks). DB migration (new column), RPC update, cron extension, notification emails, dashboard warnings.
-**Priority:** 🔴 High — business risk (prevents indefinite feature freeloading via enrollment).
+### 2B.11 Feature Loss Communication — ✅ DONE (2026-03-24)
+**Problem:** When enrollment status changed to `completed`, program plan features silently disappeared.
 
-### 2B.11 Feature Loss Communication (Post-Program Completion) — NEW (decided 2026-03-04)
-**Problem:** When enrollment status changes to `completed`, program plan features silently disappear from `useEntitlements` (it only fetches `status = 'active'` enrollments). Users have no warning about what they'll lose.
+**Implemented:**
+1. **Pre-completion warning:** `CompletionFeatureWarning.tsx` — shown on `ProgramDetail.tsx` when enrollment is active. Lists features that will be lost upon program completion, with grace period info.
+2. **Alumni grace banner:** `AlumniGraceBanner.tsx` — shown on `ProgramDetail.tsx` for completed enrollments. Surfaces `useAlumniAccess().days_remaining` with countdown and read-only access explanation.
+3. **Feature loss preview hook:** `useFeatureLossPreview` — compares current entitlements against active enrollment's program plan features to identify which features will be lost upon completion.
 
-**What:**
-1. **Pre-completion warning:** When the last module/content-package is completed, show notification: "You're about to complete [Program]. After completion, the following features from this program will no longer be available: [list]. You'll retain read-only access to program content for [X] days."
-2. **Post-completion dashboard notice:** For 7-14 days after completion, show card: "You recently completed [Program]. Some features from this program are no longer active. [See upgrade options]."
-3. **Alumni grace banner:** Surface `useAlumniAccess().days_remaining` on program content pages: "Alumni access — X days remaining (read-only)."
-4. **New hook:** `useRecentlyLostFeatures()` — compares current entitlements against recently completed enrollments to identify which features were lost.
+**Commit:** `1be8036`, `363edda`
 
-**Existing foundation:**
-- `useEntitlements().getAccessSource()` already returns `"program_plan"` — can identify program-sourced features
-- `useAlumniAccess` hook returns `days_remaining`, `grace_expires_at` — ready for UI
-- Alumni read-only banner exists in `ContentPackageViewer` but not on dashboard or program pages
-- `alumni_touchpoints` tracks nurture emails — can be extended for in-app notifications
+### 2B.12 Feature Gain Visibility — ✅ DONE (2026-03-24)
+**Problem:** Users had no visibility into which features came from their subscription vs. their program enrollment.
 
-**Effort:** Medium (1-2 weeks). New hook, dashboard components, alumni banner on more pages.
-**Priority:** 🟠 High — UX impact (prevents surprise feature loss, drives upgrades).
+**Implemented:**
+1. **Program detail page:** `ProgramFeatureList.tsx` — "What's included" section showing features the program plan grants. Displayed on `ProgramDetail.tsx` for enrolled users.
+2. **Feature attribution badges:** `FeatureSourceBadge.tsx` — subtle "Via [Program Name]" badges on features unlocked by a program enrollment. Uses `useEntitlements().getAccessSource()`.
+3. **Subscription page context:** Integrated into `Subscription.tsx` to show which features the user already has via active programs.
 
-### 2B.12 Feature Gain Visibility (During Program Enrollment) — NEW (decided 2026-03-04)
-**Problem:** When a user enrolls in a program, they silently get extra features via `program_plan_id` → `program_plan_features`. Users have no visibility into which features came from their subscription vs. their program enrollment, and no awareness of the temporary feature boost.
+**Commit:** `1be8036`, `363edda`
 
-**What:**
-1. **Program detail page (pre-enroll):** "What's included" section showing features the program plan grants — similar to plan comparison on the Subscription page. Helps justify credit cost and sets expectations.
-2. **Dashboard feature attribution:** Subtle indicators (badge/tooltip) on feature cards unlocked by a program. E.g., if `ai_insights` comes from program plan, show "Via Leadership Academy" tag. Uses `useEntitlements().getAccessSource()`.
-3. **Subscription page context:** When viewing plans, note which features the user already has via an active program — prevents unnecessary upgrade pressure.
-
-**Existing foundation:**
-- `useEntitlements().getAccessSource()` returns source for each feature (`"program_plan"`, `"subscription"`, etc.)
-- `program_plan_features` table has the feature grants per program plan
-- Subscription page already renders feature comparison grid
-
-**Effort:** Medium (1 week). Primarily UI/UX work — feature attribution badges, "program includes" section.
-**Priority:** 🟡 Medium — nice-to-have, enhances perceived program value.
-
-### 2B.13 Credit Expiry Awareness & Policy Update — NEW (decided 2026-03-04)
+### 2B.13 Credit Expiry Policy Update & Awareness — ✅ DONE (2026-03-24)
 
 **Policy decisions (decided 2026-03-04):**
-- **Purchased credits (top-ups + org bundles):** 10-year expiry (effectively permanent). Users paid real money — expiring paid credits erodes trust and discourages purchasing. 10-year horizon avoids permanent deferred revenue liability while being functionally permanent.
-- **Plan credits (monthly allowance):** No rollover, resets each billing period. Creates natural scarcity, drives engagement and top-up purchases. FIFO consumption already protects purchased credits (plan credits consumed first).
+- **Purchased credits (top-ups + org bundles):** 10-year expiry (effectively permanent). Users paid real money — expiring paid credits erodes trust and discourages purchasing.
+- **Plan credits (monthly allowance):** No rollover, resets each billing period.
 - Full rationale documented in `docs/CREDIT_ECONOMY_AND_PAYMENTS.md` Section 11.
 
-**Implementation — Policy change (migration needed):**
-1. Update `grant_credit_batch` RPC and all credit-granting edge functions to use 10-year expiry for purchased credits (currently 12 months)
-2. Retroactively extend existing `credit_batches` with `source_type = 'purchase'` to 10 years from `granted_at`
-3. Update `credit_topup_packages.validity_months` from 12 to 120
-4. Update seed data to match
+**Implemented — Policy change:**
+1. Updated `grant_credit_batch` RPC and all credit-granting edge functions (`confirm-credit-topup`, `org-confirm-credit-purchase`, `stripe-webhook`) to use 10-year expiry for purchased credits (was 12 months).
+2. Retroactively extended existing `credit_batches` with `source_type = 'purchase'` to 10 years from `granted_at`.
+3. Updated `credit_topup_packages.validity_months` from 12 to 120.
+4. Updated seed data to match.
+5. **Migration:** `20260324110000_credit_expiry_10year.sql`
 
-**Implementation — Awareness features:**
-1. **Dashboard expiry banner** — shows credits expiring within 30 days (plan credits at billing reset, any expiring grant batches). Data already available via `get_user_credit_summary_v2` (`expiring_soon`, `earliest_expiry`). Similar to existing `LowBalanceAlert`.
-2. **Email notification cron** — 7-day warning before credits expire. Notification type `credits_expiring` exists in seed data with email template key, but no cron sends it. Add to `subscription-reminders` or new cron.
-3. **AI spend suggestions** (future, Phase 3) — when credits are about to expire, suggest actions based on user context: coaching sessions, AI insights, program exploration.
+**Implemented — Awareness features:**
+1. **Dashboard expiry banner:** `CreditExpiryAlert.tsx` — shows credits expiring within 30 days on `ClientDashboard.tsx` and `Credits.tsx`. Uses `get_user_credit_summary_v2` (`expiring_soon`, `earliest_expiry`).
+2. **Email notification cron:** `credit-expiry-notifications` edge function — sends 7-day warning before credits expire, both email and in-app notification. Runs daily via `pg_cron`. Migration: `20260324110001_credit_expiry_notification_cron.sql`.
 
-**Existing foundation:**
-- `get_user_credit_summary_v2` returns `expiring_soon` (7-day window) and `earliest_expiry` timestamp
-- Credits page already shows "Expiring Soon" card for batches expiring within 30 days
-- `LowBalanceAlert` component pattern is reusable
-- `credits_expiring` notification type exists in seed data (no cron triggers it)
-- `consume_credits_fifo` orders by `expires_at NULLS LAST, created_at` — 10-year expiry works correctly
+**Remaining (future, Phase 3):**
+- AI spend suggestions — when credits are about to expire, suggest actions based on user context.
 
-**Effort:** Low-Medium (2-3 days for policy migration + banner + cron). AI suggestions deferred to Phase 3.
-**Priority:** 🟠 High for policy migration (fairness to paying users), 🟡 Medium for awareness UI.
+**Commit:** `1be8036`, `1a7bc32`
 
 ### 2B.14 Admin Features Management UX Improvements — NEW (decided 2026-03-04)
 

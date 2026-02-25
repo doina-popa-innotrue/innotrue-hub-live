@@ -17,9 +17,12 @@ Key-value pairs that control platform-wide behavior.
 | `platform_name` | Displayed in emails, UI | InnoTrue Hub |
 | `support_email` | Shown in error pages, emails | support@innotrue.com |
 | `default_timezone` | Default for scheduling | Europe/Berlin |
+| `credit_to_eur_ratio` | Credit-to-EUR conversion ratio (configurable via CreditScaleDialog) | 2 |
+| `global_email_mute` | When true, suppresses ALL outgoing emails (emergency toggle) | false |
+| `alumni_grace_period_days` | Read-only content access period after enrollment completion | 90 |
 
 **Admin UI:** System Settings page
-**Needed by:** AI edge functions, email templates, scheduling
+**Needed by:** AI edge functions, email templates, scheduling, credit display, email delivery
 
 ### 1.2 Module Types (`module_types`)
 Define the types of content a program module can be.
@@ -336,9 +339,10 @@ Credit packages let users and organizations purchase additional credits via Stri
 **Needed by:** Notification types
 
 ### 3.7 Notification Types (`notification_types`)
-31 types organized under the 8 categories. Each type has:
+31+ types organized under the 8 categories. Each type has:
 - `key` — used in code to trigger notifications
 - `is_critical` — if true, cannot be disabled by user
+- `is_system` — if true, cannot be deleted by admin (protects system-critical types)
 - `email_template_key` — links to HTML email template
 
 Examples:
@@ -546,6 +550,9 @@ The main learning experiences users enroll in.
 | `default_program_plan_id` | Fallback program plan for enrollees | → program_plans.id |
 | `tiers` | JSONB array of tier names (ordered lowest→highest) | `["Essentials", "Premium"]` |
 | `capacity` | Max active enrollments (null = unlimited) | 50 |
+| `default_duration_days` | Auto-calculated enrollment end_date (null = self-paced, no deadline) | 180 |
+
+**Enrollment duration (2B.10):** When `default_duration_days` is set, `enroll_with_credits` auto-calculates `start_date = now()` and `end_date = start_date + duration_days`. A daily cron (`enforce-enrollment-deadlines`) sends warnings at 30d/7d and transitions expired enrollments to `completed`. Admins can extend deadlines per-enrollment. Configure in Program Plan Config.
 
 **Access gating chain:**
 1. User's subscription `plan.tier_level` must be >= `program.min_plan_tier`
@@ -1172,7 +1179,7 @@ When `xapi-statements` receives a statement with a completion verb (`completed`,
 
 ### Edge Function Shared Utilities
 
-All 65 edge functions use six shared utility libraries (mandatory for new functions):
+All 76 edge functions use shared utility libraries (mandatory for new functions):
 
 | Utility | Import Path | Purpose |
 |---------|-------------|---------|

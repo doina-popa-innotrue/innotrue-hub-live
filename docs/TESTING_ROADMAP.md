@@ -2,7 +2,7 @@
 
 > Comprehensive, phased plan for achieving solid test coverage across all layers of the InnoTrue Hub platform.
 
-## Current State (as of 2026-02-20)
+## Current State (as of 2026-03-25)
 
 | Layer | Framework | Test Files | Tests | Coverage |
 |-------|-----------|------------|-------|----------|
@@ -23,10 +23,10 @@
 
 ### Key Gaps
 
-1. **Edge functions** — 61 functions, 10 shared utilities, zero tests
-2. **React components** — 264 component files, zero component-level tests
-3. **React hooks** — 74 custom hooks, only `useIsMaxPlan` tested (via lib/)
-4. **Pages** — 174 page files, only tested via E2E (surface level)
+1. **Edge functions** — 76 functions, 11 shared utilities, zero tests
+2. **React components** — 273 component files, zero component-level tests
+3. **React hooks** — 76 custom hooks, only `useIsMaxPlan` tested (via lib/)
+4. **Pages** — 181 page files, only tested via E2E (surface level)
 5. **E2E breadth** — Many features lack journey tests (content library, development profile, assessments, cohort teaching flow, enrollment codes, calendar sync)
 
 ---
@@ -44,7 +44,7 @@
 
 ## Phase 1 — Edge Function Shared Utilities (Est. 2-3 sessions)
 
-**Goal:** Test the 10 shared modules that ALL 71 edge functions depend on. Bugs here affect everything.
+**Goal:** Test the 11 shared modules that ALL 76 edge functions depend on. Bugs here affect everything.
 
 **Approach:** Create a Deno test runner alongside the functions, or create Node-compatible mirror tests.
 
@@ -80,7 +80,8 @@ Copy the shared utilities' pure logic into `src/lib/` wrappers and test with Vit
 | `oauth-crypto.ts` | Encrypt/decrypt round-trip, invalid key handling, token expiry | Medium |
 | `request-signing.ts` | HMAC signature generation, verification, timestamp validation | Medium |
 | `calcom-utils.ts` | URL construction, booking parameter mapping | Low |
-| `email-utils.ts` | Template rendering, staging override logic, recipient validation | Medium |
+| `email-utils.ts` | Template rendering, staging override logic, recipient validation, global mute flag | Medium |
+| `content-access.ts` | Staff/active/alumni/denied access chain, grace period calculation | High |
 | `ai-config.ts` | Provider selection, model fallback, endpoint URL construction | Low |
 | `oauth-providers.ts` | Provider config lookup, scope generation | Low |
 
@@ -262,7 +263,7 @@ Copy the shared utilities' pure logic into `src/lib/` wrappers and test with Vit
 
 ### Priority Recommendation
 
-**Do Phase 1 + Phase 3 next.** Edge function shared utilities are the highest-risk untested code (bugs affect all 61 functions). E2E expansion covers the most user-facing gaps with the least setup effort. Phase 2 (hooks) and Phase 4 (function integration) require more infrastructure but are the next logical steps.
+**Do Phase 1 + Phase 3 next.** Edge function shared utilities are the highest-risk untested code (bugs affect all 76 functions). E2E expansion covers the most user-facing gaps with the least setup effort. Phase 2 (hooks) and Phase 4 (function integration) require more infrastructure but are the next logical steps.
 
 ---
 

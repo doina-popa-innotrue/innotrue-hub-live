@@ -112,7 +112,7 @@ The Strategyzer Value Proposition Canvas has two sides:
 
 | # | Gain Created | How |
 |---|-------------|-----|
-| GC1 | **G1: Single platform** → 160+ pages covering all roles. 71 edge functions for backend logic. 17 storage buckets for all file types. Everything integrated. | Comprehensive, not assembled |
+| GC1 | **G1: Single platform** → 181+ pages covering all roles. 76 edge functions for backend logic. 16 storage buckets for all file types. Everything integrated. | Comprehensive, not assembled |
 | GC2 | **G2: Quantifiable outcomes** → Capability snapshots track score evolution over time. Radar charts compare self vs evaluator. Module completion rates per cohort. Credit consumption analytics. | Built-in outcome dashboards |
 | GC3 | **G3: Professional client experience** → PWA-ready, responsive UI. Onboarding welcome card. Journey progress widget. Unified feedback inbox (`/feedback`). Resource unlock dialogs. | Polished learner-facing UX |
 | GC4 | **G4: Scalable operations** → Cohort infrastructure (sessions, groups, member management). Enrollment codes with cohort auto-assignment (Phase 5 planned). Batch operations throughout admin. | Built for cohort-scale programs |

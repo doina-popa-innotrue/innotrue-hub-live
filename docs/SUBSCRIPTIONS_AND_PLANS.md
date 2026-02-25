@@ -79,7 +79,7 @@ Stripe ──────────────────────> strip
   (invoice.payment_failed)       payment_schedules + enrollment payment_status
 ```
 
-### Edge Functions (8 total)
+### Edge Functions (10 total)
 
 | Function | Purpose | Payment Type |
 |----------|---------|-------------|
@@ -196,7 +196,7 @@ This metadata persists on the Stripe subscription object and is available in all
 
 Credits are a separate dimension from plans. Plans provide a monthly `credit_allowance` that auto-refills (no rollover, resets each billing period), while purchased credits are stored in `credit_batches` with a 10-year expiry (effectively permanent — users paid real money, so purchased credits should persist).
 
-**Base ratio: 1 EUR = 2 credits** (unified across all pricing — plans, top-ups, org bundles, services).
+**Base ratio: 1 EUR = 2 credits** (unified across all pricing — plans, top-ups, org bundles, services). Now **configurable** via `system_settings.credit_to_eur_ratio` (default 1.0) with admin `CreditScaleDialog.tsx` for bulk rescaling all credit values. `useCreditRatio` hook reads the current ratio for frontend display.
 
 **Credit expiry policy (decided 2026-03-04):** Plan credits reset monthly (use-it-or-lose-it). Purchased/org credits expire after 10 years (functionally permanent). FIFO consumption uses plan credits first, protecting purchased credits. Full rationale in [`CREDIT_ECONOMY_AND_PAYMENTS.md` Section 11](CREDIT_ECONOMY_AND_PAYMENTS.md#11-credit-expiry-policy-decided-2026-03-04).
 
@@ -580,44 +580,33 @@ Credit packages auto-create their Stripe products/prices on first purchase — n
 - Admin: `ClientDetail.tsx` shows alumni access expiry countdown
 - **Continuation plan deprecated** (`is_active = false`)
 
-### Enrollment Lifecycle: Duration, Feature Visibility & Loss Communication (decided 2026-03-04)
+### Enrollment Lifecycle: Duration, Feature Visibility & Loss Communication — ✅ ALL DONE
 
 Three related features that complete the enrollment lifecycle beyond Alumni:
 
-**2B.10 — Enrollment Duration & Deadline Enforcement (🔴 High)**
+**2B.10 — Enrollment Duration & Deadline Enforcement — ✅ DONE (2026-03-25)**
 
-Problem: Enrollments stay `active` indefinitely. `client_enrollments.end_date` exists but is unenforced. Users could enroll, access premium features via `program_plan_id`, and never complete.
+- `programs.default_duration_days` (nullable INT) — NULL means self-paced, non-null means auto-calculated `end_date`
+- `enroll_with_credits` RPC updated to set `start_date = now()` and `end_date = start_date + duration_days`
+- `enforce-enrollment-deadlines` edge function: daily cron (5 AM UTC) with 3 phases — 30d warning, 7d warning, expiry enforcement
+- `enrollment_deadline_touchpoints` table with UNIQUE(enrollment_id, touchpoint_type) prevents duplicate notifications
+- `EnrollmentDeadlineBanner.tsx` on ProgramDetail + ClientDashboard — amber (8-30d) or red (≤7d)
+- Admin `ExtendDeadlineButton` in ClientDetail.tsx, duration config in `ProgramPlanConfig.tsx`
+- Backfilled `start_date` for existing enrollments; no retroactive `end_date`
+- Migration: `20260325200000_enrollment_duration.sql`
 
-Plan:
-- Add `programs.default_duration_days` (nullable INT). `enroll_with_credits` auto-calculates `end_date`.
-- Cron job (extend `alumni-lifecycle`) transitions past-due enrollments to `completed` → triggers alumni grace.
-- Expiry warnings at 30 days, 7 days, and on expiry (email + dashboard banner).
-- Admin can extend `end_date` per-enrollment. `NULL` duration = self-paced (no deadline).
+**2B.11 — Feature Loss Communication — ✅ DONE (2026-03-24)**
 
-Foundation already exists: `end_date` column, `completed_at` trigger, `alumni-lifecycle` cron.
+- `CompletionFeatureWarning.tsx` — shows which features will be lost on program completion
+- `AlumniGraceBanner.tsx` — shows grace period countdown for completed enrollments
+- `useFeatureLossPreview` hook — compares entitlements before/after
+- Wired into `ProgramDetail.tsx`
 
-**2B.11 — Feature Loss Communication (🟠 High)**
+**2B.12 — Feature Gain Visibility — ✅ DONE (2026-03-24)**
 
-Problem: When enrollment completes, program plan features silently disappear from `useEntitlements` (only fetches `status = 'active'`). No warning.
-
-Plan:
-- Pre-completion warning when last module finishes: list features that will be lost.
-- Post-completion dashboard notice for 7-14 days: features lost + upgrade CTA.
-- Alumni grace banner on program content pages: "Alumni access — X days remaining (read-only)."
-- New `useRecentlyLostFeatures()` hook comparing current entitlements vs recently completed enrollments.
-
-Foundation: `useEntitlements().getAccessSource()` returns `"program_plan"`, `useAlumniAccess().days_remaining`.
-
-**2B.12 — Feature Gain Visibility (🟡 Medium)**
-
-Problem: Users don't know which features come from their program vs subscription. No visibility into the temporary feature boost.
-
-Plan:
-- "What's included" section on program detail page (pre-enroll) — shows program plan features.
-- Dashboard feature attribution badges: "Via [Program Name]" tags on feature cards.
-- Subscription page: note which features user already has via active enrollment.
-
-Foundation: `getAccessSource()`, `program_plan_features` table, existing subscription comparison grid.
+- `ProgramFeatureList.tsx` — "What's included" section on ProgramDetail showing program plan features
+- `FeatureSourceBadge.tsx` — attribution badges ("Via [Program Name]") on feature cards
+- Integrated into `ProgramDetail.tsx` and `Subscription.tsx`
 
 ### Credit Expiry Policy & Awareness (decided 2026-03-04)
 
@@ -627,10 +616,11 @@ Foundation: `getAccessSource()`, `program_plan_features` table, existing subscri
 
 Full rationale and implementation details in [`CREDIT_ECONOMY_AND_PAYMENTS.md` Section 11](CREDIT_ECONOMY_AND_PAYMENTS.md#11-credit-expiry-policy-decided-2026-03-04).
 
-**2B.13 — Credit Expiry Awareness (planned):**
-- Dashboard expiry banner (data exists via `get_user_credit_summary_v2`, UI needed)
-- Email notification cron (notification type `credits_expiring` exists, no cron sends it)
-- AI spend suggestions (future, Phase 3)
+**2B.13 — Credit Expiry Awareness — ✅ DONE (2026-03-24):**
+- `CreditExpiryAlert.tsx` dashboard banner — shows credits expiring within 30 days on ClientDashboard + Credits page
+- `credit-expiry-notifications` edge function — daily cron sends 7-day email warnings before credit expiry
+- Migration: `20260324110000_credit_expiry_10year.sql`, `20260324110001_credit_expiry_notification_cron.sql`
+- AI spend suggestions deferred to Phase 3
 
 ### Coach/Instructor Revenue Model (decided 2026-02-21)
 
@@ -652,22 +642,17 @@ Full rationale and implementation details in [`CREDIT_ECONOMY_AND_PAYMENTS.md` S
 
 ### Identified Gaps (revised 2026-02-22)
 
-**A. Corporate/B2B Program Enrollment Flow**
-- How does HR enroll 20 employees in a program? Current flow is one-by-one.
-- Need: bulk "Program Seats" purchase for orgs — buy N seats at per-seat price with volume tiers.
-- Separate from credits, more intuitive for B2B buyers.
-- Priority: Medium — needs more design work.
+**A. Corporate/B2B Program Enrollment Flow** (partially addressed)
+- `BulkEnrollmentDialog.tsx` added for admin bulk enrollment of multiple clients at once (2026-03-24)
+- Remaining: per-seat pricing with volume tiers for org self-service enrollment (separate from credits)
+- Priority: Medium — needs more design work for the B2B self-service flow.
 
-**B. Certification Verification via Credly/Accredible** (partially built — see below)
-- Foundation exists: `program_badges`, `client_badges`, `program_badge_credentials` tables, admin badge manager, instructor approval flow, client display with LinkedIn share.
-- Credly/Accredible template URLs are stored but **no API integration** to push credentials.
-- What's missing:
-  1. **Auto-badge creation** — edge function triggered on program completion (all modules + scenarios done) → auto-creates `client_badges` with status `pending_approval`
-  2. **Credly/Accredible API push** — edge function to call their API on badge approval, store response ID, handle webhook for acceptance
-  3. **Public verification page** — route `/verify/:code` showing certificate details without login
-  4. **PDF certificate generation** — branded PDF alongside digital badge
-  5. **Badge expiry/renewal** — `expires_at` field on `client_badges` for certs requiring continuing education
-- Priority: High — certification is a key differentiator.
+**B. Certification — ✅ MOSTLY DONE (2026-03-25)**
+- ✅ Auto-badge creation: `trg_auto_create_badge_on_completion` trigger on program completion + `program_badges.auto_issue` flag
+- ✅ Public verification page: `BadgeVerification.tsx` at `/verify/:code` + `verify-badge` edge function
+- ✅ PDF certificate generation: `generate-certificate-pdf` edge function — branded PDF with verification URL
+- ✅ Enhanced `ClientBadgesSection.tsx` with PDF download, public verification link, LinkedIn share
+- Remaining: Credly/Accredible API push (edge function to call their API on approval), badge expiry/renewal
 
 **C. Waitlist / Cohort Management** ✅ DONE (2026-03-01)
 - Implemented: `cohort_waitlist` table (position-based queue), `programs.capacity` column, `check_cohort_capacity` + `check_program_capacity` RPCs, `join_cohort_waitlist` RPC, `enroll_with_credits` capacity enforcement (13 params, `p_force` admin override), `CohortWaitlistButton` (client), `CohortWaitlistManager` (admin promote/remove), `notify-cohort-waitlist` edge function.
