@@ -139,5 +139,25 @@ export function ProtectedRoute({ children, requireRole }: ProtectedRouteProps) {
     return <Navigate to="/dashboard" replace />;
   }
 
+  // For multi-role users: enforce that the route matches the selected role.
+  // Without this, a user with both admin+client roles could refresh on /admin
+  // while their selected role is "client" and still see the admin dashboard,
+  // because the access check above passes (they DO have the admin role).
+  if (requireRole && userRole && userRoles.length > 1) {
+    const routeGroup = (role: string) => {
+      if (role === "admin") return "admin";
+      if (role === "org_admin") return "org_admin";
+      if (role === "instructor" || role === "coach") return "teaching";
+      return "client";
+    };
+
+    if (routeGroup(requireRole) !== routeGroup(userRole)) {
+      if (userRole === "admin") return <Navigate to="/admin" replace />;
+      if (userRole === "org_admin") return <Navigate to="/org-admin" replace />;
+      if (userRole === "instructor" || userRole === "coach") return <Navigate to="/teaching" replace />;
+      return <Navigate to="/dashboard" replace />;
+    }
+  }
+
   return <>{children}</>;
 }
