@@ -147,6 +147,20 @@ export default function UsersManagement() {
 
   const availableRoles = ["admin", "instructor", "coach", "client"];
 
+  /** Extract a human-readable message from a Supabase FunctionsHttpError.
+   *  When an edge function returns non-2xx, supabase-js sets data=null and
+   *  puts the raw Response in error.context.  We read the JSON body from it. */
+  async function extractFnError(fnError: unknown): Promise<string> {
+    try {
+      const ctx = (fnError as any)?.context;
+      if (ctx && typeof ctx.json === "function") {
+        const body = await ctx.json();
+        if (body?.error) return body.error;
+      }
+    } catch { /* body already consumed or not JSON */ }
+    return (fnError as any)?.message || "Unknown edge function error";
+  }
+
   async function fetchUsers() {
     // Batch-fetch all data in parallel instead of N+1 per-user queries
     const [
@@ -242,7 +256,7 @@ export default function UsersManagement() {
         body: { userId: user.id },
       });
 
-      if (error) throw error;
+      if (error) throw new Error(await extractFnError(error));
       if (data?.error) throw new Error(data.error);
 
       toast.success(`Welcome email sent to ${user.email}`);
@@ -294,8 +308,21 @@ export default function UsersManagement() {
     setCreating(true);
 
     try {
-      // Use admin-provided password or generate random one
-      const password = initialPassword || Math.random().toString(36).slice(-8);
+      // Use admin-provided password or generate one that meets validation requirements
+      // (uppercase + lowercase + number + special character, ≥8 chars)
+      const password = initialPassword || (() => {
+        const chars = "abcdefghijklmnopqrstuvwxyz";
+        const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const digits = "0123456789";
+        const special = "!@#$%&*";
+        const all = chars + upper + digits + special;
+        const pick = (s: string) => s[Math.floor(Math.random() * s.length)];
+        // Guarantee one of each required class, then fill to 12 chars
+        const required = [pick(chars), pick(upper), pick(digits), pick(special)];
+        const rest = Array.from({ length: 8 }, () => pick(all));
+        // Shuffle so required chars aren't always at the start
+        return [...required, ...rest].sort(() => Math.random() - 0.5).join("");
+      })();
 
       // Generate a system email for placeholder users
       const finalEmail = createAsPlaceholder
@@ -315,8 +342,7 @@ export default function UsersManagement() {
       });
 
       if (fnError) {
-        // Extract specific error from response body, fall back to generic message
-        throw new Error(data?.error || fnError.message);
+        throw new Error(await extractFnError(fnError));
       }
       if (data?.error) throw new Error(data.error);
       if (!data?.user) throw new Error("User creation failed");
@@ -341,8 +367,9 @@ export default function UsersManagement() {
           body: { userId: newUserId, action: "disable" },
         });
         if (disableError) {
-          console.error("Failed to disable user:", disableError);
-          toast.error("User created but failed to disable. Please manually disable the user.");
+          const msg = await extractFnError(disableError);
+          console.error("Failed to disable user:", msg);
+          toast.error(`User created but failed to disable: ${msg}`);
         }
       }
 
@@ -430,8 +457,8 @@ export default function UsersManagement() {
           },
         });
 
-        // Handle edge function errors - check both the function error and the response data
-        if (updateError) throw updateError;
+        // Handle edge function errors
+        if (updateError) throw new Error(await extractFnError(updateError));
         if (data?.error) throw new Error(data.error);
       }
 
@@ -510,7 +537,7 @@ export default function UsersManagement() {
         body: { userId: selectedUser.id },
       });
 
-      if (error) throw error;
+      if (error) throw new Error(await extractFnError(error));
 
       toast.success("User deleted successfully");
       setDeleteOpen(false);
@@ -532,7 +559,7 @@ export default function UsersManagement() {
         body: { userId: user.id, action },
       });
 
-      if (error) throw error;
+      if (error) throw new Error(await extractFnError(error));
 
       toast.success(`User ${action}d successfully`);
       fetchUsers();
@@ -587,7 +614,7 @@ export default function UsersManagement() {
         },
       });
 
-      if (error) throw error;
+      if (error) throw new Error(await extractFnError(error));
       if (data?.error) throw new Error(data.error);
 
       const transferred = data?.transferred || {};
