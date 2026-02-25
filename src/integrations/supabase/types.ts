@@ -4700,6 +4700,42 @@ export type Database = {
           },
         ]
       }
+      enrollment_deadline_touchpoints: {
+        Row: {
+          enrollment_id: string
+          id: string
+          sent_at: string | null
+          touchpoint_type: string
+        }
+        Insert: {
+          enrollment_id: string
+          id?: string
+          sent_at?: string | null
+          touchpoint_type: string
+        }
+        Update: {
+          enrollment_id?: string
+          id?: string
+          sent_at?: string | null
+          touchpoint_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollment_deadline_touchpoints_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "client_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_deadline_touchpoints_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "staff_enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollment_module_staff: {
         Row: {
           created_at: string
@@ -10682,6 +10718,7 @@ export type Database = {
           code: string | null
           created_at: string | null
           credit_cost: number | null
+          default_duration_days: number | null
           default_program_plan_id: string | null
           description: string | null
           id: string
@@ -10705,6 +10742,7 @@ export type Database = {
           code?: string | null
           created_at?: string | null
           credit_cost?: number | null
+          default_duration_days?: number | null
           default_program_plan_id?: string | null
           description?: string | null
           id?: string
@@ -10728,6 +10766,7 @@ export type Database = {
           code?: string | null
           created_at?: string | null
           credit_cost?: number | null
+          default_duration_days?: number | null
           default_program_plan_id?: string | null
           description?: string | null
           id?: string
