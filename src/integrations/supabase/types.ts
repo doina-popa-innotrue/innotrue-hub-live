@@ -2337,6 +2337,91 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_client_invites: {
+        Row: {
+          coach_id: string
+          created_at: string
+          email: string
+          expires_at: string | null
+          id: string
+          linked_user_id: string | null
+          message: string | null
+          name: string | null
+          status: string
+          token: string | null
+          updated_at: string
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          email: string
+          expires_at?: string | null
+          id?: string
+          linked_user_id?: string | null
+          message?: string | null
+          name?: string | null
+          status?: string
+          token?: string | null
+          updated_at?: string
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string | null
+          id?: string
+          linked_user_id?: string | null
+          message?: string | null
+          name?: string | null
+          status?: string
+          token?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_client_invites_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_client_invites_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_client_invites_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_client_invites_linked_user_id_fkey"
+            columns: ["linked_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_client_invites_linked_user_id_fkey"
+            columns: ["linked_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_client_invites_linked_user_id_fkey"
+            columns: ["linked_user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_feedback_attachments: {
         Row: {
           attachment_type: string
