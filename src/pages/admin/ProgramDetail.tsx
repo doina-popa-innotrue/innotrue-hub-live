@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,9 @@ import {
   Upload,
   ImageIcon,
   UserCog,
+  Archive,
+  ArchiveRestore,
+  AlertTriangle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ModuleForm from "@/components/admin/ModuleForm";
@@ -340,6 +343,7 @@ function SortableTierItem({
 
 export default function ProgramDetail() {
   const { id } = useParams() as { id: string };
+  const navigate = useNavigate();
   const [program, setProgram] = useState<any>(null);
   const [modules, setModules] = useState<any[]>([]);
   const [openAdd, setOpenAdd] = useState(false);
@@ -363,6 +367,9 @@ export default function ProgramDetail() {
   const [editingDescription, setEditingDescription] = useState("");
   const [editingProgramCode, setEditingProgramCode] = useState("");
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [programDeleteDialogOpen, setProgramDeleteDialogOpen] = useState(false);
+  const [programDeleteEnrollmentCount, setProgramDeleteEnrollmentCount] = useState<number | null>(null);
+  const [programDeleteLoading, setProgramDeleteLoading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
@@ -1065,6 +1072,64 @@ export default function ProgramDetail() {
     }
   }
 
+  async function archiveProgram() {
+    try {
+      const { error } = await supabase
+        .from("programs")
+        .update({ is_active: false })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Program archived");
+      setProgram((prev: any) => prev ? { ...prev, is_active: false } : prev);
+    } catch (error: any) {
+      toast.error(`Failed to archive: ${error.message}`);
+    }
+  }
+
+  async function restoreProgram() {
+    try {
+      const { error } = await supabase
+        .from("programs")
+        .update({ is_active: true })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Program restored");
+      setProgram((prev: any) => prev ? { ...prev, is_active: true } : prev);
+    } catch (error: any) {
+      toast.error(`Failed to restore: ${error.message}`);
+    }
+  }
+
+  async function openProgramDeleteDialog() {
+    setProgramDeleteEnrollmentCount(null);
+    setProgramDeleteDialogOpen(true);
+
+    const { count, error } = await supabase
+      .from("client_enrollments")
+      .select("id", { count: "exact", head: true })
+      .eq("program_id", id)
+      .in("status", ["active", "paused"]);
+
+    setProgramDeleteEnrollmentCount(error ? -1 : (count ?? 0));
+  }
+
+  async function handleProgramHardDelete() {
+    setProgramDeleteLoading(true);
+    try {
+      const { error } = await supabase
+        .from("programs")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Program permanently deleted");
+      navigate("/admin/programs");
+    } catch (error: any) {
+      toast.error(`Failed to delete: ${error.message}`);
+    } finally {
+      setProgramDeleteLoading(false);
+    }
+  }
+
   if (!program) return <PageLoadingState />;
 
   return (
@@ -1130,18 +1195,59 @@ export default function ProgramDetail() {
             )}
           </div>
 
-          {/* Manage Tiers button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={openTierManagerDialog}
-            className="shrink-0 self-start sm:self-center"
-          >
-            <Settings className="mr-2 h-4 w-4" />
-            <span className="hidden xs:inline">Manage Tiers</span>
-            <span className="xs:hidden">Tiers</span>
-          </Button>
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openTierManagerDialog}
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              <span className="hidden xs:inline">Manage Tiers</span>
+              <span className="xs:hidden">Tiers</span>
+            </Button>
+            {program.is_active ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={archiveProgram}
+                title="Archive program"
+              >
+                <Archive className="mr-2 h-4 w-4" />
+                Archive
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={restoreProgram}
+                  title="Restore program"
+                >
+                  <ArchiveRestore className="mr-2 h-4 w-4" />
+                  Restore
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={openProgramDeleteDialog}
+                  title="Delete permanently"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              </>
+            )}
+          </div>
         </div>
+
+        {/* Archived banner */}
+        {!program.is_active && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm font-medium text-amber-800">
+            <Archive className="h-4 w-4 shrink-0" />
+            This program is archived. It is hidden from clients and instructors.
+          </div>
+        )}
 
         {/* Description - full width below header */}
         <div className="mt-4">
@@ -1624,6 +1730,59 @@ export default function ProgramDetail() {
           }
         }}
       />
+
+      {/* Hard Delete Program Confirmation */}
+      <AlertDialog open={programDeleteDialogOpen} onOpenChange={setProgramDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {programDeleteEnrollmentCount === null
+                ? "Checking enrollments..."
+                : programDeleteEnrollmentCount > 0
+                  ? "Cannot Delete Program"
+                  : "Permanently Delete Program"}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                {programDeleteEnrollmentCount === null ? (
+                  <p>Checking for active enrollments...</p>
+                ) : programDeleteEnrollmentCount > 0 ? (
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/10 text-destructive">
+                      <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+                      <p>
+                        This program has <strong>{programDeleteEnrollmentCount}</strong> active or
+                        paused enrollment{programDeleteEnrollmentCount > 1 ? "s" : ""}. You must
+                        remove all enrollments before deleting.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p>
+                      This will permanently delete <strong>{program?.name}</strong> and all its
+                      modules, sessions, and assignments.
+                    </p>
+                    <p className="text-destructive font-medium">This action cannot be undone.</p>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            {programDeleteEnrollmentCount !== null && programDeleteEnrollmentCount === 0 && (
+              <AlertDialogAction
+                onClick={handleProgramHardDelete}
+                disabled={programDeleteLoading}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {programDeleteLoading ? "Deleting..." : "Delete Permanently"}
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

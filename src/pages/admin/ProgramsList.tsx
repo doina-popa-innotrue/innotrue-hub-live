@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
-import { Plus, Copy, Check, Upload, X, ImageIcon, Settings2 } from "lucide-react";
+import { Plus, Copy, Check, Upload, X, ImageIcon, Settings2, Archive, ArchiveRestore, Trash2, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -118,6 +128,15 @@ export default function ProgramsList() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+
+  // Programs filter: "active" or "archived"
+  const [programsFilter, setProgramsFilter] = useState<"active" | "archived">("active");
+
+  // Hard delete state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingProgram, setDeletingProgram] = useState<Program | null>(null);
+  const [deleteEnrollmentCount, setDeleteEnrollmentCount] = useState<number | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Category management state
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -322,6 +341,69 @@ export default function ProgramsList() {
     }
   }
 
+  async function archiveProgram(programId: string) {
+    try {
+      const { error } = await supabase
+        .from("programs")
+        .update({ is_active: false })
+        .eq("id", programId);
+      if (error) throw error;
+      toast.success("Program archived");
+      fetchPrograms();
+    } catch (error: any) {
+      toast.error(`Failed to archive program: ${error.message}`);
+    }
+  }
+
+  async function restoreProgram(programId: string) {
+    try {
+      const { error } = await supabase
+        .from("programs")
+        .update({ is_active: true })
+        .eq("id", programId);
+      if (error) throw error;
+      toast.success("Program restored");
+      fetchPrograms();
+    } catch (error: any) {
+      toast.error(`Failed to restore program: ${error.message}`);
+    }
+  }
+
+  async function openDeleteDialog(program: Program) {
+    setDeletingProgram(program);
+    setDeleteEnrollmentCount(null);
+    setDeleteDialogOpen(true);
+
+    // Check for active/paused enrollments
+    const { count, error } = await supabase
+      .from("client_enrollments")
+      .select("id", { count: "exact", head: true })
+      .eq("program_id", program.id)
+      .in("status", ["active", "paused"]);
+
+    setDeleteEnrollmentCount(error ? -1 : (count ?? 0));
+  }
+
+  async function handleHardDelete() {
+    if (!deletingProgram) return;
+    setDeleteLoading(true);
+    try {
+      const { error } = await supabase
+        .from("programs")
+        .delete()
+        .eq("id", deletingProgram.id);
+      if (error) throw error;
+      toast.success("Program permanently deleted");
+      setDeleteDialogOpen(false);
+      setDeletingProgram(null);
+      fetchPrograms();
+    } catch (error: any) {
+      toast.error(`Failed to delete program: ${error.message}`);
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
   async function handleSaveCategory() {
     try {
       if (editingCategory) {
@@ -408,7 +490,23 @@ export default function ProgramsList() {
 
         <TabsContent value="programs">
           <div className="mb-6 flex items-center justify-between">
-            <div />
+            <div className="flex items-center gap-2">
+              <Button
+                variant={programsFilter === "active" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setProgramsFilter("active")}
+              >
+                Active
+              </Button>
+              <Button
+                variant={programsFilter === "archived" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setProgramsFilter("archived")}
+              >
+                <Archive className="mr-2 h-4 w-4" />
+                Archived
+              </Button>
+            </div>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -574,77 +672,119 @@ export default function ProgramsList() {
 
           <Card>
             <CardHeader>
-              <CardTitle>All Programs</CardTitle>
-              <CardDescription>Manage programs and their modules</CardDescription>
+              <CardTitle>
+                {programsFilter === "active" ? "Active Programs" : "Archived Programs"}
+              </CardTitle>
+              <CardDescription>
+                {programsFilter === "active"
+                  ? "Manage programs and their modules"
+                  : "Restore or permanently delete archived programs"}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Program ID</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Modules</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Active</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {programs.map((program) => (
-                    <TableRow key={program.id}>
-                      <TableCell>
-                        <ProgramIdCell programId={program.id} />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={program.logo_url || undefined} alt={program.name} />
-                            <AvatarFallback className="text-xs">
-                              {program.name.slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">{program.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{getCategoryName(program.category)}</Badge>
-                      </TableCell>
-                      <TableCell>{program.moduleCount}</TableCell>
-                      <TableCell>
-                        <Badge variant={program.is_active ? "default" : "secondary"}>
-                          {program.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={program.is_active}
-                          onCheckedChange={() => toggleProgramActive(program.id, program.is_active)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/admin/programs/${program.id}`)}
-                          >
-                            Manage
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => cloneProgram(program)}
-                            title="Clone program"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              {programs.filter((p) =>
+                programsFilter === "active" ? p.is_active : !p.is_active,
+              ).length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  {programsFilter === "active"
+                    ? "No active programs."
+                    : "No archived programs."}
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Program ID</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Modules</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {programs
+                      .filter((p) =>
+                        programsFilter === "active" ? p.is_active : !p.is_active,
+                      )
+                      .map((program) => (
+                        <TableRow key={program.id}>
+                          <TableCell>
+                            <ProgramIdCell programId={program.id} />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage
+                                  src={program.logo_url || undefined}
+                                  alt={program.name}
+                                />
+                                <AvatarFallback className="text-xs">
+                                  {program.name.slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{program.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{getCategoryName(program.category)}</Badge>
+                          </TableCell>
+                          <TableCell>{program.moduleCount}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigate(`/admin/programs/${program.id}`)}
+                              >
+                                Manage
+                              </Button>
+                              {programsFilter === "active" ? (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => cloneProgram(program)}
+                                    title="Clone program"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => archiveProgram(program.id)}
+                                    title="Archive program"
+                                  >
+                                    <Archive className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => restoreProgram(program.id)}
+                                    title="Restore program"
+                                  >
+                                    <ArchiveRestore className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive"
+                                    onClick={() => openDeleteDialog(program)}
+                                    title="Delete permanently"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -707,6 +847,59 @@ export default function ProgramsList() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Hard Delete Confirmation */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteEnrollmentCount === null
+                ? "Checking enrollments..."
+                : deleteEnrollmentCount > 0
+                  ? "Cannot Delete Program"
+                  : "Permanently Delete Program"}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                {deleteEnrollmentCount === null ? (
+                  <p>Checking for active enrollments...</p>
+                ) : deleteEnrollmentCount > 0 ? (
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/10 text-destructive">
+                      <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+                      <p>
+                        This program has <strong>{deleteEnrollmentCount}</strong> active or paused
+                        enrollment{deleteEnrollmentCount > 1 ? "s" : ""}. You must remove all
+                        enrollments before deleting.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p>
+                      This will permanently delete <strong>{deletingProgram?.name}</strong> and all
+                      its modules, sessions, and assignments.
+                    </p>
+                    <p className="text-destructive font-medium">This action cannot be undone.</p>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            {deleteEnrollmentCount !== null && deleteEnrollmentCount === 0 && (
+              <AlertDialogAction
+                onClick={handleHardDelete}
+                disabled={deleteLoading}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleteLoading ? "Deleting..." : "Delete Permanently"}
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Category Dialog */}
       <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>

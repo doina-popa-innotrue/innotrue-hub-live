@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Maximize2, Minimize2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ContentPackageViewerProps {
@@ -12,6 +13,10 @@ interface ContentPackageViewerProps {
   onXapiComplete?: () => void;
   /** When true, suppress xAPI statement sending and show alumni read-only banner */
   readOnly?: boolean;
+  /** Whether the viewer is in expanded (fullscreen overlay) mode */
+  isExpanded?: boolean;
+  /** Toggle expanded mode — keeps the component in the same React tree to avoid iframe reload */
+  onToggleExpand?: () => void;
 }
 
 /**
@@ -255,6 +260,8 @@ export function ContentPackageViewer({
   contentPackageType = "web",
   onXapiComplete,
   readOnly = false,
+  isExpanded = false,
+  onToggleExpand,
 }: ContentPackageViewerProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -468,6 +475,26 @@ export function ContentPackageViewer({
     };
   }, []);
 
+  // Escape key to collapse expanded view
+  useEffect(() => {
+    if (!isExpanded || !onToggleExpand) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onToggleExpand();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isExpanded, onToggleExpand]);
+
+  // Lock body scroll when expanded
+  useEffect(() => {
+    if (!isExpanded) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isExpanded]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -491,26 +518,84 @@ export function ContentPackageViewer({
   if (!blobUrl) return null;
 
   return (
-    <div className="relative">
+    <div
+      className={
+        isExpanded
+          ? "fixed inset-0 z-50 bg-background flex flex-col"
+          : "relative"
+      }
+    >
+      {/* Expanded header bar */}
+      {isExpanded && (
+        <div className="flex items-center justify-between border-b px-4 py-2 shrink-0">
+          <h3 className="text-sm font-medium truncate">{title}</h3>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={onToggleExpand}
+            title="Exit fullscreen (Esc)"
+          >
+            <Minimize2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Expand button in normal mode */}
+      {!isExpanded && onToggleExpand && (
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+          {xapiCompleted && (
+            <div className="flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1.5 text-sm font-medium text-green-800 shadow-sm">
+              <CheckCircle2 className="h-4 w-4" />
+              Completed
+            </div>
+          )}
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-8 w-8 shadow-sm"
+            onClick={onToggleExpand}
+            title="Expand to fullscreen"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Completed badge when expanded */}
+      {isExpanded && xapiCompleted && (
+        <div className="absolute top-2 right-12 z-10 flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1.5 text-sm font-medium text-green-800 shadow-sm">
+          <CheckCircle2 className="h-4 w-4" />
+          Completed
+        </div>
+      )}
+
+      {/* Completed badge when no expand button */}
+      {!isExpanded && !onToggleExpand && xapiCompleted && (
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1.5 text-sm font-medium text-green-800 shadow-sm">
+          <CheckCircle2 className="h-4 w-4" />
+          Completed
+        </div>
+      )}
+
       {readOnly && (
-        <div className="mb-2 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm font-medium text-amber-800">
+        <div className={`${isExpanded ? "mx-4 mt-2" : "mb-2"} flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm font-medium text-amber-800`}>
           <svg className="h-4 w-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
           </svg>
           Read-Only — Alumni Access
         </div>
       )}
-      {xapiCompleted && (
-        <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1.5 text-sm font-medium text-green-800 shadow-sm">
-          <CheckCircle2 className="h-4 w-4" />
-          Completed
-        </div>
-      )}
+
       <iframe
         ref={iframeRef}
         src={blobUrl}
-        className="w-full border-0 rounded-lg"
-        style={{ minHeight: "75vh" }}
+        className={
+          isExpanded
+            ? "flex-1 w-full border-0"
+            : "w-full border-0 rounded-lg"
+        }
+        style={isExpanded ? undefined : { minHeight: "75vh" }}
         title={title}
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
         allow="autoplay; fullscreen"

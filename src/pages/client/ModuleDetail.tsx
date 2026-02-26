@@ -155,6 +155,7 @@ export default function ModuleDetail() {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState("");
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [isContentExpanded, setIsContentExpanded] = useState(false);
   const [modulePlanAccessGranted, setModulePlanAccessGranted] = useState<boolean | null>(null);
   const [incompletePrereqs, setIncompletePrereqs] = useState<PrerequisiteModule[]>([]);
   const { loginToTalentLms, isLoading: isSSOLoading } = useTalentLmsSSO();
@@ -901,6 +902,8 @@ export default function ModuleDetail() {
                     || module.content_package_type === "xapi"
                     ? "xapi" : "web"
                 }
+                isExpanded={isContentExpanded}
+                onToggleExpand={() => setIsContentExpanded((v) => !v)}
                 onXapiComplete={() => {
                   // Update local state to reflect auto-completed progress
                   // without reloading the page (which would destroy the iframe).

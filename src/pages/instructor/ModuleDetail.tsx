@@ -98,6 +98,7 @@ export default function InstructorModuleDetail() {
   const [selectedEnrollment, setSelectedEnrollment] = useState<EnrolledClient | null>(null);
   const [loading, setLoading] = useState(true);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [isContentExpanded, setIsContentExpanded] = useState(false);
 
   // Get access token for content package iframe (iframes can't send Authorization headers)
   useEffect(() => {
@@ -369,6 +370,8 @@ export default function InstructorModuleDetail() {
                         || module.content_package_type === "xapi"
                         ? "xapi" : "web"
                     }
+                    isExpanded={isContentExpanded}
+                    onToggleExpand={() => setIsContentExpanded((v) => !v)}
                   />
                 )}
               </CardContent>
