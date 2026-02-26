@@ -371,7 +371,8 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Multi-Role Route Enforcement (2026-03-25):** `ProtectedRoute` only checked `userRoles.includes(requireRole)` (access control), not whether the **selected** role matched the route group. Multi-role users (e.g. admin+client) could see the wrong dashboard after page refresh. Added role-route group sync check that maps roles to groups (admin/org_admin/teaching/client) and redirects to the correct dashboard when the route group doesn't match the selected role. Only applies to multi-role users (`userRoles.length > 1`). Commit `44ed12b`.
 - **2B.10 Enrollment Duration & Deadline Enforcement (2026-03-25):** Time-bounded enrollments. Migration `20260325200000_enrollment_duration.sql` adds `programs.default_duration_days` (nullable INT), updates `enroll_with_credits` to auto-set `start_date = now()` and `end_date = start_date + duration_days`, backfills `start_date` on existing enrollments, creates `enrollment_deadline_touchpoints` table, 3 notification types, partial index, daily cron. New `enforce-enrollment-deadlines` edge function (5 AM UTC): 30d warning, 7d warning, expiry enforcement (transitions to `completed` → triggers alumni lifecycle). Admin: duration config in `ProgramPlanConfig.tsx` (Switch + days input), deadline display + `ExtendDeadlineButton` dialog in `ClientDetail.tsx`. Client: `EnrollmentDeadlineBanner.tsx` (amber 8-30d, red 1-7d) on `ProgramDetail.tsx` and `ClientDashboard.tsx`. NULL duration = self-paced. Deadline does not pause when enrollment paused (admin can extend manually).
   - **Key new files:** `supabase/functions/enforce-enrollment-deadlines/index.ts`, `src/components/enrollment/EnrollmentDeadlineBanner.tsx`
-- **Next steps:** SC-3 Pagination → Phase 5 remaining → SC-4 Organisation audit → Phase 3 AI
+- **SC-3/SC-5/SC-6/SC-7 Performance & Scalability (2026-03-26):** 4 migrations + 8 frontend files. SC-7: `pg_trgm` + 4 GIN trigram indexes. SC-6: 11 composite indexes for hot RLS functions. SC-5: automated cron cleanup (notifications 4AM, analytics_events 180d 4:30AM, coach_access_logs 90d 4:15AM, configurable via system_settings). SC-3: server-side pagination on 8 pages + 3 aggregation RPCs (`get_feature_usage_summary`, `get_credit_transaction_summary`, `get_analytics_cleanup_preview`). React Query migration for Assignments, Calendar, PendingAssignments (replacing useEffect).
+- **Next steps:** Phase 5 remaining → SC-4 Organisation audit → Phase 3 AI
 
 ## Scalability & Performance Audit (2026-03-24)
 
@@ -416,21 +417,19 @@ Comprehensive audit of all data-heavy areas. Findings grouped by severity with r
 
 **Skipped:** `CapabilityAssessmentsManagement.tsx` snapshot count — already fetches only `assessment_id` column, acceptable for current scale.
 
-### SC-3: Server-Side Pagination Needed (🟠 ~3-5 days)
-Admin pages that load ALL records client-side with no `.range()` or `.limit()`.
+### ~~SC-3: Server-Side Pagination~~ ✅ DONE (2026-03-26)
+8 pages paginated + 3 aggregation RPCs. Migration `20260326130000_sc3_server_aggregation_rpcs.sql`.
 
-| Severity | Page | Current State | Fix |
-|----------|------|---------------|-----|
-| **High** | `admin/NotificationsManagement.tsx` | `.limit(500)`, no pagination controls | Server-side pagination like EnrolmentsManagement |
-| **High** | `admin/CapabilityAssessmentDetail.tsx` | Loads ALL snapshots (with ratings+notes) for an assessment | Paginate snapshot list |
-| **High** | `client/Calendar.tsx` | 6 sequential unbounded queries | Date-range bounded + parallel queries |
-| **High** | `client/Assignments.tsx` | Loads ALL assignments into memory | Server-side pagination + filters |
-| **High** | `admin/ConsumptionAnalytics.tsx` | Loads ALL credit transactions to sum client-side | Server-side aggregate RPC |
-| **Medium** | `admin/EmailQueueManagement.tsx` | `.limit(200)`, no pagination controls | Add pagination |
-| **Medium** | `instructor/PendingAssignments.tsx` | Pending tab has no limit | Add limit + pagination |
-| **Medium** | `admin/DataCleanupManager.tsx` | Loads ALL session_ids + categories to count client-side | Server-side COUNT aggregate |
-
-**Already paginated (model to follow):** `EnrolmentsManagement.tsx` (React Query + `.range()` + count queries).
+| Page | Fix Applied |
+|------|-------------|
+| `admin/NotificationsManagement.tsx` | Server-side pagination (count + range), server-side category filter via type ID resolution, separate stats query |
+| `admin/EmailQueueManagement.tsx` | Server-side pagination (count + range), useMemo for filtered items |
+| `admin/ConsumptionAnalytics.tsx` | `get_feature_usage_summary` RPC + `get_credit_transaction_summary` RPC |
+| `admin/DataCleanupManager.tsx` | Single `get_analytics_cleanup_preview` RPC replacing 4 queries |
+| `admin/CapabilityAssessmentDetail.tsx` | Server-side snapshot pagination (count + range), scoped bulk select |
+| `client/Assignments.tsx` | React Query migration, client-side pagination with useMemo, parallel queries |
+| `client/Calendar.tsx` | React Query migration, ±3 month date bounding, parallel queries with Promise.all |
+| `instructor/PendingAssignments.tsx` | React Query (3 hooks: module IDs, pending, scored), scored time filter server-side, pagination both tabs |
 
 ### SC-4: Organisation Functionality Audit (🟡 Future — mark for assessment)
 Organisation-related tables and pages will grow significantly as org billing, multi-tenant features, and enterprise clients scale. **Not yet audited.** Items to assess in future:
@@ -442,30 +441,28 @@ Organisation-related tables and pages will grow significantly as org billing, mu
 - Organisation-sponsored features (`fetchOrgSponsoredFeatures` in useEntitlements) — scales with org member count
 - Multi-org support — cross-org queries, org switching
 
-### SC-5: Retention & Cleanup Policies (🟡 ~1 day)
-Append-only tables that grow indefinitely without cleanup.
+### ~~SC-5: Retention & Cleanup Policies~~ ✅ DONE (2026-03-26)
+Migration `20260326120000_sc5_retention_cleanup_policies.sql`. Automated cron cleanup:
 
-| Table | Current State | Risk |
-|-------|---------------|------|
-| `admin_audit_logs` | No cleanup. Well-indexed. | Medium — compliance may require keeping, but needs archival strategy |
-| `coach_access_logs` | No cleanup. Well-indexed. | Medium — every coach page view generates a row |
-| `calcom_webhook_logs` | Manual cleanup UI only. Missing `created_at` index. | Medium |
-| `credit_consumption_log` | No cleanup. Well-indexed. | Low — bounded by credit usage |
-| `analytics_events` | Manual cleanup only. No automated cron. | Medium — grows with every page view |
-| `notifications` | ✅ Has `cleanup_old_notifications()` + edge function + configurable retention. **Verify daily cron is active.** | Low if cron verified |
+| Cron | Schedule | Target | Retention |
+|------|----------|--------|-----------|
+| `daily-cleanup-notifications` | 4:00 AM UTC | `cleanup-notifications` edge function | Per notification type config |
+| `daily-cleanup-analytics-events` | 4:30 AM UTC | `cleanup_old_analytics_events()` SQL | 180 days (configurable: `system_settings.analytics_retention_days`) |
+| `daily-cleanup-coach-access-logs` | 4:15 AM UTC | `cleanup_old_coach_access_logs()` SQL | 90 days (configurable: `system_settings.coach_log_retention_days`) |
 
-### SC-6: RLS Policy Performance (🟡 Medium priority)
-Complex RLS policies that may slow down as data grows.
+**Not cleaned:** `admin_audit_logs` (compliance), `credit_consumption_log` (bounded by usage), `calcom_webhook_logs` (has manual cleanup UI).
 
-| Policy | Concern |
-|--------|---------|
-| `is_session_instructor_or_coach()` on `sessions` | 5-way UNION called per-row. Expensive with many sessions. |
-| `module_progress` SELECT policy | 6 OR branches with correlated EXISTS subqueries per-row |
-| `user_has_feature()` | 4-way UNION ALL across 8 tables. Called per-row on `capability_assessments`. |
-| `module_assignments` | **May lack RLS entirely** — no policies found in migrations. Security + performance concern. |
+### ~~SC-6: RLS Policy Performance~~ ✅ DONE (2026-03-26)
+Migration `20260326110000_sc6_rls_performance_indexes.sql`. 11 composite indexes for hot RLS functions:
 
-### SC-7: Search Performance (🟢 Low priority, future)
-All search uses `ilike '%term%'` (leading wildcard = sequential scan). At thousands of records, consider adding GIN trigram indexes on `profiles.name`, `notifications.title`, and other frequently-searched text columns.
+| Function | Indexes Added |
+|----------|---------------|
+| `is_session_instructor_or_coach()` | `program_instructors(program_id, instructor_id)`, `program_coaches(program_id, coach_id)`, `session_participants(session_id, user_id)` |
+| `user_has_feature()` | `features(key)`, `plan_features(plan_id, feature_id)`, `user_add_ons(user_id, add_on_id)`, `track_features(track_id, feature_id)`, `user_tracks(user_id, is_active)` |
+| `module_assignments` policies | `client_instructors(client_id, instructor_id)`, `client_coaches(client_id, coach_id)` |
+
+### ~~SC-7: Search Performance~~ ✅ DONE (2026-03-26)
+Migration `20260326100000_sc7_search_trigram_indexes.sql`. Enables `pg_trgm` extension + 4 GIN trigram indexes on `profiles(name)`, `notifications(title)`, `notifications(message)`, `organizations(name)`. Optimizes `ilike '%term%'` leading-wildcard search.
 
 ### Positive Findings (well-designed areas)
 - ✅ `EnrolmentsManagement.tsx` — model for server-side pagination (React Query + `.range()` + parallel count queries)
@@ -478,7 +475,7 @@ All search uses `ilike '%term%'` (leading wildcard = sequential scan). At thousa
 - ✅ `client_enrollments` — 8 indexes (added 2026-03-24)
 
 ### Roadmap Priority Order
-**SC-1** (indexes, ~1 day) → **SC-2** (N+1 rewrites, ~3-5 days) → **SC-3** (pagination, ~3-5 days) → **SC-5** (retention, ~1 day) → **SC-6** (RLS, ~1-2 days) → **SC-4** (org audit, future) → **SC-7** (search, future)
+~~**SC-1**~~ ✅ → ~~**SC-2**~~ ✅ → ~~**SC-3**~~ ✅ → ~~**SC-5**~~ ✅ → ~~**SC-6**~~ ✅ → ~~**SC-7**~~ ✅ → **SC-4** (org audit, future)
 
 ## npm Scripts
 ```
