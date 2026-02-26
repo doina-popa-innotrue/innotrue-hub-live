@@ -1714,40 +1714,7 @@ export function AppSidebar() {
                               )}
                             </SidebarMenuSubItem>
                           )}
-                          <SidebarMenuSubItem>
-                            {talentLmsUser ? (
-                              <button
-                                onClick={() => loginToTalentLms("")}
-                                disabled={talentLmsLoading}
-                                className="flex w-full items-start gap-2 rounded-md px-2 py-2 text-sm hover:bg-primary hover:text-primary-foreground text-sidebar-foreground disabled:opacity-50"
-                              >
-                                <GraduationCap className="h-4 w-4 shrink-0 mt-0.5" />
-                                {open && (
-                                  <span className="flex-1 text-left leading-tight">
-                                    InnoTrue Academy
-                                  </span>
-                                )}
-                                {open && (
-                                  <ExternalLink className="h-3 w-3 opacity-50 shrink-0 mt-0.5" />
-                                )}
-                              </button>
-                            ) : (
-                              <SidebarMenuSubButton
-                                asChild
-                                className="hover:bg-primary hover:text-primary-foreground text-sidebar-foreground !h-auto py-2"
-                              >
-                                <NavLink to="/academy" className="items-start">
-                                  <GraduationCap className="mr-2 h-4 w-4 shrink-0 mt-0.5" />
-                                  {open && (
-                                    <span className="flex-1 leading-tight">InnoTrue Academy</span>
-                                  )}
-                                  {open && (
-                                    <ExternalLink className="h-3 w-3 opacity-50 shrink-0 mt-0.5" />
-                                  )}
-                                </NavLink>
-                              </SidebarMenuSubButton>
-                            )}
-                          </SidebarMenuSubItem>
+                          {/* InnoTrue Academy hidden for clients — re-enable when ready */}
                           <SidebarMenuSubItem>
                             {lucidUser ? (
                               <button

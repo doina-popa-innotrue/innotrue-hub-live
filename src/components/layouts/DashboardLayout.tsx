@@ -23,6 +23,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { toast } = useToast();
   const [profileName, setProfileName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [planName, setPlanName] = useState<string | null>(null);
 
   // Initialize session timeout for security
   useSessionTimeout();
@@ -48,12 +49,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("name, avatar_url")
+        .select("name, avatar_url, plans:plan_id(display_name, name)")
         .eq("id", user.id)
         .single();
       if (error) throw error;
       setProfileName(data.name || "");
       setAvatarUrl(data.avatar_url || null);
+      const plan = data.plans as { display_name: string | null; name: string } | null;
+      setPlanName(plan?.display_name || plan?.name || null);
     } catch (error: any) {
       console.error("Error loading profile:", error);
     }
@@ -110,7 +113,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <span className="hidden sm:inline">Restart Tour</span>
               </Button>
               <NotificationBell />
-              <UserDropdown profileName={profileName} avatarUrl={avatarUrl} email={user?.email} />
+              <UserDropdown profileName={profileName} avatarUrl={avatarUrl} email={user?.email} planName={planName} />
             </div>
           </header>
           <div className="flex flex-1 min-h-0">

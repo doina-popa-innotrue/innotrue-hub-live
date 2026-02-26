@@ -27,9 +27,10 @@ interface UserDropdownProps {
   profileName: string;
   avatarUrl: string | null;
   email: string | undefined;
+  planName: string | null;
 }
 
-export function UserDropdown({ profileName, avatarUrl, email }: UserDropdownProps) {
+export function UserDropdown({ profileName, avatarUrl, email, planName }: UserDropdownProps) {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const { toast } = useToast();
@@ -113,7 +114,12 @@ export function UserDropdown({ profileName, avatarUrl, email }: UserDropdownProp
               <AvatarImage src={avatarUrl || undefined} />
               <AvatarFallback>{getInitials()}</AvatarFallback>
             </Avatar>
-            <span className="text-sm font-medium hidden sm:inline">{profileName || email}</span>
+            <div className="hidden sm:flex flex-col items-start">
+              <span className="text-sm font-medium">{profileName || email}</span>
+              {planName && (
+                <span className="text-xs text-white/60">{planName}</span>
+              )}
+            </div>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56 bg-background border border-border z-50">
