@@ -30,6 +30,7 @@ export default function ModuleReflections({ moduleProgressId }: ModuleReflection
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [addingResourceTo, setAddingResourceTo] = useState<string | null>(null);
+  const [resourceRefreshKey, setResourceRefreshKey] = useState(0);
 
   useEffect(() => {
     fetchReflections();
@@ -188,13 +189,14 @@ export default function ModuleReflections({ moduleProgressId }: ModuleReflection
                       {format(new Date(reflection.created_at), "PPp")}
                       {reflection.updated_at !== reflection.created_at && " (edited)"}
                     </p>
-                    <ReflectionResources reflectionId={reflection.id} />
+                    <ReflectionResources reflectionId={reflection.id} refreshKey={resourceRefreshKey} />
                     {addingResourceTo === reflection.id ? (
                       <div className="mt-4 p-4 border rounded-lg bg-muted/50">
                         <ReflectionResourceForm
                           reflectionId={reflection.id}
                           onSuccess={() => {
                             setAddingResourceTo(null);
+                            setResourceRefreshKey((k) => k + 1);
                           }}
                           onCancel={() => setAddingResourceTo(null)}
                         />

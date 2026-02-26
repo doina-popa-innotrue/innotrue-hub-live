@@ -83,6 +83,7 @@ interface Module {
   content_package_path?: string | null;
   content_package_type?: "web" | "xapi" | null;
   content_package_id?: string | null;
+  content_packages?: { package_type: string } | null;
   available_from_date?: string | null;
   unlock_after_days?: number | null;
   progress?: {
@@ -199,7 +200,7 @@ export default function ModuleDetail() {
 
       const { data: moduleData } = await supabase
         .from("program_modules")
-        .select("*, plan_id, min_plan_tier, content_package_path, content_package_type, content_package_id, available_from_date, unlock_after_days")
+        .select("*, plan_id, min_plan_tier, content_package_path, content_package_type, content_package_id, content_packages(package_type), available_from_date, unlock_after_days")
         .eq("id", moduleId)
         .single();
 
@@ -895,7 +896,11 @@ export default function ModuleDetail() {
                 moduleId={module.id}
                 accessToken={accessToken}
                 title={module.title}
-                contentPackageType={module.content_package_type === "xapi" ? "xapi" : "web"}
+                contentPackageType={
+                  (module.content_package_id && module.content_packages?.package_type === "xapi")
+                    || module.content_package_type === "xapi"
+                    ? "xapi" : "web"
+                }
                 onXapiComplete={() => {
                   // Update local state to reflect auto-completed progress
                   // without reloading the page (which would destroy the iframe).

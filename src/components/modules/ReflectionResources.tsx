@@ -26,15 +26,17 @@ interface ReflectionResource {
 
 interface ReflectionResourcesProps {
   reflectionId: string;
+  /** Increment to trigger a refetch (e.g. after adding a resource) */
+  refreshKey?: number;
 }
 
-export default function ReflectionResources({ reflectionId }: ReflectionResourcesProps) {
+export default function ReflectionResources({ reflectionId, refreshKey }: ReflectionResourcesProps) {
   const [resources, setResources] = useState<ReflectionResource[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchResources();
-  }, [reflectionId]);
+  }, [reflectionId, refreshKey]);
 
   async function fetchResources() {
     try {

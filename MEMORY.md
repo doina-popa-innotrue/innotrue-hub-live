@@ -123,7 +123,7 @@
 - ~~CohortDashboard~~ ✅ DONE — participant view with schedule, next session highlight, ICS, progress, group section
 - ~~Join Session one-click~~ ✅ DONE — time-aware status hook, pulsing join button, dashboard widget
 - ~~Content Tier 2 xAPI direct~~ ✅ DONE — Rise xAPI session management + statement storage + auto-completion + resume support
-- Cohort scheduling gaps — see below
+- ~~Cohort scheduling gaps~~ ✅ ALL DONE (G1-G10 + GT1)
 
 **Priority 0 — Cohort Scheduling Gaps (see `docs/COHORT_SCHEDULING_ANALYSIS.md` for full analysis):**
 - ~~G1: Cohort assignment UI on enrollment~~ ✅ DONE — `enroll_with_credits` RPC accepts `p_cohort_id`, cohort dropdown on enrollment form
@@ -133,10 +133,10 @@
 - ~~G5: Recurring session generation~~ ✅ DONE — "Generate Sessions" bulk action, weekly/biweekly recurrence
 - ~~G6: Session notifications/reminders~~ ✅ DONE — `send-schedule-reminders` edge function, 24h + 1h before, `create_notification` RPC
 - ~~G7: Session notes/recap~~ ✅ DONE — `recording_url`, `summary`, `action_items` on `cohort_sessions`, recap section
-- **GT1: Instructor/Coach Teaching Workflow (HIGH PRIORITY, ~1 week)** — G1-G7 built DB + admin/client UI but NO teaching UI for instructors/coaches. Plan ready in `.claude/plans/proud-jumping-fountain.md`. Covers: RLS fixes (4 policies: coach SELECT on program_cohorts, UPDATE on cohort_sessions for both roles, upgrade coach attendance to ALL), new `/teaching/cohorts` list page, new `/teaching/cohorts/:cohortId` detail page (attendance marking + recap editing), dashboard cohort sessions widget, StudentDetail cohort/attendance card. 3 new files, 4 modified, 1 migration.
+- ~~**GT1: Instructor/Coach Teaching Workflow**~~ ✅ DONE (2026-02-23) — RLS fixes (4 policies), `/teaching/cohorts` list page, `/teaching/cohorts/:cohortId` detail page (attendance marking + recap editing + homework), dashboard cohort sessions widget, StudentDetail cohort/attendance card. 3 new files, 4 modified, 1 migration.
 - ~~G8: Enrollment codes~~ ✅ DONE — `enrollment_codes` table, `redeem-enrollment-code` edge function, admin management page, public `/enroll` page, `validate_enrollment_code` RPC
-- G9: Cohort analytics dashboard (1 week) — medium
-- G10: Session-linked homework (3-5 days) — medium
+- ~~G9: Cohort analytics dashboard~~ ✅ DONE (2026-02-23) — `CohortAnalytics.tsx` at `/admin/cohort-analytics`, attendance %, completion %, at-risk client detection
+- ~~G10: Session-linked homework~~ ✅ DONE (2026-02-23) — `SessionHomework.tsx` in CohortDetail, assigns homework per session to all enrolled clients, tracks completion
 
 **Priority 0 — Development Profile & Assessment-Driven Guided Paths (see `docs/DEVELOPMENT_PROFILE_ANALYSIS.md`):**
 Approved for development 2026-02-18. Connects 3 assessment systems + development items + goals + guided paths into unified development journey.

@@ -55,6 +55,8 @@ interface Module {
   order_index: number;
   content_package_path?: string | null;
   content_package_type?: "web" | "xapi" | null;
+  content_package_id?: string | null;
+  content_packages?: { package_type: string } | null;
 }
 
 interface EnrolledClient {
@@ -123,7 +125,7 @@ export default function InstructorModuleDetail() {
       // Fetch module
       const { data: moduleData } = await supabase
         .from("program_modules")
-        .select("*")
+        .select("*, content_packages(package_type)")
         .eq("id", moduleId)
         .single();
 
@@ -346,7 +348,7 @@ export default function InstructorModuleDetail() {
           <ModuleSectionsDisplay moduleId={moduleId!} />
 
           {/* Embedded content package preview (Rise/web export) */}
-          {module.content_package_path && (
+          {(module.content_package_path || module.content_package_id) && (
             <Card className="border-primary/50 bg-primary/5">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -362,7 +364,11 @@ export default function InstructorModuleDetail() {
                     moduleId={module.id}
                     accessToken={accessToken}
                     title={module.title}
-                    contentPackageType={module.content_package_type === "xapi" ? "xapi" : "web"}
+                    contentPackageType={
+                      (module.content_package_id && module.content_packages?.package_type === "xapi")
+                        || module.content_package_type === "xapi"
+                        ? "xapi" : "web"
+                    }
                   />
                 )}
               </CardContent>
