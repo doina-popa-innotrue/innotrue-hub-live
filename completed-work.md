@@ -1,5 +1,36 @@
 # Completed Work — Detailed History
 
+## Action Items ↔ Timeline & Tasks Integration (2026-03-26)
+
+Bridged the gap between Development Items action items and the rest of the platform. Action items now surface in the Development Timeline, the Timeline Progress chart, and a new free section on the Tasks page. Users can promote action items to full Eisenhower Matrix tasks (feature-gated). 3 new files, 4 modified. No migrations needed. `npm run verify` passed. Deployed to all 3 environments + Lovable. Commit `d7cc154`.
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `src/hooks/useActionItems.ts` | Shared TanStack Query hook for action items. Queries `development_items` where `item_type = 'action_item'` with task_links JOIN. Exports `useActionItems(options?)` with optional status filter and `useToggleActionItemStatus()` mutation. Query key: `["action-items", user?.id, statusFilter]`. |
+| `src/components/capabilities/PromoteToTaskDialog.tsx` | Compact dialog for promoting action items to Eisenhower Matrix tasks. Pre-filled title, importance/urgency Switch toggles, due date. Auto-sets urgency if due within 7 days. Creates task with status `"todo"` + junction link in `development_item_task_links`. Invalidates `["tasks"]`, `["action-items"]`, `["development-items"]` query caches. |
+| `src/components/tasks/ActionItemsSection.tsx` | Collapsible section showing all action items with status toggle, due dates, linked task badges, promote button. Uses `useActionItems` hook. Feature-gates promote button via `useEntitlements().hasFeature("decision_toolkit_basic")`. Returns null if no action items. "View All" navigates to `/development-items`. |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `src/pages/client/DevelopmentTimeline.tsx` | Extended `TimelineItem.type` union to include `"action_item"`. Added `ActionItemRaw` interface, `actionItems` state, `showActionItems` filter, action items fetch in `fetchData()`, ListTodo icon + violet accent color, filter checkbox, click handler navigating to `/development-items`. Category set to `null` — hidden when specific category filter selected. |
+| `src/components/timeline/TimelineProgressSection.tsx` | Extended `CompletedItem.type` to include `"action_item"`. Added completed action items query, `actionItems` field in WeekData, violet stat card (4-column grid), actionItems bar segment in stacked chart (top position), legend entry. |
+| `src/pages/client/DevelopmentItems.tsx` | Added `PromoteToTaskDialog` import, `useEntitlements` check, `promotingItem` state. "Promote to Task" button (ArrowUpRight icon, violet, ghost) shown only for action items without existing task_links and when user has `decision_toolkit_basic` feature. |
+| `src/pages/client/Tasks.tsx` | Wrapped return in fragment. Added `<ActionItemsSection />` OUTSIDE and BELOW the `<FeatureGate>` wrapper — visible to ALL users (free), promote button feature-gated inside. |
+
+### Design Decisions
+
+- **No migrations needed:** All tables existed (`development_items`, `tasks`, `development_item_task_links`)
+- **Free/premium boundary:** Action items section on Tasks page is free; only the "Promote to Task" button requires `decision_toolkit_basic`
+- **Duplicate promotion prevention:** Promote button hidden when `task_links.length > 0`, shows linked task badge instead
+- **Independent status:** Promoting to task does NOT change the action item's status — they track independently
+- **Category filter edge case:** Action items have no wheel category; hidden when specific category is selected in Timeline
+- **Title fallback:** Uses first 60 chars of `content` with "…" when `title` is null
+- **Task status:** Uses `"todo"` (not `"active"`) per actual DB enum `task_status`
+
 ## Bug Fixes — Reflection Resources + xAPI Library Content (2026-03-26)
 
 Two client-facing bugs fixed, 5 files changed. `npm run verify` passed. Deployed to all 3 environments + Lovable.

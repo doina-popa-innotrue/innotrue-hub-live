@@ -156,7 +156,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - ~~**CT3b: Cross-Program Completion**~~ ✅ — `content_completions` table. `xapi-statements` writes completion on xAPI verb. `useCrossProgramCompletion` extended with 3rd data source. Client `ModuleDetail` auto-accepts completion from shared content. `CanonicalCodesManagement` now shows content packages tab.
 - **`canonical_code` override** — kept as manual override for different content that should count as equivalent.
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → ~~Enrollment Scale + Bulk Enrollment~~ ✅ → ~~SC-1 Critical Indexes~~ ✅ → ~~SC-2 N+1 Rewrites~~ ✅ → ~~2B.5 Certification~~ ✅ → ~~2B.10 Enrollment Duration~~ ✅ → ~~SC-3 Pagination~~ ✅ → ~~SC-5 Retention~~ ✅ → ~~SC-6 RLS Indexes~~ ✅ → ~~SC-7 Search Indexes~~ ✅ → ~~Phase 5 remaining (Steps 7+9 + R2/R3/R4)~~ ✅ → SC-4 Organisation Audit → 3-AI/Engagement
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → ~~Enrollment Scale + Bulk Enrollment~~ ✅ → ~~SC-1 Critical Indexes~~ ✅ → ~~SC-2 N+1 Rewrites~~ ✅ → ~~2B.5 Certification~~ ✅ → ~~2B.10 Enrollment Duration~~ ✅ → ~~SC-3 Pagination~~ ✅ → ~~SC-5 Retention~~ ✅ → ~~SC-6 RLS Indexes~~ ✅ → ~~SC-7 Search Indexes~~ ✅ → ~~Phase 5 remaining (Steps 7+9 + R2/R3/R4)~~ ✅ → ~~Action Items ↔ Timeline & Tasks~~ ✅ → SC-4 Organisation Audit → 3-AI/Engagement
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
@@ -219,7 +219,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Reflection resource refresh (2026-03-26):** Adding a resource to a reflection didn't update the display until page refresh. `ReflectionResources` lacked a trigger to refetch. Fixed with `refreshKey` prop pattern.
 - **xAPI library content loading (2026-03-26):** Shared library xAPI content failed with "File not found: index.html". Client/instructor `ModuleDetail` pages only read `program_modules.content_package_type` (null for library content) instead of JOINing `content_packages.package_type`. Fixed by adding JOIN + type resolution fallback. Also fixed instructor page not showing library content at all.
 
-## Current State (as of 2026-03-26, Phase 5 remaining + R2/R3/R4 done)
+## Current State (as of 2026-03-26, Action Items integration done)
 - All strict TypeScript flags enabled (including strictNullChecks). 0 errors.
 - **Self-registration enabled** (Phase 5 core). Signup form + Google OAuth active in Auth.tsx. New users choose role at `/complete-registration` (client immediate, coach/instructor via admin approval). All self-registered users get client role + free plan immediately.
 - 16 storage buckets on all 3 Supabase projects
@@ -380,7 +380,12 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Bug fixes (2026-03-26):**
   - **Reflection resource refresh:** Adding a resource to a reflection didn't show it until page refresh. `ReflectionResources` component now accepts `refreshKey` prop; `ModuleReflections` bumps it on successful add.
   - **xAPI library content "File not found: index.html":** Shared library content (via `content_package_id`) stores `package_type` on `content_packages` table, but both client and instructor `ModuleDetail` pages only read `program_modules.content_package_type` (null for library content). Added `content_packages(package_type)` JOIN to queries; type resolution now checks library package type first. Also fixed instructor page not showing shared library content at all (condition only checked `content_package_path`).
-- **Next steps:** Phase 5 remaining → SC-4 Organisation audit → Phase 3 AI
+- **Action Items ↔ Timeline & Tasks Integration (2026-03-26):** Bridges Development Items action items into the Timeline + Tasks ecosystem. 3 new files, 4 modified. No migrations. Commit `d7cc154`.
+  - **Timeline integration:** Action items appear in DevelopmentTimeline with ListTodo icon + violet accent. `ActionItemRaw` interface, `showActionItems` filter, category = null (hidden when specific category selected). Progress chart extended with actionItems bar + violet stat card.
+  - **Promote to Task:** `PromoteToTaskDialog.tsx` — compact dialog creating Eisenhower Matrix task + junction link. Feature-gated to `decision_toolkit_basic`. Auto-urgency if due ≤7 days. Task status `"todo"`. Integrated in DevelopmentItems.tsx (only shows if no existing task_links).
+  - **Tasks page section:** `ActionItemsSection.tsx` — collapsible section OUTSIDE FeatureGate (free for all users). Status toggle, due dates, linked task badges, promote button (gated). Uses shared `useActionItems` hook.
+  - **Shared hook:** `useActionItems.ts` — TanStack Query hook with optional status filter + `useToggleActionItemStatus()` mutation.
+- **Next steps:** SC-4 Organisation audit → Phase 3 AI
 
 ## Scalability & Performance Audit (2026-03-24)
 
