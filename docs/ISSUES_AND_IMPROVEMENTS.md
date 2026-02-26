@@ -507,10 +507,10 @@ For features you decide to build, use Cursor Agent to prototype quickly:
 | **No onboarding wizard** | Coach/instructor lands on dashboard with no guidance on what to do first | Add a first-login guided flow: "Set up your profile → Review assigned programs → Check pending tasks" |
 | **No coach verification workflow** | No way to verify coach credentials/certifications before they start coaching | Add a verification status (pending/verified/rejected) on profiles, with admin approval step |
 | **No coach availability setup** | Coaches set a calendar URL, but no native availability management | Integrate Cal.com availability slots — coaches set availability directly in Hub |
-| **No self-service coach registration** | All coaches must be admin-created | Add a "Become a Coach" application form → admin reviews → approves/rejects |
+| ~~**No self-service coach registration**~~ | ~~All coaches must be admin-created~~ | ✅ RESOLVED (Phase 5) — self-registration with admin approval at `/complete-registration` |
 | **No coach performance dashboard** | No metrics on session ratings, client satisfaction, completion rates | Add coach analytics: session count, average rating, client progress, NPS |
-| **Welcome email is minimal** | Just a password link, no introduction to the platform | Enhance with: platform overview, first steps, link to profile setup, help resources |
-| **No bulk invite** | Admin must create coaches one-by-one | Add CSV upload for bulk coach/instructor creation |
+| ~~**Welcome email is minimal**~~ | ~~Just a password link, no introduction to the platform~~ | ✅ RESOLVED — role-specific welcome emails + teaching guide at `/teaching/guide` (R2) |
+| ~~**No bulk invite**~~ | ~~Admin must create coaches one-by-one~~ | ✅ RESOLVED — bulk import via `BulkUserImport.tsx` + coaches can invite own clients via `InviteClientDialog.tsx` (R4) |
 | **No specialization matching** | No way to auto-match coaches to clients based on expertise areas | Add skill/specialization tags with matching algorithm |
 
 ### Current State: Organization Onboarding
@@ -554,7 +554,7 @@ For features you decide to build, use Cursor Agent to prototype quickly:
 |-----|--------|---------------|
 | **No onboarding wizard/tour** | Client lands on dashboard without knowing where to start | Add interactive product tour (Shepherd.js or custom): "This is your dashboard → Explore programs → Complete your profile → Set your goals" |
 | **No progress onboarding checklist** | No visual "get started" checklist | Add a persistent "Getting Started" card: profile complete? first program enrolled? first goal set? first reflection? |
-| **Self-registration disabled** | All clients must be admin-created during pilot | Plan for re-enabling: fix AuthContext role fallback, test Google OAuth, add email domain allowlisting |
+| ~~**Self-registration disabled**~~ | ~~All clients must be admin-created during pilot~~ | ✅ RESOLVED (Phase 5) — self-signup + Google OAuth re-enabled, role selection at `/complete-registration` |
 | **No recommended programs** | Clients must browse all programs, no personalization | Use assessment results + goals to recommend programs (AI-powered) |
 | **No coach matching** | Coach assigned by admin, no client preference input | Let clients see coach profiles, specialties, availability before matching |
 
@@ -1829,6 +1829,11 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 | ~~**Scalability Audit — SC-5 Retention & Cleanup**~~ | ~~Automated cron cleanup for notifications, analytics, coach logs~~ | ✅ DONE (2026-03-26) |
 | ~~**Scalability Audit — SC-6 RLS Performance**~~ | ~~11 composite indexes for hot RLS functions~~ | ✅ DONE (2026-03-26) |
 | ~~**Scalability Audit — SC-7 Search Performance**~~ | ~~GIN trigram indexes for ilike search~~ | ✅ DONE (2026-03-26) |
+| ~~**Phase 5 remaining (Steps 7+9)**~~ | ~~Wheel pipeline + bulk import~~ | ✅ DONE (2026-03-26) |
+| ~~**R2 Teaching Guide**~~ | ~~Quick actions, checklist, FAQ, role explanations~~ | ✅ DONE (2026-03-26) |
+| ~~**R3 Phase 1 Coach↔Client UX**~~ | ~~Quick Actions bar, CoachingSessionNotes~~ | ✅ DONE (2026-03-26) |
+| ~~**R4 Coach Client Invites**~~ | ~~coach_client_invites, send-coach-invite, InviteClientDialog~~ | ✅ DONE (2026-03-26) |
+| ~~**Action Items ↔ Timeline & Tasks**~~ | ~~Timeline integration, PromoteToTask, ActionItemsSection~~ | ✅ DONE (2026-03-26) |
 | Phase 1 — Onboarding/UX | 8 items | 2-3 weeks |
 | Phase 2 — Assessment Intelligence | 7 items | 3-4 weeks |
 | Phase 3 — AI & Engagement | 8 items | 3-4 weeks |
@@ -1854,7 +1859,7 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 12. ~~CT3 Shared Content Packages & Cross-Program Completion~~ ✅ DONE (2026-02-20) — `content_packages` + `content_completions` tables, content library picker, xAPI propagation, cross-program auto-accept
 13. ~~Quick medium wins (M2, M11)~~ ✅ DONE (2026-02-20) — assessment interest tracking on dashboard, console cleanup across 20 files
 14. ~~G8 Self-Enrollment Codes~~ ✅ DONE (2026-02-25) — `enrollment_codes` table, admin management page, public enrollment page, `redeem-enrollment-code` edge function
-15. **Phase 5 Self-Registration** — plan complete in `docs/PHASE5_PLAN.md`
+15. ~~**Phase 5 Self-Registration**~~ ✅ — core (Batches 1-3) + Steps 7+9 + R2/R3/R4 complete. See `docs/PHASE5_PLAN.md`. Remaining: Step 12 (public assessment funnels), Step 13 (org self-service)
 16. ~~Development Profile (DP6-DP7)~~ ✅ DONE (2026-02-24) — psychometric structured results (schema definition + score entry + profile card), readiness dashboard (coach view + client widget)
 17. ~~**SC-1 Critical Indexes**~~ ✅ DONE (2026-03-24) — 10 tables, 15+ indexes on hot-path columns
 18. ~~**SC-2 N+1 Query Rewrites**~~ ✅ DONE (2026-03-25) — 14+ pages rewritten with batched queries
@@ -1863,10 +1868,14 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 21. ~~**SC-5 Retention & Cleanup**~~ ✅ DONE (2026-03-26) — Automated cron: notifications (4 AM), analytics_events (180d, 4:30 AM), coach_access_logs (90d, 4:15 AM). Configurable via system_settings.
 22. ~~**SC-6 RLS Performance**~~ ✅ DONE (2026-03-26) — 11 composite indexes for `is_session_instructor_or_coach`, `user_has_feature`, module_assignments policies
 23. ~~**SC-7 Search Performance**~~ ✅ DONE (2026-03-26) — `pg_trgm` extension + 4 GIN trigram indexes on profiles, notifications, organizations
-24. Phase 5 remaining (Wheel pipeline, bulk import)
-25. **SC-4 Organisation Functionality Audit** (future) — org tables/pages not yet audited, will grow with enterprise adoption
-26. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
-27. Remaining phases based on business priorities
+24. ~~Phase 5 remaining (Wheel pipeline, bulk import)~~ ✅ DONE (2026-03-26) — `submit-wheel-intent` edge function + plan interest in `verify-signup`, `bulk-create-users` edge function + `BulkUserImport.tsx`
+25. ~~R2 Teaching Guide~~ ✅ DONE (2026-03-26) — `/teaching/guide` with quick actions, checklist, FAQ, role explanations
+26. ~~R3 Phase 1 Coach↔Client UX~~ ✅ DONE (2026-03-26) — Quick Actions bar, `CoachingSessionNotes.tsx`
+27. ~~R4 Coach Client Invites~~ ✅ DONE (2026-03-26) — `coach_client_invites` table, `send-coach-invite` edge function, `InviteClientDialog.tsx`
+28. ~~Action Items ↔ Timeline & Tasks~~ ✅ DONE (2026-03-26) — Timeline integration, `PromoteToTaskDialog`, `ActionItemsSection`, `useActionItems` hook
+29. **SC-4 Organisation Functionality Audit** (future) — org tables/pages not yet audited, will grow with enterprise adoption
+30. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
+31. Remaining phases based on business priorities
 
 ### 11.8 New Data Tables Required by Roadmap
 

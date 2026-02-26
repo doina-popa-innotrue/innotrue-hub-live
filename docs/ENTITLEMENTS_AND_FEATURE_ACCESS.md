@@ -259,3 +259,11 @@ The following client pages are now behind feature gates (configurable per plan):
 - **Development Profile** (`development_profile`)
 
 These join existing gated features like `goals`, `community`, `decision_toolkit_advanced`, `ai_reflection`, etc.
+
+### Feature-Gated Actions (updated 2026-03-26)
+
+Some UI actions are feature-gated without wrapping entire pages:
+- **Promote to Task** (`decision_toolkit_basic`) — The "Promote to Task" button on action items (in `ActionItemsSection` on Tasks page and `DevelopmentItems` page) is only shown to users with `decision_toolkit_basic`. The action items section itself is free for all users. Pattern: `useEntitlements().hasFeature("decision_toolkit_basic")` inline check.
+- **AI Reflection Prompt** (`ai_insights`) — Weekly reflection card gated behind `hasFeature("ai_insights")` with credit consumption via `useConsumableFeature`.
+
+This inline gating pattern (vs wrapping in `<FeatureGate>`) is used when the surrounding content should be visible to all users but a specific action requires a premium feature.

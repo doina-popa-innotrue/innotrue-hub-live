@@ -7,7 +7,14 @@
 > - Batch 2: `verify-signup` modified (pending_role_selection, 7-table placeholder transfer), Auth.tsx re-enabled (signup form + Google OAuth), AuthContext `registrationStatus`, ProtectedRoute pending states, Index.tsx redirect
 > - Batch 3: `CoachInstructorRequests.tsx` rewritten with "Role Applications" + "Coach Assignments" tabs, approve/decline mutations for role applications
 >
-> **Remaining Phase 5 steps (not yet implemented):** Step 7 (Wheel of Life pipeline), Step 9 (Bulk import), Step 12 (Public assessment funnels), Step 13 (Org self-service), Step 14 partial (enhanced consent dialog)
+> **Steps 7 + 9 completed 2026-03-26:** Step 7 (Wheel of Life → Signup Pipeline) — `submit-wheel-intent` edge function + plan interest resolution in `verify-signup`. Step 9 (Bulk User Import) — `bulk-create-users` edge function + `BulkUserImport.tsx` dialog with CSV parsing. Commit `6c924df`.
+>
+> **New Roadmap Items R2/R3/R4 completed 2026-03-26:**
+> - R2: Teaching Guide — `/teaching/guide` page with quick actions grid, 5-step getting started checklist, 9-question FAQ accordion, role explanation cards
+> - R3 Phase 1: Coach↔Client UX — Quick Actions bar in StudentDetail (4 action buttons), `CoachingSessionNotes.tsx` (structured session logs with JSON content in `client_staff_notes` table)
+> - R4: Coach Client Invites — `coach_client_invites` table, `send-coach-invite` edge function (auto-links existing users, emails new), `InviteClientDialog.tsx` (send+history tabs), `verify-signup` auto-links pending invites on signup
+>
+> **Remaining Phase 5 steps (not yet implemented):** Step 12 (Public assessment funnels), Step 13 (Org self-service), Step 14 partial (enhanced consent dialog)
 
 ## Context
 

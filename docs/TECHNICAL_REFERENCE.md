@@ -45,7 +45,7 @@
 │  │ RLS on all │  │ Email/Pass   │  │   Wheel PDFs       │   │
 │  └────────────┘  └──────────────┘  └───────────────────┘   │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │              76 Edge Functions (Deno)                 │   │
+│  │              79 Edge Functions (Deno)                 │   │
 │  │  Email (13) │ AI (5+) │ xAPI (3) │ Stripe │ Cal.com │   │
 │  └──────────────────────────────────────────────────────┘   │
 └──────────────────┬───────────────────────────────────────────┘
@@ -59,7 +59,7 @@
 **Stack:** React 18 + Vite 5 + TypeScript (strict) + Supabase + Tailwind CSS + shadcn/ui
 
 **Key design decisions:**
-- SPA with lazy-loaded routes (181+ pages, code-split to 977KB main bundle)
+- SPA with lazy-loaded routes (182+ pages, code-split to ~1031KB main bundle)
 - Supabase for backend (auth, database, storage, edge functions) — no custom server
 - Google Vertex AI for AI features (EU data residency in Frankfurt, europe-west3)
 - Resend for transactional email (13 edge functions)
@@ -109,9 +109,9 @@ fi && npm run build
 ### Supabase project details
 
 Both preprod and prod have:
-- 460+ database migrations applied (including Phase 5 self-registration, schema drift fixes, enrollment duration, certification, credit expiry)
+- 465+ database migrations applied (including Phase 5 self-registration, schema drift fixes, enrollment duration, certification, credit expiry)
 - Seed data loaded (`supabase/seed.sql`)
-- 76 edge functions deployed (including `complete-registration`, `redeem-enrollment-code`, `redeem-partner-code`, `alumni-lifecycle`, `enforce-enrollment-deadlines`, `generate-certificate-pdf`, `verify-badge`, `credit-expiry-notifications`)
+- 79 edge functions deployed (including `complete-registration`, `redeem-enrollment-code`, `redeem-partner-code`, `alumni-lifecycle`, `enforce-enrollment-deadlines`, `generate-certificate-pdf`, `verify-badge`, `credit-expiry-notifications`, `submit-wheel-intent`, `bulk-create-users`, `send-coach-invite`)
 - Google OAuth enabled (Phase 5)
 - Auth email hook pointing to `send-auth-email` edge function
 - Self-registration active: signup form + Google OAuth + role selection
@@ -168,7 +168,7 @@ After login, users must accept the current platform terms before accessing the a
 
 ### Schema overview
 
-- **380+ tables**, 20+ enum types, 460 migrations
+- **380+ tables**, 20+ enum types, 465 migrations
 - All public tables have **RLS enabled** (276 tables total, 41 with explicit policies, 235 locked to service_role only)
 - Key enums: `app_role`, `program_category`, `module_type`, `enrollment_status`, `decision_status`, `goal_category`
 

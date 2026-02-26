@@ -3,6 +3,8 @@
 > **Status:** DP1-DP4 ✅ DONE (2026-02-19, commit `c6b2e11`). DP5 ✅ DONE (2026-02-23, commit `ed0254b`). DP6-DP7 ✅ DONE (2026-02-24). All 7 phases complete. Approved for development (2026-02-18).
 >
 > **Scope:** Connect the platform's three assessment systems, development items, goals, and guided paths into a unified development journey — so clients can identify gaps, track progress, and follow structured paths (e.g., CTA review board preparation) with realistic timelines.
+>
+> **Post-DP update (2026-03-26):** Action items (development items with `item_type = 'action_item'`) are now integrated into the Development Timeline (with ListTodo icon + violet accent + filter) and the Timeline Progress chart. A new `ActionItemsSection` on the Tasks page shows pending action items (free for all users), and a `PromoteToTaskDialog` allows promoting action items to Eisenhower Matrix tasks (feature-gated to `decision_toolkit_basic`). See `useActionItems` hook, `PromoteToTaskDialog.tsx`, `ActionItemsSection.tsx`.
 
 ---
 

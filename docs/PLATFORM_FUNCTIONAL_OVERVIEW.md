@@ -260,9 +260,16 @@ These are the ongoing coaching tools clients use alongside structured programs:
 - Outcome recording
 - Analytics dashboard showing decision patterns over time
 
-**Tasks:** Action items that can be standalone or linked to goals, decisions, or group activities. Status workflow with completion tracking.
+**Tasks:** Action items that can be standalone or linked to goals, decisions, or group activities. Eisenhower Matrix prioritization (importance × urgency → quadrant). Status workflow with completion tracking. Feature-gated behind `decision_toolkit_basic`.
 
 **Development Items:** Items on the client's personal development plan. Can be client-created or coach/instructor-created. Coaches and instructors can create development items directly from the Student Detail page via a "+" button on each module row, opening the `DevelopmentItemDialog` in instructor mode. Linked to assessments, feedback, and coaching notes.
+
+**Action Items ↔ Tasks Integration (2026-03-26):** Development items with `item_type = 'action_item'` are now surfaced across the platform:
+- **Development Timeline:** Action items appear alongside goals, milestones, and tasks with ListTodo icon + violet accent. Filterable via "Action Items" checkbox. Hidden when a specific wheel category is selected (action items have no category).
+- **Timeline Progress Chart:** Action items included in the stacked bar chart and stats summary (violet color, "Actions Done" stat card).
+- **Tasks page:** `ActionItemsSection` — collapsible section shown OUTSIDE the Eisenhower Matrix FeatureGate (free for all users). Shows pending/completed action items with status toggle, due dates, and linked task badges.
+- **Promote to Task:** `PromoteToTaskDialog` allows promoting an action item to a full Eisenhower Matrix task (feature-gated to `decision_toolkit_basic`). Creates a task + junction link in `development_item_task_links`. Status tracks independently.
+- **Shared hook:** `useActionItems` — reusable TanStack Query hook with optional status filter and `useToggleActionItemStatus` mutation.
 
 ---
 
@@ -335,6 +342,14 @@ coaching, group_coaching, workshop, mastermind, review_board_mock, peer_coaching
 - **Development Profile view:** Coaches and instructors can view a client's unified Development Profile (5 sections) via `/teaching/students/:enrollmentId/development-profile`.
 
 > ✅ **GT1 Resolved (2026-02-23):** Full instructor/coach teaching workflow for cohorts is now built. `/teaching/cohorts` list page, `/teaching/cohorts/:cohortId` detail page with attendance marking + recap editing + homework assignment, cohort sessions merged into teaching dashboard widget, StudentDetail shows cohort assignment card. Symmetric RLS for both instructors and coaches. See `docs/COHORT_SCHEDULING_ANALYSIS.md` GT1 section.
+
+**Coach↔Client Interaction (R3 Phase 1, 2026-03-26):**
+- **Quick Actions bar** in StudentDetail — 4 action buttons for common coach workflows (create development item, schedule session, add note, assign badge)
+- **Coaching Session Notes** (`CoachingSessionNotes.tsx`) — structured session logs stored as JSON content in `client_staff_notes` table. Coaches record session outcomes, action items, and follow-ups
+- **Client Invites (R4):** Coaches can invite their own clients via `InviteClientDialog.tsx` (send + history tabs). `send-coach-invite` edge function auto-links existing users to `client_coaches`, emails new users with signup link. `verify-signup` auto-links pending invites on signup. `coach_client_invites` table tracks invite lifecycle.
+
+**Teaching Guide (R2, 2026-03-26):**
+- `/teaching/guide` page with quick actions grid, 5-step getting started checklist, 9-question FAQ accordion, and role explanation cards for coaches and instructors
 
 **Teaching Tools:**
 - Assignment grading with rubric support
@@ -669,11 +684,11 @@ Consumption analytics, user behavior analytics, program completions, system sett
 |--------|-------|
 | Database tables | 380+ |
 | Database enums | 25 |
-| Database migrations | 460 |
-| Edge functions | 76 |
-| Frontend pages | 181+ (71 admin, 58 client, 13 teaching, 9 org-admin, 13+ shared) |
-| React components | 273 |
-| React hooks | 76 |
+| Database migrations | 465 |
+| Edge functions | 79 |
+| Frontend pages | 182+ (71 admin, 58 client, 14 teaching, 9 org-admin, 13+ shared) |
+| React components | 278 |
+| React hooks | 77 |
 | Storage buckets | 16 |
 | Notification types | 31+ |
 | Session types | 8 |
