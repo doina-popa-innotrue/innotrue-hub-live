@@ -60,6 +60,16 @@ type GoalCategory =
   | "romance"
   | "contribution";
 
+/** Maps legacy timeframe_type values (from templates) to goal_timeframe enum values */
+function normalizeTimeframe(value: string): string {
+  const map: Record<string, string> = {
+    short_term: "short",
+    medium_term: "medium",
+    long_term: "long",
+  };
+  return map[value] || value;
+}
+
 const VALID_GOAL_CATEGORIES: GoalCategory[] = [
   "family_home",
   "financial_career",
@@ -228,9 +238,9 @@ export async function instantiateTemplate(
         title: templateGoal.title,
         description: templateGoal.description,
         category: normalizedCategory,
-        timeframe_type: templateGoal.timeframe_type,
+        timeframe_type: normalizeTimeframe(templateGoal.timeframe_type),
         priority: templateGoal.priority,
-        status: "active",
+        status: "not_started",
         progress_percentage: 0,
         template_goal_id: templateGoal.id,
         instantiation_id: instantiationId,

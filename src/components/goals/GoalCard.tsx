@@ -45,10 +45,10 @@ interface GoalCardProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  active: "bg-primary/15 text-primary",
-  on_hold: "bg-warning/15 text-warning",
+  not_started: "bg-secondary text-secondary-foreground",
+  in_progress: "bg-primary/15 text-primary",
   completed: "bg-success/15 text-success",
-  retired: "bg-secondary text-secondary-foreground",
+  paused: "bg-warning/15 text-warning",
 };
 
 const PRIORITY_COLORS: Record<string, string> = {

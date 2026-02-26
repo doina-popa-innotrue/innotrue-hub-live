@@ -83,9 +83,9 @@ export default function GoalFilters({ filters, onFiltersChange }: GoalFiltersPro
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Timeframes</SelectItem>
-            <SelectItem value="short_term">Short-term (1-6 months)</SelectItem>
-            <SelectItem value="medium_term">Medium-term (12 months)</SelectItem>
-            <SelectItem value="long_term">Long-term (3+ years)</SelectItem>
+            <SelectItem value="short">Short-term (1-6 months)</SelectItem>
+            <SelectItem value="medium">Medium-term (12 months)</SelectItem>
+            <SelectItem value="long">Long-term (3+ years)</SelectItem>
           </SelectContent>
         </Select>
 
@@ -95,10 +95,10 @@ export default function GoalFilters({ filters, onFiltersChange }: GoalFiltersPro
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="on_hold">On Hold</SelectItem>
+            <SelectItem value="not_started">Not Started</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="retired">Retired</SelectItem>
+            <SelectItem value="paused">Paused</SelectItem>
           </SelectContent>
         </Select>
 

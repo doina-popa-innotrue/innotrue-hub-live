@@ -114,10 +114,10 @@ export default function GoalForm({ goalId, defaultCategory, defaultTitle, defaul
     title: defaultTitle || "",
     description: defaultDescription || "",
     category: (defaultCategory || "personal_growth") as GoalCategory,
-    timeframe_type: "short_term" as GoalTimeframe,
-    priority: "medium" as GoalPriority,
+    timeframe_type: "short",
+    priority: "medium",
     target_date: "",
-    status: "active" as GoalStatus,
+    status: "not_started",
     is_private: false,
   });
 
@@ -286,9 +286,9 @@ export default function GoalForm({ goalId, defaultCategory, defaultTitle, defaul
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="short_term">Short-term (1-6 months)</SelectItem>
-              <SelectItem value="medium_term">Medium-term (12 months)</SelectItem>
-              <SelectItem value="long_term">Long-term (3+ years)</SelectItem>
+              <SelectItem value="short">Short-term (1-6 months)</SelectItem>
+              <SelectItem value="medium">Medium-term (12 months)</SelectItem>
+              <SelectItem value="long">Long-term (3+ years)</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -322,10 +322,10 @@ export default function GoalForm({ goalId, defaultCategory, defaultTitle, defaul
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="on_hold">On Hold</SelectItem>
+              <SelectItem value="not_started">Not Started</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="retired">Retired</SelectItem>
+              <SelectItem value="paused">Paused</SelectItem>
             </SelectContent>
           </Select>
         </div>
