@@ -1,5 +1,32 @@
 # Completed Work — Detailed History
 
+## SC-3/SC-5/SC-6/SC-7 Performance & Scalability (2026-03-26)
+
+Completed 4 scalability items from the audit: server-side pagination, retention policies, RLS indexes, and search indexes. 4 migrations, 8 frontend files modified. `npm run verify` passed.
+
+### Migrations
+
+1. **`20260326100000_sc7_search_trigram_indexes.sql`** — Enables `pg_trgm` extension + 4 GIN trigram indexes on `profiles(name)`, `notifications(title)`, `notifications(message)`, `organizations(name)` for `ilike '%term%'` search optimization.
+
+2. **`20260326110000_sc6_rls_performance_indexes.sql`** — 11 composite indexes supporting hot RLS functions (`is_session_instructor_or_coach`, `user_has_feature`, module_assignments policies).
+
+3. **`20260326120000_sc5_retention_cleanup_policies.sql`** — Automated cleanup: schedules existing `cleanup-notifications` edge function (4 AM UTC), creates `cleanup_old_analytics_events()` (180d, 4:30 AM), creates `cleanup_old_coach_access_logs()` (90d, 4:15 AM). Configurable via `system_settings`. Skipped: `admin_audit_logs` (compliance), `credit_consumption_log` (bounded).
+
+4. **`20260326130000_sc3_server_aggregation_rpcs.sql`** — 3 RPCs: `get_feature_usage_summary()` (replaces client-side Map aggregation), `get_credit_transaction_summary()` (replaces client-side reduce), `get_analytics_cleanup_preview()` (replaces 4 separate queries).
+
+### Frontend Changes (SC-3)
+
+| File | Changes |
+|------|---------|
+| `NotificationsManagement.tsx` | Server-side pagination (count + range), server-side category filter via type ID resolution, separate stats query, Pagination UI |
+| `EmailQueueManagement.tsx` | Server-side pagination (count + range), useMemo for filtered items, Pagination UI |
+| `ConsumptionAnalytics.tsx` | Features tab: `get_feature_usage_summary` RPC. Credit summary: `get_credit_transaction_summary` RPC |
+| `DataCleanupManager.tsx` | Single `get_analytics_cleanup_preview` RPC replacing 4 queries |
+| `CapabilityAssessmentDetail.tsx` | Server-side snapshot pagination (count + range), scoped bulk select, Pagination UI |
+| `Assignments.tsx` (client) | Migrated from useEffect to React Query, client-side pagination with useMemo, parallel queries |
+| `Calendar.tsx` (client) | Migrated from useEffect to React Query, ±3 month date bounding, parallel queries with Promise.all, month-based queryKey |
+| `PendingAssignments.tsx` (instructor) | Migrated from useEffect to React Query (3 hooks: module IDs, pending, scored), scored time filter moved server-side (.gte), pagination on both tabs |
+
 ## 2B.10 Enrollment Duration & Deadline Enforcement (2026-03-25)
 
 Time-bounded enrollment system. Admins can set a default duration per program; new enrollments get automatic deadlines with warnings and enforcement. 1 migration, 1 new edge function, 1 new component, 5 modified files. `npm run verify` passed. Deployed to all environments.

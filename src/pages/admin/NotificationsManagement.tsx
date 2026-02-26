@@ -1,15 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import {
   Bell,
   Trash2,
   Search,
-  Filter,
-  Users,
   AlertTriangle,
-  CheckSquare,
-  Square,
   Loader2,
   Settings,
   Clock,
@@ -34,9 +30,7 @@ import {
   AdminPageHeader,
   AdminLoadingState,
   AdminEmptyState,
-  AdminTable,
 } from "@/components/admin";
-import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
@@ -49,6 +43,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 
 interface NotificationWithUser {
   id: string;
@@ -70,6 +73,8 @@ interface NotificationWithUser {
   } | null;
 }
 
+const PAGE_SIZE = 25;
+
 export default function NotificationsManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -80,6 +85,9 @@ export default function NotificationsManagement() {
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
   const [retentionDays, setRetentionDays] = useState<string>("90");
   const [isCleanupSettingsOpen, setIsCleanupSettingsOpen] = useState(false);
+  const [page, setPage] = useState(0);
+
+  const resetPage = () => setPage(0);
 
   // Fetch retention setting
   const { data: retentionSetting } = useQuery({
@@ -92,50 +100,6 @@ export default function NotificationsManagement() {
         .single();
       if (error && error.code !== "PGRST116") throw error;
       return data?.value || "90";
-    },
-  });
-
-  // Fetch notifications with user info
-  const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ["admin-notifications", searchTerm, categoryFilter],
-    queryFn: async () => {
-      let query = supabase
-        .from("notifications")
-        .select(
-          `
-          id,
-          title,
-          message,
-          created_at,
-          is_read,
-          user_id,
-          profiles!notifications_user_id_fkey (name, email),
-          notification_types (
-            key,
-            name,
-            notification_categories (name)
-          )
-        `,
-        )
-        .order("created_at", { ascending: false })
-        .limit(500);
-
-      if (searchTerm) {
-        query = query.or(`title.ilike.%${searchTerm}%,message.ilike.%${searchTerm}%`);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      let result = data as unknown as NotificationWithUser[];
-
-      if (categoryFilter !== "all") {
-        result = result.filter(
-          (n) => n.notification_types?.notification_categories?.name === categoryFilter,
-        );
-      }
-
-      return result;
     },
   });
 
@@ -153,6 +117,104 @@ export default function NotificationsManagement() {
     },
   });
 
+  // Resolve notification_type IDs for server-side category filter
+  const { data: categoryTypeIds } = useQuery({
+    queryKey: ["notification-category-type-ids", categoryFilter],
+    queryFn: async () => {
+      if (categoryFilter === "all") return null;
+      const { data } = await supabase
+        .from("notification_types")
+        .select("id, notification_categories!inner(name)")
+        .eq("notification_categories.name", categoryFilter);
+      return data?.map((t) => t.id) || [];
+    },
+  });
+
+  // Fetch notifications with server-side pagination
+  const { data: notificationResult, isLoading } = useQuery({
+    queryKey: ["admin-notifications", page, searchTerm, categoryFilter, categoryTypeIds],
+    queryFn: async () => {
+      let countQuery = supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true });
+
+      let dataQuery = supabase
+        .from("notifications")
+        .select(
+          `
+          id,
+          title,
+          message,
+          created_at,
+          is_read,
+          user_id,
+          profiles!notifications_user_id_fkey (name, email),
+          notification_types (
+            key,
+            name,
+            notification_categories (name)
+          )
+        `,
+        )
+        .order("created_at", { ascending: false });
+
+      // Server-side search
+      if (searchTerm) {
+        countQuery = countQuery.or(`title.ilike.%${searchTerm}%,message.ilike.%${searchTerm}%`);
+        dataQuery = dataQuery.or(`title.ilike.%${searchTerm}%,message.ilike.%${searchTerm}%`);
+      }
+
+      // Server-side category filter
+      if (categoryTypeIds && categoryTypeIds.length > 0) {
+        countQuery = countQuery.in("notification_type_id", categoryTypeIds);
+        dataQuery = dataQuery.in("notification_type_id", categoryTypeIds);
+      }
+
+      const [countResult, dataResult] = await Promise.all([
+        countQuery,
+        dataQuery.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1),
+      ]);
+
+      if (dataResult.error) throw dataResult.error;
+
+      return {
+        notifications: dataResult.data as unknown as NotificationWithUser[],
+        totalCount: countResult.count ?? 0,
+      };
+    },
+  });
+
+  const notifications = notificationResult?.notifications || [];
+  const totalCount = notificationResult?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  // Stats: separate count queries for accurate totals
+  const { data: stats } = useQuery({
+    queryKey: ["admin-notification-stats"],
+    queryFn: async () => {
+      const [totalResult, unreadResult] = await Promise.all([
+        supabase.from("notifications").select("id", { count: "exact", head: true }),
+        supabase.from("notifications").select("id", { count: "exact", head: true }).eq("is_read", false),
+      ]);
+      return {
+        total: totalResult.count ?? 0,
+        unread: unreadResult.count ?? 0,
+      };
+    },
+  });
+
+  function getPageNumbers(): (number | "ellipsis")[] {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i);
+    const pages: (number | "ellipsis")[] = [0];
+    if (page > 2) pages.push("ellipsis");
+    for (let i = Math.max(1, page - 1); i <= Math.min(totalPages - 2, page + 1); i++) {
+      pages.push(i);
+    }
+    if (page < totalPages - 3) pages.push("ellipsis");
+    pages.push(totalPages - 1);
+    return pages;
+  }
+
   // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
@@ -168,6 +230,7 @@ export default function NotificationsManagement() {
         description: `Successfully deleted ${deletedCount} notifications.`,
       });
       queryClient.invalidateQueries({ queryKey: ["admin-notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-notification-stats"] });
       setSelectedIds(new Set());
       setShowDeleteDialog(false);
     },
@@ -193,6 +256,7 @@ export default function NotificationsManagement() {
         description: `Successfully cleaned up ${data.deleted_count} old notifications.`,
       });
       queryClient.invalidateQueries({ queryKey: ["admin-notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-notification-stats"] });
       setShowCleanupDialog(false);
     },
     onError: (error: Error) => {
@@ -283,7 +347,7 @@ export default function NotificationsManagement() {
             <CardTitle className="text-sm font-medium">Total Notifications</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{notifications.length}</div>
+            <div className="text-2xl font-bold">{stats?.total ?? 0}</div>
           </CardContent>
         </Card>
         <Card>
@@ -291,9 +355,7 @@ export default function NotificationsManagement() {
             <CardTitle className="text-sm font-medium">Unread</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {notifications.filter((n) => !n.is_read).length}
-            </div>
+            <div className="text-2xl font-bold">{stats?.unread ?? 0}</div>
           </CardContent>
         </Card>
         <Card>
@@ -395,7 +457,7 @@ export default function NotificationsManagement() {
                   </Button>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Calendar className="h-3 w-3" />
-                    <span>Automated cleanup runs daily at midnight UTC</span>
+                    <span>Automated cleanup runs daily at 4 AM UTC</span>
                   </div>
                 </div>
               </div>
@@ -414,11 +476,11 @@ export default function NotificationsManagement() {
                 <Input
                   placeholder="Search notifications..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => { setSearchTerm(e.target.value); resetPage(); }}
                   className="pl-9"
                 />
               </div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); resetPage(); }}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="All categories" />
                 </SelectTrigger>
@@ -515,6 +577,51 @@ export default function NotificationsManagement() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+              <p className="text-sm text-muted-foreground">
+                Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} of{" "}
+                {totalCount}
+              </p>
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setPage((p) => Math.max(0, p - 1))}
+                      className={page === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  {getPageNumbers().map((p, i) =>
+                    p === "ellipsis" ? (
+                      <PaginationItem key={`ellipsis-${i}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={p}>
+                        <PaginationLink
+                          isActive={page === p}
+                          onClick={() => setPage(p)}
+                          className="cursor-pointer"
+                        >
+                          {p + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ),
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                      className={
+                        page >= totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
         </CardContent>

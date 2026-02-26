@@ -1,7 +1,8 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
@@ -24,6 +25,7 @@ import {
   isAfter,
   endOfMonth,
   startOfMonth,
+  subMonths,
 } from "date-fns";
 import { ExternalCalendarManager } from "@/components/calendar/ExternalCalendarManager";
 import {
@@ -131,93 +133,122 @@ interface CalendarEvent {
 export default function ClientCalendar() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
 
-  // External calendar events - fetch for a 3-month window
-  const externalStartDate = useMemo(() => startOfMonth(new Date()), []);
-  const externalEndDate = useMemo(() => endOfMonth(addMonths(new Date(), 3)), []);
+  // Date range: ±3 months from selected month
+  const rangeStart = useMemo(() => startOfMonth(subMonths(selectedMonth, 3)), [selectedMonth]);
+  const rangeEnd = useMemo(() => endOfMonth(addMonths(selectedMonth, 3)), [selectedMonth]);
+
+  // External calendar events - fetch for the same window
+  const externalStartDate = useMemo(() => rangeStart, [rangeStart]);
+  const externalEndDate = useMemo(() => rangeEnd, [rangeEnd]);
   const {
     events: externalEvents,
     loading: externalLoading,
     refresh: refreshExternalEvents,
   } = useExternalCalendarEvents(externalStartDate, externalEndDate);
 
-  useEffect(() => {
-    if (user) loadEvents();
-  }, [user]);
+  const {
+    data: events = [],
+    isLoading: loading,
+  } = useQuery({
+    queryKey: ["client-calendar-events", user?.id, rangeStart.toISOString(), rangeEnd.toISOString()],
+    queryFn: async () => {
+      if (!user) return [];
 
-  // Real-time subscription for module sessions - auto-refresh when sessions change
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel("calendar-module-sessions-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*", // Listen to INSERT, UPDATE, DELETE
-          schema: "public",
-          table: "module_sessions",
-        },
-        () => {
-          loadEvents();
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
-  const loadEvents = async () => {
-    if (!user) return;
-
-    try {
-      const allEvents: CalendarEvent[] = [];
       const now = new Date();
+      const rangeStartISO = rangeStart.toISOString();
+      const rangeEndISO = rangeEnd.toISOString();
 
-      // Fetch group sessions for groups user is member of
-      // First fetch future pre-generated sessions
-      const { data: groupSessions } = await supabase
-        .from("group_sessions")
-        .select(
-          `
-          id,
-          title,
-          description,
-          session_date,
-          duration_minutes,
-          location,
-          status,
-          parent_session_id,
-          is_recurring,
-          recurrence_pattern,
-          recurrence_end_date,
-          groups!inner (
-            id,
-            name,
-            group_memberships!inner (
-              user_id,
-              status
+      // First get user's enrollments (needed by multiple queries)
+      const { data: userEnrollments } = await supabase
+        .from("client_enrollments")
+        .select("id, program_id, cohort_id, programs(id, name), program_cohorts(id, name, program_id, programs(id, name))")
+        .eq("client_user_id", user.id)
+        .eq("status", "active");
+
+      const enrollmentIds = userEnrollments?.map((e) => e.id) || [];
+
+      // Run all queries in parallel
+      const [groupSessionsResult, individualSessionsResult, groupModuleSessionsResult, cohortSessionsResult] =
+        await Promise.all([
+          // 1. Group sessions
+          supabase
+            .from("group_sessions")
+            .select(
+              `
+              id, title, description, session_date, duration_minutes, location, status,
+              parent_session_id, is_recurring, recurrence_pattern, recurrence_end_date,
+              groups!inner (
+                id, name,
+                group_memberships!inner (user_id, status)
+              )
+            `,
             )
-          )
-        `,
-        )
-        .eq("groups.group_memberships.user_id", user.id)
-        .eq("groups.group_memberships.status", "active")
-        .neq("status", "cancelled")
-        .order("session_date", { ascending: true });
+            .eq("groups.group_memberships.user_id", user.id)
+            .eq("groups.group_memberships.status", "active")
+            .neq("status", "cancelled")
+            .order("session_date", { ascending: true }),
 
-      if (groupSessions) {
+          // 2. Individual module sessions
+          enrollmentIds.length > 0
+            ? supabase
+                .from("module_sessions")
+                .select("id, title, session_date, duration_minutes, location, status, session_type, module_id, enrollment_id")
+                .eq("session_type", "individual")
+                .in("enrollment_id", enrollmentIds)
+                .neq("status", "cancelled")
+                .not("session_date", "is", null)
+                .gte("session_date", rangeStartISO)
+                .lte("session_date", rangeEndISO)
+                .order("session_date", { ascending: true })
+            : Promise.resolve({ data: [] as any[], error: null }),
+
+          // 3. Group module sessions (user is participant)
+          supabase
+            .from("module_session_participants")
+            .select(
+              `
+              session_id,
+              module_sessions!inner (
+                id, title, session_date, duration_minutes, location, status,
+                session_type, module_id, program_id,
+                programs (id, name)
+              )
+            `,
+            )
+            .eq("user_id", user.id)
+            .neq("module_sessions.status", "cancelled")
+            .not("module_sessions.session_date", "is", null)
+            .gte("module_sessions.session_date", rangeStartISO),
+
+          // 4. Cohort sessions
+          (() => {
+            const cohortIds = (userEnrollments || [])
+              .filter((e: any) => e.cohort_id)
+              .map((e: any) => e.cohort_id);
+            if (cohortIds.length === 0) return Promise.resolve({ data: [] as any[], error: null });
+            return supabase
+              .from("cohort_sessions")
+              .select("*")
+              .in("cohort_id", cohortIds)
+              .gte("session_date", rangeStart.toISOString().split("T")[0])
+              .lte("session_date", rangeEnd.toISOString().split("T")[0])
+              .order("session_date", { ascending: true });
+          })(),
+        ]);
+
+      const allEvents: CalendarEvent[] = [];
+
+      // Process group sessions
+      if (groupSessionsResult.data) {
         const addedSessionIds = new Set<string>();
 
-        groupSessions.forEach((session: any) => {
+        groupSessionsResult.data.forEach((session: any) => {
           const sessionDate = new Date(session.session_date);
 
-          // If this is a recurring master session (is_recurring=true), calculate future occurrences
           if (session.is_recurring && session.recurrence_pattern) {
             const occurrences = getRecurringOccurrences(session, now, 12);
             occurrences.forEach((occDate, index) => {
@@ -241,7 +272,6 @@ export default function ClientCalendar() {
               }
             });
           } else if (!isBefore(sessionDate, startOfDay(now))) {
-            // Regular future session (not recurring or a child session)
             const eventId = `gs-${session.id}`;
             if (!addedSessionIds.has(eventId)) {
               addedSessionIds.add(eventId);
@@ -264,56 +294,9 @@ export default function ClientCalendar() {
         });
       }
 
-      // First get user's enrollment IDs
-      const { data: userEnrollments } = await supabase
-        .from("client_enrollments")
-        .select("id, program_id, programs(id, name)")
-        .eq("client_user_id", user.id)
-        .eq("status", "active");
-
-      const enrollmentIds = userEnrollments?.map((e) => e.id) || [];
-
-      // Fetch individual module sessions for user's enrollments
-      const { data: individualSessions } =
-        enrollmentIds.length > 0
-          ? await supabase
-              .from("module_sessions")
-              .select(
-                `
-              id,
-              title,
-              session_date,
-              duration_minutes,
-              location,
-              status,
-              session_type,
-              module_id,
-              enrollment_id
-            `,
-              )
-              .eq("session_type", "individual")
-              .in("enrollment_id", enrollmentIds)
-              .neq("status", "cancelled")
-              .not("session_date", "is", null)
-              .gte("session_date", new Date().toISOString())
-              .order("session_date", { ascending: true })
-          : {
-              data: [] as {
-                id: string;
-                title: string;
-                session_date: string;
-                duration_minutes: number;
-                location: string;
-                status: string;
-                session_type: string;
-                module_id: string;
-                enrollment_id: string;
-              }[],
-            };
-
-      if (individualSessions) {
-        individualSessions.forEach((session: any) => {
-          // Find the matching enrollment to get program info
+      // Process individual sessions
+      if (individualSessionsResult.data) {
+        individualSessionsResult.data.forEach((session: any) => {
           const enrollment = userEnrollments?.find((e) => e.id === session.enrollment_id);
           allEvents.push({
             id: `is-${session.id}`,
@@ -333,36 +316,9 @@ export default function ClientCalendar() {
         });
       }
 
-      // Fetch group module sessions where user is a participant
-      const { data: groupModuleSessions } = await supabase
-        .from("module_session_participants")
-        .select(
-          `
-          session_id,
-          module_sessions!inner (
-            id,
-            title,
-            session_date,
-            duration_minutes,
-            location,
-            status,
-            session_type,
-            module_id,
-            program_id,
-            programs (
-              id,
-              name
-            )
-          )
-        `,
-        )
-        .eq("user_id", user.id)
-        .neq("module_sessions.status", "cancelled")
-        .not("module_sessions.session_date", "is", null)
-        .gte("module_sessions.session_date", new Date().toISOString());
-
-      if (groupModuleSessions) {
-        groupModuleSessions.forEach((participant: any) => {
+      // Process group module sessions
+      if (groupModuleSessionsResult.data) {
+        groupModuleSessionsResult.data.forEach((participant: any) => {
           const session = participant.module_sessions;
           if (session) {
             allEvents.push({
@@ -383,91 +339,73 @@ export default function ClientCalendar() {
         });
       }
 
-      // Fetch cohort sessions for enrolled cohorts
-      const { data: enrollmentsWithCohorts } = await supabase
-        .from("client_enrollments")
-        .select(
-          `
-          id,
-          cohort_id,
-          program_cohorts (
-            id,
-            name,
-            program_id,
-            programs (
-              id,
-              name
-            )
-          )
-        `,
-        )
-        .eq("client_user_id", user.id)
-        .eq("status", "active")
-        .not("cohort_id", "is", null);
-
-      if (enrollmentsWithCohorts) {
-        const cohortIds = enrollmentsWithCohorts
-          .filter((e: any) => e.cohort_id)
-          .map((e: any) => e.cohort_id);
-
-        if (cohortIds.length > 0) {
-          const { data: cohortSessions } = await supabase
-            .from("cohort_sessions")
-            .select("*")
-            .in("cohort_id", cohortIds)
-            .gte("session_date", new Date().toISOString().split("T")[0])
-            .order("session_date", { ascending: true });
-
-          if (cohortSessions) {
-            cohortSessions.forEach((session: any) => {
-              const enrollment = enrollmentsWithCohorts.find(
-                (e: any) => e.cohort_id === session.cohort_id,
-              );
-              const cohort = enrollment?.program_cohorts as any;
-              allEvents.push({
-                id: `cs-${session.id}`,
-                originalId: session.id,
-                title: session.title,
-                description: session.description,
-                date: new Date(session.session_date),
-                type: "cohort_session",
-                location: session.location,
-                metadata: {
-                  cohortId: session.cohort_id,
-                  cohortName: cohort?.name,
-                  programId: cohort?.programs?.id,
-                  programName: cohort?.programs?.name,
-                  moduleId: session.module_id,
-                  meetingLink: session.meeting_link,
-                },
-              });
-            });
-          }
-        }
+      // Process cohort sessions
+      if (cohortSessionsResult.data) {
+        cohortSessionsResult.data.forEach((session: any) => {
+          const enrollment = (userEnrollments || []).find(
+            (e: any) => e.cohort_id === session.cohort_id,
+          );
+          const cohort = enrollment?.program_cohorts as any;
+          allEvents.push({
+            id: `cs-${session.id}`,
+            originalId: session.id,
+            title: session.title,
+            description: session.description,
+            date: new Date(session.session_date),
+            type: "cohort_session",
+            location: session.location,
+            metadata: {
+              cohortId: session.cohort_id,
+              cohortName: cohort?.name,
+              programId: cohort?.programs?.id,
+              programName: cohort?.programs?.name,
+              moduleId: session.module_id,
+              meetingLink: session.meeting_link,
+            },
+          });
+        });
       }
 
       // Sort all events by date
       allEvents.sort((a, b) => a.date.getTime() - b.date.getTime());
-      setEvents(allEvents);
+      return allEvents;
+    },
+    enabled: !!user,
+  });
 
-      // If the currently selected date has no events, jump to the next upcoming event date
-      const firstEventDate = allEvents[0]?.date;
-      if (firstEventDate) {
-        setSelectedDate((prev) => {
-          if (!prev) return firstEventDate;
-          const hasEventsOnSelectedDay = allEvents.some((e) => isSameDay(e.date, prev));
-          return hasEventsOnSelectedDay ? prev : firstEventDate;
-        });
-      } else {
-        // Default to today when there are no events
-        setSelectedDate((prev) => prev ?? new Date());
-      }
-    } catch (error) {
-      console.error("Error loading calendar events:", error);
-    } finally {
-      setLoading(false);
+  // Real-time subscription for module sessions - invalidate query when sessions change
+  const channelRef = useMemo(() => {
+    if (!user) return null;
+
+    const channel = supabase
+      .channel("calendar-module-sessions-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "module_sessions",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["client-calendar-events"] });
+        },
+      )
+      .subscribe();
+
+    return channel;
+  }, [user, queryClient]);
+
+  // Auto-select first event date or today
+  const autoSelectedDate = useMemo(() => {
+    if (selectedDate) {
+      const hasEventsOnSelectedDay = events.some((e) => isSameDay(e.date, selectedDate));
+      if (hasEventsOnSelectedDay) return selectedDate;
     }
-  };
+    const firstEventDate = events[0]?.date;
+    return firstEventDate || new Date();
+  }, [events, selectedDate]);
+
+  const effectiveSelectedDate = selectedDate ?? autoSelectedDate;
 
   // Combine internal events with external calendar events
   const allEventsWithExternal = useMemo(() => {
@@ -499,9 +437,9 @@ export default function ClientCalendar() {
 
   // Filter events for selected date (including external)
   const selectedDateEvents = useMemo(() => {
-    if (!selectedDate) return [];
-    return allEventsWithExternal.filter((event) => isSameDay(event.date, selectedDate));
-  }, [allEventsWithExternal, selectedDate]);
+    if (!effectiveSelectedDate) return [];
+    return allEventsWithExternal.filter((event) => isSameDay(event.date, effectiveSelectedDate));
+  }, [allEventsWithExternal, effectiveSelectedDate]);
 
   // Get upcoming events (next 5, internal only for actionable items)
   const upcomingEvents = useMemo(() => {
@@ -521,7 +459,6 @@ export default function ClientCalendar() {
       case "program_schedule":
         return "bg-secondary/50 text-secondary-foreground";
       case "external":
-        // Use calendar color for external events
         return "bg-muted/50 text-muted-foreground border-l-2";
       default:
         return "bg-muted text-muted-foreground";
@@ -551,12 +488,10 @@ export default function ClientCalendar() {
     switch (event.type) {
       case "group_session":
         if (event.metadata.groupId) {
-          // Navigate to the specific session detail page
           navigate(`/groups/${event.metadata.groupId}/sessions/${event.originalId}`);
         }
         break;
       case "individual_session":
-        // Individual sessions - navigate to the module within the program
         if (event.metadata.programId && event.metadata.moduleId) {
           navigate(`/programs/${event.metadata.programId}/modules/${event.metadata.moduleId}`);
         } else if (event.metadata.moduleId) {
@@ -574,7 +509,6 @@ export default function ClientCalendar() {
         }
         break;
       case "cohort_session":
-        // Navigate to the cohort dashboard for the program
         if (event.metadata.programId) {
           navigate(`/programs/${event.metadata.programId}/cohort`);
         }
@@ -740,8 +674,10 @@ export default function ClientCalendar() {
           <CardContent className="flex flex-col items-center">
             <Calendar
               mode="single"
-              selected={selectedDate}
+              selected={effectiveSelectedDate}
               onSelect={setSelectedDate}
+              month={selectedMonth}
+              onMonthChange={setSelectedMonth}
               modifiers={{
                 hasEvent: eventDates,
               }}
@@ -761,7 +697,7 @@ export default function ClientCalendar() {
         <Card className="w-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {selectedDate ? format(selectedDate, "EEEE, MMMM d, yyyy") : "Select a date"}
+              {effectiveSelectedDate ? format(effectiveSelectedDate, "EEEE, MMMM d, yyyy") : "Select a date"}
             </CardTitle>
             <CardDescription>
               {selectedDateEvents.length} event{selectedDateEvents.length !== 1 ? "s" : ""}{" "}

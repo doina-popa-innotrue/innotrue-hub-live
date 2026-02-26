@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
@@ -25,6 +25,15 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 import {
   RefreshCw,
   Trash2,
@@ -65,30 +74,64 @@ interface EmailQueueItem {
   updated_at: string;
 }
 
+const PAGE_SIZE = 25;
+
 export default function EmailQueueManagement() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<EmailQueueItem | null>(null);
+  const [page, setPage] = useState(0);
 
-  const { data: queueItems, isLoading } = useQuery({
-    queryKey: ["email-queue", statusFilter],
+  const resetPage = () => setPage(0);
+
+  const { data: queueResult, isLoading } = useQuery({
+    queryKey: ["email-queue", page, statusFilter],
     queryFn: async () => {
-      let query = supabase
+      let countQuery = supabase
+        .from("email_queue")
+        .select("id", { count: "exact", head: true });
+
+      let dataQuery = supabase
         .from("email_queue")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
+        countQuery = countQuery.eq("status", statusFilter);
+        dataQuery = dataQuery.eq("status", statusFilter);
       }
 
-      const { data, error } = await query.limit(200);
-      if (error) throw error;
-      return data as EmailQueueItem[];
+      const [countResult, dataResult] = await Promise.all([
+        countQuery,
+        dataQuery.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1),
+      ]);
+
+      if (dataResult.error) throw dataResult.error;
+
+      return {
+        items: dataResult.data as EmailQueueItem[],
+        totalCount: countResult.count ?? 0,
+      };
     },
   });
+
+  const queueItems = queueResult?.items || [];
+  const totalCount = queueResult?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  function getPageNumbers(): (number | "ellipsis")[] {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i);
+    const pages: (number | "ellipsis")[] = [0];
+    if (page > 2) pages.push("ellipsis");
+    for (let i = Math.max(1, page - 1); i <= Math.min(totalPages - 2, page + 1); i++) {
+      pages.push(i);
+    }
+    if (page < totalPages - 3) pages.push("ellipsis");
+    pages.push(totalPages - 1);
+    return pages;
+  }
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -127,15 +170,16 @@ export default function EmailQueueManagement() {
     },
   });
 
-  const filteredItems = queueItems?.filter((item) => {
-    if (!searchTerm) return true;
+  const filteredItems = useMemo(() => {
+    if (!searchTerm) return queueItems;
     const search = searchTerm.toLowerCase();
-    return (
-      item.recipient_email.toLowerCase().includes(search) ||
-      item.recipient_name?.toLowerCase().includes(search) ||
-      item.template_key.toLowerCase().includes(search)
+    return queueItems.filter(
+      (item) =>
+        item.recipient_email.toLowerCase().includes(search) ||
+        item.recipient_name?.toLowerCase().includes(search) ||
+        item.template_key.toLowerCase().includes(search),
     );
-  });
+  }, [queueItems, searchTerm]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -189,7 +233,7 @@ export default function EmailQueueManagement() {
             className="pl-10"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); resetPage(); }}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
@@ -282,6 +326,51 @@ export default function EmailQueueManagement() {
                 ))}
               </TableBody>
             </Table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+                <p className="text-sm text-muted-foreground">
+                  Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} of{" "}
+                  {totalCount}
+                </p>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => setPage((p) => Math.max(0, p - 1))}
+                        className={page === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                    {getPageNumbers().map((p, i) =>
+                      p === "ellipsis" ? (
+                        <PaginationItem key={`ellipsis-${i}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      ) : (
+                        <PaginationItem key={p}>
+                          <PaginationLink
+                            isActive={page === p}
+                            onClick={() => setPage(p)}
+                            className="cursor-pointer"
+                          >
+                            {p + 1}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ),
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                        className={
+                          page >= totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"
+                        }
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

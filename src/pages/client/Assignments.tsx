@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface Assignment {
@@ -55,42 +65,27 @@ interface Assignment {
 
 type TabType = "pending" | "submitted" | "reviewed";
 
+const PAGE_SIZE = 25;
+
 export default function ClientAssignments() {
   const { user } = useAuth();
   const navigate = useNavigate();
   if (!user) return null;
   const [searchParams, setSearchParams] = useSearchParams();
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>(
     (searchParams.get("tab") as TabType) || "pending",
   );
-
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [filteredAssignments, setFilteredAssignments] = useState<Assignment[]>([]);
+  const [page, setPage] = useState(0);
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [programFilter, setProgramFilter] = useState<string>("all");
 
-  useEffect(() => {
-    if (user) {
-      loadAssignments();
-    }
-  }, [user]);
+  const resetPage = () => setPage(0);
 
-  useEffect(() => {
-    filterAssignments();
-  }, [assignments, searchQuery, programFilter, activeTab]);
-
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab as TabType);
-    setSearchParams({ tab });
-  };
-
-  const loadAssignments = async () => {
-    try {
-      setLoading(true);
-
+  const { data: assignments = [], isLoading: loading } = useQuery({
+    queryKey: ["client-assignments", user.id],
+    queryFn: async () => {
       // Get the user's enrollments
       const { data: enrollments, error: enrollmentError } = await supabase
         .from("client_enrollments")
@@ -101,15 +96,11 @@ export default function ClientAssignments() {
           programs(name)
         `,
         )
-        .eq("client_user_id", user?.id)
+        .eq("client_user_id", user.id)
         .eq("status", "active");
 
       if (enrollmentError) throw enrollmentError;
-      if (!enrollments || enrollments.length === 0) {
-        setAssignments([]);
-        setLoading(false);
-        return;
-      }
+      if (!enrollments || enrollments.length === 0) return [];
 
       const enrollmentIds = enrollments.map((e) => e.id);
 
@@ -127,85 +118,83 @@ export default function ClientAssignments() {
         .in("enrollment_id", enrollmentIds);
 
       if (progressError) throw progressError;
-      if (!progressData || progressData.length === 0) {
-        setAssignments([]);
-        setLoading(false);
-        return;
-      }
+      if (!progressData || progressData.length === 0) return [];
 
       const progressIds = progressData.map((p) => p.id);
 
-      // Get all assignments for these progress records
-      const { data: assignmentData, error: assignmentError } = await supabase
-        .from("module_assignments")
-        .select(
-          `
-          id,
-          module_progress_id,
-          assignment_type_id,
-          status,
-          created_at,
-          updated_at,
-          scored_at,
-          overall_score,
-          module_assignment_types(name)
-        `,
-        )
-        .in("module_progress_id", progressIds)
-        .order("updated_at", { ascending: false });
+      // Get all assignments + scenario assignments in parallel
+      const [assignmentResult, scenarioResult] = await Promise.all([
+        supabase
+          .from("module_assignments")
+          .select(
+            `
+            id,
+            module_progress_id,
+            assignment_type_id,
+            status,
+            created_at,
+            updated_at,
+            scored_at,
+            overall_score,
+            module_assignment_types(name)
+          `,
+          )
+          .in("module_progress_id", progressIds)
+          .order("updated_at", { ascending: false }),
+        supabase
+          .from("scenario_assignments")
+          .select(
+            `
+            id,
+            template_id,
+            status,
+            created_at,
+            updated_at,
+            evaluated_at,
+            enrollment_id,
+            scenario_templates(title)
+          `,
+          )
+          .eq("user_id", user.id)
+          .order("updated_at", { ascending: false }),
+      ]);
 
-      if (assignmentError) throw assignmentError;
+      if (assignmentResult.error) throw assignmentResult.error;
 
       // Combine the module assignment data
-      const moduleAssignmentsList: Assignment[] = (assignmentData || []).map((assignment) => {
-        const progress = progressData.find((p) => p.id === assignment.module_progress_id);
-        const enrollment = enrollments.find((e) => e.id === progress?.enrollment_id);
-        const module = progress?.program_modules as any;
+      const moduleAssignmentsList: Assignment[] = (assignmentResult.data || []).map(
+        (assignment) => {
+          const progress = progressData.find((p) => p.id === assignment.module_progress_id);
+          const enrollment = enrollments.find((e) => e.id === progress?.enrollment_id);
+          const module = progress?.program_modules as any;
 
-        return {
-          id: assignment.id,
-          module_progress_id: assignment.module_progress_id,
-          assignment_type_name: (assignment.module_assignment_types as any)?.name || "Assignment",
-          status: assignment.status,
-          created_at: assignment.created_at,
-          updated_at: assignment.updated_at,
-          scored_at: assignment.scored_at,
-          overall_score: assignment.overall_score ?? null,
-          module_title: module?.title || "Unknown Module",
-          module_id: progress?.module_id || "",
-          program_name: (enrollment?.programs as any)?.name || "Unknown Program",
-          program_id: enrollment?.program_id || "",
-          enrollment_id: progress?.enrollment_id || "",
-          type: "module" as const,
-        };
-      });
+          return {
+            id: assignment.id,
+            module_progress_id: assignment.module_progress_id,
+            assignment_type_name:
+              (assignment.module_assignment_types as any)?.name || "Assignment",
+            status: assignment.status,
+            created_at: assignment.created_at,
+            updated_at: assignment.updated_at,
+            scored_at: assignment.scored_at,
+            overall_score: assignment.overall_score ?? null,
+            module_title: module?.title || "Unknown Module",
+            module_id: progress?.module_id || "",
+            program_name: (enrollment?.programs as any)?.name || "Unknown Program",
+            program_id: enrollment?.program_id || "",
+            enrollment_id: progress?.enrollment_id || "",
+            type: "module" as const,
+          };
+        },
+      );
 
-      // Fetch scenario assignments for this user
-      const { data: scenarioAssignments, error: scenarioError } = await supabase
-        .from("scenario_assignments")
-        .select(
-          `
-          id,
-          template_id,
-          status,
-          created_at,
-          updated_at,
-          evaluated_at,
-          enrollment_id,
-          scenario_templates(title)
-        `,
-        )
-        .eq("user_id", user?.id)
-        .order("updated_at", { ascending: false });
-
-      if (scenarioError) {
-        console.error("Error loading scenario assignments:", scenarioError);
+      if (scenarioResult.error) {
+        console.error("Error loading scenario assignments:", scenarioResult.error);
       }
 
       // Map scenario assignments to the common Assignment interface
-      const scenarioAssignmentsList: Assignment[] = (scenarioAssignments || []).map((sa) => {
+      const scenarioAssignmentsList: Assignment[] = (scenarioResult.data || []).map((sa) => {
         const enrollment = enrollments.find((e) => e.id === sa.enrollment_id);
-        // Map scenario status to module assignment status for consistency
         let mappedStatus = sa.status;
         if (sa.status === "evaluated") mappedStatus = "reviewed";
 
@@ -228,22 +217,23 @@ export default function ClientAssignments() {
         };
       });
 
-      // Combine both lists
+      // Combine both lists and sort by updated_at descending
       const allAssignments = [...moduleAssignmentsList, ...scenarioAssignmentsList];
-      // Sort by updated_at descending
       allAssignments.sort(
         (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
       );
+      return allAssignments;
+    },
+    enabled: !!user,
+  });
 
-      setAssignments(allAssignments);
-    } catch (error) {
-      console.error("Error loading assignments:", error);
-    } finally {
-      setLoading(false);
-    }
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab as TabType);
+    setSearchParams({ tab });
+    resetPage();
   };
 
-  const filterAssignments = () => {
+  const filteredAssignments = useMemo(() => {
     let filtered = [...assignments];
 
     // Filter by tab status
@@ -275,7 +265,28 @@ export default function ClientAssignments() {
       filtered = filtered.filter((a) => a.program_id === programFilter);
     }
 
-    setFilteredAssignments(filtered);
+    return filtered;
+  }, [assignments, activeTab, searchQuery, programFilter]);
+
+  const totalPages = Math.ceil(filteredAssignments.length / PAGE_SIZE);
+  const paginatedAssignments = filteredAssignments.slice(
+    page * PAGE_SIZE,
+    (page + 1) * PAGE_SIZE,
+  );
+
+  const getPageNumbers = () => {
+    const pages: (number | "ellipsis")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 0; i < totalPages; i++) pages.push(i);
+    } else {
+      pages.push(0);
+      if (page > 2) pages.push("ellipsis");
+      for (let i = Math.max(1, page - 1); i <= Math.min(totalPages - 2, page + 1); i++)
+        pages.push(i);
+      if (page < totalPages - 3) pages.push("ellipsis");
+      pages.push(totalPages - 1);
+    }
+    return pages;
   };
 
   const getStatusBadge = (status: string) => {
@@ -365,12 +376,21 @@ export default function ClientAssignments() {
                 <Input
                   placeholder="Search assignments..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    resetPage();
+                  }}
                   className="pl-10"
                 />
               </div>
               {uniquePrograms.length > 1 && (
-                <Select value={programFilter} onValueChange={setProgramFilter}>
+                <Select
+                  value={programFilter}
+                  onValueChange={(v) => {
+                    setProgramFilter(v);
+                    resetPage();
+                  }}
+                >
                   <SelectTrigger className="w-full sm:w-[200px]">
                     <SelectValue placeholder="Filter by program" />
                   </SelectTrigger>
@@ -420,7 +440,7 @@ export default function ClientAssignments() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAssignments.map((assignment) => (
+                {paginatedAssignments.map((assignment) => (
                   <TableRow
                     key={`${assignment.type}-${assignment.id}`}
                     className="cursor-pointer hover:bg-muted/50"
@@ -459,6 +479,51 @@ export default function ClientAssignments() {
                 ))}
               </TableBody>
             </Table>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-4">
+                <p className="text-sm text-muted-foreground">
+                  Showing {page * PAGE_SIZE + 1}–
+                  {Math.min((page + 1) * PAGE_SIZE, filteredAssignments.length)} of{" "}
+                  {filteredAssignments.length}
+                </p>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => setPage((p) => Math.max(0, p - 1))}
+                        className={page === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                    {getPageNumbers().map((p, i) =>
+                      p === "ellipsis" ? (
+                        <PaginationItem key={`e${i}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      ) : (
+                        <PaginationItem key={p}>
+                          <PaginationLink
+                            isActive={p === page}
+                            onClick={() => setPage(p)}
+                            className="cursor-pointer"
+                          >
+                            {p + 1}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ),
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                        className={
+                          page >= totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"
+                        }
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </Card>
         )}
       </Tabs>

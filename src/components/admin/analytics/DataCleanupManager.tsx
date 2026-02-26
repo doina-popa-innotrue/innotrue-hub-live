@@ -78,69 +78,28 @@ export function DataCleanupManager({ onCleanupComplete }: DataCleanupManagerProp
       const startDate = debouncedRange.from.toISOString();
       const endDate = debouncedRange.to.toISOString();
 
-      // Get total events count and unique sessions
-      const { count: totalEvents, error: countError } = await supabase
-        .from("analytics_events")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", startDate)
-        .lte("created_at", endDate);
-
-      if (countError) throw countError;
-
-      // Get unique sessions count
-      const { data: sessionsData, error: sessionsError } = await supabase
-        .from("analytics_events")
-        .select("session_id")
-        .gte("created_at", startDate)
-        .lte("created_at", endDate);
-
-      if (sessionsError) throw sessionsError;
-
-      const uniqueSessions = new Set(sessionsData?.map((e) => e.session_id) || []).size;
-
-      // Get event categories breakdown
-      const { data: categoryData, error: categoryError } = await supabase
-        .from("analytics_events")
-        .select("event_category")
-        .gte("created_at", startDate)
-        .lte("created_at", endDate);
-
-      if (categoryError) throw categoryError;
-
-      const categoryMap = new Map<string, number>();
-      categoryData?.forEach((e) => {
-        const cat = e.event_category || "uncategorized";
-        categoryMap.set(cat, (categoryMap.get(cat) || 0) + 1);
+      // Single RPC replaces 4+ separate queries
+      const { data, error } = await supabase.rpc("get_analytics_cleanup_preview", {
+        p_start_date: startDate,
+        p_end_date: endDate,
       });
 
-      const eventCategories = Array.from(categoryMap.entries())
-        .map(([category, count]) => ({ category, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5); // Top 5 categories
+      if (error) throw error;
 
-      // Get date range of actual events
-      const { data: rangeData, error: rangeError } = await supabase
-        .from("analytics_events")
-        .select("created_at")
-        .gte("created_at", startDate)
-        .lte("created_at", endDate)
-        .order("created_at", { ascending: true })
-        .limit(1);
-
-      const { data: newestData } = await supabase
-        .from("analytics_events")
-        .select("created_at")
-        .gte("created_at", startDate)
-        .lte("created_at", endDate)
-        .order("created_at", { ascending: false })
-        .limit(1);
+      const result = data as {
+        totalEvents: number;
+        uniqueSessions: number;
+        eventCategories: { category: string; count: number }[];
+        oldestEvent: string | null;
+        newestEvent: string | null;
+      };
 
       return {
-        totalEvents: totalEvents || 0,
-        uniqueSessions,
-        eventCategories,
-        oldestEvent: rangeData?.[0]?.created_at || null,
-        newestEvent: newestData?.[0]?.created_at || null,
+        totalEvents: result.totalEvents || 0,
+        uniqueSessions: result.uniqueSessions || 0,
+        eventCategories: result.eventCategories || [],
+        oldestEvent: result.oldestEvent || null,
+        newestEvent: result.newestEvent || null,
       };
     },
     staleTime: 30000, // Cache for 30 seconds

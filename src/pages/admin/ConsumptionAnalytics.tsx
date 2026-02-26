@@ -116,78 +116,68 @@ export default function ConsumptionAnalytics() {
     },
   });
 
+  // Feature usage stats via server-side RPC (replaces client-side aggregation)
   const { data: usageData, isLoading } = useQuery({
     queryKey: ["consumption-analytics", selectedFeature, selectedMonth],
     queryFn: async () => {
       const { start, end } = getDateRange();
 
-      let query = supabase
+      // Server-side aggregation
+      const { data: summaryData, error: summaryError } = await supabase
+        .rpc("get_feature_usage_summary", {
+          p_start_date: start.toISOString(),
+          p_end_date: end.toISOString(),
+          p_feature_key: selectedFeature !== "all" ? selectedFeature : null,
+        });
+      if (summaryError) throw summaryError;
+
+      const stats: FeatureStats[] = (summaryData || []).map((s: { feature_key: string; total_usage: number; unique_users: number }) => ({
+        feature_key: s.feature_key,
+        feature_name: features?.find((f) => f.key === s.feature_key)?.name || s.feature_key,
+        total_usage: Number(s.total_usage),
+        unique_users: Number(s.unique_users),
+      }));
+
+      const totalUsage = stats.reduce((sum, s) => sum + s.total_usage, 0);
+      const totalUniqueUsers = new Set(
+        (summaryData || []).flatMap(() => [] as string[]),
+      ).size;
+
+      // Still fetch per-user records for the detailed table (bounded by month + feature filter)
+      let recordsQuery = supabase
         .from("usage_tracking")
-        .select(
-          `
-          user_id,
-          feature_key,
-          used_count,
-          period_start
-        `,
-        )
+        .select("user_id, feature_key, used_count, period_start")
         .gte("period_start", start.toISOString())
         .lte("period_start", end.toISOString());
 
       if (selectedFeature !== "all") {
-        query = query.eq("feature_key", selectedFeature);
+        recordsQuery = recordsQuery.eq("feature_key", selectedFeature);
       }
 
-      const { data: usageRecords, error } = await query;
-      if (error) throw error;
+      const { data: usageRecords } = await recordsQuery.limit(500);
 
-      // Get user profiles for names
+      // Batch-fetch user profiles for names
       const userIds = [...new Set((usageRecords || []).map((r) => r.user_id))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, name, email:id")
-        .in("id", userIds);
-
-      // Get emails from auth function
-      const profileMap = new Map<string, { name: string | null; email: string | null }>();
-      for (const p of profiles || []) {
-        profileMap.set(p.id, { name: p.name, email: null });
+      let profileMap = new Map<string, string | null>();
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, name")
+          .in("id", userIds);
+        profileMap = new Map((profiles || []).map((p) => [p.id, p.name]));
       }
 
-      const enrichedRecords: UsageRecord[] = (usageRecords || []).map((r) => ({
+      const records: UsageRecord[] = (usageRecords || []).map((r) => ({
         ...r,
-        name: profileMap.get(r.user_id)?.name || null,
-        email: profileMap.get(r.user_id)?.email || null,
+        name: profileMap.get(r.user_id) || null,
+        email: null,
       }));
 
-      // Calculate feature statistics
-      const featureStats: FeatureStats[] = [];
-      const featureMap = new Map<string, { total: number; users: Set<string> }>();
-
-      for (const record of enrichedRecords) {
-        if (!featureMap.has(record.feature_key)) {
-          featureMap.set(record.feature_key, { total: 0, users: new Set() });
-        }
-        const stat = featureMap.get(record.feature_key)!;
-        stat.total += record.used_count;
-        stat.users.add(record.user_id);
-      }
-
-      for (const [key, stat] of featureMap.entries()) {
-        const feature = features?.find((f) => f.key === key);
-        featureStats.push({
-          feature_key: key,
-          feature_name: feature?.name || key,
-          total_usage: stat.total,
-          unique_users: stat.users.size,
-        });
-      }
-
       return {
-        records: enrichedRecords,
-        stats: featureStats,
-        totalUsage: enrichedRecords.reduce((sum, r) => sum + r.used_count, 0),
-        uniqueUsers: new Set(enrichedRecords.map((r) => r.user_id)).size,
+        records,
+        stats,
+        totalUsage,
+        uniqueUsers: stats.reduce((sum, s) => sum + s.unique_users, 0),
       };
     },
     enabled: !!features,
@@ -250,25 +240,16 @@ export default function ConsumptionAnalytics() {
         );
       }
 
-      // Calculate summary stats
-      const { data: summaryData } = await supabase
-        .from("user_credit_transactions")
-        .select("transaction_type, amount");
-
-      const totalConsumed = (summaryData || [])
-        .filter((t) => t.transaction_type === "consumption")
-        .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-
-      const totalGranted = (summaryData || [])
-        .filter((t) => t.transaction_type !== "consumption" && t.amount > 0)
-        .reduce((sum, t) => sum + t.amount, 0);
+      // Summary stats via server-side RPC
+      const { data: creditSummary } = await supabase.rpc("get_credit_transaction_summary");
+      const summaryRow = creditSummary?.[0] || { total_consumed: 0, total_granted: 0 };
 
       return {
         transactions: enriched,
         totalCount: count || 0,
         totalPages: Math.ceil((count || 0) / PAGE_SIZE),
-        totalConsumed,
-        totalGranted,
+        totalConsumed: Number(summaryRow.total_consumed),
+        totalGranted: Number(summaryRow.total_granted),
       };
     },
   });

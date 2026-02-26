@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 import { TransferAssignmentDialog } from "@/components/instructor/TransferAssignmentDialog";
 import { ArrowRightLeft } from "lucide-react";
@@ -65,23 +75,17 @@ interface Assignment {
 
 type TabType = "pending" | "scored";
 
+const PAGE_SIZE = 25;
+
 export default function PendingAssignments() {
   const { user, userRole, userRoles } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>(
     (searchParams.get("tab") as TabType) || "pending",
   );
-
-  // Pending assignments state
-  const [pendingAssignments, setPendingAssignments] = useState<Assignment[]>([]);
-  const [filteredPendingAssignments, setFilteredPendingAssignments] = useState<Assignment[]>([]);
-
-  // Scored assignments state
-  const [scoredAssignments, setScoredAssignments] = useState<Assignment[]>([]);
-  const [filteredScoredAssignments, setFilteredScoredAssignments] = useState<Assignment[]>([]);
-  const [loadingScored, setLoadingScored] = useState(false);
+  const [pendingPage, setPendingPage] = useState(0);
+  const [scoredPage, setScoredPage] = useState(0);
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -96,318 +100,103 @@ export default function PendingAssignments() {
   const [queueFilter, setQueueFilter] = useState<"all" | "mine">(
     (searchParams.get("queue") as "all" | "mine") || "all",
   );
-  const [myEnrollmentPairs, setMyEnrollmentPairs] = useState<
-    Set<string>
-  >(new Set());
-  const [loadingMyQueue, setLoadingMyQueue] = useState(false);
 
   // Transfer dialog state
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [transferAssignments, setTransferAssignments] = useState<Assignment[]>([]);
 
-  useEffect(() => {
-    if (user) {
-      loadPendingAssignments();
-      loadMyEnrollmentPairs();
-      // Mark that the user has visited the assignments page (for staff onboarding card)
-      try {
-        localStorage.setItem("innotrue_staff_viewed_assignments", "true");
-      } catch {
-        // ignore storage errors
-      }
-    }
-  }, [user, userRole]);
+  const resetPendingPage = () => setPendingPage(0);
+  const resetScoredPage = () => setScoredPage(0);
 
-  const loadMyEnrollmentPairs = async () => {
-    if (!user) return;
+  // Mark that the user has visited the assignments page (for staff onboarding card)
+  useEffect(() => {
     try {
-      setLoadingMyQueue(true);
+      localStorage.setItem("innotrue_staff_viewed_assignments", "true");
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  // ── Module IDs resolution (cached, runs once per role change) ──
+  const { data: allModuleIds } = useQuery({
+    queryKey: ["instructor-module-ids", user?.id, userRole],
+    queryFn: async () => {
+      if (!user) return null;
+      const showInstructor = userRole === "instructor";
+      const showCoach = userRole === "coach";
+
+      const [instructorPrograms, coachPrograms, instructorModules, coachModules] =
+        await Promise.all([
+          showInstructor && userRoles.includes("instructor")
+            ? supabase.from("program_instructors").select("program_id").eq("instructor_id", user.id)
+            : Promise.resolve({ data: [], error: null }),
+          showCoach && userRoles.includes("coach")
+            ? supabase.from("program_coaches").select("program_id").eq("coach_id", user.id)
+            : Promise.resolve({ data: [], error: null }),
+          showInstructor && userRoles.includes("instructor")
+            ? supabase
+                .from("module_instructors")
+                .select("module_id")
+                .eq("instructor_id", user.id)
+            : Promise.resolve({ data: [], error: null }),
+          showCoach && userRoles.includes("coach")
+            ? supabase.from("module_coaches").select("module_id").eq("coach_id", user.id)
+            : Promise.resolve({ data: [], error: null }),
+        ]);
+
+      const programIds = new Set([
+        ...(instructorPrograms.data || []).map((p) => p.program_id),
+        ...(coachPrograms.data || []).map((p) => p.program_id),
+      ]);
+
+      const moduleIds = new Set([
+        ...(instructorModules.data || []).map((m) => m.module_id),
+        ...(coachModules.data || []).map((m) => m.module_id),
+      ]);
+
+      if (programIds.size === 0 && moduleIds.size === 0) return null;
+
+      const allIds = new Set(moduleIds);
+      if (programIds.size > 0) {
+        const { data: programModules } = await supabase
+          .from("program_modules")
+          .select("id")
+          .in("program_id", Array.from(programIds))
+          .eq("is_active", true);
+        programModules?.forEach((m) => allIds.add(m.id));
+      }
+
+      return allIds.size > 0 ? Array.from(allIds) : null;
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // ── My Queue enrollment pairs ──
+  const { data: myEnrollmentPairs = new Set<string>() } = useQuery({
+    queryKey: ["instructor-enrollment-pairs", user?.id],
+    queryFn: async () => {
+      if (!user) return new Set<string>();
       const { data } = await supabase
         .from("enrollment_module_staff")
         .select("enrollment_id, module_id")
         .eq("staff_user_id", user.id);
-
       if (data) {
-        const pairs = new Set(data.map((d) => `${d.enrollment_id}:${d.module_id}`));
-        setMyEnrollmentPairs(pairs);
+        return new Set(data.map((d) => `${d.enrollment_id}:${d.module_id}`));
       }
-    } catch (error) {
-      console.error("Error loading enrollment module staff:", error);
-    } finally {
-      setLoadingMyQueue(false);
-    }
-  };
+      return new Set<string>();
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    if (activeTab === "scored" && scoredAssignments.length === 0 && !loadingScored) {
-      loadScoredAssignments();
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    filterAndSortAssignments();
-  }, [
-    pendingAssignments,
-    scoredAssignments,
-    searchQuery,
-    programFilter,
-    clientFilter,
-    sortBy,
-    scoredTimeFilter,
-    activeTab,
-    queueFilter,
-    myEnrollmentPairs,
-  ]);
-
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab as TabType);
-    setSearchParams((prev) => {
-      const params = new URLSearchParams(prev);
-      params.set("tab", tab);
-      return params;
-    });
-  };
-
-  const handleQueueFilterChange = (queue: "all" | "mine") => {
-    setQueueFilter(queue);
-    setSearchParams((prev) => {
-      const params = new URLSearchParams(prev);
-      if (queue === "all") {
-        params.delete("queue");
-      } else {
-        params.set("queue", queue);
-      }
-      return params;
-    });
-  };
-
-  // Compute My Queue count for badge display
-  const myQueueCount = myEnrollmentPairs.size > 0
-    ? pendingAssignments.filter((a) =>
-        myEnrollmentPairs.has(`${a.enrollment_id}:${a.module_id}`),
-      ).length
-    : 0;
-
-  const getModuleIdsForUser = async () => {
-    const showInstructor = userRole === "instructor";
-    const showCoach = userRole === "coach";
-
-    const programInstructorPromise =
-      showInstructor && userRoles.includes("instructor") && user
-        ? supabase.from("program_instructors").select("program_id").eq("instructor_id", user.id)
-        : Promise.resolve({ data: [], error: null });
-
-    const programCoachPromise =
-      showCoach && userRoles.includes("coach") && user
-        ? supabase.from("program_coaches").select("program_id").eq("coach_id", user.id)
-        : Promise.resolve({ data: [], error: null });
-
-    const moduleInstructorPromise =
-      showInstructor && userRoles.includes("instructor") && user
-        ? supabase.from("module_instructors").select("module_id").eq("instructor_id", user.id)
-        : Promise.resolve({ data: [], error: null });
-
-    const moduleCoachPromise =
-      showCoach && userRoles.includes("coach") && user
-        ? supabase.from("module_coaches").select("module_id").eq("coach_id", user.id)
-        : Promise.resolve({ data: [], error: null });
-
-    const [instructorPrograms, coachPrograms, instructorModules, coachModules] = await Promise.all([
-      programInstructorPromise,
-      programCoachPromise,
-      moduleInstructorPromise,
-      moduleCoachPromise,
-    ]);
-
-    const programIds = new Set([
-      ...(instructorPrograms.data || []).map((p) => p.program_id),
-      ...(coachPrograms.data || []).map((p) => p.program_id),
-    ]);
-
-    const moduleIds = new Set([
-      ...(instructorModules.data || []).map((m) => m.module_id),
-      ...(coachModules.data || []).map((m) => m.module_id),
-    ]);
-
-    if (programIds.size === 0 && moduleIds.size === 0) {
-      return null;
-    }
-
-    let allModuleIds = new Set(moduleIds);
-    if (programIds.size > 0) {
-      const { data: programModules } = await supabase
-        .from("program_modules")
-        .select("id")
-        .in("program_id", Array.from(programIds))
-        .eq("is_active", true);
-
-      programModules?.forEach((m) => allModuleIds.add(m.id));
-    }
-
-    return allModuleIds.size > 0 ? allModuleIds : null;
-  };
-
-  const loadPendingAssignments = async () => {
-    try {
-      setLoading(true);
-
-      const allModuleIds = await getModuleIdsForUser();
-      if (!allModuleIds) {
-        setPendingAssignments([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data: moduleProgressData } = await supabase
-        .from("module_progress")
-        .select(
-          `
-          id,
-          enrollment_id,
-          module_id,
-          client_enrollments!inner(
-            client_user_id,
-            program_id,
-            programs(name)
-          ),
-          program_modules!inner(
-            title,
-            program_id
-          )
-        `,
-        )
-        .in("module_id", Array.from(allModuleIds));
-
-      if (!moduleProgressData || moduleProgressData.length === 0) {
-        setPendingAssignments([]);
-        setLoading(false);
-        return;
-      }
-
-      const progressIds = moduleProgressData.map((mp) => mp.id);
-
-      const { data: assignmentData, error: assignmentError } = await supabase
-        .from("module_assignments")
-        .select(
-          `
-          id,
-          module_progress_id,
-          assignment_type_id,
-          status,
-          created_at,
-          updated_at,
-          module_assignment_types(name)
-        `,
-        )
-        .in("module_progress_id", progressIds)
-        .in("status", ["submitted"]);
-
-      if (assignmentError) throw assignmentError;
-
-      if (!assignmentData || assignmentData.length === 0) {
-        setPendingAssignments([]);
-        setLoading(false);
-        return;
-      }
-
-      const assignmentsList = await enrichAssignments(assignmentData, moduleProgressData, false);
-      assignmentsList.sort((a, b) => b.days_pending - a.days_pending);
-
-      setPendingAssignments(assignmentsList);
-    } catch (error) {
-      console.error("Error loading pending assignments:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadScoredAssignments = async () => {
-    try {
-      setLoadingScored(true);
-
-      const allModuleIds = await getModuleIdsForUser();
-      if (!allModuleIds) {
-        setScoredAssignments([]);
-        setLoadingScored(false);
-        return;
-      }
-
-      const { data: moduleProgressData } = await supabase
-        .from("module_progress")
-        .select(
-          `
-          id,
-          enrollment_id,
-          module_id,
-          client_enrollments!inner(
-            client_user_id,
-            program_id,
-            programs(name)
-          ),
-          program_modules!inner(
-            title,
-            program_id
-          )
-        `,
-        )
-        .in("module_id", Array.from(allModuleIds));
-
-      if (!moduleProgressData || moduleProgressData.length === 0) {
-        setScoredAssignments([]);
-        setLoadingScored(false);
-        return;
-      }
-
-      const progressIds = moduleProgressData.map((mp) => mp.id);
-
-      // Get scored assignments (reviewed status with scored_at)
-      const { data: assignmentData, error: assignmentError } = await supabase
-        .from("module_assignments")
-        .select(
-          `
-          id,
-          module_progress_id,
-          assignment_type_id,
-          status,
-          created_at,
-          updated_at,
-          scored_at,
-          scored_by,
-          overall_score,
-          module_assignment_types(name)
-        `,
-        )
-        .in("module_progress_id", progressIds)
-        .eq("status", "reviewed")
-        .not("scored_at", "is", null)
-        .order("scored_at", { ascending: false })
-        .limit(200);
-
-      if (assignmentError) throw assignmentError;
-
-      if (!assignmentData || assignmentData.length === 0) {
-        setScoredAssignments([]);
-        setLoadingScored(false);
-        return;
-      }
-
-      const assignmentsList = await enrichAssignments(assignmentData, moduleProgressData, true);
-      setScoredAssignments(assignmentsList);
-    } catch (error) {
-      console.error("Error loading scored assignments:", error);
-    } finally {
-      setLoadingScored(false);
-    }
-  };
-
+  // ── Enrich assignments helper ──
   const enrichAssignments = async (
     assignmentData: any[],
     moduleProgressData: any[],
     includeScorer: boolean,
   ): Promise<Assignment[]> => {
     const assignmentsList: Assignment[] = [];
-
-    // Get unique client IDs and scorer IDs
     const clientIds = new Set<string>();
     const scorerIds = new Set<string>();
 
@@ -422,7 +211,6 @@ export default function PendingAssignments() {
       }
     }
 
-    // Batch fetch all profiles
     const { data: profiles } = await supabase
       .from("profiles")
       .select("id, name, username")
@@ -441,7 +229,9 @@ export default function PendingAssignments() {
 
       const now = new Date();
       const createdAt = new Date(assignment.created_at);
-      const daysPending = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+      const daysPending = Math.floor(
+        (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
+      );
 
       assignmentsList.push({
         id: assignment.id,
@@ -470,18 +260,156 @@ export default function PendingAssignments() {
     return assignmentsList;
   };
 
-  const filterAndSortAssignments = () => {
-    const sourceAssignments = activeTab === "pending" ? pendingAssignments : scoredAssignments;
-    let filtered = [...sourceAssignments];
+  // ── Pending assignments query ──
+  const {
+    data: pendingAssignments = [],
+    isLoading: loading,
+    refetch: refetchPending,
+  } = useQuery({
+    queryKey: ["instructor-pending-assignments", allModuleIds],
+    queryFn: async () => {
+      if (!allModuleIds) return [];
 
-    // My Queue filter — only show assignments for personally-assigned clients
+      const { data: moduleProgressData } = await supabase
+        .from("module_progress")
+        .select(
+          `
+          id, enrollment_id, module_id,
+          client_enrollments!inner(client_user_id, program_id, programs(name)),
+          program_modules!inner(title, program_id)
+        `,
+        )
+        .in("module_id", allModuleIds);
+
+      if (!moduleProgressData || moduleProgressData.length === 0) return [];
+
+      const progressIds = moduleProgressData.map((mp) => mp.id);
+
+      const { data: assignmentData, error: assignmentError } = await supabase
+        .from("module_assignments")
+        .select(
+          `
+          id, module_progress_id, assignment_type_id, status,
+          created_at, updated_at, module_assignment_types(name)
+        `,
+        )
+        .in("module_progress_id", progressIds)
+        .in("status", ["submitted"]);
+
+      if (assignmentError) throw assignmentError;
+      if (!assignmentData || assignmentData.length === 0) return [];
+
+      const list = await enrichAssignments(assignmentData, moduleProgressData, false);
+      list.sort((a, b) => b.days_pending - a.days_pending);
+      return list;
+    },
+    enabled: allModuleIds !== undefined,
+  });
+
+  // ── Scored assignments query ──
+  const scoredTimeFilterCutoff = useMemo(() => {
+    if (scoredTimeFilter === "all") return null;
+    const now = new Date();
+    const daysMap = { "7days": 7, "30days": 30, "90days": 90 };
+    return new Date(now.getTime() - daysMap[scoredTimeFilter] * 24 * 60 * 60 * 1000).toISOString();
+  }, [scoredTimeFilter]);
+
+  const {
+    data: scoredAssignments = [],
+    isLoading: loadingScored,
+  } = useQuery({
+    queryKey: ["instructor-scored-assignments", allModuleIds, scoredTimeFilterCutoff],
+    queryFn: async () => {
+      if (!allModuleIds) return [];
+
+      const { data: moduleProgressData } = await supabase
+        .from("module_progress")
+        .select(
+          `
+          id, enrollment_id, module_id,
+          client_enrollments!inner(client_user_id, program_id, programs(name)),
+          program_modules!inner(title, program_id)
+        `,
+        )
+        .in("module_id", allModuleIds);
+
+      if (!moduleProgressData || moduleProgressData.length === 0) return [];
+
+      const progressIds = moduleProgressData.map((mp) => mp.id);
+
+      let query = supabase
+        .from("module_assignments")
+        .select(
+          `
+          id, module_progress_id, assignment_type_id, status,
+          created_at, updated_at, scored_at, scored_by, overall_score,
+          module_assignment_types(name)
+        `,
+        )
+        .in("module_progress_id", progressIds)
+        .eq("status", "reviewed")
+        .not("scored_at", "is", null)
+        .order("scored_at", { ascending: false })
+        .limit(200);
+
+      // Move time filter server-side
+      if (scoredTimeFilterCutoff) {
+        query = query.gte("scored_at", scoredTimeFilterCutoff);
+      }
+
+      const { data: assignmentData, error: assignmentError } = await query;
+
+      if (assignmentError) throw assignmentError;
+      if (!assignmentData || assignmentData.length === 0) return [];
+
+      return enrichAssignments(assignmentData, moduleProgressData, true);
+    },
+    enabled: allModuleIds !== undefined && activeTab === "scored",
+  });
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab as TabType);
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.set("tab", tab);
+      return params;
+    });
+  };
+
+  const handleQueueFilterChange = (queue: "all" | "mine") => {
+    setQueueFilter(queue);
+    resetPendingPage();
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      if (queue === "all") {
+        params.delete("queue");
+      } else {
+        params.set("queue", queue);
+      }
+      return params;
+    });
+  };
+
+  // Compute My Queue count for badge display
+  const myQueueCount = useMemo(
+    () =>
+      myEnrollmentPairs.size > 0
+        ? pendingAssignments.filter((a) =>
+            myEnrollmentPairs.has(`${a.enrollment_id}:${a.module_id}`),
+          ).length
+        : 0,
+    [pendingAssignments, myEnrollmentPairs],
+  );
+
+  // ── Filtered + paginated results ──
+  const filteredPendingAssignments = useMemo(() => {
+    let filtered = [...pendingAssignments];
+
     if (queueFilter === "mine" && myEnrollmentPairs.size > 0) {
       filtered = filtered.filter((a) =>
         myEnrollmentPairs.has(`${a.enrollment_id}:${a.module_id}`),
       );
     }
-
-    // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -492,44 +420,16 @@ export default function PendingAssignments() {
           a.assignment_type_name?.toLowerCase().includes(query),
       );
     }
-
-    // Program filter
     if (programFilter !== "all") {
       filtered = filtered.filter((a) => a.program_id === programFilter);
     }
-
-    // Client filter
     if (clientFilter !== "all") {
       filtered = filtered.filter((a) => a.client_user_id === clientFilter);
     }
 
-    // Time filter for scored assignments
-    if (activeTab === "scored" && scoredTimeFilter !== "all") {
-      const now = new Date();
-      let cutoff: Date;
-      switch (scoredTimeFilter) {
-        case "7days":
-          cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        case "30days":
-          cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          break;
-        case "90days":
-          cutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-          break;
-        default:
-          cutoff = new Date(0);
-      }
-      filtered = filtered.filter((a) => a.scored_at && new Date(a.scored_at) >= cutoff);
-    }
-
-    // Sort
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "date":
-          if (activeTab === "scored") {
-            return new Date(b.scored_at || 0).getTime() - new Date(a.scored_at || 0).getTime();
-          }
           return b.days_pending - a.days_pending;
         case "client":
           return a.client_name.localeCompare(b.client_name);
@@ -540,11 +440,78 @@ export default function PendingAssignments() {
       }
     });
 
-    if (activeTab === "pending") {
-      setFilteredPendingAssignments(filtered);
-    } else {
-      setFilteredScoredAssignments(filtered);
+    return filtered;
+  }, [
+    pendingAssignments,
+    searchQuery,
+    programFilter,
+    clientFilter,
+    sortBy,
+    queueFilter,
+    myEnrollmentPairs,
+  ]);
+
+  const filteredScoredAssignments = useMemo(() => {
+    let filtered = [...scoredAssignments];
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (a) =>
+          a.client_name?.toLowerCase().includes(query) ||
+          a.module_title?.toLowerCase().includes(query) ||
+          a.program_name?.toLowerCase().includes(query) ||
+          a.assignment_type_name?.toLowerCase().includes(query),
+      );
     }
+    if (programFilter !== "all") {
+      filtered = filtered.filter((a) => a.program_id === programFilter);
+    }
+    if (clientFilter !== "all") {
+      filtered = filtered.filter((a) => a.client_user_id === clientFilter);
+    }
+
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case "date":
+          return new Date(b.scored_at || 0).getTime() - new Date(a.scored_at || 0).getTime();
+        case "client":
+          return a.client_name.localeCompare(b.client_name);
+        case "program":
+          return a.program_name.localeCompare(b.program_name);
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [scoredAssignments, searchQuery, programFilter, clientFilter, sortBy]);
+
+  const pendingTotalPages = Math.ceil(filteredPendingAssignments.length / PAGE_SIZE);
+  const paginatedPending = filteredPendingAssignments.slice(
+    pendingPage * PAGE_SIZE,
+    (pendingPage + 1) * PAGE_SIZE,
+  );
+
+  const scoredTotalPages = Math.ceil(filteredScoredAssignments.length / PAGE_SIZE);
+  const paginatedScored = filteredScoredAssignments.slice(
+    scoredPage * PAGE_SIZE,
+    (scoredPage + 1) * PAGE_SIZE,
+  );
+
+  const getPageNumbers = (totalPages: number, currentPage: number) => {
+    const pages: (number | "ellipsis")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 0; i < totalPages; i++) pages.push(i);
+    } else {
+      pages.push(0);
+      if (currentPage > 2) pages.push("ellipsis");
+      for (let i = Math.max(1, currentPage - 1); i <= Math.min(totalPages - 2, currentPage + 1); i++)
+        pages.push(i);
+      if (currentPage < totalPages - 3) pages.push("ellipsis");
+      pages.push(totalPages - 1);
+    }
+    return pages;
   };
 
   const getStatusBadge = (status: string) => {
@@ -592,8 +559,64 @@ export default function PendingAssignments() {
     ).values(),
   ).sort((a, b) => a.name.localeCompare(b.name));
 
-  const currentAssignments =
-    activeTab === "pending" ? filteredPendingAssignments : filteredScoredAssignments;
+  const PaginationUI = ({
+    totalPages,
+    currentPage,
+    setPage,
+    totalFiltered,
+  }: {
+    totalPages: number;
+    currentPage: number;
+    setPage: (p: number) => void;
+    totalFiltered: number;
+  }) => {
+    if (totalPages <= 1) return null;
+    return (
+      <div className="flex items-center justify-between pt-4">
+        <p className="text-sm text-muted-foreground">
+          Showing {currentPage * PAGE_SIZE + 1}–
+          {Math.min((currentPage + 1) * PAGE_SIZE, totalFiltered)} of {totalFiltered}
+        </p>
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => setPage(Math.max(0, currentPage - 1))}
+                className={currentPage === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+            {getPageNumbers(totalPages, currentPage).map((p, i) =>
+              p === "ellipsis" ? (
+                <PaginationItem key={`e${i}`}>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              ) : (
+                <PaginationItem key={p}>
+                  <PaginationLink
+                    isActive={p === currentPage}
+                    onClick={() => setPage(p)}
+                    className="cursor-pointer"
+                  >
+                    {p + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ),
+            )}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => setPage(Math.min(totalPages - 1, currentPage + 1))}
+                className={
+                  currentPage >= totalPages - 1
+                    ? "pointer-events-none opacity-50"
+                    : "cursor-pointer"
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
+    );
+  };
 
   return (
     <div className="container mx-auto py-8 space-y-8">
@@ -732,7 +755,10 @@ export default function PendingAssignments() {
                   <Input
                     placeholder="Search clients, modules, assignments..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      resetPendingPage();
+                    }}
                     className="pl-10"
                   />
                 </div>
@@ -740,10 +766,19 @@ export default function PendingAssignments() {
                 <ClientFilterCombobox
                   clients={uniqueClients}
                   value={clientFilter}
-                  onChange={setClientFilter}
+                  onChange={(v) => {
+                    setClientFilter(v);
+                    resetPendingPage();
+                  }}
                 />
 
-                <Select value={programFilter} onValueChange={setProgramFilter}>
+                <Select
+                  value={programFilter}
+                  onValueChange={(v) => {
+                    setProgramFilter(v);
+                    resetPendingPage();
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="All Programs" />
                   </SelectTrigger>
@@ -785,92 +820,100 @@ export default function PendingAssignments() {
                     : "No assignments match your current filters. Try adjusting your search or filter criteria."}
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Client</TableHead>
-                        <TableHead>Assignment Type</TableHead>
-                        <TableHead>Module</TableHead>
-                        <TableHead>Program</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Days Pending</TableHead>
-                        <TableHead>Submitted</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredPendingAssignments.map((assignment) => (
-                        <TableRow key={assignment.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-muted-foreground" />
-                              <div>
-                                <div className="font-medium">{assignment.client_name}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {assignment.client_email}
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Client</TableHead>
+                          <TableHead>Assignment Type</TableHead>
+                          <TableHead>Module</TableHead>
+                          <TableHead>Program</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Days Pending</TableHead>
+                          <TableHead>Submitted</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedPending.map((assignment) => (
+                          <TableRow key={assignment.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                  <div className="font-medium">{assignment.client_name}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {assignment.client_email}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <ClipboardCheck className="h-4 w-4 text-primary" />
-                              <span>{assignment.assignment_type_name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm">{assignment.module_title}</span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <BookOpen className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">{assignment.program_name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{getStatusBadge(assignment.status)}</TableCell>
-                          <TableCell>{getUrgencyBadge(assignment.days_pending)}</TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {new Date(assignment.created_at).toLocaleDateString()}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                size="sm"
-                                onClick={() =>
-                                  navigate(
-                                    `/teaching/students/${assignment.enrollment_id}?moduleId=${assignment.module_id}&moduleProgressId=${assignment.module_progress_id}`,
-                                  )
-                                }
-                              >
-                                Review
-                              </Button>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => {
-                                        setTransferAssignments([assignment]);
-                                        setTransferDialogOpen(true);
-                                      }}
-                                    >
-                                      <ArrowRightLeft className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Transfer to another instructor/coach</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <ClipboardCheck className="h-4 w-4 text-primary" />
+                                <span>{assignment.assignment_type_name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">{assignment.module_title}</span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">{assignment.program_name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{getStatusBadge(assignment.status)}</TableCell>
+                            <TableCell>{getUrgencyBadge(assignment.days_pending)}</TableCell>
+                            <TableCell>
+                              <span className="text-sm text-muted-foreground">
+                                {new Date(assignment.created_at).toLocaleDateString()}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="sm"
+                                  onClick={() =>
+                                    navigate(
+                                      `/teaching/students/${assignment.enrollment_id}?moduleId=${assignment.module_id}&moduleProgressId=${assignment.module_progress_id}`,
+                                    )
+                                  }
+                                >
+                                  Review
+                                </Button>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          setTransferAssignments([assignment]);
+                                          setTransferDialogOpen(true);
+                                        }}
+                                      >
+                                        <ArrowRightLeft className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Transfer to another instructor/coach</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <PaginationUI
+                    totalPages={pendingTotalPages}
+                    currentPage={pendingPage}
+                    setPage={setPendingPage}
+                    totalFiltered={filteredPendingAssignments.length}
+                  />
+                </>
               )}
             </CardContent>
           </Card>
@@ -881,8 +924,7 @@ export default function PendingAssignments() {
             onOpenChange={setTransferDialogOpen}
             assignments={transferAssignments}
             onTransferComplete={() => {
-              loadPendingAssignments();
-              loadMyEnrollmentPairs();
+              refetchPending();
             }}
           />
         </TabsContent>
@@ -903,7 +945,10 @@ export default function PendingAssignments() {
                   <Input
                     placeholder="Search clients, modules, assignments..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      resetScoredPage();
+                    }}
                     className="pl-10"
                   />
                 </div>
@@ -911,10 +956,19 @@ export default function PendingAssignments() {
                 <ClientFilterCombobox
                   clients={uniqueClients}
                   value={clientFilter}
-                  onChange={setClientFilter}
+                  onChange={(v) => {
+                    setClientFilter(v);
+                    resetScoredPage();
+                  }}
                 />
 
-                <Select value={programFilter} onValueChange={setProgramFilter}>
+                <Select
+                  value={programFilter}
+                  onValueChange={(v) => {
+                    setProgramFilter(v);
+                    resetScoredPage();
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="All Programs" />
                   </SelectTrigger>
@@ -930,7 +984,10 @@ export default function PendingAssignments() {
 
                 <Select
                   value={scoredTimeFilter}
-                  onValueChange={(value: any) => setScoredTimeFilter(value)}
+                  onValueChange={(value: any) => {
+                    setScoredTimeFilter(value);
+                    resetScoredPage();
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Time Period" />
@@ -975,86 +1032,94 @@ export default function PendingAssignments() {
                     : "No assignments match your filters"}
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Client</TableHead>
-                        <TableHead>Assignment Type</TableHead>
-                        <TableHead>Module</TableHead>
-                        <TableHead>Program</TableHead>
-                        <TableHead>Score</TableHead>
-                        <TableHead>Scored By</TableHead>
-                        <TableHead>Scored At</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredScoredAssignments.map((assignment) => (
-                        <TableRow key={assignment.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-muted-foreground" />
-                              <div>
-                                <div className="font-medium">{assignment.client_name}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {assignment.client_email}
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Client</TableHead>
+                          <TableHead>Assignment Type</TableHead>
+                          <TableHead>Module</TableHead>
+                          <TableHead>Program</TableHead>
+                          <TableHead>Score</TableHead>
+                          <TableHead>Scored By</TableHead>
+                          <TableHead>Scored At</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedScored.map((assignment) => (
+                          <TableRow key={assignment.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                  <div className="font-medium">{assignment.client_name}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {assignment.client_email}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <ClipboardCheck className="h-4 w-4 text-primary" />
-                              <span>{assignment.assignment_type_name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm">{assignment.module_title}</span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <BookOpen className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">{assignment.program_name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {assignment.overall_score !== null ? (
-                              <Badge variant="secondary">{assignment.overall_score}%</Badge>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm">{assignment.scorer_name || "Unknown"}</span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {assignment.scored_at
-                                ? formatDistanceToNow(new Date(assignment.scored_at), {
-                                    addSuffix: true,
-                                  })
-                                : "—"}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                navigate(
-                                  `/teaching/students/${assignment.enrollment_id}?moduleId=${assignment.module_id}&moduleProgressId=${assignment.module_progress_id}`,
-                                )
-                              }
-                            >
-                              View
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <ClipboardCheck className="h-4 w-4 text-primary" />
+                                <span>{assignment.assignment_type_name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">{assignment.module_title}</span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">{assignment.program_name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {assignment.overall_score !== null ? (
+                                <Badge variant="secondary">{assignment.overall_score}%</Badge>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">{assignment.scorer_name || "Unknown"}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm text-muted-foreground">
+                                {assignment.scored_at
+                                  ? formatDistanceToNow(new Date(assignment.scored_at), {
+                                      addSuffix: true,
+                                    })
+                                  : "—"}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  navigate(
+                                    `/teaching/students/${assignment.enrollment_id}?moduleId=${assignment.module_id}&moduleProgressId=${assignment.module_progress_id}`,
+                                  )
+                                }
+                              >
+                                View
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <PaginationUI
+                    totalPages={scoredTotalPages}
+                    currentPage={scoredPage}
+                    setPage={setScoredPage}
+                    totalFiltered={filteredScoredAssignments.length}
+                  />
+                </>
               )}
             </CardContent>
           </Card>

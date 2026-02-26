@@ -45,6 +45,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 import { format } from "date-fns";
 import { CapabilitySnapshotView } from "@/components/capabilities/CapabilitySnapshotView";
 import {
@@ -111,6 +120,8 @@ export default function CapabilityAssessmentDetail() {
   const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set());
   const [selectedSnapshots, setSelectedSnapshots] = useState<Set<string>>(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [snapshotPage, setSnapshotPage] = useState(0);
+  const SNAPSHOT_PAGE_SIZE = 25;
 
   const [domainForm, setDomainForm] = useState({ name: "", description: "" });
   const [questionForm, setQuestionForm] = useState({
@@ -182,13 +193,18 @@ export default function CapabilityAssessmentDetail() {
   // user_id = the person being assessed (self or by instructor)
   // evaluator_id = the instructor doing the evaluation (null for self-assessments)
   const {
-    data: userSnapshots,
+    data: snapshotResult,
     isLoading: snapshotsLoading,
     error: snapshotsError,
   } = useQuery({
-    queryKey: ["admin-capability-snapshots", id],
+    queryKey: ["admin-capability-snapshots", id, snapshotPage],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const countQuery = supabase
+        .from("capability_snapshots")
+        .select("id", { count: "exact", head: true })
+        .eq("assessment_id", id!);
+
+      const dataQuery = supabase
         .from("capability_snapshots")
         .select(
           `
@@ -223,16 +239,40 @@ export default function CapabilityAssessmentDetail() {
         `,
         )
         .eq("assessment_id", id!)
-        .order("completed_at", { ascending: false });
+        .order("completed_at", { ascending: false })
+        .range(snapshotPage * SNAPSHOT_PAGE_SIZE, (snapshotPage + 1) * SNAPSHOT_PAGE_SIZE - 1);
 
-      if (error) {
-        console.error("Error fetching user snapshots:", error);
-        throw error;
+      const [countResult, dataResult] = await Promise.all([countQuery, dataQuery]);
+
+      if (dataResult.error) {
+        console.error("Error fetching user snapshots:", dataResult.error);
+        throw dataResult.error;
       }
-      return data;
+      return {
+        snapshots: dataResult.data,
+        totalCount: countResult.count ?? 0,
+      };
     },
     enabled: !!id,
   });
+
+  const userSnapshots = snapshotResult?.snapshots || [];
+  const snapshotTotalCount = snapshotResult?.totalCount || 0;
+  const snapshotTotalPages = Math.ceil(snapshotTotalCount / SNAPSHOT_PAGE_SIZE);
+
+  const getSnapshotPageNumbers = () => {
+    const pages: (number | "ellipsis")[] = [];
+    if (snapshotTotalPages <= 7) {
+      for (let i = 0; i < snapshotTotalPages; i++) pages.push(i);
+    } else {
+      pages.push(0);
+      if (snapshotPage > 2) pages.push("ellipsis");
+      for (let i = Math.max(1, snapshotPage - 1); i <= Math.min(snapshotTotalPages - 2, snapshotPage + 1); i++) pages.push(i);
+      if (snapshotPage < snapshotTotalPages - 3) pages.push("ellipsis");
+      pages.push(snapshotTotalPages - 1);
+    }
+    return pages;
+  };
 
   const [selectedSnapshot, setSelectedSnapshot] = useState<any | null>(null);
 
@@ -521,10 +561,10 @@ export default function CapabilityAssessmentDetail() {
   };
 
   const toggleAllSnapshots = () => {
-    if (selectedSnapshots.size === userSnapshots?.length) {
+    if (selectedSnapshots.size === userSnapshots.length) {
       setSelectedSnapshots(new Set());
     } else {
-      setSelectedSnapshots(new Set(userSnapshots?.map((s: any) => s.id) || []));
+      setSelectedSnapshots(new Set(userSnapshots.map((s: any) => s.id)));
     }
   };
 
@@ -1144,7 +1184,7 @@ export default function CapabilityAssessmentDetail() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">User Snapshots ({userSnapshots.length})</CardTitle>
+                  <CardTitle className="text-lg">User Snapshots ({snapshotTotalCount})</CardTitle>
                   <CardDescription>
                     All users who have started or completed this assessment
                   </CardDescription>
@@ -1242,6 +1282,49 @@ export default function CapabilityAssessmentDetail() {
                       ))}
                     </TableBody>
                   </Table>
+
+                  {snapshotTotalPages > 1 && (
+                    <div className="flex items-center justify-between pt-4">
+                      <p className="text-sm text-muted-foreground">
+                        Showing {snapshotPage * SNAPSHOT_PAGE_SIZE + 1}–
+                        {Math.min((snapshotPage + 1) * SNAPSHOT_PAGE_SIZE, snapshotTotalCount)} of{" "}
+                        {snapshotTotalCount}
+                      </p>
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              onClick={() => setSnapshotPage((p) => Math.max(0, p - 1))}
+                              className={snapshotPage === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                          {getSnapshotPageNumbers().map((p, i) =>
+                            p === "ellipsis" ? (
+                              <PaginationItem key={`e${i}`}>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            ) : (
+                              <PaginationItem key={p}>
+                                <PaginationLink
+                                  isActive={p === snapshotPage}
+                                  onClick={() => setSnapshotPage(p)}
+                                  className="cursor-pointer"
+                                >
+                                  {p + 1}
+                                </PaginationLink>
+                              </PaginationItem>
+                            ),
+                          )}
+                          <PaginationItem>
+                            <PaginationNext
+                              onClick={() => setSnapshotPage((p) => Math.min(snapshotTotalPages - 1, p + 1))}
+                              className={snapshotPage >= snapshotTotalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
