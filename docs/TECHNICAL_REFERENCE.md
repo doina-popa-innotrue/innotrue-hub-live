@@ -832,6 +832,38 @@ Admins generate shareable enrollment codes per program. Authenticated users rede
 
 2. **Radix UI Checkbox not clickable in Playwright** — `<Checkbox>` from shadcn/ui renders as `<button role="checkbox">` but does not respond to Playwright `.click()`. The admin sidebar E2E test that requires ToS acceptance is commented out with a TODO. All other ToS interactions are handled by the auth setup (which works because the overlay helpers attempt the click anyway).
 
+### Scalability Infrastructure (SC-1 through SC-7)
+
+**Performance Indexes (SC-1, SC-6):**
+- SC-1: 15+ indexes on 10 hot-path tables (module_assignments, module_sessions, capability_assessments, module_progress, user_credit_transactions, etc.)
+- SC-6: 11 composite indexes supporting RLS functions — `is_session_instructor_or_coach` (program_instructors, program_coaches, session_participants), `user_has_feature` (features, plan_features, user_add_ons, track_features, user_tracks), module_assignments policies (client_instructors, client_coaches)
+
+**Search Indexes (SC-7):**
+- `pg_trgm` extension enabled for GIN trigram indexes
+- 4 indexes: `profiles(name)`, `notifications(title)`, `notifications(message)`, `organizations(name)`
+- Optimizes `ilike '%term%'` leading-wildcard patterns
+
+**Automated Cleanup Crons (SC-5):**
+
+| Cron | Schedule | Target | Retention |
+|------|----------|--------|-----------|
+| `daily-cleanup-notifications` | 4:00 AM UTC | `cleanup-notifications` edge function | Per notification type config |
+| `daily-cleanup-analytics-events` | 4:30 AM UTC | `cleanup_old_analytics_events()` SQL function | 180 days (configurable via `system_settings.analytics_retention_days`) |
+| `daily-cleanup-coach-access-logs` | 4:15 AM UTC | `cleanup_old_coach_access_logs()` SQL function | 90 days (configurable via `system_settings.coach_log_retention_days`) |
+
+**Not cleaned:** `admin_audit_logs` (compliance), `credit_consumption_log` (bounded by usage)
+
+**Server-Side Aggregation RPCs (SC-3):**
+
+| RPC | Replaces | Used by |
+|-----|----------|---------|
+| `get_feature_usage_summary(start, end, key)` | Client-side Map aggregation | ConsumptionAnalytics features tab |
+| `get_credit_transaction_summary()` | Client-side reduce over all transactions | ConsumptionAnalytics credit summary |
+| `get_analytics_cleanup_preview(start, end)` | 4 separate queries (count, distinct, group, min/max) | DataCleanupManager |
+
+**Pagination Pattern (SC-3):**
+All paginated pages follow the `EnrolmentsManagement.tsx` pattern: `PAGE_SIZE = 25`, `page` state (0-indexed), parallel `Promise.all([countQuery, dataQuery.range()])`, `getPageNumbers()` helper with ellipsis, shadcn `Pagination` component. Filter changes call `resetPage()`.
+
 ### Development caveats
 
 - `npm install` **always requires `--legacy-peer-deps`** due to a react-day-picker peer dependency conflict
