@@ -280,6 +280,109 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    // Look up ac_signup_intents for plan interest (Wheel of Life pipeline)
+    // Also check signup_verification_requests.plan_interest (direct signup with plan)
+    const planInterest = verificationRequest.plan_interest;
+    let resolvedPlanId: string | null = null;
+
+    if (planInterest) {
+      const { data: matchingPlan } = await supabaseAdmin
+        .from("plans")
+        .select("id")
+        .eq("key", planInterest)
+        .single();
+      if (matchingPlan) {
+        resolvedPlanId = matchingPlan.id;
+      }
+    }
+
+    // Also check ac_signup_intents by email for Wheel of Life data
+    if (!resolvedPlanId) {
+      const { data: intentData } = await supabaseAdmin
+        .from("ac_signup_intents")
+        .select("id, plan_interest")
+        .eq("email", verificationRequest.email)
+        .maybeSingle();
+
+      if (intentData?.plan_interest) {
+        const { data: intentPlan } = await supabaseAdmin
+          .from("plans")
+          .select("id")
+          .eq("key", intentData.plan_interest)
+          .single();
+        if (intentPlan) {
+          resolvedPlanId = intentPlan.id;
+        }
+      }
+
+      // Mark intent as registered
+      if (intentData) {
+        await supabaseAdmin
+          .from("ac_signup_intents")
+          .update({
+            status: "registered",
+            converted_user_id: verificationRequest.user_id,
+          })
+          .eq("id", intentData.id);
+      }
+    }
+
+    // Apply resolved plan to profile (only for paid plans — free is default in complete-registration)
+    if (resolvedPlanId) {
+      await supabaseAdmin
+        .from("profiles")
+        .update({ plan_id: resolvedPlanId })
+        .eq("id", verificationRequest.user_id);
+      console.log(`Plan ${planInterest} applied to user ${verificationRequest.user_id}`);
+    }
+
+    // Check for coach invite tokens — auto-link coach if user was invited
+    const { data: coachInvites } = await supabaseAdmin
+      .from("coach_client_invites")
+      .select("id, coach_id")
+      .eq("email", verificationRequest.email)
+      .eq("status", "pending");
+
+    if (coachInvites?.length) {
+      for (const invite of coachInvites) {
+        // Check if coach has coach role
+        const { data: coachRoles } = await supabaseAdmin
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", invite.coach_id);
+
+        const roles = coachRoles?.map(r => r.role) || [];
+
+        if (roles.includes("coach")) {
+          await supabaseAdmin
+            .from("client_coaches")
+            .upsert(
+              { client_id: verificationRequest.user_id, coach_id: invite.coach_id },
+              { onConflict: "client_id,coach_id" }
+            );
+        }
+
+        if (roles.includes("instructor")) {
+          await supabaseAdmin
+            .from("client_instructors")
+            .upsert(
+              { client_id: verificationRequest.user_id, instructor_id: invite.coach_id },
+              { onConflict: "client_id,instructor_id" }
+            );
+        }
+
+        // Mark invite as accepted
+        await supabaseAdmin
+          .from("coach_client_invites")
+          .update({
+            status: "accepted",
+            linked_user_id: verificationRequest.user_id,
+          })
+          .eq("id", invite.id);
+      }
+      console.log(`Linked ${coachInvites.length} coach invite(s) for ${verificationRequest.email}`);
+    }
+
     // Delete verification request
     await supabaseAdmin
       .from("signup_verification_requests")

@@ -3,6 +3,15 @@ project_id = "pfwlsxovvqdiwaztqxrj"
 [functions.accept-org-invite]
 verify_jwt = false
 
+[functions.submit-wheel-intent]
+verify_jwt = false
+
+[functions.bulk-create-users]
+verify_jwt = false
+
+[functions.send-coach-invite]
+verify_jwt = false
+
 [functions.calcom-webhook]
 verify_jwt = false
 

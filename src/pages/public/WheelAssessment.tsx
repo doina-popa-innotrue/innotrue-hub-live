@@ -146,20 +146,18 @@ export default function WheelAssessment() {
 
     setSending(true);
     try {
-      // Save to ac_signup_intents
-      const { error } = await supabase.from("ac_signup_intents").insert({
-        email: email.trim().toLowerCase(),
-        name: name.trim() || null,
-        status: "wheel_completed",
-        notes: JSON.stringify({
-          wheel_ratings: ratings,
-          notes: notes,
+      // Save to ac_signup_intents via edge function (public page — no auth token)
+      const { error } = await supabase.functions.invoke("submit-wheel-intent", {
+        body: {
+          email: email.trim().toLowerCase(),
+          name: name.trim() || null,
+          ratings,
+          notes,
           subscribe_newsletter: subscribeNewsletter,
-        }),
-        consent_given: subscribeNewsletter,
+        },
       });
 
-      if (error && !error.message.includes("duplicate")) {
+      if (error) {
         console.error("Error saving intent:", error);
       }
 
@@ -223,15 +221,18 @@ export default function WheelAssessment() {
   const handleSignUp = async () => {
     setSigningUp(true);
     try {
-      // Update the signup intent with plan interest
+      // Update the signup intent with plan interest via edge function
       if (selectedPlan) {
-        await supabase
-          .from("ac_signup_intents")
-          .update({
+        await supabase.functions.invoke("submit-wheel-intent", {
+          body: {
+            email: email.trim().toLowerCase(),
+            name: name.trim() || null,
+            ratings,
+            notes,
+            subscribe_newsletter: subscribeNewsletter,
             plan_interest: selectedPlan,
-            status: "plan_selected",
-          })
-          .eq("email", email.trim().toLowerCase());
+          },
+        });
       }
 
       // Navigate to auth page with prefilled data

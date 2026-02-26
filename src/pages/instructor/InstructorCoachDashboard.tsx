@@ -17,6 +17,7 @@ import {
   UsersRound,
   CalendarDays,
   UserCheck,
+  UserPlus,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,6 +27,7 @@ import { format } from "date-fns";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 import { StaffWelcomeCard } from "@/components/instructor/StaffWelcomeCard";
+import { InviteClientDialog } from "@/components/instructor/InviteClientDialog";
 
 interface ProgramAssignment {
   id: string;
@@ -120,6 +122,8 @@ export default function InstructorCoachDashboard() {
   const [cohortCount, setCohortCount] = useState(0);
   const [referralCount, setReferralCount] = useState(0);
   const [activePartnerCodes, setActivePartnerCodes] = useState(0);
+
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   // Staff welcome card state
   const [staffProfileName, setStaffProfileName] = useState("");
@@ -629,12 +633,22 @@ export default function InstructorCoachDashboard() {
 
   return (
     <div className="container mx-auto py-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Assigned Programs</h1>
-        <p className="text-muted-foreground">
-          Overview of your instructor and coaching assignments
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Assigned Programs</h1>
+          <p className="text-muted-foreground">
+            Overview of your instructor and coaching assignments
+          </p>
+        </div>
+        {userRoles.includes("coach") && (
+          <Button onClick={() => setInviteDialogOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Invite Client
+          </Button>
+        )}
       </div>
+
+      <InviteClientDialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen} />
 
       {/* Staff Welcome Card */}
       <StaffWelcomeCard

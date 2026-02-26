@@ -26,6 +26,7 @@ import {
   EyeOff,
   Eye,
   ArrowRightLeft,
+  Upload,
 } from "lucide-react";
 import {
   Select,
@@ -59,6 +60,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { BulkUserImport } from "@/components/admin/BulkUserImport";
 
 function UserIdCell({ userId }: { userId: string }) {
   const [copied, setCopied] = useState(false);
@@ -144,6 +146,7 @@ export default function UsersManagement() {
   const [deleteAfterTransfer, setDeleteAfterTransfer] = useState(false);
   const [transferring, setTransferring] = useState(false);
   const [togglingHidden, setTogglingHidden] = useState<string | null>(null);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
 
   const availableRoles = ["admin", "instructor", "coach", "client"];
 
@@ -650,6 +653,11 @@ export default function UsersManagement() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-bold">Users Management</h1>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setBulkImportOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Import Users
+          </Button>
         <Dialog
           open={open}
           onOpenChange={(isOpen) => {
@@ -795,7 +803,14 @@ export default function UsersManagement() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
+      <BulkUserImport
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
+        onImportComplete={() => fetchUsers()}
+      />
 
       <Card>
         <CardHeader>

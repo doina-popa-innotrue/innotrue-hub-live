@@ -12,6 +12,7 @@ interface SignupRequest {
   email: string;
   password: string;
   name: string;
+  plan_interest?: string;
 }
 
 // Rate limiting configuration
@@ -92,7 +93,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { email, password, name }: SignupRequest = await req.json();
+    const { email, password, name, plan_interest }: SignupRequest = await req.json();
 
     console.log(`Processing signup for email: ${email}`);
 
@@ -211,7 +212,8 @@ const handler = async (req: Request): Promise<Response> => {
         name: validatedName,
         verification_token: tokenHash, // Store the hash, not the plain token
         expires_at: expiresAt.toISOString(),
-        ip_address: clientIp
+        ip_address: clientIp,
+        plan_interest: plan_interest || null,
       });
 
     if (insertError) {

@@ -53,6 +53,7 @@ import { ManualCompletionControls } from "@/components/admin/ManualCompletionCon
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { DevelopmentItemDialog } from "@/components/capabilities/DevelopmentItemDialog";
+import { CoachingSessionNotes } from "@/components/instructor/CoachingSessionNotes";
 
 interface StudentInfo {
   id: string;
@@ -597,6 +598,45 @@ export default function StudentDetail() {
         </CardContent>
       </Card>
 
+      {/* Quick Actions Bar */}
+      <Card>
+        <CardContent className="py-3">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDevItemDialog({ open: true, moduleProgressId: "" })}
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Development Item
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/teaching/students/${enrollmentId}/development-profile`}>
+                <UserCog className="mr-1 h-3.5 w-3.5" />
+                Development Profile
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/teaching/assignments`}>
+                <BookOpen className="mr-1 h-3.5 w-3.5" />
+                View Assignments
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const notesSection = document.getElementById("staff-notes-section");
+                if (notesSection) notesSection.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
+              <MessageSquare className="mr-1 h-3.5 w-3.5" />
+              Add Staff Note
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Cohort Assignment */}
       {cohortInfo && (
         <Card>
@@ -915,9 +955,17 @@ export default function StudentDetail() {
           </Card>
         </div>
 
+        {/* Coaching Session Notes */}
+        {studentInfo && (
+          <CoachingSessionNotes
+            clientUserId={studentInfo.id}
+            clientName={studentInfo.name}
+          />
+        )}
+
         {/* Staff Notes Section */}
         {studentInfo && (
-          <div className="mt-6">
+          <div className="mt-6" id="staff-notes-section">
             <ClientStaffNotes
               clientUserId={studentInfo.id}
               enrollmentId={studentInfo.enrollment_id}

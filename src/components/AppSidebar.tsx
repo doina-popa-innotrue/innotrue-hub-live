@@ -924,6 +924,12 @@ export function AppSidebar() {
       icon: Award,
       tourId: "badge-approvals",
     },
+    {
+      title: "Teaching Guide",
+      url: "/teaching/guide",
+      icon: HelpCircle,
+      tourId: "teaching-guide",
+    },
   ];
 
   // Get navigation items based on the SELECTED role (not all roles)
