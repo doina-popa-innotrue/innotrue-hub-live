@@ -1,5 +1,37 @@
 # Completed Work — Detailed History
 
+## Bug Fixes — Reflection Resources + xAPI Library Content (2026-03-26)
+
+Two client-facing bugs fixed, 5 files changed. `npm run verify` passed. Deployed to all 3 environments + Lovable.
+
+### 1. Reflection Resource Refresh
+
+**Problem:** Adding a resource to a reflection on a module page didn't show it in the "Attachments" section until a full page refresh.
+
+**Root cause:** `ReflectionResourceForm.onSuccess` only closed the form (`setAddingResourceTo(null)`) but never triggered a refetch in the sibling `ReflectionResources` component, which managed its own state independently.
+
+**Fix:** Added `refreshKey` prop to `ReflectionResources` (included in `useEffect` deps). `ModuleReflections` tracks a `resourceRefreshKey` counter that bumps on successful resource add.
+
+| File | Change |
+|------|--------|
+| `src/components/modules/ReflectionResources.tsx` | Added `refreshKey` prop to interface + `useEffect` dependency |
+| `src/components/modules/ModuleReflections.tsx` | Added `resourceRefreshKey` state, bumps on `onSuccess`, passes to `ReflectionResources` |
+
+### 2. xAPI Library Content "File not found: index.html"
+
+**Problem:** xAPI content assigned to a module from the shared content library failed with `"File not found: index.html"`, but the same ZIP uploaded directly to the module worked fine.
+
+**Root cause:** Both client and instructor `ModuleDetail` pages determined content type via `module.content_package_type` (from `program_modules` table). For shared library content, this field is `null` — the package type lives on `content_packages.package_type`. So it always defaulted to `"web"` mode, requesting `index.html` at root instead of `scormcontent/index.html` (xAPI entry point).
+
+**Fix:** Added `content_packages(package_type)` JOIN to module queries. Type resolution now checks library package type first, falls back to legacy column. Also fixed instructor page not showing shared library content at all (condition only checked `content_package_path`, not `content_package_id`).
+
+| File | Change |
+|------|--------|
+| `src/pages/client/ModuleDetail.tsx` | Added `content_packages(package_type)` JOIN, updated interface, fixed type resolution |
+| `src/pages/instructor/ModuleDetail.tsx` | Same JOIN + interface + type resolution, also fixed display condition to include `content_package_id` |
+
+**Note:** Edge functions (`serve-content-package`, `xapi-launch`) already had the correct JOIN + fallback logic — the bug was purely frontend.
+
 ## SC-3/SC-5/SC-6/SC-7 Performance & Scalability (2026-03-26)
 
 Completed 4 scalability items from the audit: server-side pagination, retention policies, RLS indexes, and search indexes. 4 migrations, 8 frontend files modified. `npm run verify` passed.
