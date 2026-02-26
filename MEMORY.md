@@ -50,7 +50,7 @@
 - Supabase client: `src/integrations/supabase/client.ts`
 - Auth: `src/pages/Auth.tsx`, `src/contexts/AuthContext.tsx`
 - Routes: `src/App.tsx` | Sentry: `src/main.tsx` | Error boundary: `src/components/ErrorBoundary.tsx`
-- Edge functions: `supabase/functions/` (71 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`, `error-response.ts`, `ai-input-limits.ts`, `calcom-utils.ts`, `content-access.ts`
+- Edge functions: `supabase/functions/` (79 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`, `error-response.ts`, `ai-input-limits.ts`, `calcom-utils.ts`, `content-access.ts`
 - xAPI: `supabase/functions/xapi-launch/` (session create/resume), `supabase/functions/xapi-statements/` (LRS endpoint + state persistence)
 - Assessment scoring: `src/lib/assessmentScoring.ts` (weighted question type scoring for capability assessments)
 - Guided path instantiation: `src/lib/guidedPathInstantiation.ts` (shared template→goals service with pace/date logic)
@@ -113,7 +113,7 @@
 **Critical (C1-C4):** ~~All resolved~~ ✅
 **High (H1-H10):** ~~All resolved~~ ✅
 **Medium (remaining):** ~~M2 (psychometric interest tracking)~~ ✅ DONE, ~~M9 (async notifications)~~ ✅ DONE, ~~M11 (console.log cleanup)~~ ✅ DONE, M12 (resource ratings), M13 (Zod validation), M16 (assessment templates)
-**New roadmap items (R1-R7):** ~~R1 assessment question types~~ ✅ DONE, R2 coach/instructor onboarding (Phase 1), R3 enhanced coach↔client interaction (Phases 1/4/6), R4 coaches invite own clients (Phase 5), R5 enhanced org management (Phase 6), R6 Sentry coverage (cross-cutting), R7 test coverage (continuous)
+**New roadmap items (R1-R7):** ~~R1 assessment question types~~ ✅ DONE, ~~R2 coach/instructor onboarding (Phase 1)~~ ✅ DONE, ~~R3 enhanced coach↔client interaction (Phase 1)~~ ✅ DONE, ~~R4 coaches invite own clients (Phase 5)~~ ✅ DONE, R5 enhanced org management (Phase 6), R6 Sentry coverage (cross-cutting), R7 test coverage (continuous)
 **Coach-created development items:** ✅ DONE
 
 **Priority 0 — Status (updated 2026-02-18):**
@@ -156,7 +156,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - ~~**CT3b: Cross-Program Completion**~~ ✅ — `content_completions` table. `xapi-statements` writes completion on xAPI verb. `useCrossProgramCompletion` extended with 3rd data source. Client `ModuleDetail` auto-accepts completion from shared content. `CanonicalCodesManagement` now shows content packages tab.
 - **`canonical_code` override** — kept as manual override for different content that should count as equivalent.
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → ~~Enrollment Scale + Bulk Enrollment~~ ✅ → ~~SC-1 Critical Indexes~~ ✅ → ~~SC-2 N+1 Rewrites~~ ✅ → ~~2B.5 Certification~~ ✅ → ~~2B.10 Enrollment Duration~~ ✅ → ~~SC-3 Pagination~~ ✅ → ~~SC-5 Retention~~ ✅ → ~~SC-6 RLS Indexes~~ ✅ → ~~SC-7 Search Indexes~~ ✅ → Phase 5 remaining → SC-4 Organisation Audit → 3-AI/Engagement
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → ~~Enrollment Scale + Bulk Enrollment~~ ✅ → ~~SC-1 Critical Indexes~~ ✅ → ~~SC-2 N+1 Rewrites~~ ✅ → ~~2B.5 Certification~~ ✅ → ~~2B.10 Enrollment Duration~~ ✅ → ~~SC-3 Pagination~~ ✅ → ~~SC-5 Retention~~ ✅ → ~~SC-6 RLS Indexes~~ ✅ → ~~SC-7 Search Indexes~~ ✅ → ~~Phase 5 remaining (Steps 7+9 + R2/R3/R4)~~ ✅ → SC-4 Organisation Audit → 3-AI/Engagement
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
@@ -164,7 +164,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Onboarding:** ✅ DONE — Staff Welcome Card with 4-step checklist, Staff Profile setup (bio, specializations, company), enhanced empty states on teaching pages, role-specific welcome emails
 - **Coach/instructor registration:** Self-registration with admin approval (Phase 5). Users apply at `/complete-registration`, get client role immediately, admin approves/declines via `/admin/coach-requests` "Role Applications" tab. Admin can also directly create via `/admin/users`.
 - **Key pages:** `/teaching` (dashboard), `/teaching/students` (clients), `/teaching/readiness` (DP7 readiness dashboard), `/teaching/assignments`, `/teaching/scenarios`, `/teaching/badges`, `/teaching/assessments`, `/teaching/groups`, `/teaching/cohorts`
-- **Remaining:** Teaching FAQ/quick guide page (nice to have)
+- ~~**Remaining:** Teaching FAQ/quick guide page (nice to have)~~ ✅ DONE — `/teaching/guide` with quick actions, getting started checklist, 9-question FAQ accordion, role explanations
 
 ## Instructor/Coach Assignment & Grading
 - **3-tier staff assignment:** program → module → enrollment (personal per client). All have admin UI.
@@ -219,7 +219,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Reflection resource refresh (2026-03-26):** Adding a resource to a reflection didn't update the display until page refresh. `ReflectionResources` lacked a trigger to refetch. Fixed with `refreshKey` prop pattern.
 - **xAPI library content loading (2026-03-26):** Shared library xAPI content failed with "File not found: index.html". Client/instructor `ModuleDetail` pages only read `program_modules.content_package_type` (null for library content) instead of JOINing `content_packages.package_type`. Fixed by adding JOIN + type resolution fallback. Also fixed instructor page not showing library content at all.
 
-## Current State (as of 2026-03-26)
+## Current State (as of 2026-03-26, Phase 5 remaining + R2/R3/R4 done)
 - All strict TypeScript flags enabled (including strictNullChecks). 0 errors.
 - **Self-registration enabled** (Phase 5 core). Signup form + Google OAuth active in Auth.tsx. New users choose role at `/complete-registration` (client immediate, coach/instructor via admin approval). All self-registered users get client role + free plan immediately.
 - 16 storage buckets on all 3 Supabase projects
@@ -229,7 +229,10 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - Supabase ops scripts operational (deploy, push, sync data/storage)
 - Comprehensive analysis complete: 11-part issues doc + data config guide deployed
 - **All C1-C4 critical and H1-H10 high items resolved.** 3 medium items remain (M12, M13, M16). M2, M9, M11 resolved.
-- **Phase 5 core implemented** (`docs/PHASE5_PLAN.md`) — Batches 1-3 complete: self-registration flow, role selection, admin approval for coach/instructor applications, enhanced placeholder transfer (7 tables), Google OAuth support. Remaining: Wheel of Life pipeline (Step 7), bulk import (Step 9), public assessment funnels (Step 12), org self-service (Step 13).
+- **Phase 5 fully implemented** (`docs/PHASE5_PLAN.md`) — Batches 1-3 complete + Steps 7+9: self-registration flow, role selection, admin approval, placeholder transfer, Google OAuth, Wheel of Life → signup pipeline (`submit-wheel-intent` edge function + plan interest resolution in `verify-signup`), bulk user import (`bulk-create-users` edge function + `BulkUserImport.tsx` dialog with CSV parsing). Remaining future: public assessment funnels (Step 12), org self-service (Step 13).
+- **R2 Teaching Guide DONE** — `/teaching/guide` page with quick actions grid, 5-step getting started checklist, 9-question FAQ accordion, role explanation cards
+- **R3 Phase 1 Coach↔Client UX DONE** — Quick Actions bar in StudentDetail (4 action buttons), `CoachingSessionNotes.tsx` (structured session logs with JSON content in `client_staff_notes` table)
+- **R4 Coach Client Invites DONE** — `coach_client_invites` table (migration), `send-coach-invite` edge function (auto-links existing users, emails new), `InviteClientDialog.tsx` (send+history tabs) wired into coach dashboard, `verify-signup` auto-links pending invites on signup
 - **AI infrastructure:** 4 edge functions (decision-insights, course-recommendations, generate-reflection-prompt, analytics-ai-insights), Vertex AI Gemini 3 Flash (EU/Frankfurt), input truncation, credit-based consumption (`useConsumableFeature("ai_insights")` pattern), explicit consent gating, provider-agnostic architecture. All AI features gated behind `ai_insights` feature key with plan-based credit limits (free=5, base=50, pro=100, advanced=200, elite=300).
 - **Product strategy documented** (`docs/PRODUCT_STRATEGY_YOUNG_PROFESSIONALS_AND_AI_LEARNING.md`): 6 parts — young professionals (12 ideas), AI learning (5 features), content delivery (skip SCORM → xAPI), cohort readiness (6 gaps), coach/instructor onboarding (6 gaps), instructor/coach assignment & grading routing (6 gaps)
 - **Content delivery Tier 1 + Tier 2 DONE:** Tier 1: Rise ZIP upload + auth-gated edge function proxy + iframe embed in ModuleDetail. Private storage bucket, JWT + enrollment check on every request. Tier 2: Rise xAPI integration with session management (`xapi-launch`), statement storage (`xapi-statements`), auto-completion on xAPI verbs, resume support (bookmark + suspend_data persistence). TalentLMS kept for active programs only.

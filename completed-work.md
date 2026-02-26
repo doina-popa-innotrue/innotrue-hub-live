@@ -1393,3 +1393,38 @@ Created `docs/DATA_CONFIGURATION_GUIDE.md` (~900 lines) — comprehensive data m
 - Coaching/staff config, integration data, feedback/goal tracking
 - 8-step data population plan + verification checklist
 - Future data tables (19 entries) mapped to roadmap phases
+
+## Phase 5 Remaining + R2/R3/R4 (2026-03-26)
+
+### Phase 5 Step 7: Wheel of Life → Signup Pipeline
+- Created `submit-wheel-intent` edge function — public (no JWT), upserts `ac_signup_intents` via service role
+- Modified `WheelAssessment.tsx` — replaced direct `supabase.from("ac_signup_intents").insert()` (blocked by RLS) with edge function invocation
+- Modified `signup-user` — stores `plan_interest` in `signup_verification_requests`
+- Modified `verify-signup` — resolves plan interest from `signup_verification_requests` → `ac_signup_intents` fallback, updates intent status to "registered", applies resolved plan to profile
+
+### Phase 5 Step 9: Bulk User Import
+- Created `bulk-create-users` edge function — admin-only, batch creation (max 200), creates auth user + profile + roles + client_profiles + plan + notification_preferences
+- Created `BulkUserImport.tsx` — 4-step dialog (upload → preview → importing → results), CSV drag-drop with Papa Parse, row validation, batch processing (50/batch), progress bar, results download
+- Modified `UsersManagement.tsx` — added "Import Users" button
+
+### R2: Teaching Quick-Start Guide
+- Created `TeachingGuide.tsx` at `/teaching/guide` — quick actions grid (6 nav buttons), 5-step getting started checklist, 9-question FAQ accordion, role explanation cards (coach vs instructor)
+- Modified `App.tsx` — lazy import + route
+- Modified `AppSidebar.tsx` — added "Teaching Guide" nav item with HelpCircle icon
+
+### R3 Phase 1: Enhanced Coach↔Client Interaction
+- Created `CoachingSessionNotes.tsx` — structured coaching session notes stored as JSON in `client_staff_notes` (note_type: "coaching_session"), timeline display with summary/action items/next steps, "Log Session" dialog
+- Modified `StudentDetail.tsx` — added Quick Actions bar (Development Item, Development Profile, View Assignments, Add Staff Note), added CoachingSessionNotes component
+
+### R4: Coach Client Invite System
+- Created migration `20260326140000_phase5_r4_coach_invites.sql` — `coach_client_invites` table with id, coach_id, email, name, message, token, status, linked_user_id, expires_at; indexes; RLS policies (coach own, client by email, admin full)
+- Created `send-coach-invite` edge function — coach/instructor auth required, auto-links existing users via `client_coaches`/`client_instructors`, creates pending invite with token for new users, sends Resend email
+- Created `InviteClientDialog.tsx` — dialog with Send Invite tab (email/name/message form) and History tab (invite status table)
+- Modified `InstructorCoachDashboard.tsx` — added "Invite Client" button (visible for coaches)
+- Modified `verify-signup` — auto-links pending coach invites on new user signup (creates coach/instructor relationships, marks invites accepted)
+
+**Files changed:** 19 files, 2255 insertions
+**New edge functions (3):** `submit-wheel-intent`, `bulk-create-users`, `send-coach-invite`
+**New components (4):** `BulkUserImport.tsx`, `CoachingSessionNotes.tsx`, `InviteClientDialog.tsx`, `TeachingGuide.tsx`
+**New migration:** `20260326140000_phase5_r4_coach_invites.sql`
+**Deployed:** All 3 environments + Lovable + 79 edge functions + migration
