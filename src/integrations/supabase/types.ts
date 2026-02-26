@@ -14667,10 +14667,12 @@ export type Database = {
           total_required: number
         }[]
       }
+      cleanup_old_analytics_events: { Args: never; Returns: number }
       cleanup_old_announcements: {
         Args: { days_old?: number }
         Returns: number
       }
+      cleanup_old_coach_access_logs: { Args: never; Returns: number }
       cleanup_old_notifications: { Args: never; Returns: number }
       cleanup_old_webhook_logs: {
         Args: { retention_days?: number }
@@ -14816,6 +14818,10 @@ export type Database = {
         Args: { end_date: string; start_date: string }
         Returns: Json
       }
+      get_analytics_cleanup_preview: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: Json
+      }
       get_available_credits: {
         Args: {
           p_feature_key?: string
@@ -14845,6 +14851,13 @@ export type Database = {
         Args: { p_service_id: string; p_user_id: string }
         Returns: Json
       }
+      get_credit_transaction_summary: {
+        Args: never
+        Returns: {
+          total_consumed: number
+          total_granted: number
+        }[]
+      }
       get_current_usage: {
         Args: { _feature_key: string; _user_id: string }
         Returns: number
@@ -14859,6 +14872,18 @@ export type Database = {
           limit_value: number
           source_track_id: string
           source_track_name: string
+        }[]
+      }
+      get_feature_usage_summary: {
+        Args: {
+          p_end_date: string
+          p_feature_key?: string
+          p_start_date: string
+        }
+        Returns: {
+          feature_key: string
+          total_usage: number
+          unique_users: number
         }[]
       }
       get_group_member_directory: {
@@ -15023,6 +15048,8 @@ export type Database = {
         Returns: Json
       }
       send_cohort_session_reminders: { Args: never; Returns: Json }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       staff_has_client_relationship: {
         Args: { _client_user_id: string; _staff_id: string }
         Returns: boolean
