@@ -33,6 +33,7 @@ import {
   FolderOpen,
   X,
   UsersRound,
+  ArrowUpRight,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
@@ -62,6 +63,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DevelopmentItemDialog } from "@/components/capabilities/DevelopmentItemDialog";
+import { PromoteToTaskDialog } from "@/components/capabilities/PromoteToTaskDialog";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 interface DevelopmentItem {
@@ -116,6 +119,9 @@ export default function DevelopmentItems() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { hasFeature } = useEntitlements();
+  const canPromoteToTask = hasFeature("decision_toolkit_basic");
+  const [promotingItem, setPromotingItem] = useState<DevelopmentItem | null>(null);
 
   // URL filter params
   const urlSnapshotId = searchParams.get("snapshotId");
@@ -569,6 +575,19 @@ export default function DevelopmentItems() {
                       )}
                     </Button>
                   )}
+                  {item.item_type === "action_item" &&
+                    canPromoteToTask &&
+                    (!item.task_links || item.task_links.length === 0) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-violet-600 hover:text-violet-700"
+                        title="Promote to Task"
+                        onClick={() => setPromotingItem(item)}
+                      >
+                        <ArrowUpRight className="h-4 w-4" />
+                      </Button>
+                    )}
                   {item.resource_url && (
                     <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                       <a href={item.resource_url} target="_blank" rel="noopener noreferrer">
@@ -1076,6 +1095,15 @@ export default function DevelopmentItems() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Promote to Task dialog */}
+      <PromoteToTaskDialog
+        open={!!promotingItem}
+        onOpenChange={(open) => {
+          if (!open) setPromotingItem(null);
+        }}
+        actionItem={promotingItem}
+      />
     </div>
   );
 }

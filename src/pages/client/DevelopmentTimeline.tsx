@@ -13,6 +13,7 @@ import {
   Target,
   Flag,
   CheckSquare,
+  ListTodo,
   Calendar,
   Clock,
   Filter,
@@ -76,9 +77,18 @@ interface Task {
   goal_category?: string;
 }
 
+interface ActionItemRaw {
+  id: string;
+  title: string | null;
+  content: string | null;
+  status: string | null;
+  due_date: string | null;
+  created_at: string;
+}
+
 interface TimelineItem {
   id: string;
-  type: "goal" | "milestone" | "task";
+  type: "goal" | "milestone" | "task" | "action_item";
   title: string;
   description: string | null;
   date: string | null;
@@ -93,12 +103,14 @@ const TYPE_ICONS = {
   goal: Target,
   milestone: Flag,
   task: CheckSquare,
+  action_item: ListTodo,
 };
 
 const TYPE_COLORS = {
   goal: "bg-primary/15 text-primary",
   milestone: "bg-chart-2/15 text-chart-2",
   task: "bg-chart-4/15 text-chart-4",
+  action_item: "bg-violet-500/15 text-violet-600",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -119,11 +131,13 @@ export default function DevelopmentTimeline() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [actionItems, setActionItems] = useState<ActionItemRaw[]>([]);
 
   // Filters
   const [showGoals, setShowGoals] = useState(true);
   const [showMilestones, setShowMilestones] = useState(true);
   const [showTasks, setShowTasks] = useState(true);
+  const [showActionItems, setShowActionItems] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
@@ -188,6 +202,17 @@ export default function DevelopmentTimeline() {
         goal_category: t.goals?.category,
       }));
       setTasks(formattedTasks);
+
+      // Fetch action items from development_items
+      const { data: actionItemsData, error: actionItemsError } = await supabase
+        .from("development_items")
+        .select("id, title, content, status, due_date, created_at")
+        .eq("user_id", user.id)
+        .eq("item_type", "action_item")
+        .order("due_date", { ascending: true, nullsFirst: false });
+
+      if (actionItemsError) throw actionItemsError;
+      setActionItems(actionItemsData || []);
     } catch (error) {
       console.error("Error fetching timeline data:", error);
       toast.error("Failed to load timeline data");
@@ -249,15 +274,32 @@ export default function DevelopmentTimeline() {
       });
     }
 
+    if (showActionItems) {
+      actionItems.forEach((ai) => {
+        const title = ai.title || (ai.content ? ai.content.slice(0, 60) + (ai.content.length > 60 ? "…" : "") : "Untitled Action");
+        items.push({
+          id: ai.id,
+          type: "action_item",
+          title,
+          description: ai.content,
+          date: ai.due_date || ai.created_at,
+          status: ai.status === "completed" ? "completed" : "active",
+          category: null, // action items don't have a wheel category
+        });
+      });
+    }
+
     return items;
-  }, [goals, milestones, tasks, showGoals, showMilestones, showTasks]);
+  }, [goals, milestones, tasks, actionItems, showGoals, showMilestones, showTasks, showActionItems]);
 
   // Apply filters
   const filteredItems = useMemo(() => {
     return timelineItems.filter((item) => {
-      // Category filter
-      if (selectedCategory !== "all" && item.category !== selectedCategory) {
-        return false;
+      // Category filter — action items have no category, hide when specific category selected
+      if (selectedCategory !== "all") {
+        if (item.type === "action_item" || item.category !== selectedCategory) {
+          return false;
+        }
       }
       // Status filter
       if (selectedStatus !== "all") {
@@ -318,6 +360,8 @@ export default function DevelopmentTimeline() {
       navigate(`/goals/${item.parentId}`);
     } else if (item.type === "task") {
       navigate(`/tasks/${item.id}`);
+    } else if (item.type === "action_item") {
+      navigate("/development-items");
     }
   };
 
@@ -357,7 +401,7 @@ export default function DevelopmentTimeline() {
             <div>
               <h1 className="text-3xl font-bold">Development Timeline</h1>
               <p className="text-muted-foreground">
-                View your goals, milestones, and tasks over time
+                View your goals, milestones, tasks, and action items over time
               </p>
             </div>
           </div>
@@ -420,6 +464,20 @@ export default function DevelopmentTimeline() {
                     >
                       <CheckSquare className="h-4 w-4 text-chart-3" />
                       Tasks
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="show-action-items"
+                      checked={showActionItems}
+                      onCheckedChange={(checked) => setShowActionItems(checked === true)}
+                    />
+                    <Label
+                      htmlFor="show-action-items"
+                      className="flex items-center gap-2 text-sm cursor-pointer"
+                    >
+                      <ListTodo className="h-4 w-4 text-violet-500" />
+                      Action Items
                     </Label>
                   </div>
                 </div>
@@ -504,7 +562,7 @@ export default function DevelopmentTimeline() {
 
                               return (
                                 <div
-                                  key={`${item.type}-${item.id}`}
+                                  key={`${item.type === "action_item" ? "action" : item.type}-${item.id}`}
                                   className="relative pl-6 pb-3 cursor-pointer hover:bg-accent/50 rounded-lg p-3 -ml-4 transition-colors"
                                   onClick={() => handleItemClick(item)}
                                 >
@@ -523,7 +581,7 @@ export default function DevelopmentTimeline() {
                                       <div className="flex items-center gap-2 mb-1">
                                         <Badge variant="outline" className={TYPE_COLORS[item.type]}>
                                           <Icon className="h-3 w-3 mr-1" />
-                                          {item.type}
+                                          {item.type === "action_item" ? "action" : item.type}
                                         </Badge>
                                         <Badge
                                           variant="outline"
@@ -578,14 +636,14 @@ export default function DevelopmentTimeline() {
                       const Icon = TYPE_ICONS[item.type];
                       return (
                         <div
-                          key={`${item.type}-${item.id}`}
+                          key={`${item.type === "action_item" ? "action" : item.type}-${item.id}`}
                           className="border rounded-lg p-3 cursor-pointer hover:bg-accent/50 transition-colors"
                           onClick={() => handleItemClick(item)}
                         >
                           <div className="flex items-center gap-2 mb-2">
                             <Badge variant="outline" className={TYPE_COLORS[item.type]}>
                               <Icon className="h-3 w-3 mr-1" />
-                              {item.type}
+                              {item.type === "action_item" ? "action" : item.type}
                             </Badge>
                             <Badge
                               variant="outline"
@@ -621,7 +679,7 @@ export default function DevelopmentTimeline() {
                   <h3 className="text-lg font-medium mb-2">No items to display</h3>
                   <p className="text-muted-foreground text-center mb-4">
                     {timelineItems.length === 0
-                      ? "You haven't created any goals, milestones, or tasks yet."
+                      ? "You haven't created any goals, milestones, tasks, or action items yet."
                       : "No items match your current filters."}
                   </p>
                   {timelineItems.length === 0 && (

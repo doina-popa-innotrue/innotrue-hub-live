@@ -42,6 +42,7 @@ import { FeatureGate } from "@/components/FeatureGate";
 import { useWheelCategories } from "@/hooks/useWheelCategories";
 import { usePageView } from "@/hooks/useAnalytics";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { ActionItemsSection } from "@/components/tasks/ActionItemsSection";
 
 function TasksFallback() {
   const navigate = useNavigate();
@@ -248,98 +249,105 @@ export default function Tasks() {
   }
 
   return (
-    <FeatureGate featureKey="decision_toolkit_basic" fallback={<TasksFallback />}>
-      <div className="p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Task Prioritization</h1>
-            <p className="text-muted-foreground mt-1">Eisenhower Matrix for task management</p>
+    <>
+      <FeatureGate featureKey="decision_toolkit_basic" fallback={<TasksFallback />}>
+        <div className="p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold">Task Prioritization</h1>
+              <p className="text-muted-foreground mt-1">Eisenhower Matrix for task management</p>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[160px]">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">
+                    <div className="flex items-center gap-2">
+                      <Eye className="h-4 w-4" />
+                      Active ({activeCount})
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="done">
+                    <div className="flex items-center gap-2">
+                      <CheckSquare className="h-4 w-4" />
+                      Done ({doneCount})
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="all">
+                    <div className="flex items-center gap-2">
+                      <LayoutGrid className="h-4 w-4" />
+                      All ({tasks.length})
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="lg" className="flex-1 sm:flex-none">
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Task
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Task</DialogTitle>
+                    <DialogDescription>
+                      Add a new task to your prioritization matrix
+                    </DialogDescription>
+                  </DialogHeader>
+                  <TaskForm
+                    onSuccess={() => {
+                      setDialogOpen(false);
+                      fetchTasks();
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[160px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">
-                  <div className="flex items-center gap-2">
-                    <Eye className="h-4 w-4" />
-                    Active ({activeCount})
-                  </div>
-                </SelectItem>
-                <SelectItem value="done">
-                  <div className="flex items-center gap-2">
-                    <CheckSquare className="h-4 w-4" />
-                    Done ({doneCount})
-                  </div>
-                </SelectItem>
-                <SelectItem value="all">
-                  <div className="flex items-center gap-2">
-                    <LayoutGrid className="h-4 w-4" />
-                    All ({tasks.length})
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="lg" className="flex-1 sm:flex-none">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Task
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Task</DialogTitle>
-                  <DialogDescription>
-                    Add a new task to your prioritization matrix
-                  </DialogDescription>
-                </DialogHeader>
-                <TaskForm
-                  onSuccess={() => {
-                    setDialogOpen(false);
-                    fetchTasks();
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
 
-        {/* Eisenhower Matrix */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <QuadrantCard
-            title="Do First"
-            subtitle="Important & Urgent"
-            tasks={tasksByQuadrant.important_urgent}
-            color="destructive"
-            onTaskClick={(id) => navigate(`/tasks/${id}`)}
-          />
-          <QuadrantCard
-            title="Schedule"
-            subtitle="Important & Not Urgent"
-            tasks={tasksByQuadrant.important_not_urgent}
-            color="default"
-            onTaskClick={(id) => navigate(`/tasks/${id}`)}
-          />
-          <QuadrantCard
-            title="Delegate"
-            subtitle="Not Important & Urgent"
-            tasks={tasksByQuadrant.not_important_urgent}
-            color="secondary"
-            onTaskClick={(id) => navigate(`/tasks/${id}`)}
-          />
-          <QuadrantCard
-            title="Eliminate"
-            subtitle="Not Important & Not Urgent"
-            tasks={tasksByQuadrant.not_important_not_urgent}
-            color="outline"
-            onTaskClick={(id) => navigate(`/tasks/${id}`)}
-          />
+          {/* Eisenhower Matrix */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <QuadrantCard
+              title="Do First"
+              subtitle="Important & Urgent"
+              tasks={tasksByQuadrant.important_urgent}
+              color="destructive"
+              onTaskClick={(id) => navigate(`/tasks/${id}`)}
+            />
+            <QuadrantCard
+              title="Schedule"
+              subtitle="Important & Not Urgent"
+              tasks={tasksByQuadrant.important_not_urgent}
+              color="default"
+              onTaskClick={(id) => navigate(`/tasks/${id}`)}
+            />
+            <QuadrantCard
+              title="Delegate"
+              subtitle="Not Important & Urgent"
+              tasks={tasksByQuadrant.not_important_urgent}
+              color="secondary"
+              onTaskClick={(id) => navigate(`/tasks/${id}`)}
+            />
+            <QuadrantCard
+              title="Eliminate"
+              subtitle="Not Important & Not Urgent"
+              tasks={tasksByQuadrant.not_important_not_urgent}
+              color="outline"
+              onTaskClick={(id) => navigate(`/tasks/${id}`)}
+            />
+          </div>
         </div>
+      </FeatureGate>
+
+      {/* Action Items — visible to all users (outside FeatureGate) */}
+      <div className="px-6 pb-6">
+        <ActionItemsSection />
       </div>
-    </FeatureGate>
+    </>
   );
 }
 

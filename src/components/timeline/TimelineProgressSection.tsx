@@ -20,6 +20,7 @@ import {
   Target,
   CheckSquare,
   Flag,
+  ListTodo,
   Trophy,
   Sparkles,
 } from "lucide-react";
@@ -40,7 +41,7 @@ type TimeRange = "7d" | "30d" | "90d" | "6m" | "1y";
 
 interface CompletedItem {
   id: string;
-  type: "goal" | "milestone" | "task";
+  type: "goal" | "milestone" | "task" | "action_item";
   title: string;
   completed_at: string;
 }
@@ -65,6 +66,10 @@ const chartConfig = {
   tasks: {
     label: "Tasks",
     color: "hsl(var(--chart-4))",
+  },
+  actionItems: {
+    label: "Action Items",
+    color: "hsl(262, 83%, 58%)",
   },
 };
 
@@ -164,12 +169,36 @@ export function TimelineProgressSection() {
     enabled: !!user && isOpen,
   });
 
+  // Fetch completed action items
+  const { data: completedActionItems = [] } = useQuery({
+    queryKey: ["completed-action-items", user?.id, timeRange],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("development_items")
+        .select("id, title, content, completed_at")
+        .eq("user_id", user?.id ?? "")
+        .eq("item_type", "action_item")
+        .eq("status", "completed")
+        .not("completed_at", "is", null)
+        .gte("completed_at", startDate.toISOString());
+
+      if (error) throw error;
+      return (data || []).map((ai) => ({
+        id: ai.id,
+        type: "action_item" as const,
+        title: ai.title || (ai.content ? ai.content.slice(0, 60) : "Action Item"),
+        completed_at: ai.completed_at!,
+      }));
+    },
+    enabled: !!user && isOpen,
+  });
+
   // Combine all completed items
   const allCompleted: CompletedItem[] = useMemo(() => {
-    return [...completedGoals, ...completedMilestones, ...completedTasks].filter(
+    return [...completedGoals, ...completedMilestones, ...completedTasks, ...completedActionItems].filter(
       (item): item is CompletedItem => item.completed_at != null,
     );
-  }, [completedGoals, completedMilestones, completedTasks]);
+  }, [completedGoals, completedMilestones, completedTasks, completedActionItems]);
 
   // Calculate weekly data for chart
   const weeklyData = useMemo(() => {
@@ -178,6 +207,7 @@ export function TimelineProgressSection() {
       goals: number;
       milestones: number;
       tasks: number;
+      actionItems: number;
       total: number;
     }[] = [];
     const now = new Date();
@@ -206,6 +236,7 @@ export function TimelineProgressSection() {
         goals: weekItems.filter((i) => i.type === "goal").length,
         milestones: weekItems.filter((i) => i.type === "milestone").length,
         tasks: weekItems.filter((i) => i.type === "task").length,
+        actionItems: weekItems.filter((i) => i.type === "action_item").length,
         total: weekItems.length,
       });
     }
@@ -220,8 +251,9 @@ export function TimelineProgressSection() {
       goalsCompleted: completedGoals.length,
       milestonesCompleted: completedMilestones.length,
       tasksCompleted: completedTasks.length,
+      actionItemsCompleted: completedActionItems.length,
     }),
-    [allCompleted, completedGoals, completedMilestones, completedTasks],
+    [allCompleted, completedGoals, completedMilestones, completedTasks, completedActionItems],
   );
 
   const hasProgress = stats.totalCompleted > 0;
@@ -283,7 +315,7 @@ export function TimelineProgressSection() {
             {hasProgress ? (
               <>
                 {/* Quick Stats */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-950/40 border border-green-300 dark:border-green-700">
                     <Target className="h-5 w-5 text-green-600 dark:text-green-400" />
                     <div>
@@ -307,6 +339,15 @@ export function TimelineProgressSection() {
                     <div>
                       <p className="text-2xl font-bold text-foreground">{stats.tasksCompleted}</p>
                       <p className="text-xs text-muted-foreground">Tasks Done</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-violet-50 dark:bg-violet-950/40 border border-violet-300 dark:border-violet-700">
+                    <ListTodo className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                    <div>
+                      <p className="text-2xl font-bold text-violet-800 dark:text-violet-200">
+                        {stats.actionItemsCompleted}
+                      </p>
+                      <p className="text-xs text-violet-700 dark:text-violet-300">Actions Done</p>
                     </div>
                   </div>
                 </div>
@@ -347,6 +388,12 @@ export function TimelineProgressSection() {
                         dataKey="tasks"
                         stackId="a"
                         fill="var(--color-tasks)"
+                        radius={[0, 0, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="actionItems"
+                        stackId="a"
+                        fill="var(--color-actionItems)"
                         radius={[4, 4, 0, 0]}
                       />
                     </BarChart>
@@ -367,6 +414,10 @@ export function TimelineProgressSection() {
                     <div className="w-3 h-3 rounded-sm bg-ring" />
                     <span className="text-muted-foreground">Tasks</span>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-sm bg-violet-500" />
+                    <span className="text-muted-foreground">Actions</span>
+                  </div>
                 </div>
 
                 {/* Encouragement message */}
@@ -386,7 +437,7 @@ export function TimelineProgressSection() {
                 <Trophy className="h-12 w-12 mx-auto mb-3 opacity-40" />
                 <p className="font-medium">No completed items yet in this period</p>
                 <p className="text-sm mt-1">
-                  Complete goals, milestones, or tasks to see your progress here
+                  Complete goals, milestones, tasks, or action items to see your progress here
                 </p>
               </div>
             )}
