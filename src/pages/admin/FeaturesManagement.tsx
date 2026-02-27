@@ -268,7 +268,7 @@ export default function FeaturesManagement() {
         .select("id")
         .eq("plan_id", planId)
         .eq("feature_id", featureId)
-        .single();
+        .maybeSingle();
 
       const payload = {
         enabled,

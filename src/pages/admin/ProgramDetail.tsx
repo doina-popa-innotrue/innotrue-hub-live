@@ -34,6 +34,11 @@ import {
   AlertTriangle,
   Eye,
   EyeOff,
+  Package,
+  FileText,
+  Target,
+  Film,
+  ClipboardCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ModuleForm from "@/components/admin/ModuleForm";
@@ -94,6 +99,12 @@ import { ModuleDomainMapper } from "@/components/admin/ModuleDomainMapper";
 import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 
+interface ModuleMeta {
+  sectionCount: number;
+  skillCount: number;
+  scenarioCount: number;
+}
+
 interface SortableModuleProps {
   module: any;
   index: number;
@@ -106,6 +117,7 @@ interface SortableModuleProps {
   isSelected: boolean;
   onSelect: (moduleId: string, checked: boolean) => void;
   selectionMode: boolean;
+  meta?: ModuleMeta;
 }
 
 function SortableModule({
@@ -120,6 +132,7 @@ function SortableModule({
   isSelected,
   onSelect,
   selectionMode,
+  meta,
 }: SortableModuleProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: module.id,
@@ -235,6 +248,46 @@ function SortableModule({
             content={module.description ?? ""}
             className="text-sm text-muted-foreground"
           />
+
+          {/* Content & Resources Info */}
+          {(module.content_packages || module.capability_assessment_id || meta?.sectionCount || meta?.skillCount || meta?.scenarioCount) && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+              {module.content_packages && (
+                <span className="inline-flex items-center gap-1.5">
+                  <Package className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="font-medium text-foreground/80">{module.content_packages.title}</span>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-mono uppercase">
+                    {module.content_packages.package_type}
+                  </Badge>
+                </span>
+              )}
+              {(meta?.sectionCount ?? 0) > 0 && (
+                <span className="inline-flex items-center gap-1">
+                  <FileText className="h-3.5 w-3.5" />
+                  {meta!.sectionCount} section{meta!.sectionCount !== 1 ? "s" : ""}
+                </span>
+              )}
+              {(meta?.skillCount ?? 0) > 0 && (
+                <span className="inline-flex items-center gap-1">
+                  <Target className="h-3.5 w-3.5" />
+                  {meta!.skillCount} skill{meta!.skillCount !== 1 ? "s" : ""}
+                </span>
+              )}
+              {(meta?.scenarioCount ?? 0) > 0 && (
+                <span className="inline-flex items-center gap-1">
+                  <Film className="h-3.5 w-3.5" />
+                  {meta!.scenarioCount} scenario{meta!.scenarioCount !== 1 ? "s" : ""}
+                </span>
+              )}
+              {module.capability_assessment_id && (
+                <span className="inline-flex items-center gap-1">
+                  <ClipboardCheck className="h-3.5 w-3.5" />
+                  Assessment
+                </span>
+              )}
+            </div>
+          )}
+
           {module.links && module.links.length > 0 && (
             <div className="space-y-2 overflow-hidden">
               <p className="text-sm font-medium">Resource Links:</p>
@@ -373,6 +426,52 @@ export default function ProgramDetail() {
   const [programDeleteEnrollmentCount, setProgramDeleteEnrollmentCount] = useState<number | null>(null);
   const [programDeleteLoading, setProgramDeleteLoading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const [moduleMeta, setModuleMeta] = useState<Record<string, ModuleMeta>>({});
+
+  const MODULE_SELECT = "*, content_packages(id, title, package_type, original_filename)";
+
+  async function loadModuleMeta(moduleIds: string[]) {
+    if (moduleIds.length === 0) {
+      setModuleMeta({});
+      return;
+    }
+
+    const [sectionsRes, skillsRes, scenariosRes] = await Promise.all([
+      supabase.from("module_sections").select("module_id").in("module_id", moduleIds),
+      supabase.from("module_skills").select("module_id").in("module_id", moduleIds),
+      supabase.from("module_scenarios").select("module_id").in("module_id", moduleIds),
+    ]);
+
+    const meta: Record<string, ModuleMeta> = {};
+    moduleIds.forEach((mid) => {
+      meta[mid] = { sectionCount: 0, skillCount: 0, scenarioCount: 0 };
+    });
+
+    sectionsRes.data?.forEach((s) => {
+      if (meta[s.module_id]) meta[s.module_id].sectionCount++;
+    });
+    skillsRes.data?.forEach((s) => {
+      if (meta[s.module_id]) meta[s.module_id].skillCount++;
+    });
+    scenariosRes.data?.forEach((s) => {
+      if (meta[s.module_id]) meta[s.module_id].scenarioCount++;
+    });
+
+    setModuleMeta(meta);
+  }
+
+  async function fetchLatestModules(): Promise<any[] | null> {
+    const { data } = await supabase
+      .from("program_modules")
+      .select(MODULE_SELECT)
+      .eq("program_id", id)
+      .order("order_index");
+    if (data) {
+      setModules(data);
+      loadModuleMeta(data.map((m) => m.id));
+    }
+    return data;
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -396,7 +495,7 @@ export default function ProgramDetail() {
           .single();
         const { data: modulesData, error: modulesError } = await supabase
           .from("program_modules")
-          .select("*")
+          .select(MODULE_SELECT)
           .eq("program_id", id)
           .order("order_index");
 
@@ -409,6 +508,7 @@ export default function ProgramDetail() {
           // Initialize history with the first state
           setHistory([modulesData]);
           setHistoryIndex(0);
+          loadModuleMeta(modulesData.map((m) => m.id));
         }
       } catch (error) {
         console.error("Error in fetchData:", error);
@@ -456,13 +556,7 @@ export default function ProgramDetail() {
     } else {
       toast.success("Module added!");
       setOpenAdd(false);
-      // Refresh modules
-      const { data: modulesData } = await supabase
-        .from("program_modules")
-        .select("*")
-        .eq("program_id", id)
-        .order("order_index");
-      setModules(modulesData || []);
+      await fetchLatestModules();
     }
   }
 
@@ -491,13 +585,7 @@ export default function ProgramDetail() {
       toast.success("Module updated!");
       setOpenEdit(false);
       setEditingModule(null);
-      // Refresh modules
-      const { data: modulesData } = await supabase
-        .from("program_modules")
-        .select("*")
-        .eq("program_id", id)
-        .order("order_index");
-      setModules(modulesData || []);
+      await fetchLatestModules();
     }
   }
 
@@ -560,21 +648,11 @@ export default function ProgramDetail() {
       await updateModuleOrder(desired);
 
       toast.success("Module cloned successfully!");
-      const { data: modulesData } = await supabase
-        .from("program_modules")
-        .select("*")
-        .eq("program_id", id)
-        .order("order_index");
-      setModules(modulesData || []);
+      await fetchLatestModules();
     } catch (error: any) {
       console.error("Clone error:", error);
       toast.error(`Failed to clone module: ${error?.message || "Unknown error"}`);
-      const { data: modulesData } = await supabase
-        .from("program_modules")
-        .select("*")
-        .eq("program_id", id)
-        .order("order_index");
-      setModules(modulesData || []);
+      await fetchLatestModules();
     }
   }
 
@@ -648,13 +726,8 @@ export default function ProgramDetail() {
     } catch (error) {
       console.error("Failed to update module order:", error);
       toast.error("Failed to update module order");
-      const { data: modulesData } = await supabase
-        .from("program_modules")
-        .select("*")
-        .eq("program_id", id)
-        .order("order_index");
+      const modulesData = await fetchLatestModules();
       if (modulesData) {
-        setModules(modulesData);
         setHistory([modulesData]);
         setHistoryIndex(0);
       }
@@ -718,16 +791,8 @@ export default function ProgramDetail() {
       setSelectionMode(false);
       setShowDeleteDialog(false);
 
-      // Refresh modules
-      const { data: modulesData } = await supabase
-        .from("program_modules")
-        .select("*")
-        .eq("program_id", id)
-        .order("order_index");
-
+      const modulesData = await fetchLatestModules();
       if (modulesData) {
-        setModules(modulesData);
-        // Update history
         const newHistory = history.slice(0, historyIndex + 1);
         newHistory.push(modulesData);
         setHistory(newHistory);
@@ -755,15 +820,8 @@ export default function ProgramDetail() {
       setModuleToDelete(null);
       setShowSingleDeleteDialog(false);
 
-      // Refresh modules
-      const { data: modulesData } = await supabase
-        .from("program_modules")
-        .select("*")
-        .eq("program_id", id)
-        .order("order_index");
-
+      const modulesData = await fetchLatestModules();
       if (modulesData) {
-        setModules(modulesData);
         const newHistory = history.slice(0, historyIndex + 1);
         newHistory.push(modulesData);
         setHistory(newHistory);
@@ -806,16 +864,8 @@ export default function ProgramDetail() {
       setSelectedModules(new Set());
       setSelectionMode(false);
 
-      // Refresh modules
-      const { data: modulesData } = await supabase
-        .from("program_modules")
-        .select("*")
-        .eq("program_id", id)
-        .order("order_index");
-
+      const modulesData = await fetchLatestModules();
       if (modulesData) {
-        setModules(modulesData);
-        // Update history
         const newHistory = history.slice(0, historyIndex + 1);
         newHistory.push(modulesData);
         setHistory(newHistory);
@@ -836,17 +886,7 @@ export default function ProgramDetail() {
       if (error) throw error;
 
       toast.success(`Module ${!currentState ? "activated" : "deactivated"}`);
-
-      // Refresh modules
-      const { data: modulesData } = await supabase
-        .from("program_modules")
-        .select("*")
-        .eq("program_id", id)
-        .order("order_index");
-
-      if (modulesData) {
-        setModules(modulesData);
-      }
+      await fetchLatestModules();
     } catch (error: any) {
       toast.error(`Failed to update module: ${error.message}`);
     }
@@ -1528,6 +1568,7 @@ export default function ProgramDetail() {
                     isSelected={selectedModules.has(module.id)}
                     onSelect={handleModuleSelect}
                     selectionMode={selectionMode}
+                    meta={moduleMeta[module.id]}
                   />
                 ))}
               </div>
@@ -1759,14 +1800,7 @@ export default function ProgramDetail() {
         mode={transferMode}
         currentProgramId={id}
         onComplete={async () => {
-          const { data: modulesData } = await supabase
-            .from("program_modules")
-            .select("*")
-            .eq("program_id", id)
-            .order("order_index");
-          if (modulesData) {
-            setModules(modulesData);
-          }
+          await fetchLatestModules();
         }}
       />
 
