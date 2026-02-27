@@ -1,5 +1,70 @@
 # Completed Work — Detailed History
 
+## R6 Sentry Coverage Phase 1 + R7 Test Coverage Phase 1 (2026-03-27)
+
+Two cross-cutting quality workstreams. 8 new/modified files, 101 new tests. `npm run verify` passed (554 tests total).
+
+### R6 — Sentry Coverage Phase 1
+
+**New file: `src/lib/sentry-utils.ts`**
+- `captureSupabaseError(error, context, extra?)` — wraps Supabase errors (PostgREST + edge function) with structured Sentry tags (`pg.code`, `fn.status`)
+- `extractFunctionError(error, fallback?)` — extracts user-friendly messages from `error.context` Response objects (Supabase edge function error pattern)
+- `addBreadcrumb(category, message, data?, level?)` — typed breadcrumb helper with 8 categories: auth, enrollment, payment, navigation, content, assessment, admin, feature-gate
+- `withSpan(op, description, fn, data?)` — wraps async operations in Sentry performance spans
+- `getErrorFingerprint(error)` — custom grouping for: network errors, auth session errors, rate limits, DB constraint violations, RLS policy denials, timeouts
+- Convenience helpers: `authBreadcrumb()`, `enrollmentBreadcrumb()`, `paymentBreadcrumb()`, `contentBreadcrumb()`, `assessmentBreadcrumb()`
+
+**Auth breadcrumbs (`src/contexts/AuthContext.tsx`):**
+- Sign-in attempt/success/failure, sign-up attempt/success/failure, sign-out initiated, role switched (from→to)
+
+**Enriched Sentry user context (`src/contexts/AuthContext.tsx`):**
+- Added `email` to `Sentry.setUser()`, added tags: `user.roles_count`, `user.has_plan`, `org.name`
+
+**Source map upload (`vite.config.ts`):**
+- Installed `@sentry/vite-plugin` as devDependency
+- Production builds generate hidden sourcemaps, uploaded to Sentry, deleted after upload
+- Conditional: only active when `SENTRY_AUTH_TOKEN` env var is set
+- `build.sourcemap: "hidden"` for production, `true` for development
+
+**Error fingerprinting + noise filtering (`src/main.tsx`):**
+- `beforeSend` hook applies custom fingerprints via `getErrorFingerprint()`
+- Filters out ResizeObserver loop errors (browser noise)
+- `ignoreErrors` list: browser extensions (`chrome-extension://`, `moz-extension://`), network errors, service worker lifecycle, auth session refresh
+- Added `release` tag from `VITE_APP_VERSION`
+
+### R7 — Test Coverage Phase 1 (Edge Function Shared Utils)
+
+**Infrastructure:**
+- `vitest.config.ts` — extended `include` pattern to cover `supabase/functions/_shared/__tests__/*.test.ts`
+- `supabase/functions/_shared/__tests__/deno-mock.ts` — mocks `Deno.env.get()` for Node/jsdom. `setupDenoMock(envOverrides)` / `cleanupDenoMock()` pattern. Deno-dependent modules imported dynamically with `vi.resetModules()`.
+
+**Test files (101 new tests across 5 files):**
+
+| File | Tests | What's Tested |
+|------|-------|---------------|
+| `validation.test.ts` | 28 | `isValidEmail` (valid, invalid, edge cases), `validatePassword` (all 6 rules), `isValidUUID`, `validateName` (trim, maxLength), `validateTextInput` (required, maxLength, field name), `isValidEnum` |
+| `ai-input-limits.test.ts` | 25 | `AI_LIMITS` constants, `truncateArray` (default/custom limit, non-array input), `truncateString` (ellipsis, null/undefined), `truncateJson` (within/over limit, custom), `enforcePromptLimit` (truncation flag, exact boundary), `truncateObjectStrings` (string fields, non-string preserved, immutability) |
+| `error-response.test.ts` | 19 | All 7 error responses (400/401/403/404/429/500/500-with-message), 3 success responses (200/201/204), Content-Type header, CORS header passthrough, server error logs but doesn't leak details |
+| `cors.test.ts` | 18 | `getAllowedOrigins` (production + env), `isOriginAllowed` (null=server, production domain, Supabase URL, localhost variants, Cloudflare Pages `*.pages.dev`, evil domains rejected, subdomain attacks rejected), `getCorsHeaders` (recognized/unknown/missing origin, required headers) |
+| `request-signing.test.ts` | 11 | Valid HMAC signature verification, expired timestamps (>5 min), invalid timestamp format, tampered signatures, wrong user/action, graceful degradation (no secret configured, no headers present), explicit secret parameter override |
+
+### Files Changed
+- `src/lib/sentry-utils.ts` — **NEW** (Sentry utilities)
+- `src/main.tsx` — Enhanced Sentry init (fingerprinting, noise filtering, release tag)
+- `src/contexts/AuthContext.tsx` — Auth breadcrumbs + enriched user context
+- `vite.config.ts` — Source map upload + hidden sourcemaps
+- `vitest.config.ts` — Extended test include pattern
+- `supabase/functions/_shared/__tests__/deno-mock.ts` — **NEW** (Deno mock for Vitest)
+- `supabase/functions/_shared/__tests__/validation.test.ts` — **NEW**
+- `supabase/functions/_shared/__tests__/ai-input-limits.test.ts` — **NEW**
+- `supabase/functions/_shared/__tests__/error-response.test.ts` — **NEW**
+- `supabase/functions/_shared/__tests__/cors.test.ts` — **NEW**
+- `supabase/functions/_shared/__tests__/request-signing.test.ts` — **NEW**
+- `MEMORY.md` — Updated R6/R7 sections, roadmap position, source files
+- `docs/TESTING_ROADMAP.md` — Phase 1 marked done, summary table updated
+
+---
+
 ## UX Improvements: Groups Scroll, Program Draft Status, Timezone Codes (2026-02-27)
 
 Three UX improvements across admin and client-facing pages. 1 migration, 7 modified files. `npm run verify` passed.

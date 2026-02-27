@@ -2,16 +2,19 @@
 
 > Comprehensive, phased plan for achieving solid test coverage across all layers of the InnoTrue Hub platform.
 
-## Current State (as of 2026-03-25)
+## Current State (as of 2026-03-27)
 
 | Layer | Framework | Test Files | Tests | Coverage |
 |-------|-----------|------------|-------|----------|
 | **Unit tests** (`src/lib/`) | Vitest + jsdom | 20 | 453 | 97% stmts, 95% branches |
 | **E2E tests** (`e2e/tests/`) | Playwright (Chromium) | 13 | ~45 scenarios | Core journeys covered |
-| **Edge functions** (`supabase/functions/`) | None | 0 | 0 | 0% |
+| **Edge function shared utils** (`_shared/__tests__/`) | Vitest + Deno mock | 5 | 101 | validation, cors, error-response, ai-limits, request-signing |
+| **Edge functions** (individual) | None | 0 | 0 | 0% |
 | **React components** (`src/components/`) | None | 0 | 0 | 0% |
 | **React hooks** (`src/hooks/`) | None | 0 | 0 | 0% (1 hook tested via lib/) |
 | **Pages** (`src/pages/`) | None | 0 | 0 | 0% |
+
+**Total: 554 tests across 25 files.**
 
 ### What's Tested Well
 
@@ -42,7 +45,7 @@
 
 ---
 
-## Phase 1 — Edge Function Shared Utilities (Est. 2-3 sessions)
+## Phase 1 — Edge Function Shared Utilities ✅ DONE (2026-03-27)
 
 **Goal:** Test the 11 shared modules that ALL 76 edge functions depend on. Bugs here affect everything.
 
@@ -253,17 +256,17 @@ Copy the shared utilities' pure logic into `src/lib/` wrappers and test with Vit
 | Phase | Focus | Est. New Tests | Cumulative | Sessions |
 |-------|-------|---------------|------------|----------|
 | Current | Unit tests (src/lib/) | 453 | 453 | Done |
-| Phase 1 | Edge function shared utils | 60-80 | ~530 | 2-3 |
-| Phase 2 | React hooks (business logic) | 70-90 | ~610 | 2-3 |
-| Phase 3 | E2E expansion | 50-70 | ~670 | 3-4 |
-| Phase 4 | Edge function integration | 70-90 | ~750 | 3-4 |
-| Phase 5 | React components | 60-80 | ~820 | 4-6 |
-| Phase 6 | CI/CD quality gates | — | ~820 | 1-2 |
-| **Total** | | **~310-410 new** | **~760-860** | **~15-22** |
+| ~~Phase 1~~ | ~~Edge function shared utils~~ | ~~101~~ | ~~554~~ | ~~Done~~ ✅ |
+| Phase 2 | React hooks (business logic) | 70-90 | ~630 | 2-3 |
+| Phase 3 | E2E expansion | 50-70 | ~690 | 3-4 |
+| Phase 4 | Edge function integration | 70-90 | ~770 | 3-4 |
+| Phase 5 | React components | 60-80 | ~840 | 4-6 |
+| Phase 6 | CI/CD quality gates | — | ~840 | 1-2 |
+| **Total** | | **~250-330 remaining** | **~840** | **~13-18** |
 
 ### Priority Recommendation
 
-**Do Phase 1 + Phase 3 next.** Edge function shared utilities are the highest-risk untested code (bugs affect all 76 functions). E2E expansion covers the most user-facing gaps with the least setup effort. Phase 2 (hooks) and Phase 4 (function integration) require more infrastructure but are the next logical steps.
+**Do Phase 2 (hooks) + Phase 3 (E2E) next.** Phase 1 is complete. React hooks with business logic (`useEntitlements`, `useUserCredits`) are highest-risk untested code. E2E expansion covers the most user-facing gaps with the least setup effort.
 
 ---
 

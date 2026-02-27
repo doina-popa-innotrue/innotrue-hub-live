@@ -2,12 +2,17 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+  },
+  // Enable source maps for production builds (Sentry needs them)
+  build: {
+    sourcemap: mode === "production" ? "hidden" : true,
   },
   plugins: [
     react(),
@@ -94,6 +99,20 @@ export default defineConfig(({ mode }) => ({
         ignoreURLParametersMatching: [/^utm_/, /^fbclid$/],
       },
     }),
+    // Sentry source map upload — only in production builds with auth token configured
+    // Set SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT env vars or use .env.sentry-build-plugin
+    mode === "production" &&
+      process.env.SENTRY_AUTH_TOKEN &&
+      sentryVitePlugin({
+        org: process.env.SENTRY_ORG || "innotrue",
+        project: process.env.SENTRY_PROJECT || "innotrue-hub",
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        sourcemaps: {
+          // Delete source maps after upload so they're not served to clients
+          filesToDeleteAfterUpload: ["./dist/**/*.map"],
+        },
+        telemetry: false,
+      }),
   ].filter(Boolean),
   resolve: {
     alias: {

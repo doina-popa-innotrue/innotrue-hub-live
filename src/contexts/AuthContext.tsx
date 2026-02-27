@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { User, Session } from "@supabase/supabase-js";
 import * as Sentry from "@sentry/react";
 import { supabase } from "@/integrations/supabase/client";
+import { addBreadcrumb, authBreadcrumb } from "@/lib/sentry-utils";
 import { useNavigate } from "react-router-dom";
 
 export type UserRoleType = "admin" | "coach" | "client" | "instructor" | "org_admin";
@@ -143,10 +144,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Fetch registration status from profiles
+    // Fetch registration status + email from profiles
     const { data: profileData } = await supabase
       .from("profiles")
-      .select("registration_status")
+      .select("registration_status, email, plan_id")
       .eq("id", userId)
       .single();
     setRegistrationStatus(profileData?.registration_status ?? null);
@@ -159,12 +160,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const activeRole = determineRole(roles, savedRole);
     setUserRole(activeRole);
 
-    // Set Sentry user context for error correlation
-    Sentry.setUser({ id: userId });
+    // Set enriched Sentry user context for error correlation
+    Sentry.setUser({
+      id: userId,
+      email: profileData?.email || undefined,
+    });
     Sentry.setTag("user.role", activeRole || "none");
+    Sentry.setTag("user.roles_count", String(roles.length));
+    if (profileData?.plan_id) {
+      Sentry.setTag("user.has_plan", "true");
+    }
     if (orgMembership) {
       Sentry.setTag("user.org_role", orgMembership.role);
       Sentry.setTag("org.id", orgMembership.organization_id);
+      Sentry.setTag("org.name", orgMembership.organization_name);
     }
 
     return { roles, orgMembership };
@@ -293,12 +302,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    authBreadcrumb("Sign-in attempt", { method: "password" });
     const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
+    if (error) {
+      addBreadcrumb("auth", "Sign-in failed", { error: error.message }, "warning");
+    }
+
     if (!error && data.user) {
+      authBreadcrumb("Sign-in successful", { userId: data.user.id });
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
@@ -327,6 +342,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, name: string) => {
+    authBreadcrumb("Sign-up attempt", { method: "password" });
     const redirectUrl = `${window.location.origin}/`;
 
     const { error } = await supabase.auth.signUp({
@@ -338,10 +354,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
 
+    if (error) {
+      addBreadcrumb("auth", "Sign-up failed", { error: error.message }, "warning");
+    } else {
+      authBreadcrumb("Sign-up successful");
+    }
+
     return { error };
   };
 
   const signOut = useCallback(async () => {
+    authBreadcrumb("Sign-out initiated");
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
@@ -366,6 +389,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const switchRole = (role: UserRoleType) => {
     if (userRoles.includes(role)) {
+      authBreadcrumb("Role switched", { from: userRole, to: role });
       setUserRole(role);
       Sentry.setTag("user.role", role);
       // Save the selected role to localStorage so it persists across page loads
