@@ -1,5 +1,56 @@
 # Completed Work — Detailed History
 
+## Bug Fixes + Data Consistency + Goal Category Cleanup (2026-03-27)
+
+Multiple bug fixes, data consistency remediation, and goal category architecture cleanup. 5 migrations, 8 modified files. `npm run verify` passed (555 tests total).
+
+### Data Consistency Remediation
+- **Root cause:** 10 features, 3 plans, 9 credit services, and `wheel_categories` data only existed in `seed.sql` — never inserted by any migration. Production reference data depended on manual insertion.
+- **Migration `20260327130000` (407 lines):** Comprehensive INSERT of all missing reference data with ON CONFLICT idempotency. 9 parts: features, is_system flags, admin_notes, plans, credit services, plan-features matrix, add-on feature links, plan credit allocations, learning notification category. Values verified against latest authoritative migrations.
+
+### Groups Feature + Plan Display Name
+- **Migration `20260327120000`:** Inserted missing `groups` feature key (was only in seed.sql), assigned to all plans/tracks. Updated plan `display_name` from literal 'plan' to `INITCAP(name)`, changed default to NULL.
+
+### Group Session Delete for Leaders
+- **Files:** `GroupSessionCard.tsx`, `GroupSessionsList.tsx`, `GroupDetail.tsx` (client page)
+- Added `canManage` prop alongside `isAdmin`. Group leaders (`membership.role === "leader"`) can now delete sessions, bulk delete, mark complete, and select sessions. "Contact your group leader" message hidden when user IS the leader.
+
+### Goal Creation Failure — Enum Mismatch + Architecture Cleanup
+- **Root cause:** `goal_category` PostgreSQL enum was missing 5 values (`career`, `health`, `environment`, `spirituality`, `emotional`) matching `wheel_categories` keys used in GoalForm dropdown. INSERT failed silently (error swallowed without logging).
+- **Migration `20260327140000`:** Added 5 missing enum values + ensured 10 `wheel_categories` exist via migration.
+- **Migration `20260327150000` — Architecture cleanup:** Replaced rigid `goal_category` enum (21 overlapping values from 3 migrations) with `TEXT` column + FK to `wheel_categories(key)`. Categories now fully dynamic — admin-manageable without migrations. Steps: (1) map existing goals using 11 old category values to current 10 keys, (2) `ALTER COLUMN category TYPE TEXT`, (3) add FK constraint, (4) `DROP TYPE goal_category`, (5) deactivate legacy `wheel_categories` rows.
+- **`GoalForm.tsx`:** Removed `GoalCategory` enum type reference (now `string`). Added `console.error` to catch block for future debugging.
+- **`guidedPathInstantiation.ts`:** Replaced hardcoded 16-value `GoalCategory` type + `VALID_GOAL_CATEGORIES` array with current 10 categories + `LEGACY_CATEGORY_MAP` for old template values. New `normalizeCategory()` function maps legacy keys to current ones.
+- **Test:** Updated `guidedPathInstantiation.test.ts` — legacy category now maps (`health_fitness` → `health`), added test for current categories staying unchanged.
+
+### Category Value Mapping (migration `20260327150000`)
+| Old Value | New Value |
+|-----------|-----------|
+| `career_business`, `financial_career` | `career` |
+| `health_fitness`, `physical_health` | `health` |
+| `physical_environment`, `family_home` | `environment` |
+| `family_friends`, `romance`, `social_cultural` | `relationships` |
+| `mental_educational` | `personal_growth` |
+| `spiritual_ethical` | `spirituality` |
+
+### Google Calendar Meet Link
+- **Issue:** `invalid_grant` error from Google Calendar API. Root cause: `GOOGLE_CALENDAR_IMPERSONATE_EMAIL` secret had wrong email. User fixed manually.
+
+### Files Changed
+- `supabase/migrations/20260327120000_fix_groups_feature_and_plan_display_names.sql` — **NEW**
+- `supabase/migrations/20260327130000_data_consistency_remediation.sql` — **NEW** (407 lines)
+- `supabase/migrations/20260327140000_fix_goal_category_enum_and_wheel_categories.sql` — **NEW**
+- `supabase/migrations/20260327150000_replace_goal_category_enum_with_fk.sql` — **NEW**
+- `src/components/goals/GoalForm.tsx` — Removed enum type, added error logging
+- `src/lib/guidedPathInstantiation.ts` — New 10-category list + legacy map + `normalizeCategory()`
+- `src/lib/__tests__/guidedPathInstantiation.test.ts` — Updated category tests
+- `src/components/groups/sessions/GroupSessionCard.tsx` — Added `canManage` prop
+- `src/components/groups/sessions/GroupSessionsList.tsx` — Added `canManage` prop
+- `src/pages/client/GroupDetail.tsx` — Passes `canManage` to session components
+- `src/integrations/supabase/types.ts` — Regenerated (goal_category enum removed)
+
+---
+
 ## R6 Sentry Coverage Phase 1 + R7 Test Coverage Phase 1 (2026-03-27)
 
 Two cross-cutting quality workstreams. 8 new/modified files, 101 new tests. `npm run verify` passed (554 tests total).

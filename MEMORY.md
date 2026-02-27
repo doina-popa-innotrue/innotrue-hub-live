@@ -59,10 +59,10 @@
 - Seed: `supabase/seed.sql` | Cursor rules: `.cursorrules`
 
 ## Database Schema
-- 380+ tables, 25 enums, 425+ migrations
+- 380+ tables, 24 enums (`goal_category` removed — replaced with TEXT + FK to `wheel_categories`), 430+ migrations
 - Key tables (CT3): `content_packages` (shared content library), `content_completions` (cross-program completion tracking), `program_modules.content_package_id` FK
 - Key tables (waitlist): `cohort_waitlist` (user_id, cohort_id, position, notified), `programs.capacity`, `client_enrollments.enrollment_source/referred_by/referral_note`
-- Key enums: `app_role` (admin, client, coach, instructor), `module_type`, `enrollment_status`
+- Key enums: `app_role` (admin, client, coach, instructor), `module_type`, `enrollment_status`. `goal_category` removed (was rigid enum with 21 overlapping values) — `goals.category` is now `TEXT` with FK to `wheel_categories(key)`, dynamically managed via admin UI.
 - **Two plan systems (independent, additive):**
   - **Subscription plans** (`plans` table, tier 0-4) — one per user (`profiles.plan_id`), Stripe-integrated, platform-wide features
   - **Program plans** (`program_plans`, per-enrollment features) — auto-resolved from enrollment tier, never set manually
@@ -392,6 +392,14 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - **Timezone abbreviations:** Added `getTimezoneAbbreviation()` utility (DST-aware via `Intl.DateTimeFormat`). TimezoneSelect dropdown shows codes (e.g. "Eastern Time (US & Canada) (EST)"). CohortSessionCard, GroupSessionCard, GroupSessionDetail show timezone code next to times (e.g. "14:30 – 16:00 CET").
 - **R6 Sentry Coverage Phase 1 (2026-03-27):** `src/lib/sentry-utils.ts` created with `captureSupabaseError()`, `extractFunctionError()`, typed `addBreadcrumb()` (auth/enrollment/payment/content/assessment categories), `withSpan()` performance wrapper, `getErrorFingerprint()` for custom issue grouping. Auth breadcrumbs added to login/signup/signout/role-switch. AuthContext enriched with email + plan_id + org_name. Vite source map upload configured (`@sentry/vite-plugin`, hidden sourcemaps, delete after upload). `main.tsx` enhanced with `beforeSend` fingerprinting, `ignoreErrors` list, `release` tag. Requires `SENTRY_AUTH_TOKEN` env var for source map upload.
 - **R7 Test Coverage Phase 1 (2026-03-27):** Edge function shared utility tests. 101 new tests across 5 files in `supabase/functions/_shared/__tests__/`. Total: 554 tests (was 453). Deno mock infrastructure (`deno-mock.ts`) enables testing Deno-dependent modules in Vitest. `vitest.config.ts` extended to include edge function tests. Tested: `validation.ts` (email, password, UUID, name, text, enum), `ai-input-limits.ts` (all truncation helpers), `error-response.ts` (all 10 response types), `cors.ts` (origin matching, security), `request-signing.ts` (HMAC verification, timing-safe comparison).
+- **Data Consistency Remediation (2026-03-27):** Comprehensive audit found 10 features, 3 plans, 9 credit services, and wheel_categories only existed in seed.sql — never inserted by any migration. Migration `20260327130000_data_consistency_remediation.sql` (407 lines) inserts all reference data with ON CONFLICT idempotency. Values verified against latest authoritative migrations.
+- **Bug Fixes (2026-03-27):**
+  - **Groups feature "Upgrade Plan":** `groups` feature key was never INSERT'd in any migration (only in seed.sql). All downstream plan_features assignments matched 0 rows. Fixed by inserting feature + assigning to all plans/tracks. Migration `20260327120000`.
+  - **Plan display_name showing "plan":** Migration `20260123130736` added `display_name` column with `DEFAULT 'plan'`, so all plans got literal "plan". Fixed with `UPDATE plans SET display_name = INITCAP(name)` + changed default to NULL.
+  - **Group session delete for leaders:** Delete button was gated by `isAdmin` only. Group leaders on client page had `isAdmin={false}`. Added `canManage` prop to `GroupSessionCard`/`GroupSessionsList`, passed from `GroupDetail.tsx` where `canManage = membership?.role === "leader"`.
+  - **Goal creation failure:** `goal_category` PostgreSQL enum was missing 5 values (`career`, `health`, `environment`, `spirituality`, `emotional`) matching `wheel_categories` keys. GoalForm dropdown offered these values but INSERT failed silently (error swallowed without logging). Added console.error to catch block.
+  - **Goal category cleanup:** Replaced rigid `goal_category` enum (21 overlapping values from 3 migrations) with `TEXT` column + FK to `wheel_categories(key)`. Categories now fully dynamic — admin-managed without migrations. Migration `20260327150000` maps old values to current 10 keys, drops enum, adds FK. `guidedPathInstantiation.ts` updated with `LEGACY_CATEGORY_MAP` for old template categories.
+  - **Google Calendar `invalid_grant`:** `GOOGLE_CALENDAR_IMPERSONATE_EMAIL` secret had wrong email. User fixed manually.
 - **Next steps:** SC-4 Organisation audit → M13 Zod Validation + R6/R7 Phase 2 → Phase 3 AI
 
 ## Scalability & Performance Audit (2026-03-24)
