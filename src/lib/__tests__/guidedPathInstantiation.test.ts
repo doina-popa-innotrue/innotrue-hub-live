@@ -536,7 +536,7 @@ describe("instantiateTemplate", () => {
 
   // -- Category normalization --
 
-  it("normalizes valid categories (e.g. 'career_business' stays unchanged)", async () => {
+  it("maps legacy categories to current keys (e.g. 'health_fitness' → 'health')", async () => {
     const template = makeTemplateData([
       makeTemplateGoal({
         category: "health_fitness",
@@ -548,7 +548,22 @@ describe("instantiateTemplate", () => {
     await instantiateTemplate(supabase as any, defaultOptions);
 
     const goalInsert = supabase._insertedRows.find(r => r.table === "goals");
-    expect(goalInsert!.data.category).toBe("health_fitness");
+    expect(goalInsert!.data.category).toBe("health");
+  });
+
+  it("keeps valid current categories unchanged (e.g. 'career')", async () => {
+    const template = makeTemplateData([
+      makeTemplateGoal({
+        category: "career",
+        guided_path_template_milestones: [makeTemplateMilestone()],
+      }),
+    ]);
+    const supabase = createMockSupabase(template);
+
+    await instantiateTemplate(supabase as any, defaultOptions);
+
+    const goalInsert = supabase._insertedRows.find(r => r.table === "goals");
+    expect(goalInsert!.data.category).toBe("career");
   });
 
   it("normalizes invalid category to 'personal_growth'", async () => {

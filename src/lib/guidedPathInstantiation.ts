@@ -42,23 +42,36 @@ interface TemplateGoal {
   guided_path_template_milestones: TemplateMilestone[];
 }
 
-type GoalCategory =
-  | "family_home"
-  | "financial_career"
-  | "mental_educational"
-  | "spiritual_ethical"
-  | "social_cultural"
-  | "physical_health"
-  | "health_fitness"
-  | "career_business"
-  | "finances"
-  | "relationships"
-  | "personal_growth"
-  | "fun_recreation"
-  | "physical_environment"
-  | "family_friends"
-  | "romance"
-  | "contribution";
+/** Active wheel_categories keys. */
+const VALID_GOAL_CATEGORIES = [
+  "career",
+  "finances",
+  "health",
+  "relationships",
+  "personal_growth",
+  "fun_recreation",
+  "environment",
+  "contribution",
+  "spirituality",
+  "emotional",
+] as const;
+
+type GoalCategory = (typeof VALID_GOAL_CATEGORIES)[number];
+
+/** Maps legacy category keys (from old templates) to current keys. */
+const LEGACY_CATEGORY_MAP: Record<string, GoalCategory> = {
+  career_business: "career",
+  financial_career: "career",
+  health_fitness: "health",
+  physical_health: "health",
+  physical_environment: "environment",
+  family_home: "environment",
+  family_friends: "relationships",
+  romance: "relationships",
+  social_cultural: "relationships",
+  mental_educational: "personal_growth",
+  spiritual_ethical: "spirituality",
+};
 
 /** Maps legacy timeframe_type values (from templates) to goal_timeframe enum values */
 function normalizeTimeframe(value: string): string {
@@ -70,24 +83,13 @@ function normalizeTimeframe(value: string): string {
   return map[value] || value;
 }
 
-const VALID_GOAL_CATEGORIES: GoalCategory[] = [
-  "family_home",
-  "financial_career",
-  "mental_educational",
-  "spiritual_ethical",
-  "social_cultural",
-  "physical_health",
-  "health_fitness",
-  "career_business",
-  "finances",
-  "relationships",
-  "personal_growth",
-  "fun_recreation",
-  "physical_environment",
-  "family_friends",
-  "romance",
-  "contribution",
-];
+/** Normalizes a category value, mapping legacy keys to current ones. */
+function normalizeCategory(value: string): GoalCategory {
+  if ((VALID_GOAL_CATEGORIES as readonly string[]).includes(value)) {
+    return value as GoalCategory;
+  }
+  return LEGACY_CATEGORY_MAP[value] || "personal_growth";
+}
 
 const DEFAULT_MILESTONE_DAYS = 14;
 
@@ -225,11 +227,7 @@ export async function instantiateTemplate(
   let tasksCreated = 0;
 
   for (const templateGoal of goals) {
-    const normalizedCategory: GoalCategory = VALID_GOAL_CATEGORIES.includes(
-      templateGoal.category as GoalCategory,
-    )
-      ? (templateGoal.category as GoalCategory)
-      : "personal_growth";
+    const normalizedCategory = normalizeCategory(templateGoal.category);
 
     const { data: newGoal, error: goalError } = await supabase
       .from("goals")

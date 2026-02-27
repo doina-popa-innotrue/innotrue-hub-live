@@ -5564,7 +5564,7 @@ export type Database = {
       }
       goals: {
         Row: {
-          category: Database["public"]["Enums"]["goal_category"]
+          category: string
           created_at: string
           description: string | null
           id: string
@@ -5582,7 +5582,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          category: Database["public"]["Enums"]["goal_category"]
+          category: string
           created_at?: string
           description?: string | null
           id?: string
@@ -5600,7 +5600,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          category?: Database["public"]["Enums"]["goal_category"]
+          category?: string
           created_at?: string
           description?: string | null
           id?: string
@@ -5618,6 +5618,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "goals_category_fk"
+            columns: ["category"]
+            isOneToOne: false
+            referencedRelation: "wheel_categories"
+            referencedColumns: ["key"]
+          },
           {
             foreignKeyName: "goals_instantiation_id_fkey"
             columns: ["instantiation_id"]
@@ -15194,28 +15201,6 @@ export type Database = {
       app_role: "admin" | "coach" | "client" | "instructor"
       decision_status: "upcoming" | "in_progress" | "made" | "cancelled"
       enrollment_status: "active" | "completed" | "paused"
-      goal_category:
-        | "family_home"
-        | "financial_career"
-        | "mental_educational"
-        | "spiritual_ethical"
-        | "social_cultural"
-        | "physical_health"
-        | "health_fitness"
-        | "career_business"
-        | "finances"
-        | "relationships"
-        | "personal_growth"
-        | "fun_recreation"
-        | "physical_environment"
-        | "family_friends"
-        | "romance"
-        | "contribution"
-        | "career"
-        | "health"
-        | "environment"
-        | "spirituality"
-        | "emotional"
       goal_priority: "low" | "medium" | "high"
       goal_status: "not_started" | "in_progress" | "completed" | "paused"
       goal_timeframe: "short" | "medium" | "long"
@@ -15379,29 +15364,6 @@ export const Constants = {
       app_role: ["admin", "coach", "client", "instructor"],
       decision_status: ["upcoming", "in_progress", "made", "cancelled"],
       enrollment_status: ["active", "completed", "paused"],
-      goal_category: [
-        "family_home",
-        "financial_career",
-        "mental_educational",
-        "spiritual_ethical",
-        "social_cultural",
-        "physical_health",
-        "health_fitness",
-        "career_business",
-        "finances",
-        "relationships",
-        "personal_growth",
-        "fun_recreation",
-        "physical_environment",
-        "family_friends",
-        "romance",
-        "contribution",
-        "career",
-        "health",
-        "environment",
-        "spirituality",
-        "emotional",
-      ],
       goal_priority: ["low", "medium", "high"],
       goal_status: ["not_started", "in_progress", "completed", "paused"],
       goal_timeframe: ["short", "medium", "long"],

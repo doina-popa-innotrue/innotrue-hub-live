@@ -24,7 +24,6 @@ import { useWheelCategories } from "@/hooks/useWheelCategories";
 import { ChevronDown, ChevronRight, BarChart3 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
-type GoalCategory = Database["public"]["Enums"]["goal_category"];
 type GoalTimeframe = Database["public"]["Enums"]["goal_timeframe"];
 type GoalPriority = Database["public"]["Enums"]["goal_priority"];
 type GoalStatus = Database["public"]["Enums"]["goal_status"];
@@ -104,7 +103,7 @@ export default function GoalForm({ goalId, defaultCategory, defaultTitle, defaul
   const [formData, setFormData] = useState<{
     title: string;
     description: string;
-    category: GoalCategory;
+    category: string;
     timeframe_type: GoalTimeframe;
     priority: GoalPriority;
     target_date: string;
@@ -113,7 +112,7 @@ export default function GoalForm({ goalId, defaultCategory, defaultTitle, defaul
   }>({
     title: defaultTitle || "",
     description: defaultDescription || "",
-    category: (defaultCategory || "personal_growth") as GoalCategory,
+    category: defaultCategory || "personal_growth",
     timeframe_type: "short",
     priority: "medium",
     target_date: "",
@@ -140,7 +139,7 @@ export default function GoalForm({ goalId, defaultCategory, defaultTitle, defaul
       setFormData({
         title: data.title,
         description: data.description || "",
-        category: data.category as GoalCategory,
+        category: data.category,
         timeframe_type: data.timeframe_type as GoalTimeframe,
         priority: data.priority as GoalPriority,
         target_date: data.target_date || "",
@@ -259,7 +258,7 @@ export default function GoalForm({ goalId, defaultCategory, defaultTitle, defaul
           <Label htmlFor="category">Category *</Label>
           <Select
             value={formData.category}
-            onValueChange={(value) => setFormData({ ...formData, category: value as GoalCategory })}
+            onValueChange={(value) => setFormData({ ...formData, category: value })}
             disabled={categoriesLoading}
           >
             <SelectTrigger>
