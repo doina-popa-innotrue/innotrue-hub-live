@@ -10809,6 +10809,7 @@ export type Database = {
           id: string
           installment_options: Json | null
           is_active: boolean | null
+          is_published: boolean
           logo_url: string | null
           min_plan_tier: number | null
           name: string
@@ -10833,6 +10834,7 @@ export type Database = {
           id?: string
           installment_options?: Json | null
           is_active?: boolean | null
+          is_published?: boolean
           logo_url?: string | null
           min_plan_tier?: number | null
           name: string
@@ -10857,6 +10859,7 @@ export type Database = {
           id?: string
           installment_options?: Json | null
           is_active?: boolean | null
+          is_published?: boolean
           logo_url?: string | null
           min_plan_tier?: number | null
           name?: string
