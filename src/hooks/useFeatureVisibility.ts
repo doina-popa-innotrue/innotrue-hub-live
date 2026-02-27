@@ -108,22 +108,22 @@ export function useFeatureVisibility(
       if (planCheck.data && planCheck.data.length > 0) {
         const plan = planCheck.data[0].plans as any;
         lowestPlanName = plan?.name || null;
-        sourceDisplayName = plan?.display_name || "plan";
+        sourceDisplayName = "plan";
         sourceType = "plan";
       } else if (trackCheck.data && trackCheck.data.length > 0) {
         const track = trackCheck.data[0].tracks as any;
         lowestPlanName = track?.name || null;
-        sourceDisplayName = track?.display_name || "learning track";
+        sourceDisplayName = "learning track";
         sourceType = "track";
       } else if (addOnCheck.data && addOnCheck.data.length > 0) {
         const addOn = addOnCheck.data[0].add_ons as any;
         lowestPlanName = addOn?.name || null;
-        sourceDisplayName = addOn?.display_name || "add-on";
+        sourceDisplayName = "add-on";
         sourceType = "add_on";
       } else if (programPlanCheck.data && programPlanCheck.data.length > 0) {
         const programPlan = programPlanCheck.data[0].program_plans as any;
         lowestPlanName = programPlan?.name || null;
-        sourceDisplayName = programPlan?.display_name || "program";
+        sourceDisplayName = "program";
         sourceType = "program_plan";
       }
 
@@ -305,22 +305,22 @@ export function useMultipleFeatureVisibility(featureKeys: (string | null | undef
         if (planSource) {
           const plan = planSource.plans as any;
           lowestPlanName = plan?.name || null;
-          sourceDisplayName = plan?.display_name || "plan";
+          sourceDisplayName = "plan";
           sourceType = "plan";
         } else if (trackSource) {
           const track = trackSource.tracks as any;
           lowestPlanName = track?.name || null;
-          sourceDisplayName = track?.display_name || "learning track";
+          sourceDisplayName = "learning track";
           sourceType = "track";
         } else if (addOnSource) {
           const addOn = addOnSource.add_ons as any;
           lowestPlanName = addOn?.name || null;
-          sourceDisplayName = addOn?.display_name || "add-on";
+          sourceDisplayName = "add-on";
           sourceType = "add_on";
         } else if (programPlanSource) {
           const programPlan = programPlanSource.program_plans as any;
           lowestPlanName = programPlan?.name || null;
-          sourceDisplayName = programPlan?.display_name || "program";
+          sourceDisplayName = "program";
           sourceType = "program_plan";
         }
 
