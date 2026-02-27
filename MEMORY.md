@@ -63,6 +63,7 @@
 - Key tables (CT3): `content_packages` (shared content library), `content_completions` (cross-program completion tracking), `program_modules.content_package_id` FK
 - Key tables (waitlist): `cohort_waitlist` (user_id, cohort_id, position, notified), `programs.capacity`, `client_enrollments.enrollment_source/referred_by/referral_note`
 - Key enums: `app_role` (admin, client, coach, instructor), `module_type`, `enrollment_status`. `goal_category` removed (was rigid enum with 21 overlapping values) — `goals.category` is now `TEXT` with FK to `wheel_categories(key)`, dynamically managed via admin UI.
+- **Wheel of Life (industry-standard 10):** `wheel_of_life_snapshots` has 10 rating columns (health_fitness, career_business, finances, relationships, personal_growth, fun_recreation, physical_environment, spirituality, romance, contribution) + legacy `family_friends`. `wheel_categories` table maps goal keys to snapshot columns via `snapshot_key`. Labels editable by admin, keys are read-only.
 - **Two plan systems (independent, additive):**
   - **Subscription plans** (`plans` table, tier 0-4) — one per user (`profiles.plan_id`), Stripe-integrated, platform-wide features
   - **Program plans** (`program_plans`, per-enrollment features) — auto-resolved from enrollment tier, never set manually

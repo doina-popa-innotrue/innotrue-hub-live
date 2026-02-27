@@ -1,5 +1,58 @@
 # Completed Work — Detailed History
 
+## Wheel of Life Industry Alignment + Goal Category Navigation Fix (2026-03-27, session 2)
+
+Fixed goal creation from Wheel of Life (category not pre-selected + FK violation), fixed "Free Free" display bug, aligned categories to industry standard, made category labels admin-editable.
+
+### "Free Free" Display Bug
+- **Root cause:** `useFeatureVisibility.ts` used `plan?.display_name` ("Free") as a type label in upsell tooltips. After plan display_name migration, tooltip became "Free Free" instead of "Free plan".
+- **Fix:** Changed all `sourceDisplayName` assignments to fixed type labels ("plan", "learning track", "add-on", "program") — 8 occurrences across 2 functions.
+
+### Goal Creation from Wheel of Life — Category Mismatch
+- **Root cause:** WheelOfLife passed snapshot column names (`health_fitness`, `career_business`) in URL params, but `goals.category` now references `wheel_categories.key` (`health`, `career`). Caused: (1) category not pre-selected in GoalForm (no match in Select), (2) FK violation on insert.
+- **Fix — dynamic DB-driven mapping:** Added `snapshot_key` column to `wheel_categories` (migration `20260327160000`). Maps each goal category to its corresponding `wheel_of_life_snapshots` column. `useCategoryLookup()` returns `snapshotToGoalKey` reverse map. WheelOfLife translates at runtime via `toGoalCategoryKey()`.
+
+### Category Labels Now Admin-Editable
+- `WheelCategoriesManagement.tsx` updated: `name` field editable via input, `key` and `snapshot_key` displayed read-only with warning note.
+
+### Industry-Standard 10 Categories (migration `20260327170000`)
+Aligned Wheel of Life to standard coaching framework:
+
+| # | Category | Snapshot Column | Goal Key |
+|---|---|---|---|
+| 1 | Health & Well-being | `health_fitness` | `health` |
+| 2 | Career & Work | `career_business` | `career` |
+| 3 | Finances | `finances` | `finances` |
+| 4 | Relationships | `relationships` | `relationships` |
+| 5 | Personal Growth | `personal_growth` | `personal_growth` |
+| 6 | Fun & Recreation | `fun_recreation` | `fun_recreation` |
+| 7 | Physical Environment | `physical_environment` | `environment` |
+| 8 | Spirituality & Faith | `spirituality` (NEW) | `spirituality` |
+| 9 | Love & Intimacy | `romance` | `romance` (reactivated) |
+| 10 | Contribution & Service | `contribution` | `contribution` |
+
+- Added `spirituality` column to `wheel_of_life_snapshots`
+- Replaced `family_friends` with `spirituality` in frontend (old column kept for historical data)
+- Reactivated `romance` goal category, deactivated `emotional`
+- `emotional` goals mapped to `health` in legacy map
+
+### Files Changed
+- `supabase/migrations/20260327160000_add_snapshot_key_to_wheel_categories.sql` — **NEW**
+- `supabase/migrations/20260327170000_align_wheel_to_industry_standard.sql` — **NEW**
+- `src/hooks/useFeatureVisibility.ts` — Fixed sourceDisplayName to use type labels
+- `src/hooks/useWheelCategories.ts` — Added `snapshot_key` to interface + `snapshotToGoalKey` reverse map
+- `src/pages/client/WheelOfLife.tsx` — Dynamic category translation via `toGoalCategoryKey()`
+- `src/pages/admin/WheelCategoriesManagement.tsx` — Name editing + snapshot_key display + updated DEFAULT_COLORS
+- `src/lib/wheelOfLifeCategories.ts` — Industry-standard 10 categories
+- `src/lib/__tests__/wheelOfLifeCategories.test.ts` — Updated test expectations
+- `src/lib/guidedPathInstantiation.ts` — `romance` valid, `emotional` → legacy map
+- `src/components/wheel/WheelShareConsentDialog.tsx` — Updated categoryIcons
+- `supabase/functions/send-wheel-pdf/index.ts` — Updated category labels
+- `supabase/functions/generate-reflection-prompt/index.ts` — Updated select + labels
+- `src/integrations/supabase/types.ts` — Regenerated
+
+---
+
 ## Bug Fixes + Data Consistency + Goal Category Cleanup (2026-03-27)
 
 Multiple bug fixes, data consistency remediation, and goal category architecture cleanup. 5 migrations, 8 modified files. `npm run verify` passed (555 tests total).
