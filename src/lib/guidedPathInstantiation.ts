@@ -53,7 +53,7 @@ const VALID_GOAL_CATEGORIES = [
   "environment",
   "contribution",
   "spirituality",
-  "emotional",
+  "romance",
 ] as const;
 
 type GoalCategory = (typeof VALID_GOAL_CATEGORIES)[number];
@@ -67,10 +67,10 @@ const LEGACY_CATEGORY_MAP: Record<string, GoalCategory> = {
   physical_environment: "environment",
   family_home: "environment",
   family_friends: "relationships",
-  romance: "relationships",
   social_cultural: "relationships",
   mental_educational: "personal_growth",
   spiritual_ethical: "spirituality",
+  emotional: "health",
 };
 
 /** Maps legacy timeframe_type values (from templates) to goal_timeframe enum values */

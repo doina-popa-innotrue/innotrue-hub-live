@@ -22,24 +22,18 @@ interface WheelCategory {
   snapshot_key: string | null;
 }
 
-// Default accessible colors for reset
+// Default accessible colors for reset (keyed by wheel_categories.key)
 const DEFAULT_COLORS: Record<string, string> = {
-  health_fitness: "#10B981",
-  career_business: "#3B82F6",
+  health: "#10B981",
+  career: "#3B82F6",
   finances: "#F59E0B",
   relationships: "#8B5CF6",
   personal_growth: "#EC4899",
   fun_recreation: "#06B6D4",
-  physical_environment: "#A855F7",
-  family_friends: "#F97316",
+  environment: "#A855F7",
+  spirituality: "#F97316",
   romance: "#EF4444",
   contribution: "#14B8A6",
-  family_home: "#F97316",
-  financial_career: "#3B82F6",
-  mental_educational: "#EC4899",
-  spiritual_ethical: "#14B8A6",
-  social_cultural: "#8B5CF6",
-  physical_health: "#10B981",
 };
 
 export default function WheelCategoriesManagement() {

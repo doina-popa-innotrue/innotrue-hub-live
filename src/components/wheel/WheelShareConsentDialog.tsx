@@ -16,13 +16,13 @@ import {
   Eye,
   Heart,
   Wallet,
-  Users,
   Briefcase,
   GraduationCap,
   Smile,
   Sparkles,
   Home,
   Dumbbell,
+  Flame,
 } from "lucide-react";
 import { WHEEL_OF_LIFE_CATEGORIES, WheelCategory } from "@/lib/wheelOfLifeCategories";
 
@@ -38,11 +38,11 @@ const categoryIcons: Record<WheelCategory, React.ComponentType<{ className?: str
   career_business: Briefcase,
   finances: Wallet,
   relationships: Heart,
-  family_friends: Users,
-  romance: Heart,
   personal_growth: GraduationCap,
   fun_recreation: Smile,
   physical_environment: Home,
+  spirituality: Flame,
+  romance: Heart,
   contribution: Sparkles,
 };
 

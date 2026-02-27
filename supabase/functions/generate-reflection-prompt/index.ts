@@ -129,7 +129,7 @@ serve(async (req) => {
     // Latest wheel of life snapshot (structured columns, not key-value)
     const { data: wheelSnapshot } = await supabase
       .from('wheel_of_life_snapshots')
-      .select('health_fitness, career_business, finances, relationships, personal_growth, fun_recreation, physical_environment, family_friends, romance, contribution, created_at')
+      .select('health_fitness, career_business, finances, relationships, personal_growth, fun_recreation, physical_environment, spirituality, romance, contribution, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -166,16 +166,16 @@ serve(async (req) => {
         created_at: r.created_at,
       })), 5),
       wheelDomains: wheelSnapshot ? [
-        { name: 'Health & Fitness', score: wheelSnapshot.health_fitness || 0 },
-        { name: 'Career & Business', score: wheelSnapshot.career_business || 0 },
+        { name: 'Health & Well-being', score: wheelSnapshot.health_fitness || 0 },
+        { name: 'Career & Work', score: wheelSnapshot.career_business || 0 },
         { name: 'Finances', score: wheelSnapshot.finances || 0 },
         { name: 'Relationships', score: wheelSnapshot.relationships || 0 },
         { name: 'Personal Growth', score: wheelSnapshot.personal_growth || 0 },
         { name: 'Fun & Recreation', score: wheelSnapshot.fun_recreation || 0 },
         { name: 'Physical Environment', score: wheelSnapshot.physical_environment || 0 },
-        { name: 'Family & Friends', score: wheelSnapshot.family_friends || 0 },
-        { name: 'Romance', score: wheelSnapshot.romance || 0 },
-        { name: 'Contribution', score: wheelSnapshot.contribution || 0 },
+        { name: 'Spirituality & Faith', score: wheelSnapshot.spirituality || 0 },
+        { name: 'Love & Intimacy', score: wheelSnapshot.romance || 0 },
+        { name: 'Contribution & Service', score: wheelSnapshot.contribution || 0 },
       ].filter(d => d.score > 0) : [],
       upcomingDeadlines: truncateArray((upcomingDeadlines || []).map(d => ({
         title: truncateString(d.title, 200),

@@ -14,16 +14,16 @@ interface WheelPdfRequest {
 }
 
 const WHEEL_CATEGORIES: Record<string, string> = {
-  health_fitness: 'Health & Fitness',
-  career_business: 'Career & Business',
+  health_fitness: 'Health & Well-being',
+  career_business: 'Career & Work',
   finances: 'Finances',
   relationships: 'Relationships',
   personal_growth: 'Personal Growth',
   fun_recreation: 'Fun & Recreation',
   physical_environment: 'Physical Environment',
-  family_friends: 'Family & Friends',
-  romance: 'Romance',
-  contribution: 'Contribution',
+  spirituality: 'Spirituality & Faith',
+  romance: 'Love & Intimacy',
+  contribution: 'Contribution & Service',
 };
 
 // Default template as fallback

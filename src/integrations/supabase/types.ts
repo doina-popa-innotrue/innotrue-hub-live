@@ -13988,6 +13988,7 @@ export type Database = {
           romance: number | null
           shared_with_coach: boolean
           snapshot_date: string
+          spirituality: number | null
           updated_at: string
           user_id: string
         }
@@ -14007,6 +14008,7 @@ export type Database = {
           romance?: number | null
           shared_with_coach?: boolean
           snapshot_date?: string
+          spirituality?: number | null
           updated_at?: string
           user_id: string
         }
@@ -14026,6 +14028,7 @@ export type Database = {
           romance?: number | null
           shared_with_coach?: boolean
           snapshot_date?: string
+          spirituality?: number | null
           updated_at?: string
           user_id?: string
         }

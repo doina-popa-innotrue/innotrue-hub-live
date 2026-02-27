@@ -23,7 +23,7 @@ describe("WHEEL_OF_LIFE_CATEGORIES", () => {
       "personal_growth",
       "fun_recreation",
       "physical_environment",
-      "family_friends",
+      "spirituality",
       "romance",
       "contribution",
     ];
@@ -45,13 +45,14 @@ describe("WHEEL_CATEGORY_DESCRIPTIONS", () => {
 
 describe("LEGACY_CATEGORY_MAPPING", () => {
   it("maps old categories to new labels", () => {
-    expect(LEGACY_CATEGORY_MAPPING.family_home).toBe("Family & Friends");
-    expect(LEGACY_CATEGORY_MAPPING.financial_career).toBe("Career & Business");
-    expect(LEGACY_CATEGORY_MAPPING.physical_health).toBe("Health & Fitness");
+    expect(LEGACY_CATEGORY_MAPPING.family_home).toBe("Relationships");
+    expect(LEGACY_CATEGORY_MAPPING.financial_career).toBe("Career & Work");
+    expect(LEGACY_CATEGORY_MAPPING.physical_health).toBe("Health & Well-being");
+    expect(LEGACY_CATEGORY_MAPPING.spiritual_ethical).toBe("Spirituality & Faith");
   });
 
-  it("maps all 6 legacy categories", () => {
-    expect(Object.keys(LEGACY_CATEGORY_MAPPING)).toHaveLength(6);
+  it("maps all 7 legacy categories", () => {
+    expect(Object.keys(LEGACY_CATEGORY_MAPPING)).toHaveLength(7);
   });
 });
 
@@ -66,6 +67,7 @@ describe("CATEGORY_LABELS", () => {
   it("includes legacy category labels", () => {
     expect(CATEGORY_LABELS.family_home).toBe("Family & Home");
     expect(CATEGORY_LABELS.spiritual_ethical).toBe("Spiritual & Ethical");
+    expect(CATEGORY_LABELS.family_friends).toBe("Family & Friends");
   });
 });
 
@@ -93,7 +95,7 @@ describe("getSnapshotRatings", () => {
     personal_growth: 5,
     fun_recreation: 4,
     physical_environment: 7,
-    family_friends: 8,
+    spirituality: 6,
     romance: 6,
     contribution: 3,
     created_at: "2025-03-15T10:00:00Z",
@@ -118,10 +120,13 @@ describe("getSnapshotRatings", () => {
     const ratings = getSnapshotRatings(mockSnapshot);
     const healthRating = ratings.find((r) => r.category === "health_fitness");
     expect(healthRating?.value).toBe(8);
-    expect(healthRating?.label).toBe("Health & Fitness");
+    expect(healthRating?.label).toBe("Health & Well-being");
 
     const contributionRating = ratings.find((r) => r.category === "contribution");
     expect(contributionRating?.value).toBe(3);
+
+    const spiritualityRating = ratings.find((r) => r.category === "spirituality");
+    expect(spiritualityRating?.value).toBe(6);
   });
 
   it("defaults null values to 0", () => {
