@@ -28,6 +28,7 @@ export interface GroupSessionCardProps {
   linkPrefix?: string; // '/groups' or '/admin/groups'
   // Admin features
   isAdmin?: boolean;
+  canManage?: boolean; // true for group leaders (enables delete/status actions)
   isSelected?: boolean;
   onToggleSelect?: (sessionId: string) => void;
   onEdit?: (session: any) => void;
@@ -46,6 +47,7 @@ export function GroupSessionCard({
   userTimezone,
   linkPrefix = "/groups",
   isAdmin = false,
+  canManage = false,
   isSelected = false,
   onToggleSelect,
   onEdit,
@@ -110,8 +112,8 @@ export function GroupSessionCard({
         <div className="flex flex-col gap-3">
           {/* Header row with selection and main content */}
           <div className="flex items-start gap-3">
-            {/* Checkbox for admin selection */}
-            {isAdmin && onToggleSelect && !isGenerated && (
+            {/* Checkbox for selection (admin or leader) */}
+            {(isAdmin || canManage) && onToggleSelect && !isGenerated && (
               <Checkbox
                 checked={isSelected}
                 onCheckedChange={() => onToggleSelect(session.id)}
@@ -214,8 +216,8 @@ export function GroupSessionCard({
               </Button>
             )}
 
-            {/* Admin-only actions */}
-            {isAdmin && (
+            {/* Management actions (admin or leader) */}
+            {(isAdmin || canManage) && (
               <>
                 {onDelete && !isGenerated && (
                   <Button size="sm" variant="ghost" onClick={() => onDelete(session)}>

@@ -796,9 +796,11 @@ export default function GroupDetail() {
               {group.description && (
                 <p className="text-muted-foreground max-w-2xl">{group.description}</p>
               )}
-              <p className="text-xs text-muted-foreground mt-2">
-                To delete sessions, notes, or tasks, please contact your group leader.
-              </p>
+              {!canManage && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  To delete sessions, notes, or tasks, please contact your group leader.
+                </p>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
               {group.google_drive_folder_url && (
@@ -1004,10 +1006,11 @@ export default function GroupDetail() {
                   groupId={id}
                   userTimezone={userTimezone}
                   isAdmin={false}
+                  canManage={canManage}
                   linkPrefix="/groups"
                   onCreateSession={handleCreateSessionForList}
                   onEditSession={handleEditSessionForList}
-                  onDeleteSession={handleDeleteSessionForList}
+                  onDeleteSession={canManage ? handleDeleteSessionForList : undefined}
                   onDownloadICS={downloadICS}
                   isCreating={createSessionMutation.isPending}
                   isUpdating={updateSessionMutation.isPending}

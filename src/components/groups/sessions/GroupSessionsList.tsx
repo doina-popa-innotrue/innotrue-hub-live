@@ -84,6 +84,7 @@ interface GroupSessionsListProps {
   groupId: string;
   userTimezone: string;
   isAdmin?: boolean;
+  canManage?: boolean; // true for group leaders (enables delete/status actions)
   linkPrefix?: string;
   calcomMappingName?: string;
   // Session mutations
@@ -117,6 +118,7 @@ export function GroupSessionsList({
   groupId,
   userTimezone,
   isAdmin = false,
+  canManage = false,
   linkPrefix = "/groups",
   calcomMappingName,
   onCreateSession,
@@ -252,8 +254,8 @@ export function GroupSessionsList({
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          {/* Bulk delete button (admin only) */}
-          {isAdmin && selectedSessionIds.size > 0 && onBulkDelete && (
+          {/* Bulk delete button (admin or leader) */}
+          {(isAdmin || canManage) && selectedSessionIds.size > 0 && onBulkDelete && (
             <Button
               size="sm"
               variant="destructive"
@@ -266,8 +268,8 @@ export function GroupSessionsList({
             </Button>
           )}
 
-          {/* Select all checkbox (admin only) */}
-          {isAdmin && realSessions.length > 0 && (
+          {/* Select all checkbox (admin or leader) */}
+          {(isAdmin || canManage) && realSessions.length > 0 && (
             <div className="flex items-center gap-2">
               <Checkbox
                 checked={selectedSessionIds.size === realSessions.length && realSessions.length > 0}
@@ -318,8 +320,9 @@ export function GroupSessionsList({
               userTimezone={userTimezone}
               linkPrefix={linkPrefix}
               isAdmin={isAdmin}
+              canManage={canManage}
               isSelected={selectedSessionIds.has(session.id)}
-              onToggleSelect={isAdmin ? toggleSessionSelection : undefined}
+              onToggleSelect={(isAdmin || canManage) ? toggleSessionSelection : undefined}
               onEdit={onEditSession ? () => handleOpenForm(session) : undefined}
               onEditParent={onEditSession ? handleEditParent : undefined}
               onDelete={onDeleteSession ? (s) => onDeleteSession(s, false) : undefined}
@@ -349,8 +352,9 @@ export function GroupSessionsList({
               userTimezone={userTimezone}
               linkPrefix={linkPrefix}
               isAdmin={isAdmin}
+              canManage={canManage}
               isSelected={selectedSessionIds.has(session.id)}
-              onToggleSelect={isAdmin ? toggleSessionSelection : undefined}
+              onToggleSelect={(isAdmin || canManage) ? toggleSessionSelection : undefined}
               onDelete={onDeleteSession ? (s) => onDeleteSession(s, false) : undefined}
             />
           ))}
