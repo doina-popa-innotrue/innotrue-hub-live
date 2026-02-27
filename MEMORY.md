@@ -112,8 +112,8 @@
 ## Priority Roadmap (from ISSUES_AND_IMPROVEMENTS.md Part 11)
 **Critical (C1-C4):** ~~All resolved~~ ✅
 **High (H1-H10):** ~~All resolved~~ ✅
-**Medium (remaining):** ~~M2 (psychometric interest tracking)~~ ✅ DONE, ~~M9 (async notifications)~~ ✅ DONE, ~~M11 (console.log cleanup)~~ ✅ DONE, M12 (resource ratings), M13 (Zod validation), M16 (assessment templates)
-**New roadmap items (R1-R7):** ~~R1 assessment question types~~ ✅ DONE, ~~R2 coach/instructor onboarding (Phase 1)~~ ✅ DONE, ~~R3 enhanced coach↔client interaction (Phase 1)~~ ✅ DONE, ~~R4 coaches invite own clients (Phase 5)~~ ✅ DONE, R5 enhanced org management (Phase 6), R6 Sentry coverage (cross-cutting), R7 test coverage (continuous)
+**Medium (remaining):** ~~M2 (psychometric interest tracking)~~ ✅ DONE, ~~M9 (async notifications)~~ ✅ DONE, ~~M11 (console.log cleanup)~~ ✅ DONE, M12 (resource ratings), M13 (Zod validation — see analysis below), M16 (assessment templates)
+**New roadmap items (R1-R7):** ~~R1 assessment question types~~ ✅ DONE, ~~R2 coach/instructor onboarding (Phase 1)~~ ✅ DONE, ~~R3 enhanced coach↔client interaction (Phase 1)~~ ✅ DONE, ~~R4 coaches invite own clients (Phase 5)~~ ✅ DONE, R5 enhanced org management (Phase 6), R6 Sentry coverage (cross-cutting — see analysis below), R7 test coverage (continuous — see analysis below)
 **Coach-created development items:** ✅ DONE
 
 **Priority 0 — Status (updated 2026-02-18):**
@@ -156,7 +156,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - ~~**CT3b: Cross-Program Completion**~~ ✅ — `content_completions` table. `xapi-statements` writes completion on xAPI verb. `useCrossProgramCompletion` extended with 3rd data source. Client `ModuleDetail` auto-accepts completion from shared content. `CanonicalCodesManagement` now shows content packages tab.
 - **`canonical_code` override** — kept as manual override for different content that should count as equivalent.
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → ~~Enrollment Scale + Bulk Enrollment~~ ✅ → ~~SC-1 Critical Indexes~~ ✅ → ~~SC-2 N+1 Rewrites~~ ✅ → ~~2B.5 Certification~~ ✅ → ~~2B.10 Enrollment Duration~~ ✅ → ~~SC-3 Pagination~~ ✅ → ~~SC-5 Retention~~ ✅ → ~~SC-6 RLS Indexes~~ ✅ → ~~SC-7 Search Indexes~~ ✅ → ~~Phase 5 remaining (Steps 7+9 + R2/R3/R4)~~ ✅ → ~~Action Items ↔ Timeline & Tasks~~ ✅ → SC-4 Organisation Audit → 3-AI/Engagement
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → ~~Enrollment Scale + Bulk Enrollment~~ ✅ → ~~SC-1 Critical Indexes~~ ✅ → ~~SC-2 N+1 Rewrites~~ ✅ → ~~2B.5 Certification~~ ✅ → ~~2B.10 Enrollment Duration~~ ✅ → ~~SC-3 Pagination~~ ✅ → ~~SC-5 Retention~~ ✅ → ~~SC-6 RLS Indexes~~ ✅ → ~~SC-7 Search Indexes~~ ✅ → ~~Phase 5 remaining (Steps 7+9 + R2/R3/R4)~~ ✅ → ~~Action Items ↔ Timeline & Tasks~~ ✅ → SC-4 Organisation Audit → M13 Zod Validation + R6 Sentry Coverage + R7 Test Coverage → 3-AI/Engagement
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
@@ -385,7 +385,11 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - **Promote to Task:** `PromoteToTaskDialog.tsx` — compact dialog creating Eisenhower Matrix task + junction link. Feature-gated to `decision_toolkit_basic`. Auto-urgency if due ≤7 days. Task status `"todo"`. Integrated in DevelopmentItems.tsx (only shows if no existing task_links).
   - **Tasks page section:** `ActionItemsSection.tsx` — collapsible section OUTSIDE FeatureGate (free for all users). Status toggle, due dates, linked task badges, promote button (gated). Uses shared `useActionItems` hook.
   - **Shared hook:** `useActionItems.ts` — TanStack Query hook with optional status filter + `useToggleActionItemStatus()` mutation.
-- **Next steps:** SC-4 Organisation audit → Phase 3 AI
+- **UX improvements (2026-02-27):**
+  - **Group creation dialog scroll fix:** Wrapped form fields in `max-h-[60vh] overflow-y-auto` container, keeping Cancel/Create buttons always visible on smaller screens.
+  - **Program draft/published status:** Added `is_published` column to `programs` table (migration `20260227100000`). Decouples "active/not archived" from "visible to clients". New programs default to Draft. Admin ProgramsList shows Published/Draft badge + eye toggle. Admin ProgramDetail shows badge + Publish/Unpublish button. ExplorePrograms + OrgPrograms filter on `is_published = true`.
+  - **Timezone abbreviations:** Added `getTimezoneAbbreviation()` utility (DST-aware via `Intl.DateTimeFormat`). TimezoneSelect dropdown shows codes (e.g. "Eastern Time (US & Canada) (EST)"). CohortSessionCard, GroupSessionCard, GroupSessionDetail show timezone code next to times (e.g. "14:30 – 16:00 CET").
+- **Next steps:** SC-4 Organisation audit → M13/R6/R7 (cross-cutting quality) → Phase 3 AI
 
 ## Scalability & Performance Audit (2026-03-24)
 
@@ -489,6 +493,76 @@ Migration `20260326100000_sc7_search_trigram_indexes.sql`. Enables `pg_trgm` ext
 
 ### Roadmap Priority Order
 ~~**SC-1**~~ ✅ → ~~**SC-2**~~ ✅ → ~~**SC-3**~~ ✅ → ~~**SC-5**~~ ✅ → ~~**SC-6**~~ ✅ → ~~**SC-7**~~ ✅ → **SC-4** (org audit, future)
+
+## M13: Zod Validation Analysis (2026-02-27)
+
+**Status:** Foundation exists, wiring gap. Zod installed (v3.25.76), `@hookform/resolvers` installed, 36+ schemas defined (`src/lib/validations.ts` + `adminSchemas.ts`), `validateForm<T>()` helper exists. But schemas are NOT wired to actual form components (16 RHF forms use no resolver), and 71 edge functions use manual `typeof`/`includes()` checks instead of Zod.
+
+| Aspect | Current State | Gap |
+|--------|---------------|-----|
+| Zod dependency | ✅ Installed v3.25.76 | — |
+| Frontend schemas | ✅ 36+ in `validations.ts` + `adminSchemas.ts` | Not wired to forms |
+| React Hook Form (16 forms) | ✅ Using RHF | No `zodResolver` wiring |
+| `@hookform/resolvers` | ✅ Installed | Unused |
+| `validateForm<T>()` helper | ✅ Exists in `adminSchemas.ts` | — |
+| Edge functions (71) | ❌ Manual validation | Need Zod request parsing |
+
+**Workstreams:**
+1. **Frontend:** Wire existing Zod schemas into RHF forms via `zodResolver` (16 forms)
+2. **Edge functions:** Add Zod schemas for request body parsing (start with high-traffic functions)
+3. **Admin forms:** Use `validateForm<T>()` helper consistently in admin CRUD dialogs
+
+## R6: Sentry Coverage Analysis (2026-02-27)
+
+**Status:** Foundation solid, breadcrumbs/spans/source maps missing. Sentry `@sentry/react` v10.38.0.
+
+| Aspect | Current State | Gap |
+|--------|---------------|-----|
+| Sentry init (`main.tsx`) | ✅ Production-only, 10% trace, replay on errors | — |
+| Error boundary | ✅ `captureException` + event IDs | — |
+| React Query errors | ✅ Tagged queries + mutations in `App.tsx` | — |
+| Web Vitals | ✅ CLS/INP/LCP/FCP/TTFB → Sentry metrics | — |
+| Auth user context | ✅ User ID + role + org tags in `AuthContext.tsx` | Could add email/org name |
+| Frontend breadcrumbs | ❌ Not implemented | Key journeys: signup, login, enrollment, payment, assessment |
+| API error wrapper | ❌ `sentry-utils.ts` not created | Wrap `supabase.functions.invoke()` calls |
+| Custom performance spans | ❌ Not implemented | Signup-to-first-login, assessment completion, module load |
+| Source map upload | ❌ Not configured in Vite build | Stack traces unreadable in prod |
+| Edge function monitoring | ❌ None (Deno runtime) | Evaluate Sentry Deno SDK or HTTP API |
+| Error fingerprinting | ❌ Default grouping only | Custom fingerprints for common categories |
+
+**Priority implementation order:**
+1. Create `src/lib/sentry-utils.ts` with `captureSupabaseError()` wrapper
+2. Add breadcrumbs at signup, login, enrollment, payment flows
+3. Configure Vite source map upload to Sentry
+4. Enhance AuthContext user metadata
+5. Add custom performance spans for key flows
+6. Define error fingerprints for common categories
+7. Evaluate edge function monitoring (Deno SDK or skip)
+
+## R7: Test Coverage Analysis (2026-02-27)
+
+**Status:** Phase 1 complete (unit tests), Phases 2-6 pending. See `docs/TESTING_ROADMAP.md` for full plan.
+
+| Layer | Tests | Coverage | Status |
+|-------|-------|----------|--------|
+| `src/lib/` unit tests | 453 across 20 files | 97% stmt / 95% branch | ✅ Phase 1 done |
+| E2E (Playwright) | 13 specs, ~45 scenarios | Major journeys | ✅ Phase 1 done |
+| Edge function shared utils | ~0 | 0% | ⏳ Phase 1 (60-80 tests) |
+| React hooks (76 custom) | ~0 | 0% | ⏳ Phase 2 (70-90 tests) |
+| E2E expansion | — | — | ⏳ Phase 3 (50-70 tests) |
+| Edge function integration | ~0 | 0% | ⏳ Phase 4 (70-90 tests) |
+| React components (273) | 0 | 0% | ⏳ Phase 5 (60-80 tests) |
+| CI gates + coverage thresholds | Unit required, no thresholds | — | ⏳ Phase 6 |
+
+**6-phase roadmap (from `docs/TESTING_ROADMAP.md`):**
+1. Edge function shared utilities (`_shared/cors.ts`, `error-response.ts`, `ai-config.ts`, etc.) — ~60-80 tests
+2. Critical React hooks (`useEntitlements`, `useUserCredits`, `useCreditBatches`, auth hooks) — ~70-90 tests
+3. E2E expansion (enrollment flows, payment, assessment, cohort, teaching) — ~50-70 tests
+4. Edge function integration tests (xAPI, enrollment, payment, notification edge functions) — ~70-90 tests
+5. React component tests (forms, dialogs, admin CRUD, content viewer) — ~60-80 tests
+6. CI quality gates (coverage thresholds, branch protection, pre-commit hooks)
+
+**Total target:** ~820 tests (from current 453) over 15-22 sessions. Effort: ~1-2 sessions per phase.
 
 ## npm Scripts
 ```

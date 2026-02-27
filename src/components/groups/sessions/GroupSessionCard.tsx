@@ -19,6 +19,7 @@ import {
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { useSessionTimeStatus } from "@/hooks/useSessionTimeStatus";
+import { getTimezoneAbbreviation } from "@/components/profile/TimezoneSelect";
 
 export interface GroupSessionCardProps {
   session: any;
@@ -163,7 +164,7 @@ export function GroupSessionCard({
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5" />
-                    {format(zonedDate, "h:mm a")}
+                    {format(zonedDate, "h:mm a")} <span className="text-xs font-medium">{getTimezoneAbbreviation(userTimezone)}</span>
                   </span>
                   {session.duration_minutes && <span>({session.duration_minutes} min)</span>}
                   {session.location && !session.location.startsWith("http") && (

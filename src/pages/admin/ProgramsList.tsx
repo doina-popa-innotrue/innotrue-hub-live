@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
-import { Plus, Copy, Check, Upload, X, ImageIcon, Settings2, Archive, ArchiveRestore, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Copy, Check, Upload, X, ImageIcon, Settings2, Archive, ArchiveRestore, Trash2, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -101,6 +101,7 @@ interface Program {
   description: string | null;
   logo_url: string | null;
   is_active: boolean;
+  is_published: boolean;
   moduleCount: number;
 }
 
@@ -335,6 +336,22 @@ export default function ProgramsList() {
       if (error) throw error;
 
       toast.success(`Program ${!currentState ? "activated" : "deactivated"}`);
+      fetchPrograms();
+    } catch (error: any) {
+      toast.error(`Failed to update program: ${error.message}`);
+    }
+  }
+
+  async function toggleProgramPublished(programId: string, currentState: boolean) {
+    try {
+      const { error } = await supabase
+        .from("programs")
+        .update({ is_published: !currentState })
+        .eq("id", programId);
+
+      if (error) throw error;
+
+      toast.success(`Program ${!currentState ? "published" : "unpublished"}`);
       fetchPrograms();
     } catch (error: any) {
       toast.error(`Failed to update program: ${error.message}`);
@@ -697,6 +714,7 @@ export default function ProgramsList() {
                       <TableHead>Program ID</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Category</TableHead>
+                      {programsFilter === "active" && <TableHead>Status</TableHead>}
                       <TableHead>Modules</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -728,6 +746,16 @@ export default function ProgramsList() {
                           <TableCell>
                             <Badge variant="outline">{getCategoryName(program.category)}</Badge>
                           </TableCell>
+                          {programsFilter === "active" && (
+                            <TableCell>
+                              <Badge
+                                variant={program.is_published ? "default" : "secondary"}
+                                className={program.is_published ? "bg-green-600 hover:bg-green-700" : ""}
+                              >
+                                {program.is_published ? "Published" : "Draft"}
+                              </Badge>
+                            </TableCell>
+                          )}
                           <TableCell>{program.moduleCount}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
@@ -740,6 +768,14 @@ export default function ProgramsList() {
                               </Button>
                               {programsFilter === "active" ? (
                                 <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => toggleProgramPublished(program.id, program.is_published)}
+                                    title={program.is_published ? "Unpublish (hide from clients)" : "Publish (show to clients)"}
+                                  >
+                                    {program.is_published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  </Button>
                                   <Button
                                     variant="ghost"
                                     size="sm"

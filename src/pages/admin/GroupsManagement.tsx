@@ -257,6 +257,7 @@ export default function GroupsManagement() {
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
               <div className="space-y-2">
                 <Label htmlFor="name">Group Name *</Label>
                 <Input
@@ -417,6 +418,7 @@ export default function GroupsManagement() {
                   Link a Cal.com event type for group session booking
                 </p>
               </div>
+             </div>
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>

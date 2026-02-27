@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { useSessionTimeStatus } from "@/hooks/useSessionTimeStatus";
 import { downloadICSFile, type ICSEvent } from "@/lib/icsGenerator";
+import { getTimezoneAbbreviation } from "@/components/profile/TimezoneSelect";
 import ReactMarkdown from "react-markdown";
 
 export interface CohortSession {
@@ -196,6 +197,8 @@ export function CohortSessionCard({
                     <Clock className="h-3.5 w-3.5" />
                     {session.start_time.slice(0, 5)}
                     {session.end_time && ` – ${session.end_time.slice(0, 5)}`}
+                    {" "}
+                    <span className="text-xs font-medium">{getTimezoneAbbreviation(userTimezone)}</span>
                   </span>
                 )}
                 {durationMinutes && <span>({durationMinutes} min)</span>}

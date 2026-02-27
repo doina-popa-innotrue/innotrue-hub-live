@@ -1,5 +1,34 @@
 # Completed Work — Detailed History
 
+## UX Improvements: Groups Scroll, Program Draft Status, Timezone Codes (2026-02-27)
+
+Three UX improvements across admin and client-facing pages. 1 migration, 7 modified files. `npm run verify` passed.
+
+### Group Creation Dialog Scroll Fix
+- **Problem:** On smaller screens the 13+ field form overflowed the viewport, making the Create Group button unreachable.
+- **Fix:** Wrapped form fields in `max-h-[60vh] overflow-y-auto pr-1` container inside the `<form>`, keeping `DialogFooter` (Cancel/Create) always visible below the scroll area.
+- **File:** `src/pages/admin/GroupsManagement.tsx`
+
+### Program Draft/Published Status
+- **Problem:** `is_active` conflated "not archived" with "visible to clients." Programs being built had no way to be hidden from Explore Programs without archiving.
+- **Solution:** New `is_published` boolean column (default `false`). Decouples admin lifecycle (`is_active`) from client visibility (`is_published`).
+- **Migration:** `20260227100000_add_programs_is_published.sql` — adds column, backfills active → published, partial index.
+- **States:** `is_active=true, is_published=false` → Draft | `is_active=true, is_published=true` → Published | `is_active=false` → Archived
+- **Files modified:**
+  - `src/pages/admin/ProgramsList.tsx` — Status column (Published/Draft badge), Eye/EyeOff toggle, `toggleProgramPublished()` function
+  - `src/pages/admin/ProgramDetail.tsx` — Published/Draft badge next to name, Publish/Unpublish button, `togglePublished()` function
+  - `src/pages/client/ExplorePrograms.tsx` — `.eq("is_published", true)` filter
+  - `src/pages/org-admin/OrgPrograms.tsx` — `is_published` in SELECT + filter
+
+### Timezone Abbreviation Codes
+- **Problem:** Timezone selectors and session cards showed city names but no timezone code (EST, CET, IST, etc.).
+- **Solution:** New `getTimezoneAbbreviation(iana)` utility using `Intl.DateTimeFormat` with `timeZoneName: "short"`. DST-aware (shows EDT in summer, EST in winter).
+- **Files modified:**
+  - `src/components/profile/TimezoneSelect.tsx` — Labels now show `(EST)`, `(CET)`, etc. Exports `getTimezoneAbbreviation()`.
+  - `src/components/cohort/CohortSessionCard.tsx` — Shows timezone code after time (e.g. "14:30 – 16:00 CET")
+  - `src/components/groups/sessions/GroupSessionCard.tsx` — Shows timezone code after time
+  - `src/pages/client/GroupSessionDetail.tsx` — Shows timezone code in date/time display
+
 ## Action Items ↔ Timeline & Tasks Integration (2026-03-26)
 
 Bridged the gap between Development Items action items and the rest of the platform. Action items now surface in the Development Timeline, the Timeline Progress chart, and a new free section on the Tasks page. Users can promote action items to full Eisenhower Matrix tasks (feature-gated). 3 new files, 4 modified. No migrations needed. `npm run verify` passed. Deployed to all 3 environments + Lovable. Commit `d7cc154`.

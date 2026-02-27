@@ -193,13 +193,14 @@ export default function ExplorePrograms() {
     if (!user) return;
 
     const fetchPrograms = async () => {
-      // Fetch all active programs
+      // Fetch all published programs (active + visible to clients)
       const { data: programsData, error: programsError } = await supabase
         .from("programs")
         .select(
           "id, name, description, category, scheduled_dates, tiers, plan_id, min_plan_tier, requires_separate_purchase, allow_repeat_enrollment, credit_cost",
         )
         .eq("is_active", true)
+        .eq("is_published", true)
         .order("name");
 
       if (programsError) {

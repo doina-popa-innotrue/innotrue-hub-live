@@ -92,6 +92,7 @@ export default function OrgPrograms() {
             description,
             category,
             is_active,
+            is_published,
             credit_cost
           )
         `,
@@ -106,7 +107,7 @@ export default function OrgPrograms() {
       const validLicenses = (licensedPrograms || []).filter((lp) => {
         const program = lp.programs as any;
         const isExpired = lp.expires_at && new Date(lp.expires_at) < now;
-        return program?.is_active && !isExpired;
+        return program?.is_active && program?.is_published && !isExpired;
       });
 
       // For each program, count enrolled org members

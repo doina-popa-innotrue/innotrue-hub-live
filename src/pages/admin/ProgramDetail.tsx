@@ -32,6 +32,8 @@ import {
   Archive,
   ArchiveRestore,
   AlertTriangle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ModuleForm from "@/components/admin/ModuleForm";
@@ -1100,6 +1102,21 @@ export default function ProgramDetail() {
     }
   }
 
+  async function togglePublished() {
+    const newState = !program?.is_published;
+    try {
+      const { error } = await supabase
+        .from("programs")
+        .update({ is_published: newState })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success(`Program ${newState ? "published" : "unpublished"}`);
+      setProgram((prev: any) => prev ? { ...prev, is_published: newState } : prev);
+    } catch (error: any) {
+      toast.error(`Failed to update: ${error.message}`);
+    }
+  }
+
   async function openProgramDeleteDialog() {
     setProgramDeleteEnrollmentCount(null);
     setProgramDeleteDialogOpen(true);
@@ -1193,6 +1210,14 @@ export default function ProgramDetail() {
                 {program.code}
               </Badge>
             )}
+            {program.is_active && (
+              <Badge
+                variant={program.is_published ? "default" : "secondary"}
+                className={`text-xs shrink-0 ${program.is_published ? "bg-green-600" : ""}`}
+              >
+                {program.is_published ? "Published" : "Draft"}
+              </Badge>
+            )}
           </div>
 
           {/* Action buttons */}
@@ -1207,15 +1232,29 @@ export default function ProgramDetail() {
               <span className="xs:hidden">Tiers</span>
             </Button>
             {program.is_active ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={archiveProgram}
-                title="Archive program"
-              >
-                <Archive className="mr-2 h-4 w-4" />
-                Archive
-              </Button>
+              <>
+                <Button
+                  variant={program.is_published ? "ghost" : "default"}
+                  size="sm"
+                  onClick={togglePublished}
+                  title={program.is_published ? "Unpublish (hide from clients)" : "Publish (show to clients)"}
+                >
+                  {program.is_published ? (
+                    <><EyeOff className="mr-2 h-4 w-4" />Unpublish</>
+                  ) : (
+                    <><Eye className="mr-2 h-4 w-4" />Publish</>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={archiveProgram}
+                  title="Archive program"
+                >
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archive
+                </Button>
+              </>
             ) : (
               <>
                 <Button

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -32,6 +33,24 @@ const TIMEZONES = [
   { value: "Africa/Cairo", label: "Cairo" },
 ];
 
+/**
+ * Get the short timezone abbreviation (e.g. "EST", "CET", "IST") for an IANA timezone.
+ * DST-aware: returns the current abbreviation (e.g. "EDT" in summer, "EST" in winter).
+ */
+export function getTimezoneAbbreviation(iana: string): string {
+  try {
+    // Use Intl to get the short timezone name which gives us the abbreviation
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: iana,
+      timeZoneName: "short",
+    }).formatToParts(new Date());
+    const tzPart = parts.find((p) => p.type === "timeZoneName");
+    return tzPart?.value || iana;
+  } catch {
+    return iana;
+  }
+}
+
 interface TimezoneSelectProps {
   value: string;
   onChange: (value: string) => void;
@@ -39,6 +58,16 @@ interface TimezoneSelectProps {
 }
 
 export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProps) {
+  // Compute abbreviations once (re-computes if DST boundary crossed, but that's fine)
+  const timezonesWithAbbr = useMemo(
+    () =>
+      TIMEZONES.map((tz) => ({
+        ...tz,
+        abbr: getTimezoneAbbreviation(tz.value),
+      })),
+    [],
+  );
+
   return (
     <div className="space-y-2">
       <Label htmlFor="timezone">Timezone</Label>
@@ -47,9 +76,9 @@ export function TimezoneSelect({ value, onChange, disabled }: TimezoneSelectProp
           <SelectValue placeholder="Select your timezone" />
         </SelectTrigger>
         <SelectContent>
-          {TIMEZONES.map((tz) => (
+          {timezonesWithAbbr.map((tz) => (
             <SelectItem key={tz.value} value={tz.value}>
-              {tz.label}
+              {tz.label} ({tz.abbr})
             </SelectItem>
           ))}
         </SelectContent>

@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { getTimezoneAbbreviation } from "@/components/profile/TimezoneSelect";
 import { useAuth } from "@/contexts/AuthContext";
 import { downloadICSFile } from "@/lib/icsGenerator";
 import { useToast } from "@/hooks/use-toast";
@@ -382,7 +383,7 @@ export default function GroupSessionDetail() {
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Date & Time</p>
-                <p className="font-medium">{format(zonedDate, "PPP p")}</p>
+                <p className="font-medium">{format(zonedDate, "PPP p")} {getTimezoneAbbreviation(userTimezone)}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
