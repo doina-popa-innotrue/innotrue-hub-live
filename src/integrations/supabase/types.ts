@@ -15211,6 +15211,11 @@ export type Database = {
         | "family_friends"
         | "romance"
         | "contribution"
+        | "career"
+        | "health"
+        | "environment"
+        | "spirituality"
+        | "emotional"
       goal_priority: "low" | "medium" | "high"
       goal_status: "not_started" | "in_progress" | "completed" | "paused"
       goal_timeframe: "short" | "medium" | "long"
@@ -15391,6 +15396,11 @@ export const Constants = {
         "family_friends",
         "romance",
         "contribution",
+        "career",
+        "health",
+        "environment",
+        "spirituality",
+        "emotional",
       ],
       goal_priority: ["low", "medium", "high"],
       goal_status: ["not_started", "in_progress", "completed", "paused"],

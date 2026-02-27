@@ -219,6 +219,7 @@ export default function GoalForm({ goalId, defaultCategory, defaultTitle, defaul
 
       onSuccess();
     } catch (error: any) {
+      console.error(`Failed to ${goalId ? "update" : "create"} goal:`, error?.message || error);
       toast({
         title: "Error",
         description: `Failed to ${goalId ? "update" : "create"} goal`,
