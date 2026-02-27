@@ -11,6 +11,7 @@ export interface WheelCategory {
   order_index: number;
   is_active: boolean;
   is_legacy: boolean;
+  snapshot_key: string | null;
 }
 
 export function useWheelCategories(options?: { includeLegacy?: boolean; activeOnly?: boolean }) {
@@ -64,5 +65,15 @@ export function useCategoryLookup() {
     });
   }
 
-  return { lookup, labels, colors, categories, isLoading, error };
+  // Reverse map: snapshot column name → goal category key
+  const snapshotToGoalKey: Record<string, string> = {};
+  if (categories) {
+    categories.forEach((cat) => {
+      if (cat.snapshot_key) {
+        snapshotToGoalKey[cat.snapshot_key] = cat.key;
+      }
+    });
+  }
+
+  return { lookup, labels, colors, snapshotToGoalKey, categories, isLoading, error };
 }

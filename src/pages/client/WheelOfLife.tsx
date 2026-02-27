@@ -63,7 +63,7 @@ export default function WheelOfLife() {
   const [searchParams] = useSearchParams();
   const preselectedCategory = searchParams.get("category");
   const planLimits = useWheelFreePlanLimits();
-  const { colors: categoryColors } = useCategoryLookup();
+  const { colors: categoryColors, snapshotToGoalKey } = useCategoryLookup();
 
   const [snapshots, setSnapshots] = useState<WheelSnapshot[]>([]);
   const [goalCounts, setGoalCounts] = useState<Record<WheelCategory, number>>(
@@ -217,8 +217,12 @@ export default function WheelOfLife() {
     }));
   };
 
+  /** Translate a wheel snapshot column key to the DB goal category key */
+  const toGoalCategoryKey = (snapshotCol: WheelCategory): string =>
+    snapshotToGoalKey[snapshotCol] || snapshotCol;
+
   const navigateToGoals = (category: WheelCategory) => {
-    navigate(`/goals?category=${category}`);
+    navigate(`/goals?category=${toGoalCategoryKey(category)}`);
   };
 
   const handleAddGoal = (category: WheelCategory) => {
@@ -230,11 +234,11 @@ export default function WheelOfLife() {
       });
       return;
     }
-    navigate(`/goals?category=${category}&new=true`);
+    navigate(`/goals?category=${toGoalCategoryKey(category)}&new=true`);
   };
 
   const navigateToAddGoal = (category: WheelCategory) => {
-    navigate(`/goals?category=${category}&new=true`);
+    navigate(`/goals?category=${toGoalCategoryKey(category)}&new=true`);
   };
 
   const handleShareToggle = (snapshotId: string, snapshotDate: string, currentValue: boolean) => {

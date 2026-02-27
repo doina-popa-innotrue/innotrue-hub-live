@@ -19,6 +19,7 @@ interface WheelCategory {
   order_index: number;
   is_active: boolean;
   is_legacy: boolean;
+  snapshot_key: string | null;
 }
 
 // Default accessible colors for reset
@@ -44,6 +45,7 @@ const DEFAULT_COLORS: Record<string, string> = {
 export default function WheelCategoriesManagement() {
   const queryClient = useQueryClient();
   const [editedColors, setEditedColors] = useState<Record<string, string>>({});
+  const [editedNames, setEditedNames] = useState<Record<string, string>>({});
 
   const { data: categories, isLoading } = useQuery({
     queryKey: ["admin-wheel-categories"],
@@ -59,9 +61,11 @@ export default function WheelCategoriesManagement() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, color }: { id: string; color: string }) => {
-      const { error } = await supabase.from("wheel_categories").update({ color }).eq("id", id);
-
+    mutationFn: async ({ id, color, name }: { id: string; color?: string; name?: string }) => {
+      const updates: Record<string, string> = {};
+      if (color !== undefined) updates.color = color;
+      if (name !== undefined) updates.name = name;
+      const { error } = await supabase.from("wheel_categories").update(updates).eq("id", id);
       if (error) throw error;
     },
     onSuccess: (_, { id }) => {
@@ -72,18 +76,23 @@ export default function WheelCategoriesManagement() {
         delete updated[id];
         return updated;
       });
+      setEditedNames((prev) => {
+        const updated = { ...prev };
+        delete updated[id];
+        return updated;
+      });
       toast({
-        title: "Color Updated",
-        description: "The category color has been saved.",
+        title: "Saved",
+        description: "Category updated successfully.",
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to update color. Please try again.",
+        description: "Failed to update category. Please try again.",
         variant: "destructive",
       });
-      console.error("Error updating color:", error);
+      console.error("Error updating category:", error);
     },
   });
 
@@ -118,10 +127,15 @@ export default function WheelCategoriesManagement() {
     setEditedColors((prev) => ({ ...prev, [id]: color }));
   };
 
+  const handleNameChange = (id: string, name: string) => {
+    setEditedNames((prev) => ({ ...prev, [id]: name }));
+  };
+
   const handleSave = (id: string) => {
     const color = editedColors[id];
-    if (color !== undefined) {
-      updateMutation.mutate({ id, color });
+    const name = editedNames[id];
+    if (color !== undefined || name !== undefined) {
+      updateMutation.mutate({ id, color, name });
     }
   };
 
@@ -163,15 +177,23 @@ export default function WheelCategoriesManagement() {
           <CardTitle>Active Categories</CardTitle>
           <CardDescription>
             These are the current Wheel of Life categories displayed to users.
+            You can edit the display label and color. The <strong>key</strong> and{" "}
+            <strong>snapshot</strong> fields are read-only — do not change the snapshot
+            mapping unless the database column names change.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4">
             {activeCategories.map((category) => {
               const currentColor = editedColors[category.id] ?? category.color ?? "#6B7280";
-              const hasChanges =
+              const currentName = editedNames[category.id] ?? category.name;
+              const hasColorChange =
                 editedColors[category.id] !== undefined &&
                 editedColors[category.id] !== category.color;
+              const hasNameChange =
+                editedNames[category.id] !== undefined &&
+                editedNames[category.id] !== category.name;
+              const hasChanges = hasColorChange || hasNameChange;
 
               return (
                 <div key={category.id} className="flex items-center gap-3 p-3 rounded-lg border">
@@ -179,9 +201,18 @@ export default function WheelCategoriesManagement() {
                     className="w-10 h-10 rounded-full shrink-0 border-2 border-background shadow-sm"
                     style={{ backgroundColor: currentColor }}
                   />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{category.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{category.key}</p>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <Input
+                      value={currentName}
+                      onChange={(e) => handleNameChange(category.id, e.target.value)}
+                      className="h-8 text-sm font-medium"
+                    />
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>key: {category.key}</span>
+                      {category.snapshot_key && (
+                        <span>snapshot: {category.snapshot_key}</span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Label htmlFor={`color-${category.id}`} className="sr-only">
@@ -225,12 +256,17 @@ export default function WheelCategoriesManagement() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4">
               {legacyCategories.map((category) => {
                 const currentColor = editedColors[category.id] ?? category.color ?? "#6B7280";
-                const hasChanges =
+                const currentName = editedNames[category.id] ?? category.name;
+                const hasColorChange =
                   editedColors[category.id] !== undefined &&
                   editedColors[category.id] !== category.color;
+                const hasNameChange =
+                  editedNames[category.id] !== undefined &&
+                  editedNames[category.id] !== category.name;
+                const hasChanges = hasColorChange || hasNameChange;
 
                 return (
                   <div
@@ -241,9 +277,18 @@ export default function WheelCategoriesManagement() {
                       className="w-10 h-10 rounded-full shrink-0 border-2 border-background shadow-sm"
                       style={{ backgroundColor: currentColor }}
                     />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{category.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{category.key}</p>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <Input
+                        value={currentName}
+                        onChange={(e) => handleNameChange(category.id, e.target.value)}
+                        className="h-8 text-sm font-medium"
+                      />
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span>key: {category.key}</span>
+                        {category.snapshot_key && (
+                          <span>snapshot: {category.snapshot_key}</span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Label htmlFor={`color-${category.id}`} className="sr-only">

@@ -13911,6 +13911,7 @@ export type Database = {
           key: string
           name: string
           order_index: number
+          snapshot_key: string | null
           updated_at: string
         }
         Insert: {
@@ -13924,6 +13925,7 @@ export type Database = {
           key: string
           name: string
           order_index?: number
+          snapshot_key?: string | null
           updated_at?: string
         }
         Update: {
@@ -13937,6 +13939,7 @@ export type Database = {
           key?: string
           name?: string
           order_index?: number
+          snapshot_key?: string | null
           updated_at?: string
         }
         Relationships: []
