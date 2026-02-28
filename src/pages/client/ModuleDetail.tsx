@@ -972,29 +972,31 @@ export default function ModuleDetail() {
                 <div className="pt-4 border-t">
                   <p className="text-sm font-medium mb-2">Assigned Resources</p>
                   <div className="flex flex-wrap gap-2">
-                    {clientContent.resources.map((res) => (
-                      <Button
-                        key={res.id}
-                        variant="secondary"
-                        size="sm"
-                        onClick={async () => {
-                          if (res.resource.url) {
-                            window.open(res.resource.url, "_blank");
-                          } else if (res.resource.file_path) {
-                            const { data } = await supabase.storage
-                              .from("resource-library")
-                              .createSignedUrl(res.resource.file_path, 3600);
-                            if (data?.signedUrl) {
-                              window.open(data.signedUrl, "_blank");
+                    {clientContent.resources
+                      .filter((res) => res.resource)
+                      .map((res) => (
+                        <Button
+                          key={res.id}
+                          variant="secondary"
+                          size="sm"
+                          onClick={async () => {
+                            if (res.resource.url) {
+                              window.open(res.resource.url, "_blank");
+                            } else if (res.resource.file_path) {
+                              const { data } = await supabase.storage
+                                .from("resource-library")
+                                .createSignedUrl(res.resource.file_path, 3600);
+                              if (data?.signedUrl) {
+                                window.open(data.signedUrl, "_blank");
+                              }
                             }
-                          }
-                        }}
-                      >
-                        <LinkIcon className="h-4 w-4 mr-2" />
-                        {res.resource.title}
-                        <ExternalLink className="ml-2 h-3 w-3" />
-                      </Button>
-                    ))}
+                          }}
+                        >
+                          <LinkIcon className="h-4 w-4 mr-2" />
+                          {res.resource.title}
+                          <ExternalLink className="ml-2 h-3 w-3" />
+                        </Button>
+                      ))}
                   </div>
                 </div>
               )}

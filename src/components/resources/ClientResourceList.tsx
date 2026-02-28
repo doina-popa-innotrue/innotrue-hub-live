@@ -114,8 +114,9 @@ export function ClientResourceList({ moduleId, programId }: ClientResourceListPr
         .select("resource_id, program_id")
         .in("resource_id", directResourceIds);
 
-      // Add direct assignments
+      // Add direct assignments (skip if RLS denied access to the resource)
       directData.forEach((assignment) => {
+        if (!assignment.resource) return;
         seenResourceIds.add(assignment.resource_id);
         allAssignments.push({
           ...assignment,

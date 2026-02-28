@@ -333,7 +333,7 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
   });
 
   const handleDownload = async (assignment: ResourceAssignment) => {
-    if (!assignment.resource.file_path) return;
+    if (!assignment.resource?.file_path) return;
 
     const { data, error } = await supabase.storage
       .from("resource-library")
@@ -347,7 +347,7 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
     const url = URL.createObjectURL(data);
     const a = document.createElement("a");
     a.href = url;
-    a.download = assignment.resource.file_name || "download";
+    a.download = assignment.resource?.file_name || "download";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -554,7 +554,7 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
               </div>
             ) : (
               <div className="space-y-3">
-                {assignments?.map((assignment, index) => (
+                {assignments?.filter((a) => a.resource).map((assignment, index) => (
                   <div
                     key={assignment.id}
                     className="flex items-start gap-3 p-3 rounded-lg border bg-card"
