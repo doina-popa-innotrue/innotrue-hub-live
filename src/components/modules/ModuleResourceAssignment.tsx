@@ -40,6 +40,7 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ResourcePickerDialog } from "@/components/modules/ResourcePickerDialog";
 
 interface Resource {
   id: string;
@@ -89,9 +90,11 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<string>("resources");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
   const [selectedResourceId, setSelectedResourceId] = useState<string>("");
+  const [selectedResourceTitle, setSelectedResourceTitle] = useState<string>("");
+  const [selectedResourceType, setSelectedResourceType] = useState<string>("");
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [isRequired, setIsRequired] = useState(false);
@@ -124,21 +127,6 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
 
       if (error) throw error;
       return data as ResourceAssignment[];
-    },
-  });
-
-  // Fetch available resources from library (published & active)
-  const { data: availableResources, isLoading: loadingResources } = useQuery({
-    queryKey: ["available-resources"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("resource_library")
-        .select("id, canonical_id, title, description, resource_type")
-        .eq("is_active", true)
-        .order("title", { ascending: true });
-
-      if (error) throw error;
-      return data as Resource[];
     },
   });
 
@@ -183,9 +171,8 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
       (c) => !collectionLinks?.some((cl) => cl.collection_id === c.id),
     ) || [];
 
-  // Filter out already assigned resources
-  const unassignedResources =
-    availableResources?.filter((r) => !assignments?.some((a) => a.resource_id === r.id)) || [];
+  // IDs of already-assigned resources (used by ResourcePickerDialog to exclude them)
+  const assignedResourceIds = assignments?.map((a) => a.resource_id) || [];
 
   const assignMutation = useMutation({
     mutationFn: async () => {
@@ -206,8 +193,12 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["module-resource-assignments", moduleId] });
-      setDialogOpen(false);
+      // Also invalidate the picker's cache so excluded list stays in sync
+      queryClient.invalidateQueries({ queryKey: ["available-resources-for-picker"] });
+      setDetailsDialogOpen(false);
       setSelectedResourceId("");
+      setSelectedResourceTitle("");
+      setSelectedResourceType("");
       setNotes("");
       setIsRequired(false);
       toast.success("Resource assigned to module");
@@ -415,86 +406,79 @@ export function ModuleResourceAssignment({ moduleId }: ModuleResourceAssignmentP
             </TabsList>
 
             {activeTab === "resources" && (
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" disabled={unassignedResources.length === 0}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Assign Resource
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Assign Resource</DialogTitle>
-                    <DialogDescription>
-                      Select a resource from the library to assign to this module
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>Resource *</Label>
-                      <Select value={selectedResourceId} onValueChange={setSelectedResourceId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a resource" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {unassignedResources.map((resource) => (
-                            <SelectItem key={resource.id} value={resource.id}>
-                              <div className="flex items-center gap-2">
-                                <FileText className="h-4 w-4" />
-                                <span>{resource.title}</span>
-                                <Badge variant="outline" className="ml-2 capitalize">
-                                  {resource.resource_type}
-                                </Badge>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {loadingResources && (
-                        <p className="text-xs text-muted-foreground">Loading resources...</p>
-                      )}
-                      {unassignedResources.length === 0 && !loadingResources && (
-                        <p className="text-xs text-muted-foreground">
-                          No more resources available to assign. Add more in the Resource Library.
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Notes (optional)</Label>
-                      <Textarea
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Add any notes about this resource for clients..."
-                        rows={3}
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={isRequired}
-                        onCheckedChange={setIsRequired}
-                        id="is-required"
-                      />
-                      <Label htmlFor="is-required">Mark as required</Label>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                      Cancel
+              <>
+                <ResourcePickerDialog
+                  excludeResourceIds={assignedResourceIds}
+                  onSelect={(resource) => {
+                    setSelectedResourceId(resource.id);
+                    setSelectedResourceTitle(resource.title);
+                    setSelectedResourceType(resource.resource_type);
+                    setNotes("");
+                    setIsRequired(false);
+                    setDetailsDialogOpen(true);
+                  }}
+                  trigger={
+                    <Button size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Assign Resource
                     </Button>
-                    <Button
-                      onClick={() => assignMutation.mutate()}
-                      disabled={!selectedResourceId || assignMutation.isPending}
-                    >
-                      {assignMutation.isPending && (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      )}
-                      Assign
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                  }
+                />
+
+                {/* Assignment details dialog (shown after picking a resource) */}
+                <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Assign Resource</DialogTitle>
+                      <DialogDescription>
+                        Configure how this resource is assigned to the module
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="font-medium truncate">{selectedResourceTitle}</span>
+                        <Badge variant="outline" className="capitalize text-xs shrink-0">
+                          {selectedResourceType}
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Notes (optional)</Label>
+                        <Textarea
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                          placeholder="Add any notes about this resource for clients..."
+                          rows={3}
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={isRequired}
+                          onCheckedChange={setIsRequired}
+                          id="is-required"
+                        />
+                        <Label htmlFor="is-required">Mark as required</Label>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => assignMutation.mutate()}
+                        disabled={!selectedResourceId || assignMutation.isPending}
+                      >
+                        {assignMutation.isPending && (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        )}
+                        Assign
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </>
             )}
 
             {activeTab === "collections" && (
