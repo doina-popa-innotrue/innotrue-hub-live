@@ -250,7 +250,7 @@ function SortableModule({
           />
 
           {/* Content & Resources Info */}
-          {(module.content_packages || module.capability_assessment_id || meta?.sectionCount || meta?.skillCount || meta?.scenarioCount) && (
+          {!!(module.content_packages || module.capability_assessment_id || meta?.sectionCount || meta?.skillCount || meta?.scenarioCount) && (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
               {module.content_packages && (
                 <span className="inline-flex items-center gap-1.5">
