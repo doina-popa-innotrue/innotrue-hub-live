@@ -945,7 +945,7 @@ export function ModuleSessionManager({
                 <Plus className="h-4 w-4 mr-1" /> Schedule Session
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingSession ? "Edit Session" : "Schedule Session"}</DialogTitle>
               </DialogHeader>
