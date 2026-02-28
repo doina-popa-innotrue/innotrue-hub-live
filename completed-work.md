@@ -1,5 +1,49 @@
 # Completed Work — Detailed History
 
+## Cron Jobs Documentation + Null Resource Guard + UX Fixes (2026-02-28)
+
+Multi-session work covering crash fixes, UX improvements, and operational documentation.
+
+### Client ModuleDetail Crash — Null Resource from RLS (commit `14e8b3e`)
+- **Sentry:** `TypeError: can't access property "title", a.resource is null`
+- **Root cause:** When RLS on `resource_library` denies a client access (visibility/tier mismatch), PostgREST FK joins return `null` for the resource object. Client code at `res.resource.title` crashed.
+- **Fix:** Added `.filter((res) => res.resource)` / null guards in 3 files:
+  - `src/pages/client/ModuleDetail.tsx` — filter before rendering personalised content resources
+  - `src/components/modules/ModuleResourceAssignment.tsx` — filter before rendering assignments list + optional chaining in `handleDownload`
+  - `src/components/resources/ClientResourceList.tsx` — `if (!assignment.resource) return` guard when processing direct assignments
+
+### Resource Picker UX — Replace Flat Select with Filterable Dialog (commit `3e3aa86`)
+- **Problem:** "Module Resources" section used a flat `<Select>` dropdown for assigning resources, while "Personalised Content" already used the filterable `ResourcePickerDialog` with search + category/program/type filters.
+- **Fix:** Replaced the flat Select in `ModuleResourceAssignment.tsx` with a two-step flow:
+  1. `ResourcePickerDialog` (search + filters) for resource selection
+  2. Small confirmation dialog for notes + required toggle
+- Removed `availableResources` query and `unassignedResources` derived state (no longer needed — picker handles filtering internally)
+
+### Scenario Template `category_id` Null Handling (commit `f685ef1`)
+- **Root cause:** `useScenarioTemplates.ts` sent `category_id: ""` when no category was selected, violating FK constraint. Only `capability_assessment_id` had null-handling.
+- **Fix:** Applied same pattern: `category_id && category_id !== "none" ? category_id : null` in both `createMutation` and `updateMutation`.
+
+### Session Dialog Scroll Fix (commit `a1ca017`)
+- Save button was unreachable on small screens in the session dialog. Added `max-h-[60vh] overflow-y-auto` wrapper.
+
+### Cron Jobs Documentation & Restore Migration (commit `5679712`)
+- **`docs/CRON_JOBS.md`:** Comprehensive documentation of all 9 pg_cron jobs — daily timeline, monitoring SQL queries (health check, failure detection, run history), management commands (pause/resume/manual run), configurable retention periods, recovery instructions.
+- **`supabase/migrations/20260228120000_restore_all_cron_jobs.sql`:** Idempotent migration that safely unschedules all 9 jobs then re-creates them. For disaster recovery when cron jobs are missing but DB functions exist (e.g., after PITR restore).
+- **`docs/BACKUP_AND_RECOVERY.md`:** Section 8 rewritten with accurate 9-job inventory (was outdated with wrong job names). "Full rebuild from scratch" checklist now includes cron verification step.
+- **`MEMORY.md`:** Added `docs/CRON_JOBS.md` to Key Documentation table.
+
+### Files Changed
+- `src/pages/client/ModuleDetail.tsx` — null resource filter
+- `src/components/modules/ModuleResourceAssignment.tsx` — ResourcePickerDialog + null guards
+- `src/components/resources/ClientResourceList.tsx` — null resource guard
+- `src/hooks/scenarios/useScenarioTemplates.ts` — category_id null handling
+- `docs/CRON_JOBS.md` — **NEW** (304 lines)
+- `supabase/migrations/20260228120000_restore_all_cron_jobs.sql` — **NEW** (116 lines)
+- `docs/BACKUP_AND_RECOVERY.md` — section 8 rewrite + recovery step 6
+- `MEMORY.md` — cron doc reference
+
+---
+
 ## Wheel of Life Industry Alignment + Goal Category Navigation Fix (2026-03-27, session 2)
 
 Fixed goal creation from Wheel of Life (category not pre-selected + FK violation), fixed "Free Free" display bug, aligned categories to industry standard, made category labels admin-editable.

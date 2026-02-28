@@ -402,6 +402,12 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - **Goal creation failure:** `goal_category` PostgreSQL enum was missing 5 values (`career`, `health`, `environment`, `spirituality`, `emotional`) matching `wheel_categories` keys. GoalForm dropdown offered these values but INSERT failed silently (error swallowed without logging). Added console.error to catch block.
   - **Goal category cleanup:** Replaced rigid `goal_category` enum (21 overlapping values from 3 migrations) with `TEXT` column + FK to `wheel_categories(key)`. Categories now fully dynamic — admin-managed without migrations. Migration `20260327150000` maps old values to current 10 keys, drops enum, adds FK. `guidedPathInstantiation.ts` updated with `LEGACY_CATEGORY_MAP` for old template categories.
   - **Google Calendar `invalid_grant`:** `GOOGLE_CALENDAR_IMPERSONATE_EMAIL` secret had wrong email. User fixed manually.
+- **Bug Fixes (2026-02-28):**
+  - **Session dialog scroll:** Save button unreachable on small screens. Added `max-h-[60vh] overflow-y-auto` wrapper. Commit `a1ca017`.
+  - **Scenario template `category_id` FK violation:** Sent empty string instead of null when no category selected. Fixed with same null-handling pattern as `capability_assessment_id`. Commit `f685ef1`.
+  - **Client ModuleDetail crash (null resource):** `TypeError: can't access property "title", a.resource is null`. RLS on `resource_library` denies client access → PostgREST FK join returns null → crash. Added `.filter((res) => res.resource)` in `ModuleDetail.tsx`, `ModuleResourceAssignment.tsx`, `ClientResourceList.tsx`. Commit `14e8b3e`.
+- **Resource Picker UX (2026-02-28):** Replaced flat `<Select>` dropdown in "Module Resources" section with filterable `ResourcePickerDialog` (search + category/program/type filters) + confirmation dialog for notes/required toggle. Reuses same component already used by "Personalised Content" section. Commit `3e3aa86`.
+- **Cron Jobs Documentation & Restore (2026-02-28):** `docs/CRON_JOBS.md` — all 9 pg_cron jobs documented (timeline, monitoring queries, management, recovery). Idempotent restore migration `20260228120000_restore_all_cron_jobs.sql` for disaster recovery. `BACKUP_AND_RECOVERY.md` section 8 rewritten with accurate inventory. Commit `5679712`.
 - **Next steps:** SC-4 Organisation audit → M13 Zod Validation + R6/R7 Phase 2 → Phase 3 AI
 
 ## Scalability & Performance Audit (2026-03-24)
@@ -476,11 +482,13 @@ Migration `20260326120000_sc5_retention_cleanup_policies.sql`. Automated cron cl
 
 | Cron | Schedule | Target | Retention |
 |------|----------|--------|-----------|
-| `daily-cleanup-notifications` | 4:00 AM UTC | `cleanup-notifications` edge function | Per notification type config |
-| `daily-cleanup-analytics-events` | 4:30 AM UTC | `cleanup_old_analytics_events()` SQL | 180 days (configurable: `system_settings.analytics_retention_days`) |
-| `daily-cleanup-coach-access-logs` | 4:15 AM UTC | `cleanup_old_coach_access_logs()` SQL | 90 days (configurable: `system_settings.coach_log_retention_days`) |
+| `daily-notification-cleanup` | 4:00 AM UTC | `cleanup-notifications` edge function | Per notification type config |
+| `daily-analytics-cleanup` | 4:30 AM UTC | `cleanup_old_analytics_events()` SQL | 180 days (configurable: `system_settings.analytics_retention_days`) |
+| `daily-coach-access-log-cleanup` | 4:15 AM UTC | `cleanup_old_coach_access_logs()` SQL | 90 days (configurable: `system_settings.coach_log_retention_days`) |
 
-**Not cleaned:** `admin_audit_logs` (compliance), `credit_consumption_log` (bounded by usage), `calcom_webhook_logs` (has manual cleanup UI).
+**Not cleaned:** `admin_audit_logs` (compliance), `credit_consumption_log` (bounded by usage), `calcom_webhook_logs` (has its own daily cleanup cron `cleanup-webhook-logs-daily`).
+
+> **Full cron reference:** See `docs/CRON_JOBS.md` for all 9 jobs, monitoring queries, and restore migration.
 
 ### ~~SC-6: RLS Policy Performance~~ ✅ DONE (2026-03-26)
 Migration `20260326110000_sc6_rls_performance_indexes.sql`. 11 composite indexes for hot RLS functions:
