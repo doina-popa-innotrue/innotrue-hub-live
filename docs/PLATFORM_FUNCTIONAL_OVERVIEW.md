@@ -1,6 +1,6 @@
 # InnoTrue Hub — Platform Functional Overview
 
-> Last updated: 2026-02-22
+> Last updated: 2026-02-28
 > This document describes the InnoTrue Hub platform from a functional perspective: what it does, who uses it, how the pieces connect, and how things flow. It is intended for platform administrators, partner instructors, developers joining the project, and stakeholders evaluating platform capabilities.
 
 ---
@@ -135,7 +135,7 @@ Manages their organization's members and program access within the platform.
 │                    Supabase Backend                      │
 │  ┌─────────┐ ┌──────────┐ ┌─────────┐ ┌─────────────┐  │
 │  │  Auth    │ │ Database │ │ Storage │ │ Edge Funcs   │  │
-│  │  (OAuth) │ │ (Postgres│ │ (16     │ │ (76          │  │
+│  │  (OAuth) │ │ (Postgres│ │ (16     │ │ (79          │  │
 │  │         │ │  380+    │ │ buckets)│ │  functions)  │  │
 │  │         │ │  tables) │ │         │ │              │  │
 │  └─────────┘ └──────────┘ └─────────┘ └─────────────┘  │
@@ -684,7 +684,7 @@ Consumption analytics, user behavior analytics, program completions, system sett
 |--------|-------|
 | Database tables | 380+ |
 | Database enums | 25 |
-| Database migrations | 465 |
+| Database migrations | 474 |
 | Edge functions | 79 |
 | Frontend pages | 182+ (71 admin, 58 client, 14 teaching, 9 org-admin, 13+ shared) |
 | React components | 278 |
@@ -693,7 +693,7 @@ Consumption analytics, user behavior analytics, program completions, system sett
 | Notification types | 31+ |
 | Session types | 8 |
 | Session roles | 10 |
-| Unit tests | 453 (20 test files) |
+| Unit tests | 555 (25 test files) |
 | Environment variables | 41 |
 
 ### Tech Stack Summary

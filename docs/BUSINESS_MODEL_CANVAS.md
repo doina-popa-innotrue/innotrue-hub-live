@@ -1,7 +1,7 @@
 # InnoTrue Hub — Business Model Canvas
 
 > Based on the Strategyzer Business Model Canvas framework.
-> Last updated: 2026-02-18
+> Last updated: 2026-02-28
 >
 > This document maps InnoTrue Hub's business model across the nine building blocks of the Business Model Canvas. It complements the [Value Proposition Canvas](./VALUE_PROPOSITION_CANVAS.md), which details the fit between customer segments and value propositions.
 
@@ -295,7 +295,7 @@ The most important assets required to deliver the value propositions.
 
 | Resource | Description | Criticality |
 |----------|-------------|-------------|
-| **Platform codebase** | React + TypeScript frontend (160+ pages), 61 Deno edge functions, 369+ PostgreSQL tables, 411 migrations. Represents 2+ years of development | Critical |
+| **Platform codebase** | React + TypeScript frontend (181+ pages), 79 Deno edge functions, 380+ PostgreSQL tables, 474 migrations. Represents 2+ years of development | Critical |
 | **Entitlements engine** | 5-source merging logic with deny override — the system that enables flexible monetization. Difficult to replicate | Critical |
 | **3-tier staff assignment** | Program → module → enrollment hierarchy with Cal.com URL resolution. Core operational differentiator | Critical |
 | **3 assessment systems** | Capability (radar/evolution), definition (server-side scoring), psychometric (catalog). Unique combination for coaching platforms | High |
@@ -332,7 +332,7 @@ The most important things the business must do to make the model work.
 |----------|-------------|-----------|
 | **Feature development** | Building new capabilities following the 9-phase roadmap (Priority 0 → Phase 5 → Phase 3 → ...) | Continuous |
 | **Platform reliability** | Monitoring, bug fixes, security patches, RLS policy maintenance, edge function health | Continuous |
-| **Database management** | Migration management (403+), schema evolution, performance optimization, data integrity | Continuous |
+| **Database management** | Migration management (474), schema evolution, performance optimization, data integrity | Continuous |
 | **Deployment pipeline** | `develop` → `preprod` → `main` → Lovable sandbox. Edge function deployment. Environment sync | Per release |
 | **Security & compliance** | GDPR compliance, RLS enforcement, auth security, data isolation between organizations | Continuous |
 
@@ -362,7 +362,7 @@ The most important things the business must do to make the model work.
 
 | Partner | Role | Dependency Level | Substitutability |
 |---------|------|-----------------|------------------|
-| **Supabase** | Backend infrastructure (database, auth, storage, edge functions) | Critical | Low — deeply integrated (380+ tables, 76 edge functions, RLS policies). Migration would be major effort |
+| **Supabase** | Backend infrastructure (database, auth, storage, edge functions) | Critical | Low — deeply integrated (380+ tables, 79 edge functions, RLS policies). Migration would be major effort |
 | **Cloudflare** | Frontend hosting, CDN, custom domain | Medium | High — standard static hosting, easily switchable |
 | **Stripe** | Payment processing, subscription management, customer portal | High | Medium — standard payment integration, but billing logic is deeply integrated |
 | **Google Cloud (Vertex AI)** | AI inference (Gemini 3 Flash, EU/Frankfurt) | Medium | High — provider-agnostic architecture allows switching to Mistral, Azure OpenAI, or OpenAI |

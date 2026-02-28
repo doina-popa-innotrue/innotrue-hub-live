@@ -1,7 +1,7 @@
 # InnoTrue Hub — Value Proposition Canvas
 
 > Based on the Strategyzer Value Proposition Canvas framework.
-> Last updated: 2026-02-18
+> Last updated: 2026-02-28
 >
 > This document maps the platform's value proposition against four customer segments: coaching/development organizations (B2B buyers), clients/learners, coaches/instructors, and corporate L&D teams. Each segment has its own Customer Profile (jobs, pains, gains) and a corresponding Value Map (products/services, pain relievers, gain creators).
 
@@ -112,7 +112,7 @@ The Strategyzer Value Proposition Canvas has two sides:
 
 | # | Gain Created | How |
 |---|-------------|-----|
-| GC1 | **G1: Single platform** → 181+ pages covering all roles. 76 edge functions for backend logic. 16 storage buckets for all file types. Everything integrated. | Comprehensive, not assembled |
+| GC1 | **G1: Single platform** → 181+ pages covering all roles. 79 edge functions for backend logic. 16 storage buckets for all file types. Everything integrated. | Comprehensive, not assembled |
 | GC2 | **G2: Quantifiable outcomes** → Capability snapshots track score evolution over time. Radar charts compare self vs evaluator. Module completion rates per cohort. Credit consumption analytics. | Built-in outcome dashboards |
 | GC3 | **G3: Professional client experience** → PWA-ready, responsive UI. Onboarding welcome card. Journey progress widget. Unified feedback inbox (`/feedback`). Resource unlock dialogs. | Polished learner-facing UX |
 | GC4 | **G4: Scalable operations** → Cohort infrastructure (sessions, groups, member management). Enrollment codes with cohort auto-assignment (Phase 5 planned). Batch operations throughout admin. | Built for cohort-scale programs |

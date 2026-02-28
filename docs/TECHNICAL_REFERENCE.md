@@ -109,7 +109,7 @@ fi && npm run build
 ### Supabase project details
 
 Both preprod and prod have:
-- 465+ database migrations applied (including Phase 5 self-registration, schema drift fixes, enrollment duration, certification, credit expiry)
+- 474 database migrations applied (including Phase 5 self-registration, schema drift fixes, enrollment duration, certification, credit expiry, retention cleanup, cron restore)
 - Seed data loaded (`supabase/seed.sql`)
 - 79 edge functions deployed (including `complete-registration`, `redeem-enrollment-code`, `redeem-partner-code`, `alumni-lifecycle`, `enforce-enrollment-deadlines`, `generate-certificate-pdf`, `verify-badge`, `credit-expiry-notifications`, `submit-wheel-intent`, `bulk-create-users`, `send-coach-invite`)
 - Google OAuth enabled (Phase 5)
@@ -168,7 +168,7 @@ After login, users must accept the current platform terms before accessing the a
 
 ### Schema overview
 
-- **380+ tables**, 20+ enum types, 465 migrations
+- **380+ tables**, 20+ enum types, 474 migrations
 - All public tables have **RLS enabled** (276 tables total, 41 with explicit policies, 235 locked to service_role only)
 - Key enums: `app_role`, `program_category`, `module_type`, `enrollment_status`, `decision_status`, `goal_category`
 
@@ -208,7 +208,7 @@ All INSERTs use `ON CONFLICT` for idempotency.
 
 ### Overview
 
-76 Deno/TypeScript edge functions in `supabase/functions/`, plus 11 shared utilities in `_shared/`.
+79 Deno/TypeScript edge functions in `supabase/functions/`, plus 11 shared utilities in `_shared/`.
 
 All functions have `verify_jwt = false` in `supabase/config.toml` — they implement custom auth checks internally (checking the `Authorization` header via `supabase.auth.getUser()`).
 
@@ -464,7 +464,7 @@ Auth endpoints are never cached.
 
 ### Unit tests (Vitest)
 
-- **453 tests** in `src/lib/__tests__/` (20 test files)
+- **555 tests** across 25 test files (`src/lib/__tests__/` + `supabase/functions/_shared/__tests__/`)
 - Run: `npm test` (single run), `npm run test:watch` (watch mode)
 - Coverage: `npm run test:coverage`
 
@@ -843,13 +843,15 @@ Admins generate shareable enrollment codes per program. Authenticated users rede
 - 4 indexes: `profiles(name)`, `notifications(title)`, `notifications(message)`, `organizations(name)`
 - Optimizes `ilike '%term%'` leading-wildcard patterns
 
-**Automated Cleanup Crons (SC-5):**
+**Automated Cleanup & Lifecycle Crons (SC-5):**
+
+9 pg_cron jobs handle credit lifecycle, cleanup, notifications, session reminders, and enrollment enforcement. Full documentation in [`docs/CRON_JOBS.md`](./CRON_JOBS.md).
 
 | Cron | Schedule | Target | Retention |
 |------|----------|--------|-----------|
-| `daily-cleanup-notifications` | 4:00 AM UTC | `cleanup-notifications` edge function | Per notification type config |
-| `daily-cleanup-analytics-events` | 4:30 AM UTC | `cleanup_old_analytics_events()` SQL function | 180 days (configurable via `system_settings.analytics_retention_days`) |
-| `daily-cleanup-coach-access-logs` | 4:15 AM UTC | `cleanup_old_coach_access_logs()` SQL function | 90 days (configurable via `system_settings.coach_log_retention_days`) |
+| `daily-notification-cleanup` | 4:00 AM UTC | `cleanup-notifications` edge function | Per notification type config |
+| `daily-analytics-cleanup` | 4:30 AM UTC | `cleanup_old_analytics_events()` SQL function | 180 days (configurable via `system_settings.analytics_retention_days`) |
+| `daily-coach-access-log-cleanup` | 4:15 AM UTC | `cleanup_old_coach_access_logs()` SQL function | 90 days (configurable via `system_settings.coach_log_retention_days`) |
 
 **Not cleaned:** `admin_audit_logs` (compliance), `credit_consumption_log` (bounded by usage)
 

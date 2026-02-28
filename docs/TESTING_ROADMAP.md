@@ -6,7 +6,7 @@
 
 | Layer | Framework | Test Files | Tests | Coverage |
 |-------|-----------|------------|-------|----------|
-| **Unit tests** (`src/lib/`) | Vitest + jsdom | 20 | 453 | 97% stmts, 95% branches |
+| **Unit tests** (`src/lib/`) | Vitest + jsdom | 20 | 454 | 97% stmts, 95% branches |
 | **E2E tests** (`e2e/tests/`) | Playwright (Chromium) | 13 | ~45 scenarios | Core journeys covered |
 | **Edge function shared utils** (`_shared/__tests__/`) | Vitest + Deno mock | 5 | 101 | validation, cors, error-response, ai-limits, request-signing |
 | **Edge functions** (individual) | None | 0 | 0 | 0% |
@@ -14,7 +14,7 @@
 | **React hooks** (`src/hooks/`) | None | 0 | 0 | 0% (1 hook tested via lib/) |
 | **Pages** (`src/pages/`) | None | 0 | 0 | 0% |
 
-**Total: 554 tests across 25 files.**
+**Total: 555 tests across 25 files.**
 
 ### What's Tested Well
 
@@ -26,7 +26,7 @@
 
 ### Key Gaps
 
-1. **Edge functions** — 76 functions, 11 shared utilities, zero tests
+1. **Edge functions** — 79 functions, 11 shared utilities, zero tests
 2. **React components** — 273 component files, zero component-level tests
 3. **React hooks** — 76 custom hooks, only `useIsMaxPlan` tested (via lib/)
 4. **Pages** — 181 page files, only tested via E2E (surface level)
@@ -255,8 +255,8 @@ Copy the shared utilities' pure logic into `src/lib/` wrappers and test with Vit
 
 | Phase | Focus | Est. New Tests | Cumulative | Sessions |
 |-------|-------|---------------|------------|----------|
-| Current | Unit tests (src/lib/) | 453 | 453 | Done |
-| ~~Phase 1~~ | ~~Edge function shared utils~~ | ~~101~~ | ~~554~~ | ~~Done~~ ✅ |
+| Current | Unit tests (src/lib/) | 454 | 454 | Done |
+| ~~Phase 1~~ | ~~Edge function shared utils~~ | ~~101~~ | ~~555~~ | ~~Done~~ ✅ |
 | Phase 2 | React hooks (business logic) | 70-90 | ~630 | 2-3 |
 | Phase 3 | E2E expansion | 50-70 | ~690 | 3-4 |
 | Phase 4 | Edge function integration | 70-90 | ~770 | 3-4 |

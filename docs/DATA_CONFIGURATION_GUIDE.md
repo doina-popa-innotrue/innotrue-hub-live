@@ -1179,7 +1179,7 @@ When `xapi-statements` receives a statement with a completion verb (`completed`,
 
 ### Edge Function Shared Utilities
 
-All 76 edge functions use shared utility libraries (mandatory for new functions):
+All 79 edge functions use shared utility libraries (mandatory for new functions):
 
 | Utility | Import Path | Purpose |
 |---------|-------------|---------|
