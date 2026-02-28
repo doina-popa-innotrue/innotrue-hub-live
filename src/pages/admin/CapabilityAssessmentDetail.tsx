@@ -24,7 +24,6 @@ import {
   Trash2,
   Loader2,
   ArrowLeft,
-  GripVertical,
   ChevronDown,
   ChevronUp,
   Sliders,
@@ -120,6 +119,8 @@ export default function CapabilityAssessmentDetail() {
   const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set());
   const [selectedSnapshots, setSelectedSnapshots] = useState<Set<string>>(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
+  const [domainToDelete, setDomainToDelete] = useState<Domain | null>(null);
   const [snapshotPage, setSnapshotPage] = useState(0);
   const SNAPSHOT_PAGE_SIZE = 25;
 
@@ -367,15 +368,66 @@ export default function CapabilityAssessmentDetail() {
 
   const deleteDomainMutation = useMutation({
     mutationFn: async (domainId: string) => {
-      const { error } = await supabase.from("capability_domains").delete().eq("id", domainId);
+      const { data, error } = await supabase
+        .from("capability_domains")
+        .delete()
+        .eq("id", domainId)
+        .select();
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("Domain was not deleted — it may have already been removed or access was denied.");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["capability-domains", id] });
       queryClient.invalidateQueries({ queryKey: ["capability-questions", id] });
       toast({ description: "Domain deleted successfully" });
+      setDomainToDelete(null);
     },
     onError: (error) => {
+      console.error("Delete domain failed:", error);
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setDomainToDelete(null);
+    },
+  });
+
+  const reorderDomainMutation = useMutation({
+    mutationFn: async ({
+      domainId,
+      direction,
+    }: {
+      domainId: string;
+      direction: "up" | "down";
+    }) => {
+      const sorted = [...(domains || [])].sort((a, b) => a.order_index - b.order_index);
+      const currentIndex = sorted.findIndex((d) => d.id === domainId);
+
+      if (currentIndex === -1) return;
+      if (direction === "up" && currentIndex === 0) return;
+      if (direction === "down" && currentIndex === sorted.length - 1) return;
+
+      const swapIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+      const currentDomain = sorted[currentIndex];
+      const swapDomain = sorted[swapIndex];
+
+      // Swap order_index values
+      const { error: error1 } = await supabase
+        .from("capability_domains")
+        .update({ order_index: swapDomain.order_index })
+        .eq("id", currentDomain.id);
+      if (error1) throw error1;
+
+      const { error: error2 } = await supabase
+        .from("capability_domains")
+        .update({ order_index: currentDomain.order_index })
+        .eq("id", swapDomain.id);
+      if (error2) throw error2;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["capability-domains", id] });
+    },
+    onError: (error) => {
+      console.error("Reorder domain failed:", error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
@@ -442,18 +494,25 @@ export default function CapabilityAssessmentDetail() {
 
   const deleteQuestionMutation = useMutation({
     mutationFn: async (questionId: string) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("capability_domain_questions")
         .delete()
-        .eq("id", questionId);
+        .eq("id", questionId)
+        .select();
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("Question was not deleted — it may have already been removed or access was denied.");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["capability-questions", id] });
       toast({ description: "Question deleted successfully" });
+      setQuestionToDelete(null);
     },
     onError: (error) => {
+      console.error("Delete question failed:", error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
+      setQuestionToDelete(null);
     },
   });
 
@@ -935,7 +994,39 @@ export default function CapabilityAssessmentDetail() {
                     <Card>
                       <CardHeader className="pb-2">
                         <div className="flex items-center gap-3">
-                          <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
+                          <div className="flex flex-col gap-0.5">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              disabled={index === 0 || reorderDomainMutation.isPending}
+                              onClick={() =>
+                                reorderDomainMutation.mutate({
+                                  domainId: domain.id,
+                                  direction: "up",
+                                })
+                              }
+                            >
+                              <ArrowUp className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              disabled={
+                                index === (domains?.length ?? 0) - 1 ||
+                                reorderDomainMutation.isPending
+                              }
+                              onClick={() =>
+                                reorderDomainMutation.mutate({
+                                  domainId: domain.id,
+                                  direction: "down",
+                                })
+                              }
+                            >
+                              <ArrowDown className="h-3 w-3" />
+                            </Button>
+                          </div>
                           <CollapsibleTrigger asChild>
                             <Button variant="ghost" size="sm" className="p-0 h-auto">
                               {isExpanded ? (
@@ -972,15 +1063,7 @@ export default function CapabilityAssessmentDetail() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => {
-                                if (
-                                  confirm(
-                                    `Delete "${domain.name}"? This will also delete all questions in this domain.`,
-                                  )
-                                ) {
-                                  deleteDomainMutation.mutate(domain.id);
-                                }
-                              }}
+                              onClick={() => setDomainToDelete(domain)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -1108,11 +1191,7 @@ export default function CapabilityAssessmentDetail() {
                                       variant="ghost"
                                       size="icon"
                                       className="h-8 w-8"
-                                      onClick={() => {
-                                        if (confirm("Delete this question?")) {
-                                          deleteQuestionMutation.mutate(question.id);
-                                        }
-                                      }}
+                                      onClick={() => setQuestionToDelete(question.id)}
                                     >
                                       <Trash2 className="h-3 w-3" />
                                     </Button>
@@ -1353,6 +1432,78 @@ export default function CapabilityAssessmentDetail() {
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       )}
                       Delete {selectedSnapshots.size} Snapshot(s)
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              {/* Delete Question Confirmation Dialog */}
+              <AlertDialog
+                open={!!questionToDelete}
+                onOpenChange={(open) => {
+                  if (!open) setQuestionToDelete(null);
+                }}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this question?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. The question and all associated ratings will be
+                      permanently deleted.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        if (questionToDelete) {
+                          deleteQuestionMutation.mutate(questionToDelete);
+                        }
+                      }}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      disabled={deleteQuestionMutation.isPending}
+                    >
+                      {deleteQuestionMutation.isPending && (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      )}
+                      Delete Question
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              {/* Delete Domain Confirmation Dialog */}
+              <AlertDialog
+                open={!!domainToDelete}
+                onOpenChange={(open) => {
+                  if (!open) setDomainToDelete(null);
+                }}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Delete &ldquo;{domainToDelete?.name}&rdquo;?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the domain and all
+                      questions within it, along with their associated ratings and notes.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        if (domainToDelete) {
+                          deleteDomainMutation.mutate(domainToDelete.id);
+                        }
+                      }}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      disabled={deleteDomainMutation.isPending}
+                    >
+                      {deleteDomainMutation.isPending && (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      )}
+                      Delete Domain
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
