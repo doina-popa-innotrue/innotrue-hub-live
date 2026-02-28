@@ -26,6 +26,7 @@ interface ModuleAssignmentsViewProps {
   moduleProgressId: string;
   isEditable: boolean; // true for coach/instructor, false for client
   isInstructor?: boolean; // true when instructor/coach is viewing
+  hideHeader?: boolean; // true when embedded inside AssignmentSection (avoids duplicate heading)
 }
 
 export function ModuleAssignmentsView({
@@ -33,6 +34,7 @@ export function ModuleAssignmentsView({
   moduleProgressId,
   isEditable,
   isInstructor = false,
+  hideHeader = false,
 }: ModuleAssignmentsViewProps) {
   const { data: assignedTypes, isLoading } = useQuery({
     queryKey: ["module-assigned-assignments", moduleId],
@@ -65,10 +67,12 @@ export function ModuleAssignmentsView({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <ClipboardCheck className="h-5 w-5 text-primary" />
-        <h3 className="font-semibold text-lg">Assignments</h3>
-      </div>
+      {!hideHeader && (
+        <div className="flex items-center gap-2">
+          <ClipboardCheck className="h-5 w-5 text-primary" />
+          <h3 className="font-semibold text-lg">Assignments</h3>
+        </div>
+      )}
       {assignedTypes.map((type) => (
         <ModuleAssignmentForm
           key={type.id}

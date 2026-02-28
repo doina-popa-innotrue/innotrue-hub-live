@@ -19,9 +19,7 @@ import {
   Award,
   ChevronRight,
   FileText,
-  Link as LinkIcon,
   Lock,
-  Paperclip,
   Plus,
   RotateCcw,
   PlayCircle,
@@ -30,14 +28,11 @@ import { format } from "date-fns";
 import { useTalentLmsSSO } from "@/hooks/useTalentLmsSSO";
 import { useTalentLmsProgress } from "@/hooks/useTalentLmsProgress";
 import { awardSkillsForModuleCompletion } from "@/hooks/useSkillsAcquisition";
-import ModuleReflections from "@/components/modules/ModuleReflections";
-import ModuleFeedback from "@/components/modules/ModuleFeedback";
-import { ModuleAssignmentsView } from "@/components/modules/ModuleAssignmentsView";
-import { ModuleSelfAssessment } from "@/components/modules/ModuleSelfAssessment";
 import { ModuleSessionDisplay } from "@/components/modules/ModuleSessionDisplay";
 import { ModuleScenariosSection } from "@/components/modules/ModuleScenariosSection";
-import { AssignedScenarioItem } from "@/components/modules/AssignedScenarioItem";
 import { ContentPackageViewer } from "@/components/modules/ContentPackageViewer";
+import { AssignmentSection } from "@/components/modules/AssignmentSection";
+import type { ClientContent } from "@/components/modules/AssignmentSection";
 
 import {
   Breadcrumb,
@@ -98,44 +93,6 @@ interface PrerequisiteModule {
   id: string;
   title: string;
   order_index: number;
-}
-
-interface ClientContent {
-  id: string;
-  content: string;
-  attachments?: {
-    id: string;
-    title: string;
-    attachment_type: string;
-    file_path?: string;
-    url?: string;
-    description?: string;
-  }[];
-  resources?: {
-    id: string;
-    resource: {
-      id: string;
-      title: string;
-      description: string | null;
-      resource_type: string;
-      url: string | null;
-      file_path: string | null;
-    };
-  }[];
-  scenarios?: {
-    id: string;
-    scenario_template_id: string;
-    scenario_templates: {
-      id: string;
-      title: string;
-      description: string | null;
-      is_protected: boolean;
-      capability_assessments?: {
-        id: string;
-        name: string;
-      } | null;
-    } | null;
-  }[];
 }
 
 export default function ModuleDetail() {
@@ -924,107 +881,6 @@ export default function ModuleDetail() {
           </Card>
         )}
 
-        {/* Client-specific content for individualized modules */}
-        {!isLocked && clientContent && (
-          <Card className="border-primary/50 bg-primary/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Your Assignment
-              </CardTitle>
-              <CardDescription>This content has been specifically assigned to you</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="whitespace-pre-wrap">{clientContent.content}</div>
-
-              {clientContent.attachments && clientContent.attachments.length > 0 && (
-                <div className="pt-4 border-t">
-                  <p className="text-sm font-medium mb-2">Attached Files & Links</p>
-                  <div className="flex flex-wrap gap-2">
-                    {clientContent.attachments.map((att) => (
-                      <Button
-                        key={att.id}
-                        variant="outline"
-                        size="sm"
-                        onClick={async () => {
-                          if (att.url) {
-                            window.open(att.url, "_blank");
-                          } else if (att.file_path) {
-                            const { data } = await supabase.storage
-                              .from("module-client-content")
-                              .createSignedUrl(att.file_path, 3600);
-                            if (data?.signedUrl) {
-                              window.open(data.signedUrl, "_blank");
-                            }
-                          }
-                        }}
-                      >
-                        <Paperclip className="h-4 w-4 mr-2" />
-                        {att.title}
-                        <ExternalLink className="ml-2 h-3 w-3" />
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {clientContent.resources && clientContent.resources.length > 0 && (
-                <div className="pt-4 border-t">
-                  <p className="text-sm font-medium mb-2">Assigned Resources</p>
-                  <div className="flex flex-wrap gap-2">
-                    {clientContent.resources
-                      .filter((res) => res.resource)
-                      .map((res) => (
-                        <Button
-                          key={res.id}
-                          variant="secondary"
-                          size="sm"
-                          onClick={async () => {
-                            if (res.resource.url) {
-                              window.open(res.resource.url, "_blank");
-                            } else if (res.resource.file_path) {
-                              const { data } = await supabase.storage
-                                .from("resource-library")
-                                .createSignedUrl(res.resource.file_path, 3600);
-                              if (data?.signedUrl) {
-                                window.open(data.signedUrl, "_blank");
-                              }
-                            }
-                          }}
-                        >
-                          <LinkIcon className="h-4 w-4 mr-2" />
-                          {res.resource.title}
-                          <ExternalLink className="ml-2 h-3 w-3" />
-                        </Button>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              {clientContent.scenarios && clientContent.scenarios.length > 0 && (
-                <div className="pt-4 border-t">
-                  <p className="text-sm font-medium mb-2">Assigned Scenarios</p>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Complete these scenarios as part of your assignment. Click to start.
-                  </p>
-                  <div className="space-y-2">
-                    {clientContent.scenarios.map((scen) => (
-                      <AssignedScenarioItem
-                        key={scen.id}
-                        scenarioTemplateId={scen.scenario_template_id}
-                        title={scen.scenario_templates?.title || "Untitled Scenario"}
-                        assessmentName={scen.scenario_templates?.capability_assessments?.name}
-                        moduleId={moduleId!}
-                        enrollmentId={enrollment?.id}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
         {!isLocked && module.links && module.links.length > 0 && (
           <Card
             className={module.module_type === "content" ? "border-primary/50 bg-primary/5" : ""}
@@ -1208,14 +1064,12 @@ export default function ModuleDetail() {
           <>
             <Separator />
             <ModuleScenariosSection moduleId={module.id} enrollmentId={enrollment.id} />
-            <ModuleSelfAssessment moduleId={module.id} enrollmentId={enrollment.id} />
-            <ModuleAssignmentsView
+            <AssignmentSection
+              clientContent={clientContent}
               moduleId={module.id}
               moduleProgressId={module.progress.id}
-              isEditable={true}
+              enrollmentId={enrollment.id}
             />
-            <ModuleReflections moduleProgressId={module.progress.id} />
-            <ModuleFeedback moduleProgressId={module.progress.id} />
           </>
         )}
       </div>
