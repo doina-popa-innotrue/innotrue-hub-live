@@ -77,6 +77,8 @@ export function useScenarioTemplateMutations() {
             data.capability_assessment_id && data.capability_assessment_id !== "none"
               ? data.capability_assessment_id
               : null,
+          category_id:
+            data.category_id && data.category_id !== "none" ? data.category_id : null,
           created_by: user?.id,
         })
         .select()
@@ -105,6 +107,8 @@ export function useScenarioTemplateMutations() {
             data.capability_assessment_id && data.capability_assessment_id !== "none"
               ? data.capability_assessment_id
               : null,
+          category_id:
+            data.category_id && data.category_id !== "none" ? data.category_id : null,
         })
         .eq("id", id);
 
