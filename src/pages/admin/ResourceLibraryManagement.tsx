@@ -136,6 +136,7 @@ export default function ResourceLibraryManagement() {
     url: "",
     file: null as File | null,
     downloadable: true,
+    visibility: "enrolled" as string,
     program_ids: [] as string[],
     skill_ids: [] as string[],
     category_id: "" as string,
@@ -288,7 +289,7 @@ export default function ResourceLibraryManagement() {
           mime_type,
           created_by: user.id,
           is_active: true,
-          visibility: "private",
+          visibility: data.visibility || "enrolled",
           downloadable: data.downloadable,
         })
         .select("id")
@@ -349,6 +350,7 @@ export default function ResourceLibraryManagement() {
         resource_type: data.resource_type,
         url: data.url || null,
         category_id: data.category_id || null,
+        visibility: data.visibility || "enrolled",
       };
 
       if (data.file) {
@@ -477,6 +479,7 @@ export default function ResourceLibraryManagement() {
       url: "",
       file: null,
       downloadable: true,
+      visibility: "enrolled",
       program_ids: [],
       skill_ids: [],
       category_id: "",
@@ -494,6 +497,7 @@ export default function ResourceLibraryManagement() {
       url: resource.url || "",
       file: null,
       downloadable: resource.downloadable,
+      visibility: resource.visibility || "private",
       program_ids: resource.program_ids || [],
       skill_ids: resource.skill_ids || [],
       category_id: resource.category_id || "",
@@ -766,6 +770,41 @@ export default function ResourceLibraryManagement() {
                 </Label>
               </div>
 
+              <div className="space-y-2">
+                <Label>Visibility</Label>
+                <Select
+                  value={formData.visibility}
+                  onValueChange={(value) => setFormData({ ...formData, visibility: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="private">
+                      <span className="flex items-center gap-2">
+                        <EyeOff className="h-4 w-4" />
+                        Private — Admin only
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="enrolled">
+                      <span className="flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        Enrolled — Assigned or enrolled users
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="public">
+                      <span className="flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        Public — All logged-in users
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Controls who can see this resource. &quot;Enrolled&quot; is recommended for most resources — it allows access via program enrollment, direct assignment, or personalised content.
+                </p>
+              </div>
+
               <Collapsible open={programsOpen} onOpenChange={setProgramsOpen} className="space-y-2">
                 <CollapsibleTrigger asChild>
                   <Button variant="outline" className="w-full justify-between">
@@ -773,12 +812,12 @@ export default function ResourceLibraryManagement() {
                       {formData.program_ids.length === 0 ? (
                         <>
                           <Globe className="h-4 w-4" />
-                          Public (all users)
+                          All programs
                         </>
                       ) : (
                         <>
                           <Lock className="h-4 w-4" />
-                          Gated to {formData.program_ids.length} program(s)
+                          Restricted to {formData.program_ids.length} program(s)
                         </>
                       )}
                     </span>
@@ -789,7 +828,7 @@ export default function ResourceLibraryManagement() {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-2 pt-2">
                   <p className="text-xs text-muted-foreground">
-                    Leave empty for public access, or select programs to restrict access.
+                    Optionally restrict to specific programs. Leave empty to allow access from any program.
                   </p>
                   <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
                     {programs?.map((program) => (
