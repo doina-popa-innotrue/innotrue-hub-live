@@ -26,6 +26,7 @@ import {
   ArrowRight,
   TrendingUp,
   Maximize2,
+  Pencil,
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { DevelopmentItemDialog } from "@/components/capabilities/DevelopmentItemDialog";
@@ -75,6 +76,7 @@ export function InstructorAssignmentScoring({
     domainId?: string;
   }>({});
   const [isExpanded, setIsExpanded] = useState(false);
+  const [editItem, setEditItem] = useState<any>(null);
 
   // Get the assignment type to find scoring assessment (fallback if no linked assessment)
   const { data: assignmentType } = useQuery({
@@ -240,6 +242,7 @@ export function InstructorAssignmentScoring({
   const navigate = useNavigate();
 
   // Fetch development items (resources/notes) added by instructor for this snapshot (overall level)
+  // Excludes items that are linked to specific questions or domains (those are shown inline).
   const { data: instructorResources } = useQuery({
     queryKey: ["instructor-resources", snapshotId],
     queryFn: async () => {
@@ -255,32 +258,68 @@ export function InstructorAssignmentScoring({
       if (!links || links.length === 0) return [];
 
       const itemIds = links.map((l) => l.development_item_id);
+
+      // Also get question-linked and domain-linked item IDs so we can exclude them
+      const [questionLinks, domainLinks] = await Promise.all([
+        supabase
+          .from("development_item_question_links")
+          .select("development_item_id")
+          .eq("snapshot_id", snapshotId),
+        supabase
+          .from("development_item_domain_links")
+          .select("development_item_id")
+          .eq("snapshot_id", snapshotId),
+      ]);
+
+      const excludeIds = new Set([
+        ...(questionLinks.data || []).map((l) => l.development_item_id),
+        ...(domainLinks.data || []).map((l) => l.development_item_id),
+      ]);
+
+      // Only keep items that are ONLY linked at snapshot level (overall)
+      const overallItemIds = itemIds.filter((id) => !excludeIds.has(id));
+      if (overallItemIds.length === 0) return [];
+
       const { data: items, error: itemsError } = await supabase
         .from("development_items")
-        .select(
-          `
-          id, 
-          item_type, 
-          title, 
-          content, 
-          resource_url, 
-          author_id,
-          resource_type,
-          library_resource_id,
-          library_resources (
-            id,
-            title,
-            url,
-            resource_type,
-            file_path
-          )
-        `,
-        )
-        .in("id", itemIds)
+        .select("id, item_type, title, content, resource_url, author_id, resource_type, library_resource_id, file_path")
+        .in("id", overallItemIds)
         .in("item_type", ["resource", "note", "action_item", "reflection"]);
 
       if (itemsError) throw itemsError;
-      return items || [];
+
+      // For items with library_resource_id, fetch the resource details
+      const libraryResourceIds =
+        items?.filter((i) => i.library_resource_id).map((i) => i.library_resource_id!) || [];
+      let libraryResources: Record<string, { title: string; resource_url: string | null }> = {};
+
+      if (libraryResourceIds.length > 0) {
+        const { data: libRes } = await supabase
+          .from("resource_library")
+          .select("id, title, url")
+          .in("id", libraryResourceIds);
+
+        libraryResources = (libRes || []).reduce(
+          (acc, r) => {
+            acc[r.id] = { title: r.title, resource_url: r.url };
+            return acc;
+          },
+          {} as Record<string, { title: string; resource_url: string | null }>,
+        );
+      }
+
+      // Enhance items with library resource info
+      return (items || []).map((item) => {
+        if (item.library_resource_id && libraryResources[item.library_resource_id]) {
+          const libRes = libraryResources[item.library_resource_id];
+          return {
+            ...item,
+            title: item.title || libRes.title,
+            resource_url: item.resource_url || libRes.resource_url,
+          };
+        }
+        return item;
+      });
     },
     enabled: !!snapshotId,
   });
@@ -617,6 +656,17 @@ export function InstructorAssignmentScoring({
       });
       return;
     }
+    setEditItem(null);
+    setDevItemContext(context);
+    setResourceDialogOpen(true);
+  };
+
+  // Handle "Edit Resource" click
+  const handleEditResourceClick = (
+    item: any,
+    context: { questionId?: string; domainId?: string },
+  ) => {
+    setEditItem(item);
     setDevItemContext(context);
     setResourceDialogOpen(true);
   };
@@ -795,18 +845,32 @@ export function InstructorAssignmentScoring({
                           )}
                         </div>
                         {canAddResources && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteResourceMutation.mutate(item.id);
-                            }}
-                            title="Remove this item"
-                          >
-                            <Trash2 className="h-3 w-3 text-muted-foreground" />
-                          </Button>
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditResourceClick(item, { questionId: question.id, domainId: domain.id });
+                              }}
+                              title="Edit this item"
+                            >
+                              <Pencil className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteResourceMutation.mutate(item.id);
+                              }}
+                              title="Remove this item"
+                            >
+                              <Trash2 className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                          </div>
                         )}
                       </div>
                     );
@@ -892,18 +956,32 @@ export function InstructorAssignmentScoring({
                       )}
                     </div>
                     {canAddResources && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 shrink-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteResourceMutation.mutate(item.id);
-                        }}
-                        title="Remove this item"
-                      >
-                        <Trash2 className="h-3 w-3 text-muted-foreground" />
-                      </Button>
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditResourceClick(item, { domainId: domain.id });
+                          }}
+                          title="Edit this item"
+                        >
+                          <Pencil className="h-3 w-3 text-muted-foreground" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteResourceMutation.mutate(item.id);
+                          }}
+                          title="Remove this item"
+                        >
+                          <Trash2 className="h-3 w-3 text-muted-foreground" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 );
@@ -964,23 +1042,37 @@ export function InstructorAssignmentScoring({
         {instructorResources && instructorResources.length > 0 ? (
           <div className="space-y-2">
             {instructorResources.map((item) => {
-              const libraryResource = (item as any).library_resources;
-              const resourceType = (item as any).resource_type;
-              const isLibraryResource = resourceType === "library" && libraryResource;
+              const TypeIcon =
+                item.item_type === "reflection"
+                  ? StickyNote
+                  : item.item_type === "action_item"
+                    ? Target
+                    : item.item_type === "resource"
+                      ? LinkIcon
+                      : FileText;
+              const hasDirectUrl = !!item.resource_url;
+              const hasLibraryResource = !!item.library_resource_id;
+              const isClickable = hasDirectUrl || hasLibraryResource;
+
+              const handleItemClick = () => {
+                if (hasDirectUrl) {
+                  window.open(item.resource_url!, "_blank");
+                } else if (hasLibraryResource) {
+                  navigate(`/resources/${item.library_resource_id}`);
+                }
+              };
 
               return (
                 <div
                   key={item.id}
-                  className="flex items-start gap-2 p-2 rounded-md bg-background border"
+                  className={`flex items-start gap-2 p-2 rounded-md bg-background border ${isClickable ? "cursor-pointer hover:bg-muted/50" : ""}`}
+                  onClick={isClickable ? handleItemClick : undefined}
                 >
+                  <TypeIcon className="h-3.5 w-3.5 mt-1 text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-xs shrink-0">
-                        {item.item_type === "resource"
-                          ? isLibraryResource
-                            ? "Library"
-                            : "Resource"
-                          : "Note"}
+                        {item.item_type}
                       </Badge>
                       <span className="font-medium text-sm truncate">{item.title}</span>
                     </div>
@@ -989,40 +1081,42 @@ export function InstructorAssignmentScoring({
                         {item.content}
                       </p>
                     )}
-                    {/* URL-based resource */}
-                    {item.resource_url && (
-                      <a
-                        href={item.resource_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
-                      >
+                    {isClickable && (
+                      <span className="text-xs text-primary flex items-center gap-1 mt-1">
                         <ExternalLink className="h-3 w-3" />
-                        {item.resource_url}
-                      </a>
-                    )}
-                    {/* Library resource */}
-                    {isLibraryResource && libraryResource.url && (
-                      <a
-                        href={libraryResource.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        {libraryResource.title || libraryResource.url}
-                      </a>
+                        {hasLibraryResource && !hasDirectUrl
+                          ? "View resource"
+                          : "Open resource"}
+                      </span>
                     )}
                   </div>
                   {canAddResources && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      onClick={() => deleteResourceMutation.mutate(item.id)}
-                    >
-                      <Trash2 className="h-3 w-3 text-muted-foreground" />
-                    </Button>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditResourceClick(item, {});
+                        }}
+                        title="Edit this item"
+                      >
+                        <Pencil className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteResourceMutation.mutate(item.id);
+                        }}
+                        title="Remove this item"
+                      >
+                        <Trash2 className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               );
@@ -1094,7 +1188,10 @@ export function InstructorAssignmentScoring({
       open={resourceDialogOpen}
       onOpenChange={(open) => {
         setResourceDialogOpen(open);
-        if (!open) setDevItemContext({});
+        if (!open) {
+          setDevItemContext({});
+          setEditItem(null);
+        }
       }}
       snapshotId={snapshotId}
       moduleProgressId={moduleProgressId}
@@ -1102,8 +1199,9 @@ export function InstructorAssignmentScoring({
       domainId={devItemContext.domainId}
       forUserId={clientUserId}
       allowedTypes={["resource", "note", "action_item", "reflection"]}
-      dialogTitle={getDialogTitle()}
-      dialogDescription={getDialogDescription()}
+      dialogTitle={editItem ? "Edit Resource" : getDialogTitle()}
+      dialogDescription={editItem ? "Update the resource details." : getDialogDescription()}
+      editItem={editItem}
     />
   );
 
