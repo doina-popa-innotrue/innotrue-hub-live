@@ -14883,6 +14883,14 @@ export type Database = {
         }
         Returns: string
       }
+      debug_resource_access: {
+        Args: { _resource_id: string; _user_id: string }
+        Returns: {
+          check_name: string
+          details: string
+          passed: boolean
+        }[]
+      }
       delete_analytics_events: {
         Args: { end_date: string; start_date: string }
         Returns: number

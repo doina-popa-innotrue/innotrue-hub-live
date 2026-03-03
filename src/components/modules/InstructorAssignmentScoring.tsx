@@ -24,6 +24,8 @@ import {
   Link as LinkIcon,
   ArrowRight,
   TrendingUp,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { DevelopmentItemDialog } from "@/components/capabilities/DevelopmentItemDialog";
@@ -72,6 +74,7 @@ export function InstructorAssignmentScoring({
     questionId?: string;
     domainId?: string;
   }>({});
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Get the assignment type to find scoring assessment (fallback if no linked assessment)
   const { data: assignmentType } = useQuery({
@@ -535,6 +538,19 @@ export function InstructorAssignmentScoring({
   // Allow adding resources unless the scoring is finalized
   const canAddResources = !isCompleted && !isNotSubmitted && clientUserId;
 
+  // Handle "Add Resource" click — show save-first toast when no snapshot exists
+  const handleAddResourceClick = (context: { questionId?: string; domainId?: string }) => {
+    if (!snapshotId) {
+      toast({
+        title: "Save Required",
+        description: "Please save your scoring first before adding resources.",
+      });
+      return;
+    }
+    setDevItemContext(context);
+    setResourceDialogOpen(true);
+  };
+
   // Show a message when assignment isn't ready for grading
   if (isNotSubmitted) {
     return (
@@ -553,6 +569,456 @@ export function InstructorAssignmentScoring({
     );
   }
 
+  // Dialog title for the resource dialog, contextual to what was clicked
+  const getDialogTitle = () => {
+    if (devItemContext.questionId) return "Add Resource for This Question";
+    if (devItemContext.domainId) return "Add Resource for This Domain";
+    return "Add Resource for Client";
+  };
+
+  const getDialogDescription = () => {
+    if (devItemContext.questionId)
+      return "Add a resource, note, or action item linked to this specific question.";
+    if (devItemContext.domainId)
+      return "Add a resource, note, or action item linked to this domain.";
+    return "Add a helpful resource or note that will be visible to the client with their evaluation results.";
+  };
+
+  // --- Shared scoring form content (used in both inline Card and expanded overlay) ---
+  const scoringContent = (
+    <div className="space-y-6">
+      {domains.map((domain) => (
+        <div key={domain.id} className="space-y-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1">
+              <h4 className="font-semibold text-base">{domain.name}</h4>
+              {domain.description && (
+                <p className="text-sm text-muted-foreground">{domain.description}</p>
+              )}
+            </div>
+            {canAddResources && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 text-xs h-7"
+                onClick={() => handleAddResourceClick({ domainId: domain.id })}
+                title="Add resource for this domain"
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Add
+              </Button>
+            )}
+          </div>
+
+          {domain.questions.map((question) => (
+            <div key={question.id} className="pl-4 border-l-2 border-muted space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <Label className="text-sm font-medium">{question.question_text}</Label>
+                  {question.description && (
+                    <p className="text-xs text-muted-foreground">{question.description}</p>
+                  )}
+                </div>
+                {canAddResources && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 text-xs h-7"
+                    onClick={() =>
+                      handleAddResourceClick({ questionId: question.id, domainId: domain.id })
+                    }
+                    title="Add resource for this question"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add
+                  </Button>
+                )}
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <Slider
+                  value={[ratings[question.id] || 1]}
+                  min={1}
+                  max={ratingScale}
+                  step={1}
+                  onValueChange={([v]) => setRatings({ ...ratings, [question.id]: v })}
+                  disabled={isCompleted}
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>1</span>
+                  <span className="font-medium text-foreground">
+                    {ratings[question.id] || "-"} / {ratingScale}
+                  </span>
+                  <span>{ratingScale}</span>
+                </div>
+              </div>
+
+              {isCompleted ? (
+                notes[question.id] && (
+                  <div className="text-sm">
+                    <RichTextDisplay content={notes[question.id]} />
+                  </div>
+                )
+              ) : (
+                <RichTextEditor
+                  placeholder="Add notes for this criterion..."
+                  value={notes[question.id] || ""}
+                  onChange={(value) => setNotes({ ...notes, [question.id]: value })}
+                  disabled={isCompleted}
+                  className="text-sm min-h-[80px]"
+                />
+              )}
+
+              {/* Show development items linked to this question */}
+              {questionDevItems?.[question.id] && questionDevItems[question.id].length > 0 && (
+                <div className="mt-2 space-y-1.5">
+                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <Lightbulb className="h-3 w-3" />
+                    Resources & Items ({questionDevItems[question.id].length})
+                  </p>
+                  {questionDevItems[question.id].map((item) => {
+                    const TypeIcon =
+                      item.item_type === "reflection"
+                        ? StickyNote
+                        : item.item_type === "action_item"
+                          ? Target
+                          : item.item_type === "resource"
+                            ? LinkIcon
+                            : FileText;
+                    const hasDirectUrl = !!item.resource_url;
+                    const hasLibraryResource = !!item.library_resource_id;
+                    const isClickable = hasDirectUrl || hasLibraryResource;
+
+                    const handleItemClick = () => {
+                      if (hasDirectUrl) {
+                        window.open(item.resource_url!, "_blank");
+                      } else if (hasLibraryResource) {
+                        navigate(`/resources/${item.library_resource_id}`);
+                      }
+                    };
+
+                    return (
+                      <div
+                        key={item.id}
+                        className={`flex items-start gap-2 pl-4 py-1.5 rounded-md bg-muted/30 text-sm ${isClickable ? "cursor-pointer hover:bg-muted/50" : ""}`}
+                        onClick={isClickable ? handleItemClick : undefined}
+                      >
+                        <TypeIcon className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <span
+                            className={`font-medium ${isClickable ? "text-primary hover:underline" : ""}`}
+                          >
+                            {item.title}
+                          </span>
+                          {item.content && (
+                            <p className="text-xs text-muted-foreground line-clamp-1">
+                              {item.content}
+                            </p>
+                          )}
+                          {isClickable && (
+                            <span className="text-xs text-primary flex items-center gap-1 mt-0.5">
+                              <ExternalLink className="h-3 w-3" />
+                              {hasLibraryResource && !hasDirectUrl
+                                ? "View resource"
+                                : "Open resource"}
+                            </span>
+                          )}
+                        </div>
+                        {canAddResources && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteResourceMutation.mutate(item.id);
+                            }}
+                            title="Remove this item"
+                          >
+                            <Trash2 className="h-3 w-3 text-muted-foreground" />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Domain-level notes */}
+          <div className="pl-4 space-y-2">
+            <Label className="text-sm font-medium text-muted-foreground">Domain Notes</Label>
+            {isCompleted ? (
+              domainNotes[domain.id] && (
+                <div className="text-sm">
+                  <RichTextDisplay content={domainNotes[domain.id]} />
+                </div>
+              )
+            ) : (
+              <RichTextEditor
+                placeholder={`Overall notes for ${domain.name}...`}
+                value={domainNotes[domain.id] || ""}
+                onChange={(value) => setDomainNotes({ ...domainNotes, [domain.id]: value })}
+                disabled={isCompleted}
+                className="text-sm min-h-[80px]"
+              />
+            )}
+          </div>
+          <Separator />
+        </div>
+      ))}
+
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          <Label className="font-medium">Overall Instructor Notes</Label>
+        </div>
+        {isCompleted ? (
+          instructorNotes && (
+            <div className="text-sm">
+              <RichTextDisplay content={instructorNotes} />
+            </div>
+          )
+        ) : (
+          <RichTextEditor
+            placeholder="General feedback and comments for the client..."
+            value={instructorNotes}
+            onChange={setInstructorNotes}
+            disabled={isCompleted}
+            className="min-h-[120px]"
+          />
+        )}
+      </div>
+
+      {/* Resources Section - for adding resources/notes for the client */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
+            <Label className="font-medium">Resources for Client</Label>
+          </div>
+          {canAddResources && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleAddResourceClick({})}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Resource
+            </Button>
+          )}
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Add helpful resources, links, or notes that will be visible to the client with their
+          evaluation.
+        </p>
+
+        {instructorResources && instructorResources.length > 0 ? (
+          <div className="space-y-2">
+            {instructorResources.map((item) => {
+              const libraryResource = (item as any).library_resources;
+              const resourceType = (item as any).resource_type;
+              const isLibraryResource = resourceType === "library" && libraryResource;
+
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-start gap-2 p-2 rounded-md bg-background border"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        {item.item_type === "resource"
+                          ? isLibraryResource
+                            ? "Library"
+                            : "Resource"
+                          : "Note"}
+                      </Badge>
+                      <span className="font-medium text-sm truncate">{item.title}</span>
+                    </div>
+                    {item.content && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {item.content}
+                      </p>
+                    )}
+                    {/* URL-based resource */}
+                    {item.resource_url && (
+                      <a
+                        href={item.resource_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        {item.resource_url}
+                      </a>
+                    )}
+                    {/* Library resource */}
+                    {isLibraryResource && libraryResource.url && (
+                      <a
+                        href={libraryResource.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        {libraryResource.title || libraryResource.url}
+                      </a>
+                    )}
+                  </div>
+                  {canAddResources && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                      onClick={() => deleteResourceMutation.mutate(item.id)}
+                    >
+                      <Trash2 className="h-3 w-3 text-muted-foreground" />
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground italic">No resources added yet.</p>
+        )}
+      </div>
+
+      {/* View Full Assessment Button - for completed scoring */}
+      {isCompleted && snapshotId && assessment && (
+        <>
+          <Separator />
+          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-1 space-y-2">
+                <h4 className="font-medium text-sm">View Full Assessment</h4>
+                <div className="space-y-1.5 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                    <span>View evolution and comparison charts</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-3.5 w-3.5 shrink-0" />
+                    <span>Access all resources in full context</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="h-3.5 w-3.5 shrink-0" />
+                    <span>View development items and actions</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <Button asChild className="w-full sm:w-auto">
+              <Link to={`/capabilities/${assessment.id}?snapshotId=${snapshotId}`}>
+                View Full Assessment
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  // --- Action buttons (shared between inline and expanded) ---
+  const actionButtons = !isCompleted ? (
+    <div className="flex gap-2 justify-end pt-4 border-t">
+      <Button
+        variant="outline"
+        onClick={() => saveMutation.mutate({ status: "draft" })}
+        disabled={saveMutation.isPending}
+      >
+        <Save className="h-4 w-4 mr-2" /> Save Draft
+      </Button>
+      <Button
+        onClick={() => saveMutation.mutate({ status: "completed" })}
+        disabled={saveMutation.isPending}
+      >
+        <CheckCircle className="h-4 w-4 mr-2" /> Complete Scoring
+      </Button>
+    </div>
+  ) : null;
+
+  // --- Resource Dialog (shared) ---
+  const resourceDialog = snapshotId && clientUserId && (
+    <DevelopmentItemDialog
+      open={resourceDialogOpen}
+      onOpenChange={(open) => {
+        setResourceDialogOpen(open);
+        if (!open) setDevItemContext({});
+      }}
+      snapshotId={snapshotId}
+      moduleProgressId={moduleProgressId}
+      questionId={devItemContext.questionId}
+      domainId={devItemContext.domainId}
+      forUserId={clientUserId}
+      allowedTypes={["resource", "note", "action_item", "reflection"]}
+      dialogTitle={getDialogTitle()}
+      dialogDescription={getDialogDescription()}
+    />
+  );
+
+  // --- Expanded fullscreen overlay ---
+  if (isExpanded) {
+    return (
+      <>
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 bg-black/50 z-50"
+          onClick={() => setIsExpanded(false)}
+        />
+
+        {/* Fullscreen scoring panel */}
+        <div className="fixed inset-4 z-50 bg-background rounded-xl shadow-2xl flex flex-col overflow-hidden border">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b bg-amber-50/50 dark:bg-amber-950/20">
+            <div className="flex items-center gap-3">
+              <ClipboardCheck className="h-5 w-5 text-amber-600" />
+              <div>
+                <h2 className="font-semibold text-lg">Instructor Scoring</h2>
+                <p className="text-sm text-muted-foreground">
+                  {assessment.name}
+                </p>
+              </div>
+              {isCompleted && (
+                <Badge variant="default" className="flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Scored
+                </Badge>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsExpanded(false)}
+              title="Minimize scoring panel"
+            >
+              <Minimize2 className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Scrollable body */}
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            {scoringContent}
+          </div>
+
+          {/* Footer with action buttons */}
+          {actionButtons && (
+            <div className="px-6 py-4 border-t bg-background">
+              {actionButtons}
+            </div>
+          )}
+        </div>
+
+        {resourceDialog}
+      </>
+    );
+  }
+
+  // --- Normal inline Card rendering ---
   return (
     <Card className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
       <CardHeader>
@@ -561,411 +1027,34 @@ export function InstructorAssignmentScoring({
             <ClipboardCheck className="h-5 w-5 text-amber-600" />
             <CardTitle className="text-lg">Instructor Scoring</CardTitle>
           </div>
-          {isCompleted && (
-            <Badge variant="default" className="flex items-center gap-1">
-              <CheckCircle className="h-3 w-3" />
-              Scored
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {isCompleted && (
+              <Badge variant="default" className="flex items-center gap-1">
+                <CheckCircle className="h-3 w-3" />
+                Scored
+              </Badge>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsExpanded(true)}
+              title="Expand scoring to full screen"
+            >
+              <Maximize2 className="h-4 w-4 mr-1" />
+              Expand
+            </Button>
+          </div>
         </div>
         <CardDescription>
           Use the "{assessment.name}" template to evaluate this submission
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {domains.map((domain) => (
-          <div key={domain.id} className="space-y-4">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1">
-                <h4 className="font-semibold text-base">{domain.name}</h4>
-                {domain.description && (
-                  <p className="text-sm text-muted-foreground">{domain.description}</p>
-                )}
-              </div>
-              {canAddResources && snapshotId && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 shrink-0"
-                  onClick={() => {
-                    setDevItemContext({ domainId: domain.id });
-                    setResourceDialogOpen(true);
-                  }}
-                  title="Add development item for this domain"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-
-            {domain.questions.map((question) => (
-              <div key={question.id} className="pl-4 border-l-2 border-muted space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium">{question.question_text}</Label>
-                    {question.description && (
-                      <p className="text-xs text-muted-foreground">{question.description}</p>
-                    )}
-                  </div>
-                  {canAddResources && snapshotId && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      onClick={() => {
-                        setDevItemContext({ questionId: question.id, domainId: domain.id });
-                        setResourceDialogOpen(true);
-                      }}
-                      title="Add development item for this question"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-
-                <div className="space-y-2 pt-1">
-                  <Slider
-                    value={[ratings[question.id] || 1]}
-                    min={1}
-                    max={ratingScale}
-                    step={1}
-                    onValueChange={([v]) => setRatings({ ...ratings, [question.id]: v })}
-                    disabled={isCompleted}
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>1</span>
-                    <span className="font-medium text-foreground">
-                      {ratings[question.id] || "-"} / {ratingScale}
-                    </span>
-                    <span>{ratingScale}</span>
-                  </div>
-                </div>
-
-                {isCompleted ? (
-                  notes[question.id] && (
-                    <div className="text-sm">
-                      <RichTextDisplay content={notes[question.id]} />
-                    </div>
-                  )
-                ) : (
-                  <RichTextEditor
-                    placeholder="Add notes for this criterion..."
-                    value={notes[question.id] || ""}
-                    onChange={(value) => setNotes({ ...notes, [question.id]: value })}
-                    disabled={isCompleted}
-                    className="text-sm min-h-[80px]"
-                  />
-                )}
-
-                {/* Show development items linked to this question */}
-                {questionDevItems?.[question.id] && questionDevItems[question.id].length > 0 && (
-                  <div className="mt-2 space-y-1.5">
-                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                      <Lightbulb className="h-3 w-3" />
-                      Resources & Items ({questionDevItems[question.id].length})
-                    </p>
-                    {questionDevItems[question.id].map((item) => {
-                      const TypeIcon =
-                        item.item_type === "reflection"
-                          ? StickyNote
-                          : item.item_type === "action_item"
-                            ? Target
-                            : item.item_type === "resource"
-                              ? LinkIcon
-                              : FileText;
-                      const hasDirectUrl = !!item.resource_url;
-                      const hasLibraryResource = !!item.library_resource_id;
-                      const isClickable = hasDirectUrl || hasLibraryResource;
-
-                      const handleItemClick = () => {
-                        if (hasDirectUrl) {
-                          window.open(item.resource_url!, "_blank");
-                        } else if (hasLibraryResource) {
-                          navigate(`/resources/${item.library_resource_id}`);
-                        }
-                      };
-
-                      return (
-                        <div
-                          key={item.id}
-                          className={`flex items-start gap-2 pl-4 py-1.5 rounded-md bg-muted/30 text-sm ${isClickable ? "cursor-pointer hover:bg-muted/50" : ""}`}
-                          onClick={isClickable ? handleItemClick : undefined}
-                        >
-                          <TypeIcon className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <span
-                              className={`font-medium ${isClickable ? "text-primary hover:underline" : ""}`}
-                            >
-                              {item.title}
-                            </span>
-                            {item.content && (
-                              <p className="text-xs text-muted-foreground line-clamp-1">
-                                {item.content}
-                              </p>
-                            )}
-                            {isClickable && (
-                              <span className="text-xs text-primary flex items-center gap-1 mt-0.5">
-                                <ExternalLink className="h-3 w-3" />
-                                {hasLibraryResource && !hasDirectUrl
-                                  ? "View resource"
-                                  : "Open resource"}
-                              </span>
-                            )}
-                          </div>
-                          {canAddResources && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 shrink-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteResourceMutation.mutate(item.id);
-                              }}
-                              title="Remove this item"
-                            >
-                              <Trash2 className="h-3 w-3 text-muted-foreground" />
-                            </Button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* Domain-level notes */}
-            <div className="pl-4 space-y-2">
-              <Label className="text-sm font-medium text-muted-foreground">Domain Notes</Label>
-              {isCompleted ? (
-                domainNotes[domain.id] && (
-                  <div className="text-sm">
-                    <RichTextDisplay content={domainNotes[domain.id]} />
-                  </div>
-                )
-              ) : (
-                <RichTextEditor
-                  placeholder={`Overall notes for ${domain.name}...`}
-                  value={domainNotes[domain.id] || ""}
-                  onChange={(value) => setDomainNotes({ ...domainNotes, [domain.id]: value })}
-                  disabled={isCompleted}
-                  className="text-sm min-h-[80px]"
-                />
-              )}
-            </div>
-            <Separator />
-          </div>
-        ))}
-
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            <Label className="font-medium">Overall Instructor Notes</Label>
-          </div>
-          {isCompleted ? (
-            instructorNotes && (
-              <div className="text-sm">
-                <RichTextDisplay content={instructorNotes} />
-              </div>
-            )
-          ) : (
-            <RichTextEditor
-              placeholder="General feedback and comments for the client..."
-              value={instructorNotes}
-              onChange={setInstructorNotes}
-              disabled={isCompleted}
-              className="min-h-[120px]"
-            />
-          )}
-        </div>
-
-        {/* Resources Section - for adding resources/notes for the client */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-              <Label className="font-medium">Resources for Client</Label>
-            </div>
-            {canAddResources && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (!snapshotId) {
-                    // Need to save first to create snapshot
-                    toast({
-                      title: "Save Required",
-                      description: "Please save your scoring first before adding resources.",
-                    });
-                  } else {
-                    // Clear question/domain context for overall-level resource
-                    setDevItemContext({});
-                    setResourceDialogOpen(true);
-                  }
-                }}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add Resource
-              </Button>
-            )}
-          </div>
-
-          <p className="text-xs text-muted-foreground">
-            Add helpful resources, links, or notes that will be visible to the client with their
-            evaluation.
-          </p>
-
-          {instructorResources && instructorResources.length > 0 ? (
-            <div className="space-y-2">
-              {instructorResources.map((item) => {
-                const libraryResource = (item as any).library_resources;
-                const resourceType = (item as any).resource_type;
-                const isLibraryResource = resourceType === "library" && libraryResource;
-
-                return (
-                  <div
-                    key={item.id}
-                    className="flex items-start gap-2 p-2 rounded-md bg-background border"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          {item.item_type === "resource"
-                            ? isLibraryResource
-                              ? "Library"
-                              : "Resource"
-                            : "Note"}
-                        </Badge>
-                        <span className="font-medium text-sm truncate">{item.title}</span>
-                      </div>
-                      {item.content && (
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {item.content}
-                        </p>
-                      )}
-                      {/* URL-based resource */}
-                      {item.resource_url && (
-                        <a
-                          href={item.resource_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          {item.resource_url}
-                        </a>
-                      )}
-                      {/* Library resource */}
-                      {isLibraryResource && libraryResource.url && (
-                        <a
-                          href={libraryResource.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          {libraryResource.title || libraryResource.url}
-                        </a>
-                      )}
-                    </div>
-                    {canAddResources && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0"
-                        onClick={() => deleteResourceMutation.mutate(item.id)}
-                      >
-                        <Trash2 className="h-3 w-3 text-muted-foreground" />
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground italic">No resources added yet.</p>
-          )}
-        </div>
-
-        {/* View Full Assessment Button - for completed scoring */}
-        {isCompleted && snapshotId && assessment && (
-          <>
-            <Separator />
-            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="flex-1 space-y-2">
-                  <h4 className="font-medium text-sm">View Full Assessment</h4>
-                  <div className="space-y-1.5 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-3.5 w-3.5 shrink-0" />
-                      <span>View evolution and comparison charts</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-3.5 w-3.5 shrink-0" />
-                      <span>Access all resources in full context</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Lightbulb className="h-3.5 w-3.5 shrink-0" />
-                      <span>View development items and actions</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <Button asChild className="w-full sm:w-auto">
-                <Link to={`/capabilities/${assessment.id}?snapshotId=${snapshotId}`}>
-                  View Full Assessment
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </>
-        )}
-
-        {!isCompleted && (
-          <div className="flex gap-2 justify-end pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={() => saveMutation.mutate({ status: "draft" })}
-              disabled={saveMutation.isPending}
-            >
-              <Save className="h-4 w-4 mr-2" /> Save Draft
-            </Button>
-            <Button
-              onClick={() => saveMutation.mutate({ status: "completed" })}
-              disabled={saveMutation.isPending}
-            >
-              <CheckCircle className="h-4 w-4 mr-2" /> Complete Scoring
-            </Button>
-          </div>
-        )}
+        {scoringContent}
+        {actionButtons}
       </CardContent>
 
-      {/* Resource Dialog for instructors */}
-      {snapshotId && clientUserId && (
-        <DevelopmentItemDialog
-          open={resourceDialogOpen}
-          onOpenChange={(open) => {
-            setResourceDialogOpen(open);
-            if (!open) setDevItemContext({});
-          }}
-          snapshotId={snapshotId}
-          moduleProgressId={moduleProgressId}
-          questionId={devItemContext.questionId}
-          domainId={devItemContext.domainId}
-          forUserId={clientUserId}
-          allowedTypes={["resource", "note", "action_item", "reflection"]}
-          dialogTitle={
-            devItemContext.questionId
-              ? "Add Development Item for Question"
-              : "Add Resource for Client"
-          }
-          dialogDescription={
-            devItemContext.questionId
-              ? "Add a development item linked to this specific question."
-              : "Add a helpful resource or note that will be visible to the client with their evaluation results."
-          }
-        />
-      )}
+      {resourceDialog}
     </Card>
   );
 }
