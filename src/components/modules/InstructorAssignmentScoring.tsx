@@ -959,104 +959,107 @@ export function InstructorAssignmentScoring({
       allowedTypes={["resource", "note", "action_item", "reflection"]}
       dialogTitle={getDialogTitle()}
       dialogDescription={getDialogDescription()}
+      contentClassName={isExpanded ? "z-[200]" : undefined}
     />
   );
 
   // --- Expanded fullscreen overlay (portaled to document.body to escape dialog transform) ---
-  if (isExpanded) {
-    return createPortal(
-      <>
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-black/50 z-[100]"
-          onClick={() => setIsExpanded(false)}
-        />
+  const expandedOverlay = isExpanded
+    ? createPortal(
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 z-[100]"
+            onClick={() => setIsExpanded(false)}
+          />
 
-        {/* Fullscreen scoring panel — covers entire viewport */}
-        <div className="fixed inset-0 z-[100] bg-background flex flex-col overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b bg-amber-50/50 dark:bg-amber-950/20">
-            <div className="flex items-center gap-3">
-              <ClipboardCheck className="h-5 w-5 text-amber-600" />
-              <div>
-                <h2 className="font-semibold text-lg">Instructor Scoring</h2>
-                <p className="text-sm text-muted-foreground">
-                  {assessment.name}
-                </p>
+          {/* Fullscreen scoring panel — covers entire viewport */}
+          <div className="fixed inset-0 z-[100] bg-background flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-amber-50/50 dark:bg-amber-950/20">
+              <div className="flex items-center gap-3">
+                <ClipboardCheck className="h-5 w-5 text-amber-600" />
+                <div>
+                  <h2 className="font-semibold text-lg">Instructor Scoring</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {assessment.name}
+                  </p>
+                </div>
+                {isCompleted && (
+                  <Badge variant="default" className="flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    Scored
+                  </Badge>
+                )}
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsExpanded(false)}
+                title="Minimize scoring panel"
+              >
+                <Minimize2 className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              {scoringContent}
+            </div>
+
+            {/* Footer with action buttons */}
+            {actionButtons && (
+              <div className="px-6 py-4 border-t bg-background">
+                {actionButtons}
+              </div>
+            )}
+          </div>
+        </>,
+        document.body,
+      )
+    : null;
+
+  // --- Always render the inline Card + keep resourceDialog in the normal DOM tree ---
+  // resourceDialog must stay in the parent Dialog's DOM subtree so Radix nested
+  // dialog detection works and opening it doesn't dismiss the parent Dialog.
+  return (
+    <>
+      {expandedOverlay}
+      <Card className={`border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20 ${isExpanded ? "invisible h-0 overflow-hidden" : ""}`}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5 text-amber-600" />
+              <CardTitle className="text-lg">Instructor Scoring</CardTitle>
+            </div>
+            <div className="flex items-center gap-2">
               {isCompleted && (
                 <Badge variant="default" className="flex items-center gap-1">
                   <CheckCircle className="h-3 w-3" />
                   Scored
                 </Badge>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsExpanded(true)}
+                title="Expand scoring to full screen"
+              >
+                <Maximize2 className="h-4 w-4 mr-1" />
+                Expand
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsExpanded(false)}
-              title="Minimize scoring panel"
-            >
-              <Minimize2 className="h-5 w-5" />
-            </Button>
           </div>
-
-          {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-6 py-6">
-            {scoringContent}
-          </div>
-
-          {/* Footer with action buttons */}
-          {actionButtons && (
-            <div className="px-6 py-4 border-t bg-background">
-              {actionButtons}
-            </div>
-          )}
-        </div>
-
-        {resourceDialog}
-      </>,
-      document.body,
-    );
-  }
-
-  // --- Normal inline Card rendering ---
-  return (
-    <Card className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ClipboardCheck className="h-5 w-5 text-amber-600" />
-            <CardTitle className="text-lg">Instructor Scoring</CardTitle>
-          </div>
-          <div className="flex items-center gap-2">
-            {isCompleted && (
-              <Badge variant="default" className="flex items-center gap-1">
-                <CheckCircle className="h-3 w-3" />
-                Scored
-              </Badge>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsExpanded(true)}
-              title="Expand scoring to full screen"
-            >
-              <Maximize2 className="h-4 w-4 mr-1" />
-              Expand
-            </Button>
-          </div>
-        </div>
-        <CardDescription>
-          Use the "{assessment.name}" template to evaluate this submission
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {scoringContent}
-        {actionButtons}
-      </CardContent>
-
+          <CardDescription>
+            Use the "{assessment.name}" template to evaluate this submission
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {!isExpanded && scoringContent}
+          {!isExpanded && actionButtons}
+        </CardContent>
+      </Card>
       {resourceDialog}
-    </Card>
+    </>
   );
 }

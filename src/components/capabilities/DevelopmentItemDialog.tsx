@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { ResourcePickerDialog } from "@/components/modules/ResourcePickerDialog";
 
 interface DevelopmentItemData {
@@ -72,6 +73,8 @@ interface DevelopmentItemDialogProps {
   dialogTitle?: string;
   /** Custom description for the dialog */
   dialogDescription?: string;
+  /** Extra className for DialogContent (e.g. z-index override) */
+  contentClassName?: string;
 }
 
 export function DevelopmentItemDialog({
@@ -88,6 +91,7 @@ export function DevelopmentItemDialog({
   allowedTypes,
   dialogTitle,
   dialogDescription,
+  contentClassName,
 }: DevelopmentItemDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -625,7 +629,7 @@ export function DevelopmentItemDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className={cn("max-w-lg max-h-[90vh] overflow-y-auto", contentClassName)} overlayClassName={contentClassName}>
         <DialogHeader>
           <DialogTitle>
             {dialogTitle || `${isEditing ? "Edit" : "Add"} Development Item`}
