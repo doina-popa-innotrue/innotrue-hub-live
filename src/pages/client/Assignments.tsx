@@ -19,6 +19,7 @@ import {
   Search,
   ClipboardList,
   Clock,
+  Circle,
   BookOpen,
   Send,
   CheckCircle,
@@ -103,44 +104,62 @@ export default function ClientAssignments() {
       if (!enrollments || enrollments.length === 0) return [];
 
       const enrollmentIds = enrollments.map((e) => e.id);
+      const programIds = enrollments.map((e) => e.program_id);
 
-      // Get module progress for these enrollments
-      const { data: progressData, error: progressError } = await supabase
-        .from("module_progress")
-        .select(
-          `
-          id,
-          enrollment_id,
-          module_id,
-          program_modules(title, program_id)
-        `,
-        )
-        .in("enrollment_id", enrollmentIds);
-
-      if (progressError) throw progressError;
-      if (!progressData || progressData.length === 0) return [];
-
-      const progressIds = progressData.map((p) => p.id);
-
-      // Get all assignments + scenario assignments in parallel
-      const [assignmentResult, scenarioResult] = await Promise.all([
+      // Get module progress + ALL program modules in parallel
+      const [progressResult, modulesResult] = await Promise.all([
         supabase
-          .from("module_assignments")
+          .from("module_progress")
           .select(
             `
             id,
-            module_progress_id,
-            assignment_type_id,
-            status,
-            created_at,
-            updated_at,
-            scored_at,
-            overall_score,
-            module_assignment_types(name)
+            enrollment_id,
+            module_id,
+            program_modules(title, program_id)
           `,
           )
-          .in("module_progress_id", progressIds)
-          .order("updated_at", { ascending: false }),
+          .in("enrollment_id", enrollmentIds),
+        supabase
+          .from("program_modules")
+          .select("id, title, program_id, order_index")
+          .in("program_id", programIds),
+      ]);
+
+      if (progressResult.error) throw progressResult.error;
+      if (modulesResult.error) throw modulesResult.error;
+
+      const progressData = progressResult.data || [];
+      const allModules = modulesResult.data || [];
+      const progressIds = progressData.map((p) => p.id);
+      const allModuleIds = allModules.map((m) => m.id);
+
+      // Get started assignments + scenario assignments + all assignment configs in parallel
+      const queries: [
+        ReturnType<typeof supabase.from>,
+        ReturnType<typeof supabase.from>,
+        ReturnType<typeof supabase.from>,
+      ] = [] as any;
+
+      const [assignmentResult, scenarioResult, configsResult] = await Promise.all([
+        progressIds.length > 0
+          ? supabase
+              .from("module_assignments")
+              .select(
+                `
+                id,
+                module_progress_id,
+                assignment_type_id,
+                status,
+                created_at,
+                updated_at,
+                scored_at,
+                overall_score,
+                module_assignment_types(name)
+              `,
+              )
+              .in("module_progress_id", progressIds)
+              .order("updated_at", { ascending: false })
+          : Promise.resolve({ data: [] as any[], error: null }),
         supabase
           .from("scenario_assignments")
           .select(
@@ -157,16 +176,32 @@ export default function ClientAssignments() {
           )
           .eq("user_id", user.id)
           .order("updated_at", { ascending: false }),
+        allModuleIds.length > 0
+          ? supabase
+              .from("module_assignment_configs")
+              .select("module_id, assignment_type_id, module_assignment_types(id, name)")
+              .in("module_id", allModuleIds)
+          : Promise.resolve({ data: [] as any[], error: null }),
       ]);
 
       if (assignmentResult.error) throw assignmentResult.error;
 
-      // Combine the module assignment data
+      // Build a set of started assignment keys: "moduleProgressId:assignmentTypeId"
+      const startedKeys = new Set<string>();
+      // Also track started assignments by module: "moduleId:assignmentTypeId"
+      const startedModuleKeys = new Set<string>();
+
+      // Combine the module assignment data (started ones)
       const moduleAssignmentsList: Assignment[] = (assignmentResult.data || []).map(
         (assignment) => {
           const progress = progressData.find((p) => p.id === assignment.module_progress_id);
           const enrollment = enrollments.find((e) => e.id === progress?.enrollment_id);
-          const module = progress?.program_modules as any;
+          const mod = progress?.program_modules as any;
+
+          startedKeys.add(`${assignment.module_progress_id}:${assignment.assignment_type_id}`);
+          if (progress?.module_id) {
+            startedModuleKeys.add(`${progress.module_id}:${assignment.assignment_type_id}`);
+          }
 
           return {
             id: assignment.id,
@@ -178,7 +213,7 @@ export default function ClientAssignments() {
             updated_at: assignment.updated_at,
             scored_at: assignment.scored_at,
             overall_score: assignment.overall_score ?? null,
-            module_title: module?.title || "Unknown Module",
+            module_title: mod?.title || "Unknown Module",
             module_id: progress?.module_id || "",
             program_name: (enrollment?.programs as any)?.name || "Unknown Program",
             program_id: enrollment?.program_id || "",
@@ -187,6 +222,43 @@ export default function ClientAssignments() {
           };
         },
       );
+
+      // Discover unstarted assignments from module configs
+      const unstartedAssignments: Assignment[] = [];
+      if (!configsResult.error && configsResult.data) {
+        for (const config of configsResult.data) {
+          const moduleId = config.module_id;
+          const typeId = config.assignment_type_id;
+
+          // Skip if client already has a module_assignment for this config
+          if (startedModuleKeys.has(`${moduleId}:${typeId}`)) continue;
+
+          const mod = allModules.find((m) => m.id === moduleId);
+          if (!mod) continue;
+
+          const enrollment = enrollments.find((e) => e.program_id === mod.program_id);
+          if (!enrollment) continue;
+
+          const typeName = (config.module_assignment_types as any)?.name || "Assignment";
+
+          unstartedAssignments.push({
+            id: `unstarted-${moduleId}-${typeId}`,
+            module_progress_id: "",
+            assignment_type_name: typeName,
+            status: "not_started",
+            created_at: "",
+            updated_at: "",
+            scored_at: null,
+            overall_score: null,
+            module_title: mod.title,
+            module_id: moduleId,
+            program_name: (enrollment.programs as any)?.name || "Unknown Program",
+            program_id: mod.program_id,
+            enrollment_id: enrollment.id,
+            type: "module" as const,
+          });
+        }
+      }
 
       if (scenarioResult.error) {
         console.error("Error loading scenario assignments:", scenarioResult.error);
@@ -217,12 +289,21 @@ export default function ClientAssignments() {
         };
       });
 
-      // Combine both lists and sort by updated_at descending
-      const allAssignments = [...moduleAssignmentsList, ...scenarioAssignmentsList];
-      allAssignments.sort(
+      // Combine all lists: started first (sorted by updated_at), then unstarted (sorted by program + module order)
+      const startedAssignments = [...moduleAssignmentsList, ...scenarioAssignmentsList];
+      startedAssignments.sort(
         (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
       );
-      return allAssignments;
+
+      // Sort unstarted by program name then module order
+      unstartedAssignments.sort((a, b) => {
+        if (a.program_name !== b.program_name) return a.program_name.localeCompare(b.program_name);
+        const aOrder = allModules.find((m) => m.id === a.module_id)?.order_index ?? 0;
+        const bOrder = allModules.find((m) => m.id === b.module_id)?.order_index ?? 0;
+        return aOrder - bOrder;
+      });
+
+      return [...startedAssignments, ...unstartedAssignments];
     },
     enabled: !!user,
   });
@@ -239,7 +320,9 @@ export default function ClientAssignments() {
     // Filter by tab status
     switch (activeTab) {
       case "pending":
-        filtered = filtered.filter((a) => a.status === "draft" || a.status === "in_progress");
+        filtered = filtered.filter(
+          (a) => a.status === "not_started" || a.status === "draft" || a.status === "in_progress",
+        );
         break;
       case "submitted":
         filtered = filtered.filter((a) => a.status === "submitted");
@@ -294,6 +377,11 @@ export default function ClientAssignments() {
       string,
       { variant: "default" | "secondary" | "outline"; label: string; icon: React.ReactNode }
     > = {
+      not_started: {
+        variant: "outline",
+        label: "Not Started",
+        icon: <Circle className="h-3 w-3" />,
+      },
       draft: { variant: "outline", label: "Draft", icon: <Clock className="h-3 w-3" /> },
       in_progress: {
         variant: "secondary",
@@ -327,7 +415,7 @@ export default function ClientAssignments() {
   );
 
   const pendingCount = assignments.filter(
-    (a) => a.status === "draft" || a.status === "in_progress",
+    (a) => a.status === "not_started" || a.status === "draft" || a.status === "in_progress",
   ).length;
   const submittedCount = assignments.filter((a) => a.status === "submitted").length;
   const reviewedCount = assignments.filter((a) => a.status === "reviewed").length;
@@ -470,7 +558,9 @@ export default function ClientAssignments() {
                       </TableCell>
                     )}
                     <TableCell className="text-right text-muted-foreground">
-                      {formatDistanceToNow(new Date(assignment.updated_at), { addSuffix: true })}
+                      {assignment.updated_at
+                        ? formatDistanceToNow(new Date(assignment.updated_at), { addSuffix: true })
+                        : "—"}
                     </TableCell>
                     <TableCell>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
