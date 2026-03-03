@@ -608,6 +608,13 @@ export function DevelopmentItemDialog({
       toast({ description: "Development item updated successfully" });
       queryClient.invalidateQueries({ queryKey: ["development-items"] });
       queryClient.invalidateQueries({ queryKey: ["recent-development-items"] });
+      // Also invalidate instructor scoring queries if a snapshot was linked
+      if (snapshotId && snapshotId !== "standalone") {
+        queryClient.invalidateQueries({ queryKey: ["instructor-resources", snapshotId] });
+        queryClient.invalidateQueries({ queryKey: ["instructor-question-dev-items", snapshotId] });
+        queryClient.invalidateQueries({ queryKey: ["instructor-domain-dev-items", snapshotId] });
+        queryClient.invalidateQueries({ queryKey: ["snapshot-linked-resources", snapshotId] });
+      }
       resetForm();
       onOpenChange(false);
     },
