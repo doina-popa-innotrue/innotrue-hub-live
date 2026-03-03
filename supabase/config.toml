@@ -60,6 +60,9 @@ verify_jwt = false
 [functions.create-client-development-item]
 verify_jwt = false
 
+[functions.update-client-development-item]
+verify_jwt = false
+
 [functions.credit-expiry-notifications]
 verify_jwt = false
 

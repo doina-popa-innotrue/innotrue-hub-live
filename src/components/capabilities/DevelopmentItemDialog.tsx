@@ -498,7 +498,25 @@ export function DevelopmentItemDialog({
     mutationFn: async () => {
       if (!user || !editItem) throw new Error("Not authenticated or no item to edit");
 
-      // Update development item
+      // When editing for someone else (instructor mode), use edge function to bypass RLS
+      if (forUserId && forUserId !== user.id) {
+        const { data, error } = await supabase.functions.invoke("update-client-development-item", {
+          body: {
+            itemId: editItem.id,
+            title: title || null,
+            content: content || null,
+            resourceUrl: itemType === "resource" ? resourceUrl || null : null,
+            dueDate: itemType === "action_item" ? dueDate || null : null,
+          },
+        });
+
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+
+        return (data as any).item;
+      }
+
+      // Self-edit (normal user flow) — uses regular supabase client
       const itemData: any = {
         title: title || null,
         content: content || null,
