@@ -965,14 +965,14 @@ export function InstructorAssignmentScoring({
   if (isExpanded) {
     return (
       <>
-        {/* Backdrop */}
+        {/* Backdrop — z-[100] to sit above parent dialog (z-50) */}
         <div
-          className="fixed inset-0 bg-black/50 z-50"
+          className="fixed inset-0 bg-black/50 z-[100]"
           onClick={() => setIsExpanded(false)}
         />
 
-        {/* Fullscreen scoring panel */}
-        <div className="fixed inset-4 z-50 bg-background rounded-xl shadow-2xl flex flex-col overflow-hidden border">
+        {/* Fullscreen scoring panel — covers entire viewport */}
+        <div className="fixed inset-0 z-[100] bg-background flex flex-col overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b bg-amber-50/50 dark:bg-amber-950/20">
             <div className="flex items-center gap-3">
