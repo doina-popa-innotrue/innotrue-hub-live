@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -26,7 +26,6 @@ import {
   ArrowRight,
   TrendingUp,
   Maximize2,
-  Minimize2,
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { DevelopmentItemDialog } from "@/components/capabilities/DevelopmentItemDialog";
@@ -959,73 +958,52 @@ export function InstructorAssignmentScoring({
       allowedTypes={["resource", "note", "action_item", "reflection"]}
       dialogTitle={getDialogTitle()}
       dialogDescription={getDialogDescription()}
-      contentClassName={isExpanded ? "z-[200]" : undefined}
     />
   );
 
-  // --- Expanded fullscreen overlay (portaled to document.body to escape dialog transform) ---
-  const expandedOverlay = isExpanded
-    ? createPortal(
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 z-[100]"
-            onClick={() => setIsExpanded(false)}
-          />
-
-          {/* Fullscreen scoring panel — covers entire viewport */}
-          <div className="fixed inset-0 z-[100] bg-background flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-amber-50/50 dark:bg-amber-950/20">
-              <div className="flex items-center gap-3">
-                <ClipboardCheck className="h-5 w-5 text-amber-600" />
-                <div>
-                  <h2 className="font-semibold text-lg">Instructor Scoring</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {assessment.name}
-                  </p>
-                </div>
-                {isCompleted && (
-                  <Badge variant="default" className="flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3" />
-                    Scored
-                  </Badge>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsExpanded(false)}
-                title="Minimize scoring panel"
-              >
-                <Minimize2 className="h-5 w-5" />
-              </Button>
-            </div>
-
-            {/* Scrollable body */}
-            <div className="flex-1 overflow-y-auto px-6 py-6">
-              {scoringContent}
-            </div>
-
-            {/* Footer with action buttons */}
-            {actionButtons && (
-              <div className="px-6 py-4 border-t bg-background">
-                {actionButtons}
-              </div>
-            )}
+  // --- Expanded fullscreen Dialog (Radix handles nested dialog dismiss correctly) ---
+  const expandedDialog = (
+    <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
+      <DialogContent className="max-w-none w-screen h-screen p-0 border-0 rounded-none left-0 top-0 translate-x-0 translate-y-0 gap-0 flex flex-col">
+        <DialogHeader className="flex-row items-center gap-3 px-6 py-4 border-b bg-amber-50/50 dark:bg-amber-950/20 shrink-0 pr-14 space-y-0">
+          <ClipboardCheck className="h-5 w-5 text-amber-600 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <DialogTitle className="text-lg">Instructor Scoring</DialogTitle>
+            <DialogDescription className="truncate">
+              {assessment.name}
+            </DialogDescription>
           </div>
-        </>,
-        document.body,
-      )
-    : null;
+          {isCompleted && (
+            <Badge variant="default" className="flex items-center gap-1 shrink-0">
+              <CheckCircle className="h-3 w-3" />
+              Scored
+            </Badge>
+          )}
+        </DialogHeader>
 
-  // --- Always render the inline Card + keep resourceDialog in the normal DOM tree ---
-  // resourceDialog must stay in the parent Dialog's DOM subtree so Radix nested
-  // dialog detection works and opening it doesn't dismiss the parent Dialog.
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          {scoringContent}
+        </div>
+
+        {/* Footer with action buttons */}
+        {actionButtons && (
+          <div className="px-6 py-4 border-t bg-background shrink-0">
+            {actionButtons}
+          </div>
+        )}
+
+        {/* Resource dialog nested inside expanded dialog so Radix tracks it */}
+        {isExpanded && resourceDialog}
+      </DialogContent>
+    </Dialog>
+  );
+
+  // --- Inline Card rendering ---
   return (
     <>
-      {expandedOverlay}
-      <Card className={`border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20 ${isExpanded ? "invisible h-0 overflow-hidden" : ""}`}>
+      {expandedDialog}
+      <Card className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -1055,11 +1033,11 @@ export function InstructorAssignmentScoring({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {!isExpanded && scoringContent}
-          {!isExpanded && actionButtons}
+          {scoringContent}
+          {actionButtons}
         </CardContent>
       </Card>
-      {resourceDialog}
+      {!isExpanded && resourceDialog}
     </>
   );
 }
