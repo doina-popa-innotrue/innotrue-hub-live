@@ -354,6 +354,75 @@ export function InstructorAssignmentScoring({
     enabled: !!snapshotId,
   });
 
+  // Fetch development items linked to specific domains in this snapshot
+  const { data: domainDevItems } = useQuery({
+    queryKey: ["instructor-domain-dev-items", snapshotId],
+    queryFn: async () => {
+      if (!snapshotId) return {};
+
+      const { data: links, error: linksError } = await supabase
+        .from("development_item_domain_links")
+        .select("domain_id, development_item_id")
+        .eq("snapshot_id", snapshotId);
+
+      if (linksError) throw linksError;
+      if (!links || links.length === 0) return {};
+
+      const itemIds = [...new Set(links.map((l) => l.development_item_id))];
+      const { data: items, error: itemsError } = await supabase
+        .from("development_items")
+        .select("id, item_type, title, content, resource_url, library_resource_id, file_path")
+        .in("id", itemIds);
+
+      if (itemsError) throw itemsError;
+
+      // For items with library_resource_id, fetch the resource details
+      const libraryResourceIds =
+        items?.filter((i) => i.library_resource_id).map((i) => i.library_resource_id!) || [];
+      let libraryResources: Record<string, { title: string; resource_url: string | null }> = {};
+
+      if (libraryResourceIds.length > 0) {
+        const { data: libRes } = await supabase
+          .from("resource_library")
+          .select("id, title, url")
+          .in("id", libraryResourceIds);
+
+        libraryResources = (libRes || []).reduce(
+          (acc, r) => {
+            acc[r.id] = { title: r.title, resource_url: r.url };
+            return acc;
+          },
+          {} as Record<string, { title: string; resource_url: string | null }>,
+        );
+      }
+
+      // Enhance items with library resource info
+      const enhancedItems = items?.map((item) => {
+        if (item.library_resource_id && libraryResources[item.library_resource_id]) {
+          const libRes = libraryResources[item.library_resource_id];
+          return {
+            ...item,
+            title: item.title || libRes.title,
+            resource_url: item.resource_url || libRes.resource_url,
+          };
+        }
+        return item;
+      });
+
+      // Group by domain_id
+      const grouped: Record<string, typeof enhancedItems> = {};
+      for (const link of links) {
+        const item = enhancedItems?.find((i) => i.id === link.development_item_id);
+        if (item) {
+          if (!grouped[link.domain_id]) grouped[link.domain_id] = [];
+          grouped[link.domain_id].push(item);
+        }
+      }
+      return grouped;
+    },
+    enabled: !!snapshotId,
+  });
+
   const deleteResourceMutation = useMutation({
     mutationFn: async (itemId: string) => {
       const { error } = await supabase.from("development_items").delete().eq("id", itemId);
@@ -362,6 +431,7 @@ export function InstructorAssignmentScoring({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["instructor-resources", snapshotId] });
       queryClient.invalidateQueries({ queryKey: ["instructor-question-dev-items", snapshotId] });
+      queryClient.invalidateQueries({ queryKey: ["instructor-domain-dev-items", snapshotId] });
       toast({ description: "Resource removed" });
     },
     onError: (error) => {
@@ -765,6 +835,82 @@ export function InstructorAssignmentScoring({
               />
             )}
           </div>
+
+          {/* Show development items linked to this domain */}
+          {domainDevItems?.[domain.id] && domainDevItems[domain.id].length > 0 && (
+            <div className="pl-4 space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <Lightbulb className="h-3 w-3" />
+                Domain Resources & Items ({domainDevItems[domain.id].length})
+              </p>
+              {domainDevItems[domain.id].map((item) => {
+                const TypeIcon =
+                  item.item_type === "reflection"
+                    ? StickyNote
+                    : item.item_type === "action_item"
+                      ? Target
+                      : item.item_type === "resource"
+                        ? LinkIcon
+                        : FileText;
+                const hasDirectUrl = !!item.resource_url;
+                const hasLibraryResource = !!item.library_resource_id;
+                const isClickable = hasDirectUrl || hasLibraryResource;
+
+                const handleItemClick = () => {
+                  if (hasDirectUrl) {
+                    window.open(item.resource_url!, "_blank");
+                  } else if (hasLibraryResource) {
+                    navigate(`/resources/${item.library_resource_id}`);
+                  }
+                };
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`flex items-start gap-2 pl-4 py-1.5 rounded-md bg-muted/30 text-sm ${isClickable ? "cursor-pointer hover:bg-muted/50" : ""}`}
+                    onClick={isClickable ? handleItemClick : undefined}
+                  >
+                    <TypeIcon className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span
+                        className={`font-medium ${isClickable ? "text-primary hover:underline" : ""}`}
+                      >
+                        {item.title}
+                      </span>
+                      {item.content && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">
+                          {item.content}
+                        </p>
+                      )}
+                      {isClickable && (
+                        <span className="text-xs text-primary flex items-center gap-1 mt-0.5">
+                          <ExternalLink className="h-3 w-3" />
+                          {hasLibraryResource && !hasDirectUrl
+                            ? "View resource"
+                            : "Open resource"}
+                        </span>
+                      )}
+                    </div>
+                    {canAddResources && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteResourceMutation.mutate(item.id);
+                        }}
+                        title="Remove this item"
+                      >
+                        <Trash2 className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <Separator />
         </div>
       ))}
