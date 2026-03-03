@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -961,11 +962,11 @@ export function InstructorAssignmentScoring({
     />
   );
 
-  // --- Expanded fullscreen overlay ---
+  // --- Expanded fullscreen overlay (portaled to document.body to escape dialog transform) ---
   if (isExpanded) {
-    return (
+    return createPortal(
       <>
-        {/* Backdrop — z-[100] to sit above parent dialog (z-50) */}
+        {/* Backdrop */}
         <div
           className="fixed inset-0 bg-black/50 z-[100]"
           onClick={() => setIsExpanded(false)}
@@ -1014,7 +1015,8 @@ export function InstructorAssignmentScoring({
         </div>
 
         {resourceDialog}
-      </>
+      </>,
+      document.body,
     );
   }
 
