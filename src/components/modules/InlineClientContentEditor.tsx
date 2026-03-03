@@ -261,20 +261,28 @@ export function InlineClientContentEditor({
 
       // Save pending resources
       for (const resource of pendingResources) {
-        await supabase.from("module_client_content_resources").insert({
+        const { error: resError } = await supabase.from("module_client_content_resources").insert({
           module_client_content_id: savedContent.id,
           resource_id: resource.id,
           assigned_by: currentUser?.id,
         });
+        if (resError) {
+          console.error("Failed to assign resource:", resource.id, resError);
+          toast.error(`Failed to assign resource "${resource.title}"`);
+        }
       }
 
       // Save pending scenarios
       for (const scenario of pendingScenarios) {
-        await supabase.from("module_client_content_scenarios").insert({
+        const { error: scenError } = await supabase.from("module_client_content_scenarios").insert({
           module_client_content_id: savedContent.id,
           scenario_template_id: scenario.id,
           assigned_by: currentUser?.id,
         });
+        if (scenError) {
+          console.error("Failed to assign scenario:", scenario.id, scenError);
+          toast.error(`Failed to assign scenario "${scenario.title}"`);
+        }
       }
 
       toast.success("Content saved for " + clientName);

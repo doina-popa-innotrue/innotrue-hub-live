@@ -245,15 +245,29 @@ export default function ModuleDetail() {
 
           if (contentData) {
             // Fetch assigned resources
-            const { data: resourcesData } = await supabase
+            const { data: resourcesData, error: resourcesError } = await supabase
               .from("module_client_content_resources")
               .select(
                 `
                 id,
+                resource_id,
                 resource:resource_id(id, title, description, resource_type, url, file_path)
               `,
               )
               .eq("module_client_content_id", contentData.id);
+
+            if (resourcesError) {
+              console.error("Failed to fetch personalised resources:", resourcesError);
+            } else if (resourcesData?.length) {
+              const nullResources = resourcesData.filter((r: any) => !r.resource);
+              if (nullResources.length > 0) {
+                console.error(
+                  "RLS blocked FK join for personalised resources — resource_ids:",
+                  nullResources.map((r: any) => r.resource_id),
+                  "Check can_access_resource() and resource visibility settings.",
+                );
+              }
+            }
 
             // Fetch assigned scenarios
             const { data: scenarioLinks, error: scenarioLinksError } = await supabase
