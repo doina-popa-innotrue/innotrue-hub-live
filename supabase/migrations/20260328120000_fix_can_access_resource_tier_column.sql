@@ -1,8 +1,7 @@
--- Add Check 8 and Check 9 to can_access_resource(): grant access when a resource
--- is linked to a capability assessment domain or question.
--- Without this, the FK join from domain_resource_links/question_resource_links
--- → resource_library returns NULL on the client side because the RLS policy blocks
--- access (same pattern as Check 7 fix for personalised module content).
+-- Fix: can_access_resource() Check 1 referenced pp.tier_index which does not exist.
+-- The correct column is program_plans.tier_level.
+-- This caused the ENTIRE function to error on every call for 'enrolled' resources,
+-- meaning NO enrolled resource was ever visible to non-admin users.
 
 CREATE OR REPLACE FUNCTION public.can_access_resource(
   _user_id UUID,
@@ -138,7 +137,6 @@ BEGIN
     END IF;
 
     -- Check 8: Linked to a capability assessment domain
-    -- Resources curated for assessment domains are accessible to all authenticated users
     IF EXISTS (
       SELECT 1
       FROM public.domain_resource_links drl
@@ -148,7 +146,6 @@ BEGIN
     END IF;
 
     -- Check 9: Linked to a capability assessment question
-    -- Resources curated for assessment questions are accessible to all authenticated users
     IF EXISTS (
       SELECT 1
       FROM public.question_resource_links qrl

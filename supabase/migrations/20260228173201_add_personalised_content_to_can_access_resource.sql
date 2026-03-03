@@ -56,7 +56,7 @@ BEGIN
       WHERE rpt.resource_id = _resource_id
         AND ce.client_user_id = _user_id
         AND ce.status IN ('active', 'completed')
-        AND (rpt.min_tier_index IS NULL OR rpt.min_tier_index = 0 OR pp.tier_index >= rpt.min_tier_index)
+        AND (rpt.min_tier_index IS NULL OR rpt.min_tier_index = 0 OR pp.tier_level >= rpt.min_tier_index)
     ) THEN
       RETURN TRUE;
     END IF;
