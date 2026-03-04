@@ -236,12 +236,23 @@ export default function ModuleDetail() {
 
         // Fetch client-specific content if module is individualized
         if (moduleData.is_individualized) {
-          const { data: contentData } = await supabase
+          const { data: contentData, error: contentError } = await supabase
             .from("module_client_content")
             .select("*, module_client_content_attachments(*)")
             .eq("module_id", moduleData.id)
             .eq("user_id", user.id)
             .maybeSingle();
+
+          if (contentError) {
+            console.error("Failed to fetch personalised content:", contentError);
+          } else if (!contentData) {
+            console.warn(
+              "Module is individualized but no personalised content found for user",
+              user.id,
+              "module",
+              moduleData.id,
+            );
+          }
 
           if (contentData) {
             // Fetch assigned resources
@@ -275,7 +286,9 @@ export default function ModuleDetail() {
               .select("id, scenario_template_id")
               .eq("module_client_content_id", contentData.id);
 
-            if (scenarioLinksError) throw scenarioLinksError;
+            if (scenarioLinksError) {
+              console.error("Failed to fetch personalised scenario links:", scenarioLinksError);
+            }
 
             const templateIds = (scenarioLinks || [])
               .map((s) => s.scenario_template_id)
@@ -306,9 +319,11 @@ export default function ModuleDetail() {
                 )
                 .in("id", templateIds);
 
-              if (templatesError) throw templatesError;
-
-              templatesById = new Map((templatesData || []).map((t: any) => [t.id, t]));
+              if (templatesError) {
+                console.error("Failed to fetch scenario templates for personalised content:", templatesError);
+              } else {
+                templatesById = new Map((templatesData || []).map((t: any) => [t.id, t]));
+              }
             }
 
             const scenariosData = (scenarioLinks || []).map((link) => ({
