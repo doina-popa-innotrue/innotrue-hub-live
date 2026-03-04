@@ -26,7 +26,7 @@
 
 ### Key Gaps
 
-1. **Edge functions** — 79 functions, 11 shared utilities, zero tests
+1. **Edge functions** — 80 functions, 11 shared utilities, zero tests
 2. **React components** — 273 component files, zero component-level tests
 3. **React hooks** — 76 custom hooks, only `useIsMaxPlan` tested (via lib/)
 4. **Pages** — 181 page files, only tested via E2E (surface level)

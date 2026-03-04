@@ -1873,7 +1873,13 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 26. ~~R3 Phase 1 Coach↔Client UX~~ ✅ DONE (2026-03-26) — Quick Actions bar, `CoachingSessionNotes.tsx`
 27. ~~R4 Coach Client Invites~~ ✅ DONE (2026-03-26) — `coach_client_invites` table, `send-coach-invite` edge function, `InviteClientDialog.tsx`
 28. ~~Action Items ↔ Timeline & Tasks~~ ✅ DONE (2026-03-26) — Timeline integration, `PromoteToTaskDialog`, `ActionItemsSection`, `useActionItems` hook
-29. **SC-4 Organisation Functionality Audit** (future) — org tables/pages not yet audited, will grow with enterprise adoption
+29. ~~**Resource visibility & RLS fixes**~~ ✅ DONE (2026-03-28) — Resource edit form visibility dropdown, `can_access_resource()` tier_level crash fix, assessment resource RLS checks, diagnostic RPC
+30. ~~**Instructor scoring UX**~~ ✅ DONE (2026-03-29) — Expandable scoring panel, per-question resource attachment, domain-level resource display, dialog stacking fixes
+31. ~~**Client Assignments expansion**~~ ✅ DONE (2026-03-29) — Show all program module assignments including unstarted, `not_started` status badge
+32. ~~**Instructor dev item RLS**~~ ✅ DONE (2026-03-29) — `update-client-development-item` edge function for RLS bypass, `client_instructors` check added to RLS policy
+33. ~~**Scenario paragraph RLS optimization**~~ ✅ DONE (2026-03-30) — Consolidated 6 SELECT policies to 2 via SECURITY DEFINER function, eliminated query timeouts
+34. ~~**PostgREST FK hint fixes**~~ ✅ DONE (2026-03-30) — Fixed broken FK hints in 5 files (StaffAssignments, Cohorts, CohortDashboard, CohortDetail, ModuleTeamContact), replaced with batch profile queries
+35. **SC-4 Organisation Functionality Audit** (future) — org tables/pages not yet audited, will grow with enterprise adoption
 30. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
 31. Remaining phases based on business priorities
 

@@ -1,5 +1,81 @@
 # Completed Work — Detailed History
 
+## Broken PostgREST FK Hints + Scenario RLS + Client Assignments (2026-03-30)
+
+Multi-session work covering PostgREST FK hint fixes, scenario paragraph RLS optimization, client Assignments page expansion, instructor scoring UX, and resource visibility fixes.
+
+### PostgREST FK Hint Pattern — Systemic Fix (commits `84683d1`, `32af6ac`)
+- **Root cause:** Tables with FK to `auth.users(id)` (different schema) have FK constraints invisible to PostgREST. Using FK hints like `profiles!program_coaches_coach_id_fkey` causes 400 errors because PostgREST can't resolve the relationship chain through `auth.users`.
+- **Affected tables:** `program_coaches`, `program_instructors`, `module_coaches`, `module_instructors`, `client_instructors`, `client_coaches`, `client_enrollments`, `program_cohorts`, `cohort_sessions` — all FK to `auth.users`, NOT directly to `profiles`.
+- **Safe tables:** `capability_snapshots`, `decision_comments`, `decisions`, `tasks`, `notifications`, `client_badges` — these FK directly to `profiles(id)`, so FK hints work.
+- **Verification method:** Check `src/integrations/supabase/types.ts` — if FK name appears in `Relationships[]`, it references a public table. If absent, it references `auth.users` and is broken.
+- **Fix pattern:** Replace FK hints with separate batch profile queries using a `Map<string, Profile>` for O(1) lookup. Keep FK hints to public tables (programs, program_modules) as those work correctly.
+- **Files fixed (7 broken FK hints across 5 files):**
+  - `src/pages/admin/StaffAssignments.tsx` — complete rewrite of `loadAssignments()`: added `fetchProfilesMap()` batch helper, removed 6 broken staff FK hints + 1 broken enrollment FK hint, collects all user IDs into Set, batch-fetches profiles once
+  - `src/pages/instructor/Cohorts.tsx` — replaced `lead_instructor:profiles!program_cohorts_lead_instructor_id_fkey` with separate profile lookup
+  - `src/pages/client/CohortDashboard.tsx` — 2 FK hints fixed: cohort lead instructor + session instructor batch lookup via `sessionInstructorMap`
+  - `src/pages/instructor/CohortDetail.tsx` — 2 FK hints fixed: same pattern as CohortDashboard
+  - `src/components/modules/ModuleTeamContact.tsx` — replaced broken FK hints on `program_coaches`/`program_instructors` queries (fixed in previous session, commit `32af6ac`)
+- **Also in `32af6ac`:** Fixed client `ModuleDetail.tsx` scenario queries that were incorrectly gating on `is_individualized`, preventing all scenarios from showing.
+
+### Scenario Paragraph RLS Optimization (commits `ad5a93a`, `03c19b7`)
+- **Root cause:** The `scenario_paragraphs` table had 6 RLS policies for SELECT alone, causing query timeouts when admins tried to add paragraphs to scenario templates. Each SELECT triggered 6 parallel subquery checks.
+- **Commit `03c19b7`:** Initial fix — updated the admin's React Query to use `.eq("scenario_template_id", templateId)` to narrow the query scope, reducing the RLS evaluation surface.
+- **Commit `ad5a93a`:** Migration `20260330100000_optimize_scenario_paragraph_rls.sql` — consolidated 6 SELECT policies into 2 (admin full access + client restricted via `can_access_scenario_paragraph()` SECURITY DEFINER function). The function checks: admin → allow, then verifies enrollment + module_progress + scenario_instance chain. Also consolidated INSERT/UPDATE/DELETE policies.
+
+### Personalised Content Fetch — Silent Failure Prevention (commit `e59978c`)
+- **Problem:** `ModuleDetail.tsx` client page silently swallowed errors when fetching personalised content (resources + scenarios). If the queries failed (e.g., RLS timeout), the page just showed nothing with no indication of failure.
+- **Fix:** Added explicit error checking with `console.error` for both personalised resources and scenarios queries. Removed misleading `console.warn` that fired for all modules (not just individualized ones) after `is_individualized` gate removal.
+
+### Client Assignments Page — Show All Program Module Assignments (commit `b9d82fe`)
+- **Problem:** Client `/assignments` page only showed assignments already started (where `module_assignments` records exist). But modules can have assignment types configured via `module_assignment_configs` that the client hasn't begun yet.
+- **Fix:** Expanded query in `src/pages/client/Assignments.tsx`:
+  1. Fetch all `program_modules` for enrolled programs
+  2. Fetch all `module_assignment_configs` with joined `module_assignment_types`
+  3. Cross-reference: for each config without a matching `module_assignments` record, create a virtual entry with status `"not_started"`
+- Added `not_started` status badge (outline style with circle icon)
+- Included `not_started` in "Pending" tab filter alongside `draft` and `in_progress`
+- Clicking an unstarted assignment navigates to `/programs/{program_id}/modules/{module_id}`
+
+### Instructor Dev Item Edits — RLS Bypass via Edge Function (commit `a314efd`)
+- **Problem:** Instructors couldn't edit development items they created for clients — RLS UPDATE policy on `development_items` only allowed the `user_id` (client) to update.
+- **Fix:** Created pattern to route instructor edits through an edge function with service role, bypassing RLS while still checking the instructor has a valid relationship with the client.
+
+### Instructor RLS Policy Fix (commit `7ae802c`)
+- **Problem:** Instructor UPDATE/DELETE RLS policies on `development_items` checked `program_instructors` and `module_instructors` but missed `client_instructors` (direct assignment). Instructors assigned directly to clients couldn't manage development items.
+- **Fix:** Added `client_instructors` check to the instructor RLS policy.
+
+### Instructor Scoring UX — Expandable Panel + Per-Question Resources (commits `cdda28e`, `029f9e8`, `5873701`, `037c2cf`, `516dc21`, `ff4b090`, `f4df465`, `b5237b4`)
+- **Commit `cdda28e`:** New expandable scoring panel for capability assessments — full viewport overlay with detailed question-level scoring. Per-question resource buttons to attach development resources directly from scoring view.
+- **Commits `029f9e8`, `5873701`, `037c2cf`, `516dc21`:** Dialog stacking fixes — expanded scoring panel initially used z-index + fixed positioning, then portal to `document.body`, then keeping in parent DOM tree, and finally switched to Radix Dialog component for proper layer management and scroll lock handling.
+- **Commit `ff4b090`:** Added domain-level resource display in instructor scoring view — shows resources linked at the assessment domain level alongside question-level resources.
+- **Commit `f4df465`:** Fixed query invalidation — after adding a resource to a question, the per-question dev items query wasn't invalidated, so the new resource didn't appear until page refresh.
+- **Commit `b5237b4`:** Fixed overall resources query broken by invalid FK join + added edit buttons for resources in scoring view.
+
+### Resource Visibility & RLS Fixes (commits `851ffe7`, `678db54`, `b85f3fb`)
+- **Commit `851ffe7`:** Added visibility dropdown to resource edit form (was missing — resources defaulted to `private`/admin-only). Changed default visibility to `enrolled`. Added RLS checks for assessment-linked resources (Check 8+9 in `can_access_resource()`).
+- **Commit `678db54`:** Added error handling for personalised resource/scenario INSERT operations. Created `debug_resource_access()` diagnostic RPC for troubleshooting resource visibility issues.
+- **Commit `b85f3fb`:** Critical fix — `can_access_resource()` Check 1 referenced `pp.tier_index` but column is `pp.tier_level` on `program_plans`. This crashed the ENTIRE function, making ALL enrolled resources invisible to ALL non-admin users. Migration `20260328120000` fixes the column reference.
+
+### Stray "0" Fix (commit `983f18c`)
+- Admin `ProgramDetail.tsx` displayed a stray "0" after module descriptions due to `{modules.length && <div>...}` pattern — when length is 0, React renders "0" as text. Fixed with `{modules.length > 0 && ...}`.
+
+### Files Changed
+- `src/pages/admin/StaffAssignments.tsx` — complete `loadAssignments()` rewrite
+- `src/pages/instructor/Cohorts.tsx` — FK hint fix
+- `src/pages/client/CohortDashboard.tsx` — 2 FK hint fixes
+- `src/pages/instructor/CohortDetail.tsx` — 2 FK hint fixes
+- `src/components/modules/ModuleTeamContact.tsx` — FK hint fix
+- `src/pages/client/ModuleDetail.tsx` — scenario visibility fix, console.warn cleanup, personalised content error handling
+- `src/pages/client/Assignments.tsx` — show all program module assignments
+- `supabase/migrations/20260330100000_optimize_scenario_paragraph_rls.sql` — **NEW** (scenario paragraph RLS consolidation)
+- `src/pages/instructor/InstructorAssessmentScoring.tsx` — expandable panel, per-question resources
+- `src/components/resources/ResourceEditForm.tsx` — visibility dropdown
+- `src/pages/admin/ProgramDetail.tsx` — stray "0" fix
+- Multiple scoring/dialog components created and iterated
+
+---
+
 ## Cron Jobs Documentation + Null Resource Guard + UX Fixes (2026-02-28)
 
 Multi-session work covering crash fixes, UX improvements, and operational documentation.

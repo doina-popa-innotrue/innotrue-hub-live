@@ -45,7 +45,7 @@
 │  │ RLS on all │  │ Email/Pass   │  │   Wheel PDFs       │   │
 │  └────────────┘  └──────────────┘  └───────────────────┘   │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │              79 Edge Functions (Deno)                 │   │
+│  │              80 Edge Functions (Deno)                 │   │
 │  │  Email (13) │ AI (5+) │ xAPI (3) │ Stripe │ Cal.com │   │
 │  └──────────────────────────────────────────────────────┘   │
 └──────────────────┬───────────────────────────────────────────┘
@@ -109,9 +109,9 @@ fi && npm run build
 ### Supabase project details
 
 Both preprod and prod have:
-- 474 database migrations applied (including Phase 5 self-registration, schema drift fixes, enrollment duration, certification, credit expiry, retention cleanup, cron restore)
+- 481 database migrations applied (including Phase 5 self-registration, schema drift fixes, enrollment duration, certification, credit expiry, retention cleanup, cron restore, scenario paragraph RLS optimization)
 - Seed data loaded (`supabase/seed.sql`)
-- 79 edge functions deployed (including `complete-registration`, `redeem-enrollment-code`, `redeem-partner-code`, `alumni-lifecycle`, `enforce-enrollment-deadlines`, `generate-certificate-pdf`, `verify-badge`, `credit-expiry-notifications`, `submit-wheel-intent`, `bulk-create-users`, `send-coach-invite`)
+- 80 edge functions deployed (including `complete-registration`, `redeem-enrollment-code`, `redeem-partner-code`, `alumni-lifecycle`, `enforce-enrollment-deadlines`, `generate-certificate-pdf`, `verify-badge`, `credit-expiry-notifications`, `submit-wheel-intent`, `bulk-create-users`, `send-coach-invite`, `update-client-development-item`)
 - Google OAuth enabled (Phase 5)
 - Auth email hook pointing to `send-auth-email` edge function
 - Self-registration active: signup form + Google OAuth + role selection
@@ -168,7 +168,7 @@ After login, users must accept the current platform terms before accessing the a
 
 ### Schema overview
 
-- **380+ tables**, 20+ enum types, 474 migrations
+- **380+ tables**, 20+ enum types, 481 migrations
 - All public tables have **RLS enabled** (276 tables total, 41 with explicit policies, 235 locked to service_role only)
 - Key enums: `app_role`, `program_category`, `module_type`, `enrollment_status`, `decision_status`, `goal_category`
 
@@ -208,7 +208,7 @@ All INSERTs use `ON CONFLICT` for idempotency.
 
 ### Overview
 
-79 Deno/TypeScript edge functions in `supabase/functions/`, plus 11 shared utilities in `_shared/`.
+80 Deno/TypeScript edge functions in `supabase/functions/`, plus 11 shared utilities in `_shared/`.
 
 All functions have `verify_jwt = false` in `supabase/config.toml` — they implement custom auth checks internally (checking the `Authorization` header via `supabase.auth.getUser()`).
 
@@ -865,6 +865,18 @@ Admins generate shareable enrollment codes per program. Authenticated users rede
 
 **Pagination Pattern (SC-3):**
 All paginated pages follow the `EnrolmentsManagement.tsx` pattern: `PAGE_SIZE = 25`, `page` state (0-indexed), parallel `Promise.all([countQuery, dataQuery.range()])`, `getPageNumbers()` helper with ellipsis, shadcn `Pagination` component. Filter changes call `resetPage()`.
+
+### PostgREST FK Hint Caveat
+
+Tables with FK constraints to `auth.users(id)` (different schema from `public`) have those constraints **invisible to PostgREST**. Using FK hints like `profiles!program_coaches_coach_id_fkey` causes **400 errors** because PostgREST can't resolve the relationship chain through `auth.users`.
+
+**Broken tables (FK → `auth.users`):** `program_coaches`, `program_instructors`, `module_coaches`, `module_instructors`, `client_instructors`, `client_coaches`, `client_enrollments`, `program_cohorts`, `cohort_sessions`
+
+**Safe tables (FK → `profiles` directly):** `capability_snapshots`, `decision_comments`, `decisions`, `tasks`, `notifications`, `client_badges`
+
+**Fix pattern:** Fetch raw user IDs, then batch-query `profiles` separately. Verify in `src/integrations/supabase/types.ts` — if FK name appears in `Relationships[]`, it references a public table and works. If absent, it references `auth.users` and is broken.
+
+Fixed across: `StaffAssignments.tsx`, `Cohorts.tsx`, `CohortDashboard.tsx`, `CohortDetail.tsx`, `ModuleTeamContact.tsx` (commits `32af6ac`, `84683d1`).
 
 ### Development caveats
 

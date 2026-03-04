@@ -149,3 +149,14 @@ Cross-referenced all 6 RLS fix migrations against 15+ later migrations (Feb 14�
 - `cohort_sessions`: Later migration `20260225` added compatible new policies (facilitator access) without removing any existing ones. No conflict.
 
 **Conclusion:** No security regressions. All RLS fixes remain effective.
+
+### RLS Performance Optimization (2026-03-30)
+
+**`scenario_paragraphs` + `paragraph_question_links` RLS consolidation** — migration `20260330100000_optimize_scenario_paragraph_rls.sql`:
+
+- **Problem:** `scenario_paragraphs` had 6 SELECT policies that were all evaluated in parallel for every query. This caused query timeouts when admins tried to add paragraphs to scenario templates, as each SELECT triggered 6 expensive subquery checks.
+- **Fix:** Consolidated 6 SELECT policies into 2:
+  1. **Admin:** Full access (simple role check)
+  2. **Client:** Access via `can_access_scenario_paragraph()` SECURITY DEFINER function — checks admin role first, then verifies enrollment → module_progress → scenario_instance chain
+- Also consolidated INSERT/UPDATE/DELETE policies similarly.
+- **Result:** SELECT query time dropped from timeout (>30s) to sub-second.

@@ -199,12 +199,22 @@ Manages their organization's members and program access within the platform.
 - Visibility is scoped: instructors only see assignments from modules and programs they are assigned to
 - Grading interface includes:
   - Rubric-based scoring tied to capability assessment domains and questions
+  - **Expandable scoring panel** — full viewport overlay for detailed question-level scoring with context
+  - **Per-question resource attachment** — attach development resources directly from the scoring view
   - Per-question and per-domain notes
+  - Domain-level resource display alongside question-level resources
   - Development items that get linked to the client's development plan
   - Resource recommendations
 - `scored_by` and `scored_at` are recorded when grading is completed
 - Client receives email notification when grading is done
 - Status workflow: `not_started` → `in_progress` → `submitted` → `reviewed` (graded)
+
+**Client assignments page (`/assignments`):**
+- Shows **all** assignments from enrolled programs, including those not yet started
+- Fetches `module_assignment_configs` across all enrolled program modules to discover unstarted assignments
+- Virtual entries created with `not_started` status for assignments the client hasn't begun
+- Pending tab includes `not_started`, `draft`, and `in_progress` assignments
+- Clicking an unstarted assignment navigates to the module detail page
 
 ---
 
@@ -684,8 +694,8 @@ Consumption analytics, user behavior analytics, program completions, system sett
 |--------|-------|
 | Database tables | 380+ |
 | Database enums | 25 |
-| Database migrations | 474 |
-| Edge functions | 79 |
+| Database migrations | 481 |
+| Edge functions | 80 |
 | Frontend pages | 182+ (71 admin, 58 client, 14 teaching, 9 org-admin, 13+ shared) |
 | React components | 278 |
 | React hooks | 77 |

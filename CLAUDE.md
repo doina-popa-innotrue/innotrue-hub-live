@@ -24,7 +24,7 @@ Git hooks in `scripts/hooks/` are installed automatically via `npm install` (`pr
 To add a new hook: create it in `scripts/hooks/`, make it executable. It will be installed for all developers on their next `npm install`.
 
 ## Edge Function Standards (MANDATORY)
-All 71 edge functions use shared utilities. New functions MUST follow the same patterns:
+All 80 edge functions use shared utilities. New functions MUST follow the same patterns:
 
 1. **CORS:** `import { getCorsHeaders } from "../_shared/cors.ts"` → `const cors = getCorsHeaders(req)`
    - NEVER use inline/wildcard CORS headers
@@ -63,6 +63,25 @@ Schema changes MUST follow this process to prevent code/DB drift:
 7. Migration naming convention: `YYYYMMDDHHMMSS_descriptive_name.sql`
 
 Why: Schema drift causes silent failures (queries return empty results for non-existent columns) and Lovable build failures when it regenerates types from the live DB. The Supabase dashboard SQL editor is especially dangerous because it applies SQL without tracking in `supabase_migrations`, causing `db push` to skip or re-apply migrations.
+
+## PostgREST FK Hint Rule (MANDATORY)
+**NEVER use FK hints to `profiles` through `auth.users` tables.** Tables with FK to `auth.users(id)` (different schema) have constraints invisible to PostgREST. Using hints like `profiles!program_coaches_coach_id_fkey` causes **400 errors**.
+
+**Broken tables (FK → `auth.users`):** `program_coaches`, `program_instructors`, `module_coaches`, `module_instructors`, `client_instructors`, `client_coaches`, `client_enrollments`, `program_cohorts`, `cohort_sessions`
+
+**Safe tables (FK → `profiles` directly):** `capability_snapshots`, `decision_comments`, `decisions`, `tasks`, `notifications`, `client_badges`
+
+**Fix pattern:** Fetch raw user IDs, then batch-query `profiles` separately:
+```typescript
+// ❌ BROKEN — FK hint through auth.users
+.select(`*, coach:profiles!program_coaches_coach_id_fkey(name)`)
+
+// ✅ CORRECT — separate profile lookup
+.select(`*, coach_id`)
+// then batch: supabase.from("profiles").select("id, name").in("id", userIds)
+```
+
+**Verification:** Check `src/integrations/supabase/types.ts` → if FK name appears in `Relationships[]`, it references a public table and works. If absent, it references `auth.users` and is broken.
 
 ## Frontend Standards
 - Use `@/` import alias for all imports

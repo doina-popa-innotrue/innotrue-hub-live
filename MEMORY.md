@@ -51,7 +51,7 @@
 - Supabase client: `src/integrations/supabase/client.ts`
 - Auth: `src/pages/Auth.tsx`, `src/contexts/AuthContext.tsx`
 - Routes: `src/App.tsx` | Sentry: `src/main.tsx` | Error boundary: `src/components/ErrorBoundary.tsx`
-- Edge functions: `supabase/functions/` (79 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`, `error-response.ts`, `ai-input-limits.ts`, `calcom-utils.ts`, `content-access.ts`
+- Edge functions: `supabase/functions/` (80 functions) | Shared: `_shared/cors.ts`, `ai-config.ts`, `email-utils.ts`, `error-response.ts`, `ai-input-limits.ts`, `calcom-utils.ts`, `content-access.ts`
 - xAPI: `supabase/functions/xapi-launch/` (session create/resume), `supabase/functions/xapi-statements/` (LRS endpoint + state persistence)
 - Assessment scoring: `src/lib/assessmentScoring.ts` (weighted question type scoring for capability assessments)
 - Guided path instantiation: `src/lib/guidedPathInstantiation.ts` (shared template→goals service with pace/date logic)
@@ -60,7 +60,7 @@
 - Seed: `supabase/seed.sql` | Cursor rules: `.cursorrules`
 
 ## Database Schema
-- 380+ tables, 24 enums (`goal_category` removed — replaced with TEXT + FK to `wheel_categories`), 430+ migrations
+- 380+ tables, 24 enums (`goal_category` removed — replaced with TEXT + FK to `wheel_categories`), 481 migrations
 - Key tables (CT3): `content_packages` (shared content library), `content_completions` (cross-program completion tracking), `program_modules.content_package_id` FK
 - Key tables (waitlist): `cohort_waitlist` (user_id, cohort_id, position, notified), `programs.capacity`, `client_enrollments.enrollment_source/referred_by/referral_note`
 - Key enums: `app_role` (admin, client, coach, instructor), `module_type`, `enrollment_status`. `goal_category` removed (was rigid enum with 21 overlapping values) — `goals.category` is now `TEXT` with FK to `wheel_categories(key)`, dynamically managed via admin UI.
@@ -222,7 +222,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Reflection resource refresh (2026-03-26):** Adding a resource to a reflection didn't update the display until page refresh. `ReflectionResources` lacked a trigger to refetch. Fixed with `refreshKey` prop pattern.
 - **xAPI library content loading (2026-03-26):** Shared library xAPI content failed with "File not found: index.html". Client/instructor `ModuleDetail` pages only read `program_modules.content_package_type` (null for library content) instead of JOINing `content_packages.package_type`. Fixed by adding JOIN + type resolution fallback. Also fixed instructor page not showing library content at all.
 
-## Current State (as of 2026-03-26, Action Items integration done)
+## Current State (as of 2026-03-30, FK hints + scenario RLS fixed)
 - All strict TypeScript flags enabled (including strictNullChecks). 0 errors.
 - **Self-registration enabled** (Phase 5 core). Signup form + Google OAuth active in Auth.tsx. New users choose role at `/complete-registration` (client immediate, coach/instructor via admin approval). All self-registered users get client role + free plan immediately.
 - 16 storage buckets on all 3 Supabase projects
@@ -408,6 +408,14 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
   - **Client ModuleDetail crash (null resource):** `TypeError: can't access property "title", a.resource is null`. RLS on `resource_library` denies client access → PostgREST FK join returns null → crash. Added `.filter((res) => res.resource)` in `ModuleDetail.tsx`, `ModuleResourceAssignment.tsx`, `ClientResourceList.tsx`. Commit `14e8b3e`.
 - **Resource Picker UX (2026-02-28):** Replaced flat `<Select>` dropdown in "Module Resources" section with filterable `ResourcePickerDialog` (search + category/program/type filters) + confirmation dialog for notes/required toggle. Reuses same component already used by "Personalised Content" section. Commit `3e3aa86`.
 - **Cron Jobs Documentation & Restore (2026-02-28):** `docs/CRON_JOBS.md` — all 9 pg_cron jobs documented (timeline, monitoring queries, management, recovery). Idempotent restore migration `20260228120000_restore_all_cron_jobs.sql` for disaster recovery. `BACKUP_AND_RECOVERY.md` section 8 rewritten with accurate inventory. Commit `5679712`.
+- **Stray "0" in ProgramDetail (2026-03-28):** `{modules.length && <div>...}` renders "0" as text when length is 0. Use `{modules.length > 0 && ...}` instead. Commit `983f18c`.
+- **Resource visibility vs program gating (2026-03-28):** Resource edit form's "Public (all users)" label controlled program gating, NOT the `visibility` column. New resources defaulted to `visibility: 'private'` (admin-only). Fixed: added visibility dropdown, changed default to `enrolled`. Commit `851ffe7`.
+- **can_access_resource() tier_index crash (2026-03-28):** Check 1 referenced `pp.tier_index` but `program_plans` has `tier_level`. Crashed entire function → all enrolled resources invisible to non-admin users. Migration `20260328120000`. Commit `b85f3fb`.
+- **Instructor scoring dialog stacking (2026-03-28–29):** Expandable scoring panel inside a Radix Dialog caused layer management issues. Fixed by using Radix Dialog for the expanded view instead of manual portal/z-index tricks. Commits `cdda28e`→`516dc21`.
+- **Instructor dev item RLS gap (2026-03-29):** Instructor UPDATE/DELETE RLS policies on `development_items` missed `client_instructors` check. Direct-assigned instructors couldn't manage items. Commit `7ae802c`. Also routed instructor edits through edge function for RLS bypass. Commit `a314efd`.
+- **Client Assignments — show unstarted (2026-03-29):** Page only showed started assignments. Now fetches `program_modules` + `module_assignment_configs` for enrolled programs, creates virtual entries with `not_started` status for unconfigured assignments. Commit `b9d82fe`.
+- **Scenario paragraph RLS timeout (2026-03-30):** 6 SELECT policies on `scenario_paragraphs` caused query timeouts. Consolidated to 2 policies (admin + client via SECURITY DEFINER function). Migration `20260330100000`. Commits `03c19b7`, `ad5a93a`.
+- **Broken PostgREST FK hints (2026-03-30):** Tables with FK to `auth.users(id)` have constraints invisible to PostgREST — FK hints like `profiles!program_coaches_coach_id_fkey` cause 400 errors. Fixed in 5 files (StaffAssignments, Cohorts, CohortDashboard, CohortDetail, ModuleTeamContact) by replacing with separate batch profile queries. Commits `32af6ac`, `84683d1`.
 - **Next steps:** SC-4 Organisation audit → M13 Zod Validation + R6/R7 Phase 2 → Phase 3 AI
 
 ## Scalability & Performance Audit (2026-03-24)
