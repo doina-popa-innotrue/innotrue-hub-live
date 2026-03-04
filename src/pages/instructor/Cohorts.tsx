@@ -46,12 +46,13 @@ export default function InstructorCohorts() {
 
       if (programIds.size === 0) return [];
 
-      // Fetch cohorts for those programs with lead instructor + program name
+      // Fetch cohorts for those programs (no FK hint to profiles — auth.users FKs
+      // are invisible to PostgREST, so we fetch instructor profiles separately)
       const { data: cohortsData, error: cohortsError } = await supabase
         .from("program_cohorts")
         .select(`
           id, name, description, start_date, end_date, status, max_capacity, program_id,
-          lead_instructor:profiles!program_cohorts_lead_instructor_id_fkey ( name ),
+          lead_instructor_id,
           programs ( name )
         `)
         .in("program_id", Array.from(programIds))
@@ -59,6 +60,21 @@ export default function InstructorCohorts() {
 
       if (cohortsError) throw cohortsError;
       if (!cohortsData || cohortsData.length === 0) return [];
+
+      // Batch-fetch lead instructor profiles
+      const instructorIds = [...new Set(
+        (cohortsData as any[]).map((c) => c.lead_instructor_id).filter(Boolean),
+      )];
+      const instructorMap = new Map<string, string>();
+      if (instructorIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, name")
+          .in("id", instructorIds);
+        for (const p of profiles || []) {
+          instructorMap.set(p.id, p.name || "Unknown");
+        }
+      }
 
       const cohortIds = cohortsData.map((c) => c.id);
 
@@ -94,7 +110,9 @@ export default function InstructorCohorts() {
         status: c.status,
         max_capacity: c.max_capacity,
         program_id: c.program_id,
-        lead_instructor_name: c.lead_instructor?.name || null,
+        lead_instructor_name: c.lead_instructor_id
+          ? instructorMap.get(c.lead_instructor_id) || null
+          : null,
         program_name: c.programs?.name || null,
         enrolled_count: enrollCountMap[c.id] || 0,
         session_count: sessionCountMap[c.id] || 0,

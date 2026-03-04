@@ -91,12 +91,13 @@ export default function TeachingCohortDetail() {
   const loadData = useCallback(async () => {
     if (!user || !cohortId) return;
 
-    // 1. Load cohort with lead instructor + program name
+    // 1. Load cohort + program name (fetch lead instructor profile separately —
+    // FK hints to profiles via auth.users are invisible to PostgREST)
     const { data: cohortData, error: cohortError } = await supabase
       .from("program_cohorts")
       .select(`
         id, name, description, start_date, end_date, status, max_capacity, program_id,
-        lead_instructor:profiles!program_cohorts_lead_instructor_id_fkey ( name ),
+        lead_instructor_id,
         programs ( name )
       `)
       .eq("id", cohortId)
@@ -105,6 +106,16 @@ export default function TeachingCohortDetail() {
     if (cohortError || !cohortData) {
       setLoading(false);
       return;
+    }
+
+    let leadInstructorName: string | null = null;
+    if ((cohortData as any).lead_instructor_id) {
+      const { data: liProfile } = await supabase
+        .from("profiles")
+        .select("name")
+        .eq("id", (cohortData as any).lead_instructor_id)
+        .single();
+      leadInstructorName = liProfile?.name || null;
     }
 
     setCohort({
@@ -116,21 +127,35 @@ export default function TeachingCohortDetail() {
       status: (cohortData as any).status,
       max_capacity: (cohortData as any).max_capacity,
       program_id: (cohortData as any).program_id,
-      lead_instructor_name: (cohortData as any).lead_instructor?.name || null,
+      lead_instructor_name: leadInstructorName,
       program_name: (cohortData as any).programs?.name || null,
     });
 
-    // 2. Load sessions with instructor + module
+    // 2. Load sessions with module (fetch instructor profiles separately)
     const { data: sessionsData } = await supabase
       .from("cohort_sessions")
       .select(`
         id, title, description, session_date, start_time, end_time,
-        location, meeting_link, module_id, recap, recording_url, order_index,
-        program_modules ( title ),
-        instructor:profiles!cohort_sessions_instructor_id_fkey ( name )
+        location, meeting_link, module_id, instructor_id, recap, recording_url, order_index,
+        program_modules ( title )
       `)
       .eq("cohort_id", cohortId)
       .order("order_index", { ascending: true });
+
+    // Batch-fetch session instructor profiles
+    const sessionInstructorIds = [...new Set(
+      (sessionsData || []).map((s: any) => s.instructor_id).filter(Boolean),
+    )];
+    const sessionInstructorMap = new Map<string, string>();
+    if (sessionInstructorIds.length > 0) {
+      const { data: siProfiles } = await supabase
+        .from("profiles")
+        .select("id, name")
+        .in("id", sessionInstructorIds);
+      for (const p of siProfiles || []) {
+        sessionInstructorMap.set(p.id, p.name || "Unknown");
+      }
+    }
 
     // 3. Load attendance records for all sessions
     const { data: attendanceData } = await supabase
@@ -164,7 +189,9 @@ export default function TeachingCohortDetail() {
       location: s.location,
       meeting_link: s.meeting_link,
       module_title: s.program_modules?.title || null,
-      instructor_name: s.instructor?.name || (cohortData as any).lead_instructor?.name || null,
+      instructor_name: s.instructor_id
+        ? sessionInstructorMap.get(s.instructor_id) || leadInstructorName
+        : leadInstructorName,
       recap: s.recap,
       recording_url: s.recording_url,
       order_index: s.order_index,

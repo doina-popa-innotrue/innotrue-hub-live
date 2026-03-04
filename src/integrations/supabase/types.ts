@@ -14745,6 +14745,14 @@ export type Database = {
         Args: { _field_name: string; _profile_user_id: string }
         Returns: boolean
       }
+      can_write_question_link: {
+        Args: { p_paragraph_id: string }
+        Returns: boolean
+      }
+      can_write_section_paragraph: {
+        Args: { p_section_id: string }
+        Returns: boolean
+      }
       check_alumni_access: {
         Args: { p_program_id: string; p_user_id: string }
         Returns: Json

@@ -247,13 +247,6 @@ export default function ModuleDetail() {
 
           if (contentError) {
             console.error("Failed to fetch personalised content:", contentError);
-          } else if (!contentData) {
-            console.warn(
-              "Module is individualized but no personalised content found for user",
-              user.id,
-              "module",
-              moduleData.id,
-            );
           }
 
           if (contentData) {

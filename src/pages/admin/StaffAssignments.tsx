@@ -114,12 +114,32 @@ export default function StaffAssignments() {
     loadAvailableStaffAndClients();
   }, []);
 
+  /** Batch-fetch profiles for a set of user IDs, returning a Map for O(1) lookup */
+  async function fetchProfilesMap(userIds: string[]) {
+    const map = new Map<string, { id: string; name: string; email: string; avatar_url: string | null }>();
+    const unique = [...new Set(userIds.filter(Boolean))];
+    if (unique.length === 0) return map;
+    // Supabase .in() has a practical limit; chunk in batches of 200
+    for (let i = 0; i < unique.length; i += 200) {
+      const batch = unique.slice(i, i + 200);
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, name, email, avatar_url")
+        .in("id", batch);
+      for (const p of data || []) {
+        map.set(p.id, { id: p.id, name: p.name || "Unknown", email: p.email || "", avatar_url: p.avatar_url });
+      }
+    }
+    return map;
+  }
+
   async function loadAssignments() {
     setLoading(true);
     try {
       const allAssignments: Assignment[] = [];
 
-      // Fetch all 6 assignment sources in parallel (instead of sequential + N+1)
+      // Fetch all 6 assignment sources in parallel — no FK hints to profiles
+      // (those FKs reference auth.users which is invisible to PostgREST)
       const [
         { data: directInstructors },
         { data: directCoaches },
@@ -128,34 +148,22 @@ export default function StaffAssignments() {
         { data: moduleInstructors },
         { data: moduleCoaches },
       ] = await Promise.all([
-        supabase.from("client_instructors").select(`
-          id, instructor_id, client_id,
-          instructor:profiles!client_instructors_instructor_id_fkey(id, name, email, avatar_url),
-          client:profiles!client_instructors_client_id_fkey(id, name, email, avatar_url)
-        `),
-        supabase.from("client_coaches").select(`
-          id, coach_id, client_id,
-          coach:profiles!client_coaches_coach_id_fkey(id, name, email, avatar_url),
-          client:profiles!client_coaches_client_id_fkey(id, name, email, avatar_url)
-        `),
+        supabase.from("client_instructors").select("id, instructor_id, client_id"),
+        supabase.from("client_coaches").select("id, coach_id, client_id"),
         supabase.from("program_instructors").select(`
           id, instructor_id, program_id,
-          instructor:profiles!program_instructors_instructor_id_fkey(id, name, email, avatar_url),
           program:programs!program_instructors_program_id_fkey(id, name, slug)
         `),
         supabase.from("program_coaches").select(`
           id, coach_id, program_id,
-          coach:profiles!program_coaches_coach_id_fkey(id, name, email, avatar_url),
           program:programs!program_coaches_program_id_fkey(id, name, slug)
         `),
         supabase.from("module_instructors").select(`
           id, instructor_id, module_id,
-          instructor:profiles!module_instructors_instructor_id_fkey(id, name, email, avatar_url),
           module:program_modules!module_instructors_module_id_fkey(id, title, program_id)
         `),
         supabase.from("module_coaches").select(`
           id, coach_id, module_id,
-          coach:profiles!module_coaches_coach_id_fkey(id, name, email, avatar_url),
           module:program_modules!module_coaches_module_id_fkey(id, title, program_id)
         `),
       ]);
@@ -171,44 +179,69 @@ export default function StaffAssignments() {
         if (mc.module) programIds.add((mc.module as any).program_id);
       });
 
-      // Batch-fetch ALL enrollments for these programs in ONE query (replaces N+1 loops)
+      // Batch-fetch ALL enrollments for these programs in ONE query
+      // (no FK hint to profiles — fetch profiles separately)
       let enrollmentsByProgram = new Map<
         string,
-        { client_user_id: string | null; client: any }[]
+        { client_user_id: string }[]
       >();
       if (programIds.size > 0) {
         const { data: allEnrollments } = await supabase
           .from("client_enrollments")
-          .select(
-            `client_user_id, program_id,
-            client:profiles!client_enrollments_client_user_id_fkey(id, name, email, avatar_url)`,
-          )
+          .select("client_user_id, program_id")
           .in("program_id", Array.from(programIds))
           .not("client_user_id", "is", null);
 
         if (allEnrollments) {
           for (const e of allEnrollments) {
+            if (!e.client_user_id) continue;
             const list = enrollmentsByProgram.get(e.program_id) || [];
-            list.push(e);
+            list.push({ client_user_id: e.client_user_id });
             enrollmentsByProgram.set(e.program_id, list);
           }
         }
       }
 
+      // Collect ALL user IDs we need profiles for, then batch-fetch once
+      const allUserIds = new Set<string>();
+
+      // Staff IDs
+      directInstructors?.forEach((di) => allUserIds.add(di.instructor_id));
+      directCoaches?.forEach((dc) => allUserIds.add(dc.coach_id));
+      programInstructors?.forEach((pi) => allUserIds.add(pi.instructor_id));
+      programCoaches?.forEach((pc) => allUserIds.add(pc.coach_id));
+      moduleInstructors?.forEach((mi) => allUserIds.add(mi.instructor_id));
+      moduleCoaches?.forEach((mc) => allUserIds.add(mc.coach_id));
+
+      // Client IDs from direct assignments
+      directInstructors?.forEach((di) => allUserIds.add(di.client_id));
+      directCoaches?.forEach((dc) => allUserIds.add(dc.client_id));
+
+      // Client IDs from enrollments
+      for (const enrollments of enrollmentsByProgram.values()) {
+        for (const e of enrollments) {
+          allUserIds.add(e.client_user_id);
+        }
+      }
+
+      const profiles = await fetchProfilesMap([...allUserIds]);
+
       // 1. Direct client-instructor assignments
       if (directInstructors) {
         for (const di of directInstructors) {
-          if (di.instructor && di.client) {
+          const staff = profiles.get(di.instructor_id);
+          const client = profiles.get(di.client_id);
+          if (staff && client) {
             allAssignments.push({
               id: `direct-inst-${di.id}`,
               staffId: di.instructor_id,
-              staffName: (di.instructor as any).name || "Unknown",
-              staffEmail: (di.instructor as any).email || "",
-              staffAvatar: (di.instructor as any).avatar_url,
+              staffName: staff.name,
+              staffEmail: staff.email,
+              staffAvatar: staff.avatar_url,
               clientId: di.client_id,
-              clientName: (di.client as any).name || "Unknown",
-              clientEmail: (di.client as any).email || "",
-              clientAvatar: (di.client as any).avatar_url,
+              clientName: client.name,
+              clientEmail: client.email,
+              clientAvatar: client.avatar_url,
               role: "instructor",
               source: "direct",
               sourceId: di.id,
@@ -221,17 +254,19 @@ export default function StaffAssignments() {
       // 2. Direct client-coach assignments
       if (directCoaches) {
         for (const dc of directCoaches) {
-          if (dc.coach && dc.client) {
+          const staff = profiles.get(dc.coach_id);
+          const client = profiles.get(dc.client_id);
+          if (staff && client) {
             allAssignments.push({
               id: `direct-coach-${dc.id}`,
               staffId: dc.coach_id,
-              staffName: (dc.coach as any).name || "Unknown",
-              staffEmail: (dc.coach as any).email || "",
-              staffAvatar: (dc.coach as any).avatar_url,
+              staffName: staff.name,
+              staffEmail: staff.email,
+              staffAvatar: staff.avatar_url,
               clientId: dc.client_id,
-              clientName: (dc.client as any).name || "Unknown",
-              clientEmail: (dc.client as any).email || "",
-              clientAvatar: (dc.client as any).avatar_url,
+              clientName: client.name,
+              clientEmail: client.email,
+              clientAvatar: client.avatar_url,
               role: "coach",
               source: "direct",
               sourceId: dc.id,
@@ -244,20 +279,22 @@ export default function StaffAssignments() {
       // 3. Program-level instructor assignments (using batch enrollment map)
       if (programInstructors) {
         for (const pi of programInstructors) {
-          if (!pi.instructor) continue;
+          const staff = profiles.get(pi.instructor_id);
+          if (!staff) continue;
           const enrollments = enrollmentsByProgram.get(pi.program_id) || [];
           for (const enroll of enrollments) {
-            if (enroll.client) {
+            const client = profiles.get(enroll.client_user_id);
+            if (client) {
               allAssignments.push({
                 id: `prog-inst-${pi.id}-${enroll.client_user_id}`,
                 staffId: pi.instructor_id,
-                staffName: (pi.instructor as any).name || "Unknown",
-                staffEmail: (pi.instructor as any).email || "",
-                staffAvatar: (pi.instructor as any).avatar_url,
-                clientId: enroll.client_user_id!,
-                clientName: (enroll.client as any).name || "Unknown",
-                clientEmail: (enroll.client as any).email || "",
-                clientAvatar: (enroll.client as any).avatar_url,
+                staffName: staff.name,
+                staffEmail: staff.email,
+                staffAvatar: staff.avatar_url,
+                clientId: enroll.client_user_id,
+                clientName: client.name,
+                clientEmail: client.email,
+                clientAvatar: client.avatar_url,
                 role: "instructor",
                 source: "program",
                 sourceId: pi.program_id,
@@ -271,20 +308,22 @@ export default function StaffAssignments() {
       // 4. Program-level coach assignments (using batch enrollment map)
       if (programCoaches) {
         for (const pc of programCoaches) {
-          if (!pc.coach) continue;
+          const staff = profiles.get(pc.coach_id);
+          if (!staff) continue;
           const enrollments = enrollmentsByProgram.get(pc.program_id) || [];
           for (const enroll of enrollments) {
-            if (enroll.client) {
+            const client = profiles.get(enroll.client_user_id);
+            if (client) {
               allAssignments.push({
                 id: `prog-coach-${pc.id}-${enroll.client_user_id}`,
                 staffId: pc.coach_id,
-                staffName: (pc.coach as any).name || "Unknown",
-                staffEmail: (pc.coach as any).email || "",
-                staffAvatar: (pc.coach as any).avatar_url,
-                clientId: enroll.client_user_id!,
-                clientName: (enroll.client as any).name || "Unknown",
-                clientEmail: (enroll.client as any).email || "",
-                clientAvatar: (enroll.client as any).avatar_url,
+                staffName: staff.name,
+                staffEmail: staff.email,
+                staffAvatar: staff.avatar_url,
+                clientId: enroll.client_user_id,
+                clientName: client.name,
+                clientEmail: client.email,
+                clientAvatar: client.avatar_url,
                 role: "coach",
                 source: "program",
                 sourceId: pc.program_id,
@@ -298,21 +337,23 @@ export default function StaffAssignments() {
       // 5. Module-level instructor assignments (using batch enrollment map)
       if (moduleInstructors) {
         for (const mi of moduleInstructors) {
-          if (!mi.module || !mi.instructor) continue;
+          const staff = profiles.get(mi.instructor_id);
+          if (!mi.module || !staff) continue;
           const programId = (mi.module as any).program_id;
           const enrollments = enrollmentsByProgram.get(programId) || [];
           for (const enroll of enrollments) {
-            if (enroll.client) {
+            const client = profiles.get(enroll.client_user_id);
+            if (client) {
               allAssignments.push({
                 id: `mod-inst-${mi.id}-${enroll.client_user_id}`,
                 staffId: mi.instructor_id,
-                staffName: (mi.instructor as any).name || "Unknown",
-                staffEmail: (mi.instructor as any).email || "",
-                staffAvatar: (mi.instructor as any).avatar_url,
-                clientId: enroll.client_user_id!,
-                clientName: (enroll.client as any).name || "Unknown",
-                clientEmail: (enroll.client as any).email || "",
-                clientAvatar: (enroll.client as any).avatar_url,
+                staffName: staff.name,
+                staffEmail: staff.email,
+                staffAvatar: staff.avatar_url,
+                clientId: enroll.client_user_id,
+                clientName: client.name,
+                clientEmail: client.email,
+                clientAvatar: client.avatar_url,
                 role: "instructor",
                 source: "module",
                 sourceId: mi.module_id,
@@ -326,21 +367,23 @@ export default function StaffAssignments() {
       // 6. Module-level coach assignments (using batch enrollment map)
       if (moduleCoaches) {
         for (const mc of moduleCoaches) {
-          if (!mc.module || !mc.coach) continue;
+          const staff = profiles.get(mc.coach_id);
+          if (!mc.module || !staff) continue;
           const programId = (mc.module as any).program_id;
           const enrollments = enrollmentsByProgram.get(programId) || [];
           for (const enroll of enrollments) {
-            if (enroll.client) {
+            const client = profiles.get(enroll.client_user_id);
+            if (client) {
               allAssignments.push({
                 id: `mod-coach-${mc.id}-${enroll.client_user_id}`,
                 staffId: mc.coach_id,
-                staffName: (mc.coach as any).name || "Unknown",
-                staffEmail: (mc.coach as any).email || "",
-                staffAvatar: (mc.coach as any).avatar_url,
-                clientId: enroll.client_user_id!,
-                clientName: (enroll.client as any).name || "Unknown",
-                clientEmail: (enroll.client as any).email || "",
-                clientAvatar: (enroll.client as any).avatar_url,
+                staffName: staff.name,
+                staffEmail: staff.email,
+                staffAvatar: staff.avatar_url,
+                clientId: enroll.client_user_id,
+                clientName: client.name,
+                clientEmail: client.email,
+                clientAvatar: client.avatar_url,
                 role: "coach",
                 source: "module",
                 sourceId: mc.module_id,
