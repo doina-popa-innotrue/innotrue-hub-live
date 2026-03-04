@@ -234,8 +234,10 @@ export default function ModuleDetail() {
           }
         }
 
-        // Fetch client-specific content if module is individualized
-        if (moduleData.is_individualized) {
+        // Always check for client-specific content (even if is_individualized is off —
+        // content may have been assigned before the flag was toggled, or flag may have
+        // been accidentally reset during a module edit).
+        {
           const { data: contentData, error: contentError } = await supabase
             .from("module_client_content")
             .select("*, module_client_content_attachments(*)")

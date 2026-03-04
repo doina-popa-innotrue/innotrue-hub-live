@@ -19,6 +19,20 @@ interface ModuleTeamContactProps {
   enrollmentId?: string;
 }
 
+/** Fetch profiles for a list of user IDs and return a Map<id, {name, avatar_url}> */
+async function fetchProfiles(userIds: string[]) {
+  const map = new Map<string, { name: string; avatar_url: string | null }>();
+  if (userIds.length === 0) return map;
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, name, avatar_url")
+    .in("id", userIds);
+  for (const p of data || []) {
+    map.set(p.id, { name: p.name || "Unknown", avatar_url: p.avatar_url });
+  }
+  return map;
+}
+
 export function ModuleTeamContact({ moduleId, programId, enrollmentId }: ModuleTeamContactProps) {
   const [loading, setLoading] = useState(true);
   const [personalInstructor, setPersonalInstructor] = useState<TeamMember | null>(null);
@@ -33,53 +47,35 @@ export function ModuleTeamContact({ moduleId, programId, enrollmentId }: ModuleT
       if (enrollmentId) {
         const { data: personalStaff } = await supabase
           .from("enrollment_module_staff")
-          .select(`
-            staff_user_id,
-            role,
-            profiles:staff_user_id (id, name, avatar_url)
-          `)
+          .select("staff_user_id, role")
           .eq("enrollment_id", enrollmentId)
           .eq("module_id", moduleId)
           .maybeSingle();
 
-        if (personalStaff && (personalStaff as any).profiles) {
-          setPersonalInstructor({
-            id: personalStaff.staff_user_id,
-            name: ((personalStaff as any).profiles as any)?.name || "Instructor",
-            avatar_url: ((personalStaff as any).profiles as any)?.avatar_url,
-            role: (personalStaff.role === "coach" ? "coach" : "instructor") as "instructor" | "coach",
-          });
+        if (personalStaff) {
+          const profiles = await fetchProfiles([personalStaff.staff_user_id]);
+          const profile = profiles.get(personalStaff.staff_user_id);
+          if (profile) {
+            setPersonalInstructor({
+              id: personalStaff.staff_user_id,
+              name: profile.name,
+              avatar_url: profile.avatar_url,
+              role: (personalStaff.role === "coach" ? "coach" : "instructor") as "instructor" | "coach",
+            });
+          }
         }
       }
 
       // First try to fetch module-specific instructors
       const { data: moduleInstructorsData } = await supabase
         .from("module_instructors")
-        .select(
-          `
-          instructor_id,
-          profiles!module_instructors_instructor_id_fkey (
-            id,
-            name,
-            avatar_url
-          )
-        `,
-        )
+        .select("instructor_id")
         .eq("module_id", moduleId);
 
       // Then try module-specific coaches
       const { data: moduleCoachesData } = await supabase
         .from("module_coaches")
-        .select(
-          `
-          coach_id,
-          profiles!module_coaches_coach_id_fkey (
-            id,
-            name,
-            avatar_url
-          )
-        `,
-        )
+        .select("coach_id")
         .eq("module_id", moduleId);
 
       let finalInstructors: TeamMember[] = [];
@@ -87,65 +83,59 @@ export function ModuleTeamContact({ moduleId, programId, enrollmentId }: ModuleT
 
       // Use module-level assignments if available, otherwise fall back to program-level
       if (moduleInstructorsData && moduleInstructorsData.length > 0) {
-        finalInstructors = moduleInstructorsData.map((i) => ({
-          id: i.instructor_id,
-          name: (i.profiles as any)?.name || "Instructor",
-          avatar_url: (i.profiles as any)?.avatar_url,
+        const ids = moduleInstructorsData.map((i) => i.instructor_id);
+        const profiles = await fetchProfiles(ids);
+        finalInstructors = ids.map((id) => ({
+          id,
+          name: profiles.get(id)?.name || "Instructor",
+          avatar_url: profiles.get(id)?.avatar_url || null,
           role: "instructor" as const,
         }));
       } else {
         // Fallback to program instructors
         const { data: programInstructorsData } = await supabase
           .from("program_instructors")
-          .select(
-            `
-            instructor_id,
-            profiles!program_instructors_instructor_id_fkey (
-              id,
-              name,
-              avatar_url
-            )
-          `,
-          )
+          .select("instructor_id")
           .eq("program_id", programId);
 
-        finalInstructors = (programInstructorsData || []).map((i) => ({
-          id: i.instructor_id,
-          name: (i.profiles as any)?.name || "Instructor",
-          avatar_url: (i.profiles as any)?.avatar_url,
-          role: "instructor" as const,
-        }));
+        if (programInstructorsData && programInstructorsData.length > 0) {
+          const ids = programInstructorsData.map((i) => i.instructor_id);
+          const profiles = await fetchProfiles(ids);
+          finalInstructors = ids.map((id) => ({
+            id,
+            name: profiles.get(id)?.name || "Instructor",
+            avatar_url: profiles.get(id)?.avatar_url || null,
+            role: "instructor" as const,
+          }));
+        }
       }
 
       if (moduleCoachesData && moduleCoachesData.length > 0) {
-        finalCoaches = moduleCoachesData.map((c) => ({
-          id: c.coach_id,
-          name: (c.profiles as any)?.name || "Coach",
-          avatar_url: (c.profiles as any)?.avatar_url,
+        const ids = moduleCoachesData.map((c) => c.coach_id);
+        const profiles = await fetchProfiles(ids);
+        finalCoaches = ids.map((id) => ({
+          id,
+          name: profiles.get(id)?.name || "Coach",
+          avatar_url: profiles.get(id)?.avatar_url || null,
           role: "coach" as const,
         }));
       } else {
         // Fallback to program coaches
         const { data: programCoachesData } = await supabase
           .from("program_coaches")
-          .select(
-            `
-            coach_id,
-            profiles!program_coaches_coach_id_fkey (
-              id,
-              name,
-              avatar_url
-            )
-          `,
-          )
+          .select("coach_id")
           .eq("program_id", programId);
 
-        finalCoaches = (programCoachesData || []).map((c) => ({
-          id: c.coach_id,
-          name: (c.profiles as any)?.name || "Coach",
-          avatar_url: (c.profiles as any)?.avatar_url,
-          role: "coach" as const,
-        }));
+        if (programCoachesData && programCoachesData.length > 0) {
+          const ids = programCoachesData.map((c) => c.coach_id);
+          const profiles = await fetchProfiles(ids);
+          finalCoaches = ids.map((id) => ({
+            id,
+            name: profiles.get(id)?.name || "Coach",
+            avatar_url: profiles.get(id)?.avatar_url || null,
+            role: "coach" as const,
+          }));
+        }
       }
 
       setInstructors(finalInstructors);
@@ -154,7 +144,7 @@ export function ModuleTeamContact({ moduleId, programId, enrollmentId }: ModuleT
     }
 
     fetchTeamData();
-  }, [moduleId, programId]);
+  }, [moduleId, programId, enrollmentId]);
 
   const handleContact = async (userId: string, name: string, role: string) => {
     try {
