@@ -266,7 +266,7 @@ Use `@/` path alias for all imports (maps to `src/`).
 |-----|--------|----------|----------|
 | Development | `develop` | local/dev | `localhost:8080` |
 | Pre-production | `preprod` | `jtzcrirqflfnagceendt` | Cloudflare preview |
-| Production | `main` | `qfdztdgublwlmewobxmx` | `app.innotrue.com` |
+| Production | `main` | `pvrarqyktvnrmggjpbow` | `app.innotrue.com` |
 | Lovable Sandbox | lovable remote | `cezlnvdjildzxpyxyabb` | Lovable preview |
 
 ## npm Scripts

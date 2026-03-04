@@ -216,7 +216,7 @@ If you start a new session about a topic covered in a previous session, mention 
 
 **URLs:**
 - Preprod: `https://supabase.com/dashboard/project/jtzcrirqflfnagceendt`
-- Production: `https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx`
+- Production: `https://supabase.com/dashboard/project/pvrarqyktvnrmggjpbow`
 
 ### When to use Supabase Dashboard
 
@@ -680,7 +680,7 @@ Usually means the test user's credentials changed or expired on preprod:
 | GitHub repo | `https://github.com/doina-popa-innotrue/innotrue-hub-live` |
 | GitHub Actions (CI) | `https://github.com/doina-popa-innotrue/innotrue-hub-live/actions` |
 | Supabase (preprod) | `https://supabase.com/dashboard/project/jtzcrirqflfnagceendt` |
-| Supabase (production) | `https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx` |
+| Supabase (production) | `https://supabase.com/dashboard/project/pvrarqyktvnrmggjpbow` |
 | Sentry | `https://innotrue.sentry.io` |
 | Cloudflare Pages | Cloudflare Dashboard > Pages |
 

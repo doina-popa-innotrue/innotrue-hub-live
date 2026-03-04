@@ -130,7 +130,7 @@ The `stripe-webhook` edge function handles these events:
    # Preprod
    npx supabase secrets set STRIPE_WEBHOOK_SECRET='whsec_...' --project-ref jtzcrirqflfnagceendt
    # Prod
-   npx supabase secrets set STRIPE_WEBHOOK_SECRET='whsec_...' --project-ref qfdztdgublwlmewobxmx
+   npx supabase secrets set STRIPE_WEBHOOK_SECRET='whsec_...' --project-ref pvrarqyktvnrmggjpbow
    ```
 
 **Current Status (2026-03-04):**

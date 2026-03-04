@@ -10,7 +10,7 @@ Last updated: 2026-02-26
 
 | | **Production** | **Preprod** | **Lovable Sandbox** |
 |---|---|---|---|
-| Supabase ref | `qfdztdgublwlmewobxmx` | `jtzcrirqflfnagceendt` | `cezlnvdjildzxpyxyabb` |
+| Supabase ref | `pvrarqyktvnrmggjpbow` | `jtzcrirqflfnagceendt` | `cezlnvdjildzxpyxyabb` |
 | Frontend URL | `app.innotrue.com` | Cloudflare Pages preview | Lovable preview |
 | Git branch | `main` | `preprod` | `lovable-sync` → lovable remote `main` |
 | `APP_ENV` | `production` | `staging` | `development` |
@@ -36,7 +36,7 @@ Set via Cloudflare Pages build command (prod/preprod) or hardcoded fallbacks (Lo
 ## Edge Function Secrets
 
 Set via: **Supabase Dashboard → Project Settings → Edge Function Secrets**
-- Prod: https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/settings/functions
+- Prod: https://supabase.com/dashboard/project/pvrarqyktvnrmggjpbow/settings/functions
 - Preprod: https://supabase.com/dashboard/project/jtzcrirqflfnagceendt/settings/functions
 - Sandbox: https://supabase.com/dashboard/project/cezlnvdjildzxpyxyabb/settings/functions
 
@@ -243,7 +243,7 @@ Set via: **Authentication → Configuration → Auth Providers**
 Each Supabase project needs the Google Client ID + Secret from Google Cloud Console (APIs & Services → Credentials → OAuth 2.0 Client IDs).
 
 **Authorized redirect URIs in Google Cloud Console:**
-- `https://qfdztdgublwlmewobxmx.supabase.co/auth/v1/callback` (prod)
+- `https://pvrarqyktvnrmggjpbow.supabase.co/auth/v1/callback` (prod)
 - `https://jtzcrirqflfnagceendt.supabase.co/auth/v1/callback` (preprod)
 - `https://cezlnvdjildzxpyxyabb.supabase.co/auth/v1/callback` (sandbox)
 - `https://app.innotrue.com/~oauth/callback` (custom OAuth for calendar/meeting integrations)

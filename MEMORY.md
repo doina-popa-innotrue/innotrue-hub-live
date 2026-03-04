@@ -13,7 +13,7 @@
 | Development | `develop` | `pfwlsxovvqdiwaztqxrj` (OLD) | `localhost:8080` | `development` |
 | Lovable Sandbox | `main` (lovable remote) | `cezlnvdjildzxpyxyabb` | Lovable preview | `development` |
 | Pre-production | `preprod` | `jtzcrirqflfnagceendt` | Cloudflare preview | `staging` |
-| Production | `main` | `qfdztdgublwlmewobxmx` | `app.innotrue.com` | `production` |
+| Production | `main` | `pvrarqyktvnrmggjpbow` | `app.innotrue.com` | `production` |
 
 **Git flow:** `feature/xyz` → `develop` → `preprod` → `main`
 

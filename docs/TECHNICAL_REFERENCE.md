@@ -76,7 +76,7 @@
 |-------------|-----------|-----------------|--------------|-----------|
 | Development | `develop` | `pfwlsxovvqdiwaztqxrj` (Lovable-owned) | `localhost:8080` | `development` |
 | Pre-production | `preprod` | `jtzcrirqflfnagceendt` | Cloudflare Pages preview | `staging` |
-| Production | `main` | `qfdztdgublwlmewobxmx` | `app.innotrue.com` | `production` |
+| Production | `main` | `pvrarqyktvnrmggjpbow` | `app.innotrue.com` | `production` |
 
 ### Git branch flow
 
@@ -96,7 +96,7 @@ All merges are fast-forward when possible. No squash merges.
 
 ```bash
 if [ "$CF_PAGES_BRANCH" = "main" ]; then
-  export VITE_SUPABASE_URL="https://qfdztdgublwlmewobxmx.supabase.co"
+  export VITE_SUPABASE_URL="https://pvrarqyktvnrmggjpbow.supabase.co"
   export VITE_SUPABASE_PUBLISHABLE_KEY="<prod-key>"
   export VITE_SENTRY_DSN="https://53c8f56b03ee...@o451...ingest.de.sentry.io/451..."
   export VITE_APP_ENV="production"

@@ -172,8 +172,8 @@ supabase storage cp -r backups/storage/<env>/<date>/<bucket>/ ss:///<bucket>/ --
 
 **Example — restore resource-library to prod:**
 ```bash
-supabase link --project-ref qfdztdgublwlmewobxmx
-supabase storage cp -r backups/storage/prod-qfdztdgublwlmewobxmx/2026-02-12_153000/resource-library/ ss:///resource-library/ --linked --experimental -j 4
+supabase link --project-ref pvrarqyktvnrmggjpbow
+supabase storage cp -r backups/storage/prod-pvrarqyktvnrmggjpbow/2026-02-12_153000/resource-library/ ss:///resource-library/ --linked --experimental -j 4
 ```
 
 **Note:** This overwrites existing files with the same name. It does NOT delete files that exist in the bucket but not in the backup.
@@ -238,7 +238,7 @@ supabase link --project-ref jtzcrirqflfnagceendt
 supabase functions deploy xapi-launch
 supabase functions deploy xapi-statements
 supabase functions deploy serve-content-package
-supabase link --project-ref qfdztdgublwlmewobxmx  # link back to prod
+supabase link --project-ref pvrarqyktvnrmggjpbow  # link back to prod
 ```
 
 ## 5. Secrets and Environment Variables
@@ -282,7 +282,7 @@ Edge functions use **28 manually-set secrets** (3 more are auto-injected by Supa
 **Option B:** Export secrets to an encrypted file:
 ```bash
 # Export current secrets (requires Supabase CLI + project linked)
-supabase secrets list --project-ref qfdztdgublwlmewobxmx > secrets-prod-$(date +%Y%m%d).txt
+supabase secrets list --project-ref pvrarqyktvnrmggjpbow > secrets-prod-$(date +%Y%m%d).txt
 # Encrypt immediately
 gpg -c secrets-prod-*.txt && rm secrets-prod-*.txt
 ```
@@ -293,10 +293,10 @@ gpg -c secrets-prod-*.txt && rm secrets-prod-*.txt
 
 ```bash
 # Restore secrets from backup
-supabase secrets set --env-file secrets-prod.txt --project-ref qfdztdgublwlmewobxmx
+supabase secrets set --env-file secrets-prod.txt --project-ref pvrarqyktvnrmggjpbow
 
 # Or set individually
-supabase secrets set RESEND_API_KEY=re_xxxx --project-ref qfdztdgublwlmewobxmx
+supabase secrets set RESEND_API_KEY=re_xxxx --project-ref pvrarqyktvnrmggjpbow
 ```
 
 ## 6. Hosting and DNS Configuration
@@ -346,19 +346,19 @@ These settings live in **external service dashboards** — not in Git, not in th
 
 | Service | What to configure | Dashboard location |
 |---------|-------------------|--------------------|
-| **Stripe** | Webhook endpoint URL → `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/stripe-webhook` | Stripe → Developers → Webhooks |
-| **Cal.com** | Webhook URL → `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/calcom-webhook` | Cal.com → Settings → Webhooks |
-| **TalentLMS** | Webhook URL → `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/talentlms-webhook` | TalentLMS → admin panel |
+| **Stripe** | Webhook endpoint URL → `https://pvrarqyktvnrmggjpbow.supabase.co/functions/v1/stripe-webhook` | Stripe → Developers → Webhooks |
+| **Cal.com** | Webhook URL → `https://pvrarqyktvnrmggjpbow.supabase.co/functions/v1/calcom-webhook` | Cal.com → Settings → Webhooks |
+| **TalentLMS** | Webhook URL → `https://pvrarqyktvnrmggjpbow.supabase.co/functions/v1/talentlms-webhook` | TalentLMS → admin panel |
 | **Google OAuth (login)** | Redirect URIs → `https://{PROJECT_REF}.supabase.co/auth/v1/callback` (one per env) | Supabase Dashboard → Auth → Providers → Google + Google Cloud Console → Credentials |
-| **Google OAuth (calendar)** | Redirect URI → `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/oauth-callback` | Google Cloud Console → Credentials |
+| **Google OAuth (calendar)** | Redirect URI → `https://pvrarqyktvnrmggjpbow.supabase.co/functions/v1/oauth-callback` | Google Cloud Console → Credentials |
 | **Microsoft OAuth** | Redirect URI → same pattern as Google calendar | Azure Portal → App Registrations |
 | **Zoom OAuth** | Redirect URI → same pattern as Google calendar | Zoom Marketplace → App Dashboard |
-| **Supabase Auth** | Send Email Hook → `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/send-auth-email` | Supabase Dashboard → Auth → Hooks |
+| **Supabase Auth** | Send Email Hook → `https://pvrarqyktvnrmggjpbow.supabase.co/functions/v1/send-auth-email` | Supabase Dashboard → Auth → Hooks |
 
 > **Note:** If the Supabase project ref changes (e.g. after project recreation), ALL webhook URLs and OAuth redirect URIs above must be updated to the new project ref.
 >
 > **Google OAuth redirect URIs (all must be in Google Cloud Console):**
-> - `https://qfdztdgublwlmewobxmx.supabase.co/auth/v1/callback` (prod)
+> - `https://pvrarqyktvnrmggjpbow.supabase.co/auth/v1/callback` (prod)
 > - `https://jtzcrirqflfnagceendt.supabase.co/auth/v1/callback` (preprod)
 > - `https://cezlnvdjildzxpyxyabb.supabase.co/auth/v1/callback` (sandbox)
 > - `https://app.innotrue.com/~oauth/callback` (custom calendar/meeting integrations)
@@ -460,7 +460,7 @@ If the Supabase project must be recreated from scratch:
 
 | Environment | Project Ref | Branch | Frontend |
 |-------------|-------------|--------|----------|
-| Production | `qfdztdgublwlmewobxmx` | `main` | `app.innotrue.com` |
+| Production | `pvrarqyktvnrmggjpbow` | `main` | `app.innotrue.com` |
 | Pre-production | `jtzcrirqflfnagceendt` | `preprod` | Cloudflare preview |
 | Sandbox | `cezlnvdjildzxpyxyabb` | Lovable | Lovable preview |
 
@@ -482,7 +482,7 @@ For protection beyond the 7-day PITR window:
 
 ```bash
 # Get the database URL from Supabase Dashboard → Settings → Database → Connection String
-pg_dump "postgresql://postgres:[password]@db.qfdztdgublwlmewobxmx.supabase.co:5432/postgres" \
+pg_dump "postgresql://postgres:[password]@db.pvrarqyktvnrmggjpbow.supabase.co:5432/postgres" \
   --format=custom \
   --file="backups/db/prod-$(date +%Y%m%d).dump"
 

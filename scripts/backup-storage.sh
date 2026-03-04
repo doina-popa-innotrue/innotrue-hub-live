@@ -9,7 +9,7 @@
 #   ./scripts/backup-storage.sh [environment]
 #
 # Environments:
-#   prod      — Production (qfdztdgublwlmewobxmx)   [default]
+#   prod      — Production (pvrarqyktvnrmggjpbow)   [default]
 #   preprod   — Pre-production (jtzcrirqflfnagceendt)
 #   sandbox   — Lovable sandbox (cezlnvdjildzxpyxyabb)
 #
@@ -37,7 +37,7 @@ BACKUP_BASE="$REPO_ROOT/backups/storage"
 DATE=$(date +%Y-%m-%d_%H%M%S)
 
 # Project refs
-PROD_REF="qfdztdgublwlmewobxmx"
+PROD_REF="pvrarqyktvnrmggjpbow"
 PREPROD_REF="jtzcrirqflfnagceendt"
 SANDBOX_REF="cezlnvdjildzxpyxyabb"
 

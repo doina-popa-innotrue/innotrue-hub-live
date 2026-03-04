@@ -4,7 +4,7 @@
 
 | Environment | Project Ref | Branch | Frontend |
 |---|---|---|---|
-| **Production** | `qfdztdgublwlmewobxmx` | `main` | `app.innotrue.com` |
+| **Production** | `pvrarqyktvnrmggjpbow` | `main` | `app.innotrue.com` |
 | **Preprod** | `jtzcrirqflfnagceendt` | `preprod` | Cloudflare Pages preview |
 | **Sandbox** | `cezlnvdjildzxpyxyabb` | Lovable `main` | Lovable preview |
 
@@ -416,7 +416,7 @@ Supabase does not back up secrets. You must maintain your own secure record.
 
 ```bash
 # List secret names (values are NOT shown) to verify what's set
-supabase secrets list --project-ref qfdztdgublwlmewobxmx   # prod
+supabase secrets list --project-ref pvrarqyktvnrmggjpbow   # prod
 supabase secrets list --project-ref jtzcrirqflfnagceendt   # preprod
 supabase secrets list --project-ref cezlnvdjildzxpyxyabb   # sandbox
 ```

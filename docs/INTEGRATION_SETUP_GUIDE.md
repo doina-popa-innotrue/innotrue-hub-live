@@ -40,14 +40,14 @@ Last updated: 2026-02-21
 | | **Production** | **Preprod** | **Lovable Sandbox** |
 |---|---|---|---|
 | **Frontend URL** | `https://app.innotrue.com` | `https://preprod.innotrue-hub-live.pages.dev` | `https://innotrue-hub-lovable-sandbox.lovable.app` |
-| **Supabase ref** | `qfdztdgublwlmewobxmx` | `jtzcrirqflfnagceendt` | `cezlnvdjildzxpyxyabb` |
-| **Supabase URL** | `https://qfdztdgublwlmewobxmx.supabase.co` | `https://jtzcrirqflfnagceendt.supabase.co` | `https://cezlnvdjildzxpyxyabb.supabase.co` |
+| **Supabase ref** | `pvrarqyktvnrmggjpbow` | `jtzcrirqflfnagceendt` | `cezlnvdjildzxpyxyabb` |
+| **Supabase URL** | `https://pvrarqyktvnrmggjpbow.supabase.co` | `https://jtzcrirqflfnagceendt.supabase.co` | `https://cezlnvdjildzxpyxyabb.supabase.co` |
 | **`SITE_URL` value** | `https://app.innotrue.com` | `https://preprod.innotrue-hub-live.pages.dev` | `https://innotrue-hub-lovable-sandbox.lovable.app` |
 | **`APP_ENV` value** | `production` | `staging` | `development` |
 | **Git branch** | `main` | `preprod` | `lovable-sync` → lovable remote `main` |
 | **Hosting** | Cloudflare Pages | Cloudflare Pages (preview) | Lovable Cloud |
-| **Supabase Dashboard** | [Open](https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx) | [Open](https://supabase.com/dashboard/project/jtzcrirqflfnagceendt) | [Open](https://supabase.com/dashboard/project/cezlnvdjildzxpyxyabb) |
-| **Edge Function Secrets** | [Open](https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/settings/functions) | [Open](https://supabase.com/dashboard/project/jtzcrirqflfnagceendt/settings/functions) | [Open](https://supabase.com/dashboard/project/cezlnvdjildzxpyxyabb/settings/functions) |
+| **Supabase Dashboard** | [Open](https://supabase.com/dashboard/project/pvrarqyktvnrmggjpbow) | [Open](https://supabase.com/dashboard/project/jtzcrirqflfnagceendt) | [Open](https://supabase.com/dashboard/project/cezlnvdjildzxpyxyabb) |
+| **Edge Function Secrets** | [Open](https://supabase.com/dashboard/project/pvrarqyktvnrmggjpbow/settings/functions) | [Open](https://supabase.com/dashboard/project/jtzcrirqflfnagceendt/settings/functions) | [Open](https://supabase.com/dashboard/project/cezlnvdjildzxpyxyabb/settings/functions) |
 
 ---
 
@@ -107,7 +107,7 @@ Production is currently missing this secret. Generate a **different** value:
 echo "REQUEST_SIGNING_SECRET (prod): $(openssl rand -hex 32)"
 ```
 
-Set it at: https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/settings/functions
+Set it at: https://supabase.com/dashboard/project/pvrarqyktvnrmggjpbow/settings/functions
 
 ### Step 4: Verify what you need before re-adding
 
@@ -185,11 +185,11 @@ Stripe has built-in test mode on the same account — no extra cost.
 **Production:**
 1. Toggle test mode OFF
 2. Copy the live **Secret key** (`sk_live_...`)
-3. Set in prod Supabase project (`qfdztdgublwlmewobxmx`) Edge Function Secrets
+3. Set in prod Supabase project (`pvrarqyktvnrmggjpbow`) Edge Function Secrets
 4. **Webhook for production:**
    - Go to **Developers → Webhooks** (live mode)
    - Click **Add endpoint**
-   - URL: `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/stripe-webhook`
+   - URL: `https://pvrarqyktvnrmggjpbow.supabase.co/functions/v1/stripe-webhook`
    - Select same 4 events as preprod
    - Copy signing secret → set as `STRIPE_WEBHOOK_SECRET` in prod
 
@@ -367,7 +367,7 @@ The hook `useModuleSchedulingUrl.ts` resolves which Cal.com event to use in this
 
 **Production (completed 2026-02-13):**
 - Event-type-level webhooks added to all production event types
-- Webhook URL: `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/calcom-webhook`
+- Webhook URL: `https://pvrarqyktvnrmggjpbow.supabase.co/functions/v1/calcom-webhook`
 - Same webhook secret used across all prod event types → stored as `CALCOM_WEBHOOK_SECRET`
 - Old account-level webhooks (including stale Lovable one) deleted
 - `CALCOM_API_KEY` set (production API key)
@@ -378,7 +378,7 @@ The hook `useModuleSchedulingUrl.ts` resolves which Cal.com event to use in this
 ### Critical: Webhook isolation via event-type-level webhooks
 
 Webhooks are **per event type**, NOT per team or org. This means:
-- Each **production** event type has a webhook → `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/calcom-webhook`
+- Each **production** event type has a webhook → `https://pvrarqyktvnrmggjpbow.supabase.co/functions/v1/calcom-webhook`
 - Each **preprod** event type has a webhook → `https://jtzcrirqflfnagceendt.supabase.co/functions/v1/calcom-webhook`
 - **No account-level webhooks** — these would fire for ALL teams and cause cross-contamination
 - When creating a new event type on either team, **always add the correct webhook** to it
@@ -410,7 +410,7 @@ Without the correct event type IDs in the database, the webhook receives booking
 |---|---|---|---|
 | Production | `CALCOM_API_KEY` | Prod team key | [ ] Verified |
 | Production | `CALCOM_WEBHOOK_SECRET` | Prod webhook secret | [ ] Verified |
-| Production | Webhook URL in Cal.com | → `qfdztdgublwlmewobxmx` | [ ] Verified |
+| Production | Webhook URL in Cal.com | → `pvrarqyktvnrmggjpbow` | [ ] Verified |
 | Production | `calcom_event_type_mappings` data | Prod event type IDs | [ ] Verified |
 | Production | `instructor_calcom_event_types` data | Prod child event IDs | [ ] Verified |
 | Preprod | `CALCOM_API_KEY` | Preprod team key | [ ] Set up |
@@ -785,7 +785,7 @@ Each Supabase project needs its own Google OAuth Client ID registered with the c
 
 | Environment | Google OAuth App | Redirect URI |
 |---|---|---|
-| **Production** | Prod OAuth client | `https://qfdztdgublwlmewobxmx.supabase.co/auth/v1/callback` |
+| **Production** | Prod OAuth client | `https://pvrarqyktvnrmggjpbow.supabase.co/auth/v1/callback` |
 | **Preprod** | Separate OAuth client | `https://jtzcrirqflfnagceendt.supabase.co/auth/v1/callback` |
 | **Lovable Sandbox** | Separate OAuth client | `https://cezlnvdjildzxpyxyabb.supabase.co/auth/v1/callback` |
 
@@ -839,7 +839,7 @@ This is the single most important secret to get right on every environment.
 
 Set `SITE_URL` in **Edge Function Secrets** on each Supabase project:
 
-1. **Production:** https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/settings/functions
+1. **Production:** https://supabase.com/dashboard/project/pvrarqyktvnrmggjpbow/settings/functions
    → `SITE_URL` = `https://app.innotrue.com`
 
 2. **Preprod:** https://supabase.com/dashboard/project/jtzcrirqflfnagceendt/settings/functions
@@ -933,7 +933,7 @@ All mapping data is stored in Supabase tables, not in the external tools. You co
 - **Supabase SQL Editor** (Dashboard → SQL Editor) for direct inserts
 
 Links to SQL Editors:
-- Prod: https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/sql/new
+- Prod: https://supabase.com/dashboard/project/pvrarqyktvnrmggjpbow/sql/new
 - Preprod: https://supabase.com/dashboard/project/jtzcrirqflfnagceendt/sql/new
 - Sandbox: https://supabase.com/dashboard/project/cezlnvdjildzxpyxyabb/sql/new
 
@@ -1230,7 +1230,7 @@ This is **user-driven, not admin-configured.** Each instructor connects their ow
 
 Track your actual configuration here as you complete each step. Update the Status column and add notes.
 
-### Production (Supabase: `qfdztdgublwlmewobxmx`)
+### Production (Supabase: `pvrarqyktvnrmggjpbow`)
 
 | Secret | Expected Value | Status | Notes |
 |---|---|---|---|
@@ -1350,7 +1350,7 @@ Track your actual configuration here as you complete each step. Update the Statu
 | Microsoft Azure | https://portal.azure.com |
 | Resend | https://resend.com/overview |
 | Sentry | https://sentry.io |
-| Supabase (prod) | https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx |
+| Supabase (prod) | https://supabase.com/dashboard/project/pvrarqyktvnrmggjpbow |
 | Supabase (preprod) | https://supabase.com/dashboard/project/jtzcrirqflfnagceendt |
 | Supabase (sandbox) | https://supabase.com/dashboard/project/cezlnvdjildzxpyxyabb |
 | Cloudflare Pages | https://dash.cloudflare.com → Pages → innotrue-hub-live |

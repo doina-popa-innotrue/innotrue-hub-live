@@ -14,7 +14,7 @@ describe("cors.ts", () => {
   beforeEach(() => {
     setupDenoMock({
       SITE_URL: "https://app.innotrue.com",
-      SUPABASE_URL: "https://qfdztdgublwlmewobxmx.supabase.co",
+      SUPABASE_URL: "https://pvrarqyktvnrmggjpbow.supabase.co",
     });
   });
 
@@ -43,7 +43,7 @@ describe("cors.ts", () => {
       const { getAllowedOrigins } = await import("../cors");
       const origins = getAllowedOrigins();
       expect(origins).toContain(
-        "https://qfdztdgublwlmewobxmx.supabase.co",
+        "https://pvrarqyktvnrmggjpbow.supabase.co",
       );
     });
   });
@@ -65,7 +65,7 @@ describe("cors.ts", () => {
     it("allows Supabase URL", async () => {
       const { isOriginAllowed } = await import("../cors");
       expect(
-        isOriginAllowed("https://qfdztdgublwlmewobxmx.supabase.co"),
+        isOriginAllowed("https://pvrarqyktvnrmggjpbow.supabase.co"),
       ).toBe(true);
     });
 

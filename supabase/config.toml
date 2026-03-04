@@ -1,4 +1,4 @@
-project_id = "pfwlsxovvqdiwaztqxrj"
+project_id = "pvrarqyktvnrmggjpbow"
 
 [functions.accept-org-invite]
 verify_jwt = false

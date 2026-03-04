@@ -103,7 +103,7 @@ feature/xyz  -->  develop  -->  preprod  -->  main
 |-------------|--------|-----------------|--------------|
 | Development | `develop` | `pfwlsxovvqdiwaztqxrj` | `localhost:8080` |
 | Pre-production | `preprod` | `jtzcrirqflfnagceendt` | Cloudflare Pages preview |
-| Production | `main` | `qfdztdgublwlmewobxmx` | `app.innotrue.com` |
+| Production | `main` | `pvrarqyktvnrmggjpbow` | `app.innotrue.com` |
 
 ## Testing
 

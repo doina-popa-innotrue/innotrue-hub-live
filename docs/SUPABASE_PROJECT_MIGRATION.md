@@ -1,7 +1,7 @@
 # Supabase Project Migration — London → Frankfurt
 
 > **Status:** Planning
-> **Reason:** Production project (`qfdztdgublwlmewobxmx`) is on London cluster; need Frankfurt (eu-central-1) for GDPR data residency
+> **Reason:** Production project (`pvrarqyktvnrmggjpbow`) is on London cluster; need Frankfurt (eu-central-1) for GDPR data residency
 > **Estimated effort:** 1-2 days prep + 30-60 min downtime window
 > **Created:** 2026-03-30
 
@@ -56,7 +56,7 @@
 
 | Environment | Project Ref | Purpose |
 |---|---|---|
-| **Production** | `qfdztdgublwlmewobxmx` | Live platform (`app.innotrue.com`) |
+| **Production** | `pvrarqyktvnrmggjpbow` | Live platform (`app.innotrue.com`) |
 | **Pre-production** | `jtzcrirqflfnagceendt` | Staging (Cloudflare preview) |
 | **Sandbox** | `cezlnvdjildzxpyxyabb` | Lovable visual editor |
 
@@ -155,7 +155,7 @@ All must be manually set in the new project's Dashboard → Edge Function Secret
 
 ## 4. External Webhook URLs
 
-All currently point to `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/...`
+All currently point to `https://pvrarqyktvnrmggjpbow.supabase.co/functions/v1/...`
 
 | Service | Webhook URL Path | Where to Update |
 |---|---|---|
@@ -174,10 +174,10 @@ All currently point to `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/..
 
 | Provider | Current Redirect URI | Where to Update |
 |---|---|---|
-| **Google (Auth)** | `https://qfdztdgublwlmewobxmx.supabase.co/auth/v1/callback` | Google Cloud Console → APIs & Services → Credentials |
-| **Google (Calendar OAuth)** | `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/oauth-callback` | Google Cloud Console |
-| **Microsoft** | `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/oauth-callback` | Azure Portal → App Registrations |
-| **Zoom** | `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/oauth-callback` | Zoom Marketplace → App Dashboard |
+| **Google (Auth)** | `https://pvrarqyktvnrmggjpbow.supabase.co/auth/v1/callback` | Google Cloud Console → APIs & Services → Credentials |
+| **Google (Calendar OAuth)** | `https://pvrarqyktvnrmggjpbow.supabase.co/functions/v1/oauth-callback` | Google Cloud Console |
+| **Microsoft** | `https://pvrarqyktvnrmggjpbow.supabase.co/functions/v1/oauth-callback` | Azure Portal → App Registrations |
+| **Zoom** | `https://pvrarqyktvnrmggjpbow.supabase.co/functions/v1/oauth-callback` | Zoom Marketplace → App Dashboard |
 
 Frontend redirect URI (`https://app.innotrue.com/~oauth/callback`) stays the same — no change needed.
 
@@ -273,7 +273,7 @@ SELECT jobname, status, start_time FROM cron.job_run_details ORDER BY start_time
 
 | Variable | Current Value | New Value |
 |---|---|---|
-| `VITE_SUPABASE_URL` | `https://qfdztdgublwlmewobxmx.supabase.co` | `https://<NEW_REF>.supabase.co` |
+| `VITE_SUPABASE_URL` | `https://pvrarqyktvnrmggjpbow.supabase.co` | `https://<NEW_REF>.supabase.co` |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Current prod anon key | New project's anon key |
 | `VITE_APP_ENV` | `production` | `production` (unchanged) |
 | `VITE_SENTRY_DSN` | Sentry DSN | Unchanged |
@@ -326,7 +326,7 @@ New DB password:          _________________________
 On `develop` branch:
 
 ```bash
-# Update all 5 scripts — replace qfdztdgublwlmewobxmx with new ref
+# Update all 5 scripts — replace pvrarqyktvnrmggjpbow with new ref
 # scripts/supabase-push.sh
 # scripts/supabase-deploy.sh
 # scripts/backup-storage.sh
@@ -710,7 +710,7 @@ The old project should NOT be deleted or paused until the new project has been r
 Print this for the cutover day:
 
 ```
-OLD PROJECT: qfdztdgublwlmewobxmx (London)
+OLD PROJECT: pvrarqyktvnrmggjpbow (London)
 NEW PROJECT: _________________________ (Frankfurt)
 
 NEW ANON KEY: _________________________

@@ -554,7 +554,7 @@ STAGING_EMAIL_OVERRIDE = your-test-inbox@example.com
 |---|---|---|---|---|
 | Development | `develop` | `pfwlsxovvqdiwaztqxrj` (Lovable-owned) | `localhost:8080` | `development` |
 | Pre-production | `preprod` | `jtzcrirqflfnagceendt` | Cloudflare preview URL | `staging` |
-| Production | `main` | `qfdztdgublwlmewobxmx` | `app.innotrue.com` | `production` |
+| Production | `main` | `pvrarqyktvnrmggjpbow` | `app.innotrue.com` | `production` |
 
 Create three environment files (do NOT commit these — they're in `.gitignore`):
 
@@ -574,7 +574,7 @@ VITE_APP_ENV=staging
 
 **`.env.production`** (production Supabase):
 ```env
-VITE_SUPABASE_URL=https://qfdztdgublwlmewobxmx.supabase.co
+VITE_SUPABASE_URL=https://pvrarqyktvnrmggjpbow.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=<prod-anon-key-from-dashboard>
 VITE_SENTRY_DSN=<your-sentry-dsn>
 VITE_APP_ENV=production
@@ -613,7 +613,7 @@ wrangler login
    | Variable | Value |
    |----------|-------|
    | `NODE_VERSION` | `20` |
-   | `VITE_SUPABASE_URL` | `https://qfdztdgublwlmewobxmx.supabase.co` |
+   | `VITE_SUPABASE_URL` | `https://pvrarqyktvnrmggjpbow.supabase.co` |
    | `VITE_SUPABASE_PUBLISHABLE_KEY` | `<prod-anon-key from Supabase dashboard>` |
    | `VITE_APP_ENV` | `production` |
 
@@ -902,7 +902,7 @@ jobs:
 | Project | Ref | Plan | Purpose |
 |---|---|---|---|
 | Pre-prod | `jtzcrirqflfnagceendt` | Micro | Integration testing |
-| Production | `qfdztdgublwlmewobxmx` | Small | Live production |
+| Production | `pvrarqyktvnrmggjpbow` | Small | Live production |
 
 **9b. Push migrations, seed, and edge functions to preprod ✅ COMPLETED (Feb 9, 2026)**
 
@@ -989,7 +989,7 @@ supabase secrets set GOOGLE_CALENDAR_IMPERSONATE_EMAIL='admin@yourdomain.com' --
 - 393 migrations applied successfully
 - Seed data (12 sections) applied — demo users, plans, programs, etc.
 - 60 edge functions deployed
-- Dashboard: https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/functions
+- Dashboard: https://supabase.com/dashboard/project/pvrarqyktvnrmggjpbow/functions
 
 **9e. Set production edge function secrets — MANUAL**
 
@@ -998,30 +998,30 @@ Same as preprod but with **production values** and **NO staging override**:
 ```bash
 # ── CORE ──
 supabase secrets set RESEND_API_KEY='re_xxxxxxxxxxxx' \
-  --project-ref qfdztdgublwlmewobxmx
+  --project-ref pvrarqyktvnrmggjpbow
 
 supabase secrets set SITE_URL='https://app.innotrue.com' \
-  --project-ref qfdztdgublwlmewobxmx
+  --project-ref pvrarqyktvnrmggjpbow
 
 supabase secrets set STRIPE_SECRET_KEY='sk_live_xxxxxxxxxxxx' \
-  --project-ref qfdztdgublwlmewobxmx
+  --project-ref pvrarqyktvnrmggjpbow
 
 # ── AI ──
 supabase secrets set GCP_SERVICE_ACCOUNT_KEY='{ paste contents of key.json }' \
-  --project-ref qfdztdgublwlmewobxmx
+  --project-ref pvrarqyktvnrmggjpbow
 
 supabase secrets set GCP_PROJECT_ID='your-gcp-project-id' \
-  --project-ref qfdztdgublwlmewobxmx
+  --project-ref pvrarqyktvnrmggjpbow
 
 supabase secrets set GCP_LOCATION='europe-west3' \
-  --project-ref qfdztdgublwlmewobxmx
+  --project-ref pvrarqyktvnrmggjpbow
 
 # ── SECURITY ──
 supabase secrets set OAUTH_ENCRYPTION_KEY='<run: openssl rand -hex 32>' \
-  --project-ref qfdztdgublwlmewobxmx
+  --project-ref pvrarqyktvnrmggjpbow
 
 supabase secrets set CALENDAR_HMAC_SECRET='<run: openssl rand -hex 32>' \
-  --project-ref qfdztdgublwlmewobxmx
+  --project-ref pvrarqyktvnrmggjpbow
 
 # IMPORTANT: Do NOT set APP_ENV or STAGING_EMAIL_OVERRIDE on production!
 # Emails must go to real recipients in production.
@@ -1039,7 +1039,7 @@ Do these for **EACH** project (preprod and prod). Detailed steps below:
 2. Find your existing OAuth 2.0 Client (or create one: Application type → Web application, Name → InnoTrue Hub)
 3. Under **Authorized redirect URIs**, add **both** callback URLs:
    - `https://jtzcrirqflfnagceendt.supabase.co/auth/v1/callback` (preprod)
-   - `https://qfdztdgublwlmewobxmx.supabase.co/auth/v1/callback` (prod)
+   - `https://pvrarqyktvnrmggjpbow.supabase.co/auth/v1/callback` (prod)
 4. Click **Save**
 5. Copy the **Client ID** and **Client Secret**
 
@@ -1053,7 +1053,7 @@ Do these for **EACH** project (preprod and prod). Detailed steps below:
 
 **In Supabase Dashboard — Prod:**
 
-1. Go to https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/auth/providers
+1. Go to https://supabase.com/dashboard/project/pvrarqyktvnrmggjpbow/auth/providers
 2. Same steps: Enable Google, paste same Client ID and Client Secret
 3. Click **Save**
 
@@ -1077,13 +1077,13 @@ Your app uses a custom `send-auth-email` edge function that sends auth emails (s
 
 **Prod:**
 
-1. Go to https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/auth/hooks
+1. Go to https://supabase.com/dashboard/project/pvrarqyktvnrmggjpbow/auth/hooks
 2. Same steps but with prod values:
-   - **URI:** `https://qfdztdgublwlmewobxmx.supabase.co/functions/v1/send-auth-email`
+   - **URI:** `https://pvrarqyktvnrmggjpbow.supabase.co/functions/v1/send-auth-email`
    - **Authorization:** `Bearer <YOUR_PROD_SERVICE_ROLE_KEY>`
 3. Click **Save**
 
-**To find the prod service role key:** https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/settings/api
+**To find the prod service role key:** https://supabase.com/dashboard/project/pvrarqyktvnrmggjpbow/settings/api
 
 ##### 9f-3. Auth Redirect URLs
 
@@ -1093,7 +1093,7 @@ Your app uses a custom `send-auth-email` edge function that sends auth emails (s
   - `https://preprod.innotrue-hub-live.pages.dev/**`
   - `http://localhost:8080/**` (for local dev)
 
-**Prod** — go to https://supabase.com/dashboard/project/qfdztdgublwlmewobxmx/auth/url-configuration
+**Prod** — go to https://supabase.com/dashboard/project/pvrarqyktvnrmggjpbow/auth/url-configuration
 - **Site URL:** `https://app.innotrue.com`
 - **Redirect URLs:** Add:
   - `https://app.innotrue.com/**`
@@ -1130,7 +1130,7 @@ In Cloudflare Dashboard → Pages → your project → Settings → Environment 
 
 | Variable | Production (`main`) | Preview (other branches) |
 |---|---|---|
-| `VITE_SUPABASE_URL` | `https://qfdztdgublwlmewobxmx.supabase.co` | `https://jtzcrirqflfnagceendt.supabase.co` |
+| `VITE_SUPABASE_URL` | `https://pvrarqyktvnrmggjpbow.supabase.co` | `https://jtzcrirqflfnagceendt.supabase.co` |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | `<prod-anon-key>` | `<preprod-anon-key>` |
 | `VITE_APP_ENV` | `production` | `staging` |
 | `NODE_VERSION` | `20` | `20` |
@@ -1144,11 +1144,11 @@ The CLI can only be linked to one project at a time. Use `--project-ref` flags o
 ```bash
 # Quick switch
 supabase link --project-ref jtzcrirqflfnagceendt   # work on preprod
-supabase link --project-ref qfdztdgublwlmewobxmx   # switch to prod
+supabase link --project-ref pvrarqyktvnrmggjpbow   # switch to prod
 
 # Or use --project-ref flag without re-linking
 supabase functions deploy --project-ref jtzcrirqflfnagceendt
-supabase functions deploy --project-ref qfdztdgublwlmewobxmx
+supabase functions deploy --project-ref pvrarqyktvnrmggjpbow
 ```
 
 **9i. Data migration from Lovable project (later):**
@@ -1163,7 +1163,7 @@ pg_dump --data-only --no-owner --no-privileges \
   > data_export.sql
 
 # Import into production (after reviewing the export)
-psql -h db.qfdztdgublwlmewobxmx.supabase.co -U postgres -d postgres < data_export.sql
+psql -h db.pvrarqyktvnrmggjpbow.supabase.co -U postgres -d postgres < data_export.sql
 ```
 
 **Complete secrets reference — all 28 environment variables used by edge functions:**
