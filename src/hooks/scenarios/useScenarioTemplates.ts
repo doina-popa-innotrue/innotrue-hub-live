@@ -275,30 +275,60 @@ export function useSectionParagraphs(sectionId: string | undefined) {
     queryKey: ["section-paragraphs", sectionId],
     queryFn: async () => {
       if (!sectionId) return [];
-      const { data, error } = await supabase
+
+      // First, fetch paragraphs with only direct question links (no deep nesting)
+      // to avoid statement timeouts from 4-level nested RLS evaluation.
+      const { data: paragraphs, error: pError } = await supabase
         .from("section_paragraphs")
-        .select(
-          `
-          *,
-          paragraph_question_links(
-            *,
-            capability_domain_questions(
-              id,
-              question_text,
-              description,
-              domain_id,
-              capability_domains(id, name)
-            )
-          )
-        `,
-        )
+        .select("*")
         .eq("section_id", sectionId)
         .order("order_index");
 
-      if (error) throw error;
-      return data as (SectionParagraph & { paragraph_question_links: ParagraphQuestionLink[] })[];
+      if (pError) throw pError;
+      if (!paragraphs || paragraphs.length === 0) return [] as (SectionParagraph & { paragraph_question_links: ParagraphQuestionLink[] })[];
+
+      // Fetch question links for these paragraphs separately
+      const paragraphIds = paragraphs.map((p) => p.id);
+      const { data: links, error: lError } = await supabase
+        .from("paragraph_question_links")
+        .select(
+          `
+          *,
+          capability_domain_questions(
+            id,
+            question_text,
+            description,
+            domain_id,
+            capability_domains(id, name)
+          )
+        `,
+        )
+        .in("paragraph_id", paragraphIds);
+
+      if (lError) {
+        // Links failed but paragraphs loaded — return paragraphs without links
+        console.error("Failed to load paragraph question links:", lError);
+        return paragraphs.map((p) => ({
+          ...p,
+          paragraph_question_links: [] as ParagraphQuestionLink[],
+        })) as (SectionParagraph & { paragraph_question_links: ParagraphQuestionLink[] })[];
+      }
+
+      // Group links by paragraph_id
+      const linksByParagraph = new Map<string, ParagraphQuestionLink[]>();
+      for (const link of links || []) {
+        const existing = linksByParagraph.get(link.paragraph_id) || [];
+        existing.push(link as ParagraphQuestionLink);
+        linksByParagraph.set(link.paragraph_id, existing);
+      }
+
+      return paragraphs.map((p) => ({
+        ...p,
+        paragraph_question_links: linksByParagraph.get(p.id) || [],
+      })) as (SectionParagraph & { paragraph_question_links: ParagraphQuestionLink[] })[];
     },
     enabled: !!sectionId,
+    retry: 1,
   });
 }
 

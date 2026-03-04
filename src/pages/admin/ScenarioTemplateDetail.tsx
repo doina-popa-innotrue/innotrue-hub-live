@@ -172,7 +172,7 @@ function SectionCard({
     instructions: section.instructions || "",
   });
 
-  const { data: paragraphs, isLoading } = useSectionParagraphs(section.id);
+  const { data: paragraphs, isLoading, isError } = useSectionParagraphs(section.id);
   const { updateMutation, deleteMutation } = useScenarioSectionMutations(templateId);
 
   const handleSave = () => {
@@ -253,28 +253,24 @@ function SectionCard({
 
         <CollapsibleContent>
           <CardContent className="pt-0">
-            {isLoading ? (
-              <div className="py-4 text-center text-muted-foreground">Loading paragraphs...</div>
-            ) : (
-              <div className="space-y-3">
-                {paragraphs?.map((paragraph, index) => (
-                  <ParagraphItem
-                    key={paragraph.id}
-                    paragraph={paragraph}
-                    paragraphNumber={index + 1}
-                    sectionId={section.id}
-                    isLocked={isLocked}
-                    assessmentId={assessmentId}
-                  />
-                ))}
-                {!isLocked && (
-                  <AddParagraphDialog
-                    sectionId={section.id}
-                    existingCount={paragraphs?.length || 0}
-                  />
-                )}
-              </div>
-            )}
+            <div className="space-y-3">
+              {paragraphs?.map((paragraph, index) => (
+                <ParagraphItem
+                  key={paragraph.id}
+                  paragraph={paragraph}
+                  paragraphNumber={index + 1}
+                  sectionId={section.id}
+                  isLocked={isLocked}
+                  assessmentId={assessmentId}
+                />
+              ))}
+              {!isLocked && (
+                <AddParagraphDialog
+                  sectionId={section.id}
+                  existingCount={paragraphs?.length || 0}
+                />
+              )}
+            </div>
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
