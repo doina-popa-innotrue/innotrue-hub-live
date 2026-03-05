@@ -74,7 +74,7 @@
 
 | Environment | Git Branch | Supabase Project | Frontend URL | `APP_ENV` |
 |-------------|-----------|-----------------|--------------|-----------|
-| Development | `develop` | `pfwlsxovvqdiwaztqxrj` (Lovable-owned) | `localhost:8080` | `development` |
+| Development | `develop` | `jtzcrirqflfnagceendt` (shared with preprod) | `localhost:8080` | `development` |
 | Pre-production | `preprod` | `jtzcrirqflfnagceendt` | Cloudflare Pages preview | `staging` |
 | Production | `main` | `pvrarqyktvnrmggjpbow` | `app.innotrue.com` | `production` |
 

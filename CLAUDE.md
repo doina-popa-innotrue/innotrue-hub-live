@@ -83,6 +83,24 @@ Why: Schema drift causes silent failures (queries return empty results for non-e
 
 **Verification:** Check `src/integrations/supabase/types.ts` → if FK name appears in `Relationships[]`, it references a public table and works. If absent, it references `auth.users` and is broken.
 
+## Supabase Auth User Import Rule (MANDATORY)
+**NEVER import auth users via direct SQL INSERT** into `auth.users` / `auth.identities`. GoTrue requires internal state that SQL INSERT bypasses, causing "Database error querying schema" on login.
+
+**Correct approach for auth user migration:**
+1. Create users via Admin API: `POST /auth/v1/admin/users` with `email_confirm: true` and same UUID
+2. Temporarily add `ON CONFLICT (id) DO NOTHING` to `handle_new_user` trigger (profiles already exist)
+3. Restore original password hashes via SQL `UPDATE auth.users SET encrypted_password = '...'`
+4. Restore the trigger to original after import
+
+## Supabase Project Refs
+| Env | Ref | Region |
+|---|---|---|
+| **Production** | `pvrarqyktvnrmggjpbow` | Frankfurt (eu-central-1) |
+| **Preprod** | `jtzcrirqflfnagceendt` | (preprod) |
+| **Sandbox** | `cezlnvdjildzxpyxyabb` | (Lovable) |
+| **Old prod (decommission)** | `qfdztdgublwlmewobxmx` | London (eu-west-2) |
+| **Old Lovable (deprecated)** | `pfwlsxovvqdiwaztqxrj` | — |
+
 ## Frontend Standards
 - Use `@/` import alias for all imports
 - TanStack React Query for data fetching (check existing hooks before creating new ones)

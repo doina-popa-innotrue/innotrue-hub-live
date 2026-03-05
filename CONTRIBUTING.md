@@ -101,7 +101,7 @@ feature/xyz  -->  develop  -->  preprod  -->  main
 
 | Environment | Branch | Supabase Project | Frontend URL |
 |-------------|--------|-----------------|--------------|
-| Development | `develop` | `pfwlsxovvqdiwaztqxrj` | `localhost:8080` |
+| Development | `develop` | `jtzcrirqflfnagceendt` (shared with preprod) | `localhost:8080` |
 | Pre-production | `preprod` | `jtzcrirqflfnagceendt` | Cloudflare Pages preview |
 | Production | `main` | `pvrarqyktvnrmggjpbow` | `app.innotrue.com` |
 

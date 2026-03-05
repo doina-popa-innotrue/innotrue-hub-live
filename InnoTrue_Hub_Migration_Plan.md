@@ -484,11 +484,11 @@ All Lovable dependencies have been removed. Here is what was done:
 
 1. **Google OAuth:** Dashboard → Authentication → Providers → Google
    - Add Client ID and Client Secret from Google Cloud Console
-   - Redirect URL: `https://pfwlsxovvqdiwaztqxrj.supabase.co/auth/v1/callback`
+   - Redirect URL: `https://pvrarqyktvnrmggjpbow.supabase.co/auth/v1/callback`
 
 2. **Auth Email Hook (route auth emails through Resend):** Dashboard → Authentication → Hooks
    - Enable the "Send Email" hook
-   - URI: `https://pfwlsxovvqdiwaztqxrj.supabase.co/functions/v1/send-auth-email`
+   - URI: `https://pvrarqyktvnrmggjpbow.supabase.co/functions/v1/send-auth-email`
    - HTTP Header: `Authorization: Bearer <service-role-key>`
    - **Why:** Without this, 4 auth email types (signup confirmation, magic link, password recovery, email change) are sent via Supabase's built-in SMTP (`noreply@mail.app.supabase.io`) which has poor deliverability and lands in spam. With the hook enabled, all auth emails go through Resend via `send-auth-email` edge function using your branded `noreply@mail.innotrue.com` sender.
 
@@ -552,7 +552,7 @@ STAGING_EMAIL_OVERRIDE = your-test-inbox@example.com
 
 | Environment | Git Branch | Supabase Project Ref | Frontend | APP_ENV |
 |---|---|---|---|---|
-| Development | `develop` | `pfwlsxovvqdiwaztqxrj` (Lovable-owned) | `localhost:8080` | `development` |
+| Development | `develop` | `pvrarqyktvnrmggjpbow` (Lovable-owned) | `localhost:8080` | `development` |
 | Pre-production | `preprod` | `jtzcrirqflfnagceendt` | Cloudflare preview URL | `staging` |
 | Production | `main` | `pvrarqyktvnrmggjpbow` | `app.innotrue.com` | `production` |
 
@@ -560,7 +560,7 @@ Create three environment files (do NOT commit these — they're in `.gitignore`)
 
 **`.env.development`** (local dev, points to existing Lovable-managed Supabase):
 ```env
-VITE_SUPABASE_URL=https://pfwlsxovvqdiwaztqxrj.supabase.co
+VITE_SUPABASE_URL=https://pvrarqyktvnrmggjpbow.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=<existing-anon-key>
 VITE_APP_ENV=development
 ```
@@ -893,7 +893,7 @@ jobs:
 #### Step 9 — Create Supabase Environments (Pre-prod + Production)
 
 > **Environment strategy:**
-> - **Existing Lovable project** (`pfwlsxovvqdiwaztqxrj`) → stays as dev/staging, used with Lovable or as a data export source. Don't touch it.
+> - **Existing Lovable project** (`pvrarqyktvnrmggjpbow`) → stays as dev/staging, used with Lovable or as a data export source. Don't touch it.
 > - **New preprod project** → for integration testing on `preprod` branch. Uses seed data.
 > - **New production project** → for live users on `main` branch. Seed data initially, then real data.
 
@@ -1158,7 +1158,7 @@ When you're ready to export real data from the Lovable-managed project:
 ```bash
 # Export data from existing project (ask Lovable for DB credentials, or use their export)
 pg_dump --data-only --no-owner --no-privileges \
-  -h db.pfwlsxovvqdiwaztqxrj.supabase.co -U postgres -d postgres \
+  -h db.pvrarqyktvnrmggjpbow.supabase.co -U postgres -d postgres \
   --exclude-table-data='auth.*' \
   > data_export.sql
 

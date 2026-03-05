@@ -10,7 +10,7 @@
 ## Environments
 | Env | Branch | Supabase Ref | Frontend | APP_ENV |
 |---|---|---|---|---|
-| Development | `develop` | `pfwlsxovvqdiwaztqxrj` (OLD) | `localhost:8080` | `development` |
+| Development | `develop` | `jtzcrirqflfnagceendt` (preprod, shared) | `localhost:8080` | `development` |
 | Lovable Sandbox | `main` (lovable remote) | `cezlnvdjildzxpyxyabb` | Lovable preview | `development` |
 | Pre-production | `preprod` | `jtzcrirqflfnagceendt` | Cloudflare preview | `staging` |
 | Production | `main` | `pvrarqyktvnrmggjpbow` | `app.innotrue.com` | `production` |
@@ -222,7 +222,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Reflection resource refresh (2026-03-26):** Adding a resource to a reflection didn't update the display until page refresh. `ReflectionResources` lacked a trigger to refetch. Fixed with `refreshKey` prop pattern.
 - **xAPI library content loading (2026-03-26):** Shared library xAPI content failed with "File not found: index.html". Client/instructor `ModuleDetail` pages only read `program_modules.content_package_type` (null for library content) instead of JOINing `content_packages.package_type`. Fixed by adding JOIN + type resolution fallback. Also fixed instructor page not showing library content at all.
 
-## Current State (as of 2026-03-30, FK hints + scenario RLS fixed)
+## Current State (as of 2026-03-05, production migrated London → Frankfurt)
 - All strict TypeScript flags enabled (including strictNullChecks). 0 errors.
 - **Self-registration enabled** (Phase 5 core). Signup form + Google OAuth active in Auth.tsx. New users choose role at `/complete-registration` (client immediate, coach/instructor via admin approval). All self-registered users get client role + free plan immediately.
 - 16 storage buckets on all 3 Supabase projects

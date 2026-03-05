@@ -1,5 +1,39 @@
 # Completed Work — Detailed History
 
+## Supabase Production Migration — London → Frankfurt (2026-03-05)
+
+Full production migration from London (`qfdztdgublwlmewobxmx`, eu-west-2) to Frankfurt (`pvrarqyktvnrmggjpbow`, eu-central-1) for GDPR data residency compliance.
+
+### Migration Steps Completed
+- **Schema:** 295 tables already created via 481 migrations on the new Frankfurt project
+- **Data export/import:** Full data dump from old project via Session Pooler (`aws-1-eu-west-2.pooler.supabase.com`), imported with `SET session_replication_role = 'replica'` to disable triggers. IPv6-only `db.*` hosts required pooler connections.
+- **Auth users (8 users, 9 identities):** Initial SQL INSERT caused "Database error querying schema" on login. **Root cause:** GoTrue requires its own internal state setup — direct SQL INSERT bypasses this. **Fix:** Deleted imported users from `auth.identities` + `auth.users` (with `session_replication_role = 'replica'` to preserve profiles/roles), re-created each via Supabase Auth Admin API (`POST /auth/v1/admin/users`) with same UUID + `email_confirm: true`, then restored original `encrypted_password` via SQL UPDATE.
+- **Storage:** 662 files (~112MB) across 4 active buckets migrated via download/upload script — 0 failures
+- **DB functions:** 6 notification functions had hardcoded old Lovable project URL (`pfwlsxovvqdiwaztqxrj`) — sed-replaced to new Frankfurt URL
+- **Code updates (commit `0a8bffb`):**
+  - `supabase/config.toml` — project_id updated
+  - 5 scripts — PROD_REF updated (`supabase-push.sh`, `supabase-deploy.sh`, `backup-storage.sh`, `supabase-data-sync.sh`, `supabase-storage-sync.sh`)
+  - `cleanup-lovable-code.sh` — added new ref to known refs list
+  - `supabase/functions/_shared/__tests__/cors.test.ts` — test URL updated
+  - 12 documentation files — old project ref replaced
+  - Types regenerated from new project (identical schema)
+- **Deployment:** develop → preprod → main → Lovable
+- **Cloudflare Pages:** Build command updated with new `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` for production branch
+
+### Key Lessons
+1. **IPv6-only DB hosts:** Supabase `db.*` hostnames resolve to IPv6 only (AAAA records, no A records). Use Session Pooler connection strings instead.
+2. **Session Pooler prefix:** Use `aws-1-` (not `aws-0-`). The exact prefix is in the Supabase dashboard connection info.
+3. **Password URL encoding:** `!` in passwords must be URL-encoded as `%21` in connection URIs.
+4. **Auth user import:** NEVER use direct SQL INSERT for `auth.users`. Always use Supabase Auth Admin API, then UPDATE `encrypted_password` separately.
+5. **Trigger conflicts on re-import:** `handle_new_user` trigger causes profile duplicates. Temporarily add `ON CONFLICT (id) DO NOTHING` to the trigger function during re-import, then restore original.
+
+### Remaining Manual Tasks
+- Google OAuth redirect URI: update in Google Cloud Console + Supabase Auth settings
+- Send Email Hook: configure in new project Auth → Hooks
+- Site URL & Redirect URLs: verify in Auth → URL Configuration
+- External webhooks (Stripe, Cal.com): update if they reference old project URL
+- Old project decommission: pause after 30 days, delete after 90 days
+
 ## Broken PostgREST FK Hints + Scenario RLS + Client Assignments (2026-03-30)
 
 Multi-session work covering PostgREST FK hint fixes, scenario paragraph RLS optimization, client Assignments page expansion, instructor scoring UX, and resource visibility fixes.

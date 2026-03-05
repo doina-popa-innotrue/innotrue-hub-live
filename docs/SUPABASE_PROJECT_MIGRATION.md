@@ -1,9 +1,25 @@
 # Supabase Project Migration — London → Frankfurt
 
-> **Status:** Planning
-> **Reason:** Production project (`pvrarqyktvnrmggjpbow`) is on London cluster; need Frankfurt (eu-central-1) for GDPR data residency
-> **Estimated effort:** 1-2 days prep + 30-60 min downtime window
-> **Created:** 2026-03-30
+> **Status:** ✅ COMPLETED (2026-03-05)
+> **Reason:** Production project was on London cluster; migrated to Frankfurt (eu-central-1) for GDPR data residency
+> **Old project:** `qfdztdgublwlmewobxmx` (London, eu-west-2) — to be decommissioned after 30 days
+> **New project:** `pvrarqyktvnrmggjpbow` (Frankfurt, eu-central-1) — now live
+> **Created:** 2026-03-30 | **Completed:** 2026-03-05
+>
+> ### Migration Summary
+> - Schema: 295 tables via 481 migrations (already pushed before migration)
+> - Data: Full data import with `SET session_replication_role = 'replica'`
+> - Auth: 8 users + 9 identities — **re-created via Admin API** (direct SQL INSERT breaks GoTrue)
+> - Storage: 662 files (~112MB) across 4 active buckets — 0 failures
+> - DB functions: 6 notification functions had hardcoded old Lovable URL — fixed
+> - Code: All scripts, docs, config updated from old refs → `pvrarqyktvnrmggjpbow`
+> - Deployed: develop → preprod → main → Lovable (commit `0a8bffb`)
+>
+> ### Key Lesson: Auth User Import
+> Direct SQL INSERT into `auth.users`/`auth.identities` causes "Database error querying schema" on login.
+> GoTrue requires its own internal setup. **Fix:** Delete imported users, re-create via Admin API
+> (`POST /auth/v1/admin/users` with same UUID + `email_confirm: true`), then UPDATE `encrypted_password`
+> via SQL to restore original password hash.
 
 ---
 
