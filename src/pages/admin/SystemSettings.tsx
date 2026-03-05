@@ -112,6 +112,7 @@ export default function SystemSettings() {
       program_terms_retention_years: "Program Terms Retention (Years)",
       org_terms_retention_years: "Organization Terms Retention (Years)",
       global_email_mute: "Global Email Mute",
+      signup_enabled: "Public Signup",
       purchased_credit_expiry_months: "Purchased Credit Expiry (Months)",
       credit_to_eur_ratio: "Credit-to-EUR Ratio",
     };
@@ -140,7 +141,23 @@ export default function SystemSettings() {
   };
 
   const isBooleanToggle = (key: string): boolean => {
-    return key === "global_email_mute";
+    return key === "global_email_mute" || key === "signup_enabled";
+  };
+
+  const getBooleanLabel = (key: string, value: string): string => {
+    if (key === "global_email_mute") {
+      return value === "true" ? "All outbound emails are suppressed" : "Emails are sending normally";
+    }
+    if (key === "signup_enabled") {
+      return value === "true" ? "New users can sign up publicly" : "Public signup is disabled";
+    }
+    return value === "true" ? "Enabled" : "Disabled";
+  };
+
+  const getBooleanWarning = (key: string, value: string): boolean => {
+    if (key === "global_email_mute") return value === "true";
+    if (key === "signup_enabled") return value === "false"; // warn when OFF
+    return false;
   };
 
   if (isLoading) {
@@ -174,11 +191,11 @@ export default function SystemSettings() {
                 {isBooleanToggle(setting.key) ? (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {currentValue === "true" && (
+                      {getBooleanWarning(setting.key, currentValue) && (
                         <AlertTriangle className="h-4 w-4 text-amber-500" />
                       )}
-                      <span className={`text-sm font-medium ${currentValue === "true" ? "text-amber-600" : "text-muted-foreground"}`}>
-                        {currentValue === "true" ? "All outbound emails are suppressed" : "Emails are sending normally"}
+                      <span className={`text-sm font-medium ${getBooleanWarning(setting.key, currentValue) ? "text-amber-600" : "text-muted-foreground"}`}>
+                        {getBooleanLabel(setting.key, currentValue)}
                       </span>
                     </div>
                     <Switch

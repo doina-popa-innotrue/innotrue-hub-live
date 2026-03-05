@@ -28,14 +28,17 @@ import {
   CheckCircle2,
   ArrowRight,
   LogOut,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useSignupEnabled } from "@/hooks/useSignupEnabled";
 
 type RoleChoice = "client" | "coach" | "instructor" | "both";
 
 export default function CompleteRegistration() {
   const navigate = useNavigate();
   const { user, userRoles, loading: authLoading, signOut } = useAuth();
+  const { signupEnabled, isLoading: signupLoading } = useSignupEnabled();
 
   const [registrationStatus, setRegistrationStatus] = useState<string | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
@@ -136,7 +139,7 @@ export default function CompleteRegistration() {
   };
 
   // Loading states
-  if (authLoading || statusLoading) {
+  if (authLoading || statusLoading || signupLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -145,6 +148,36 @@ export default function CompleteRegistration() {
   }
 
   if (!user) return null;
+
+  // Block new users when signup is disabled (catches Google OAuth auto-provisioned accounts)
+  if (!signupEnabled && userRoles.length === 0) {
+    return (
+      <div className="relative flex min-h-screen items-center justify-center bg-muted/30 p-4">
+        <div className="absolute top-4 right-4">
+          <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+              <AlertTriangle className="h-6 w-6 text-amber-600" />
+            </div>
+            <CardTitle>Signups Are Currently Closed</CardTitle>
+            <CardDescription>
+              New registrations are not being accepted at this time. If you believe this is an error, please contact your administrator.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={signOut} variant="outline" className="w-full">
+              Sign Out
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-muted/30 p-4">

@@ -21,6 +21,7 @@ import {
   Mail,
 } from "lucide-react";
 import { usePageView } from "@/hooks/useAnalytics";
+import { useSignupEnabled } from "@/hooks/useSignupEnabled";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 
 // Icon mapping for dynamic features
@@ -73,6 +74,7 @@ export default function Auth() {
 
   // Fetch dynamic context
   const { context, isLoading: contextLoading } = useAuthContext(contextSlug);
+  const { signupEnabled } = useSignupEnabled();
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -103,12 +105,19 @@ export default function Auth() {
   const defaultToSignup = wheelCompleted;
   const [activeTab, setActiveTab] = useState<"login" | "signup">(defaultToSignup ? "signup" : "login");
 
-  // Auto-switch to signup tab when auth context requests it
+  // Auto-switch to signup tab when auth context requests it (only if signup is enabled)
   useEffect(() => {
-    if (!contextLoading && context.default_to_signup) {
+    if (!contextLoading && context.default_to_signup && signupEnabled) {
       setActiveTab("signup");
     }
-  }, [contextLoading, context.default_to_signup]);
+  }, [contextLoading, context.default_to_signup, signupEnabled]);
+
+  // Force back to login if signup becomes disabled while on signup tab
+  useEffect(() => {
+    if (!signupEnabled && activeTab === "signup") {
+      setActiveTab("login");
+    }
+  }, [signupEnabled, activeTab]);
 
   // Track if we gave up waiting for recovery session
   const [recoveryTimedOut, setRecoveryTimedOut] = useState(false);
@@ -905,16 +914,18 @@ export default function Auth() {
 
             <div className="mt-6 text-center text-sm">
               {activeTab === "login" ? (
-                <p className="text-muted-foreground">
-                  Don't have an account?{" "}
-                  <button
-                    onClick={() => setActiveTab("signup")}
-                    className="font-semibold hover:underline"
-                    style={{ color: primaryColor }}
-                  >
-                    Create Account
-                  </button>
-                </p>
+                signupEnabled ? (
+                  <p className="text-muted-foreground">
+                    Don't have an account?{" "}
+                    <button
+                      onClick={() => setActiveTab("signup")}
+                      className="font-semibold hover:underline"
+                      style={{ color: primaryColor }}
+                    >
+                      Create Account
+                    </button>
+                  </p>
+                ) : null
               ) : (
                 <p className="text-muted-foreground">
                   Already have an account?{" "}

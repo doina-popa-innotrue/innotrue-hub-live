@@ -15034,6 +15034,7 @@ export type Database = {
         Args: { _module_id: string }
         Returns: string
       }
+      get_signup_enabled: { Args: never; Returns: boolean }
       get_track_ui_visibility: {
         Args: { p_user_id: string }
         Returns: {

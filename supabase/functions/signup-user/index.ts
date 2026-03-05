@@ -69,6 +69,25 @@ const handler = async (req: Request): Promise<Response> => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
+    // Check if signup is enabled
+    const { data: signupSetting } = await supabaseAdmin
+      .from("system_settings")
+      .select("value")
+      .eq("key", "signup_enabled")
+      .single();
+
+    if (signupSetting?.value === "false") {
+      console.log("Signup blocked: signup_enabled is false");
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_RESPONSE_TIME) {
+        await new Promise(resolve => setTimeout(resolve, MIN_RESPONSE_TIME - elapsed));
+      }
+      return new Response(
+        JSON.stringify({ error: "Signups are currently closed. Please try again later." }),
+        { status: 403, headers: { ...cors, "Content-Type": "application/json" } }
+      );
+    }
+
     // Check rate limit - count recent signup attempts from this IP
     const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000).toISOString();
     

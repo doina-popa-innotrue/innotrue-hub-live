@@ -89,6 +89,21 @@ serve(async (req) => {
       return successResponse.ok({ message: "Registration already complete", already_complete: true }, cors);
     }
 
+    // Defense-in-depth: block new users when signup is disabled
+    // Only applies to users with zero roles (truly new users, including Google OAuth)
+    if (!existingRoles || existingRoles.length === 0) {
+      const { data: signupSetting } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "signup_enabled")
+        .single();
+
+      if (signupSetting?.value === "false") {
+        console.log(`Registration blocked for ${userEmail}: signup_enabled is false`);
+        return errorResponse.forbidden("Signups are currently closed. Please try again later.", cors);
+      }
+    }
+
     // 4. Upsert profile (handles Google OAuth users who may not have a profile yet)
     const { error: profileError } = await supabase
       .from("profiles")
