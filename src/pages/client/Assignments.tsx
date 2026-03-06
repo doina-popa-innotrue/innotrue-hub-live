@@ -24,6 +24,8 @@ import {
   Send,
   CheckCircle,
   ChevronRight,
+  Lightbulb,
+  Target,
 } from "lucide-react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { formatDistanceToNow, format } from "date-fns";
@@ -60,8 +62,9 @@ interface Assignment {
   program_name: string;
   program_id: string;
   enrollment_id: string;
-  type: "module" | "scenario";
+  type: "module" | "scenario" | "assessment";
   scenario_assignment_id?: string;
+  assessment_id?: string;
 }
 
 type TabType = "pending" | "submitted" | "reviewed";
@@ -121,7 +124,7 @@ export default function ClientAssignments() {
           .in("enrollment_id", enrollmentIds),
         supabase
           .from("program_modules")
-          .select("id, title, program_id, order_index")
+          .select("id, title, program_id, order_index, capability_assessment_id, capability_assessments(id, name)")
           .in("program_id", programIds),
       ]);
 
@@ -166,12 +169,14 @@ export default function ClientAssignments() {
             `
             id,
             template_id,
+            module_id,
             status,
             created_at,
             updated_at,
             evaluated_at,
             enrollment_id,
-            scenario_templates(title)
+            scenario_templates(title),
+            program_modules(id, title, program_id)
           `,
           )
           .eq("user_id", user.id)
@@ -267,27 +272,105 @@ export default function ClientAssignments() {
       // Map scenario assignments to the common Assignment interface
       const scenarioAssignmentsList: Assignment[] = (scenarioResult.data || []).map((sa) => {
         const enrollment = enrollments.find((e) => e.id === sa.enrollment_id);
+        const scenarioModule = sa.program_modules as any;
         let mappedStatus = sa.status;
         if (sa.status === "evaluated") mappedStatus = "reviewed";
+
+        const templateTitle = (sa.scenario_templates as any)?.title || "Untitled Scenario";
+        // If linked to a module, show module title; otherwise show template title
+        const moduleTitle = scenarioModule?.title || templateTitle;
+        // Derive program from the module join or fall back to enrollment
+        const moduleProgramId = scenarioModule?.program_id || enrollment?.program_id || "";
+        const moduleProgramName =
+          enrollments.find((e) => e.program_id === moduleProgramId)?.programs;
 
         return {
           id: sa.id,
           module_progress_id: "",
-          assignment_type_name: "Scenario",
+          assignment_type_name: `Scenario: ${templateTitle}`,
           status: mappedStatus,
           created_at: sa.created_at,
           updated_at: sa.updated_at,
           scored_at: sa.evaluated_at,
           overall_score: null as number | null,
-          module_title: (sa.scenario_templates as any)?.title || "Untitled Scenario",
-          module_id: "",
-          program_name: (enrollment?.programs as any)?.name || "Unknown Program",
-          program_id: enrollment?.program_id || "",
+          module_title: moduleTitle,
+          module_id: sa.module_id || "",
+          program_name: (moduleProgramName as any)?.name || (enrollment?.programs as any)?.name || "Unknown Program",
+          program_id: moduleProgramId,
           enrollment_id: sa.enrollment_id || "",
           type: "scenario" as const,
           scenario_assignment_id: sa.id,
         };
       });
+
+      // Build module-linked assessment tasks from modules with capability_assessment_id
+      const assessmentAssignments: Assignment[] = [];
+      const modulesWithAssessment = allModules.filter(
+        (m: any) => m.capability_assessment_id,
+      );
+
+      if (modulesWithAssessment.length > 0) {
+        const assessmentIds = [
+          ...new Set(modulesWithAssessment.map((m: any) => m.capability_assessment_id as string)),
+        ];
+
+        // Check user's completion status via capability_snapshots
+        const { data: snapshots } = await supabase
+          .from("capability_snapshots")
+          .select("id, assessment_id, status, completed_at, is_self_assessment")
+          .eq("user_id", user.id)
+          .eq("is_self_assessment", true)
+          .in("assessment_id", assessmentIds);
+
+        const snapshotsByAssessment = new Map<string, any[]>();
+        (snapshots || []).forEach((s) => {
+          const existing = snapshotsByAssessment.get(s.assessment_id) || [];
+          existing.push(s);
+          snapshotsByAssessment.set(s.assessment_id, existing);
+        });
+
+        for (const mod of modulesWithAssessment) {
+          const modAny = mod as any;
+          const enrollment = enrollments.find((e) => e.program_id === modAny.program_id);
+          if (!enrollment) continue;
+
+          const assessmentSnapshots = snapshotsByAssessment.get(modAny.capability_assessment_id) || [];
+          const hasCompleted = assessmentSnapshots.some((s: any) => s.status === "completed");
+          const hasDraft = assessmentSnapshots.some((s: any) => s.status === "draft");
+
+          let status = "not_started";
+          let updatedAt = "";
+          if (hasCompleted) {
+            status = "reviewed";
+            const latestCompleted = assessmentSnapshots
+              .filter((s: any) => s.status === "completed")
+              .sort((a: any, b: any) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0];
+            updatedAt = latestCompleted?.completed_at || "";
+          } else if (hasDraft) {
+            status = "in_progress";
+          }
+
+          const assessmentName = modAny.capability_assessments?.name || "Assessment";
+
+          assessmentAssignments.push({
+            id: `assessment-${modAny.id}-${modAny.capability_assessment_id}`,
+            module_progress_id: "",
+            assignment_type_name: `Self-Assessment: ${assessmentName}`,
+            status,
+            created_at: "",
+            updated_at: updatedAt,
+            scored_at: null,
+            overall_score: null,
+            module_title: modAny.title,
+            module_id: modAny.id,
+            program_name: (enrollment.programs as any)?.name || "Unknown Program",
+            program_id: modAny.program_id,
+            enrollment_id: enrollment.id,
+            type: "assessment" as const,
+            assessment_id: modAny.capability_assessment_id,
+          });
+        }
+      }
 
       // Combine all lists: started first (sorted by updated_at), then unstarted (sorted by program + module order)
       const startedAssignments = [...moduleAssignmentsList, ...scenarioAssignmentsList];
@@ -295,15 +378,24 @@ export default function ClientAssignments() {
         (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
       );
 
+      // Separate assessment items by status
+      const startedAssessments = assessmentAssignments.filter(
+        (a) => a.status !== "not_started",
+      );
+      const unstartedAssessments = assessmentAssignments.filter(
+        (a) => a.status === "not_started",
+      );
+
       // Sort unstarted by program name then module order
-      unstartedAssignments.sort((a, b) => {
+      const allUnstarted = [...unstartedAssignments, ...unstartedAssessments];
+      allUnstarted.sort((a, b) => {
         if (a.program_name !== b.program_name) return a.program_name.localeCompare(b.program_name);
         const aOrder = allModules.find((m) => m.id === a.module_id)?.order_index ?? 0;
         const bOrder = allModules.find((m) => m.id === b.module_id)?.order_index ?? 0;
         return aOrder - bOrder;
       });
 
-      return [...startedAssignments, ...unstartedAssignments];
+      return [...startedAssignments, ...startedAssessments, ...allUnstarted];
     },
     enabled: !!user,
   });
@@ -425,7 +517,7 @@ export default function ClientAssignments() {
       <div>
         <h1 className="text-3xl font-bold mb-2">My Assignments</h1>
         <p className="text-muted-foreground">
-          View and manage your module assignments across all programs
+          View and manage all your assignments, scenarios, and assessments
         </p>
       </div>
 
@@ -535,6 +627,8 @@ export default function ClientAssignments() {
                     onClick={() => {
                       if (assignment.type === "scenario" && assignment.scenario_assignment_id) {
                         navigate(`/scenarios/${assignment.scenario_assignment_id}`);
+                      } else if (assignment.type === "assessment" && assignment.assessment_id) {
+                        navigate(`/capabilities/${assignment.assessment_id}`);
                       } else {
                         navigate(
                           `/programs/${assignment.program_id}/modules/${assignment.module_id}`,
@@ -542,7 +636,17 @@ export default function ClientAssignments() {
                       }
                     }}
                   >
-                    <TableCell className="font-medium">{assignment.assignment_type_name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {assignment.type === "scenario" && (
+                          <Lightbulb className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                        )}
+                        {assignment.type === "assessment" && (
+                          <Target className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                        )}
+                        {assignment.assignment_type_name}
+                      </div>
+                    </TableCell>
                     <TableCell>{assignment.module_title}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{assignment.program_name}</Badge>

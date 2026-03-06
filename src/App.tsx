@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider, MutationCache, QueryCache } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AdminRefreshListener } from "@/components/AdminRefreshListener";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -202,7 +202,6 @@ const Services = lazy(() => import("./pages/client/Services"));
 const TermsHistory = lazy(() => import("./pages/client/TermsHistory"));
 const AllNotifications = lazy(() => import("./pages/client/AllNotifications"));
 const NotificationSettings = lazy(() => import("./pages/client/NotificationSettings"));
-const ClientScenarios = lazy(() => import("./pages/client/Scenarios"));
 const ClientScenarioDetail = lazy(() => import("./pages/client/ScenarioDetail"));
 const DevelopmentProfile = lazy(() => import("./pages/client/DevelopmentProfile"));
 
@@ -1853,13 +1852,7 @@ const App = () => (
                   />
                   <Route
                     path="/scenarios"
-                    element={
-                      <ProtectedRoute requireRole="client">
-                        <DashboardLayout>
-                          <ClientScenarios />
-                        </DashboardLayout>
-                      </ProtectedRoute>
-                    }
+                    element={<Navigate to="/assignments" replace />}
                   />
                   <Route
                     path="/scenarios/:id"

@@ -47,6 +47,7 @@ import {
   Eye,
   RotateCcw,
   History,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ScenarioSection, SectionParagraph, ParagraphQuestionLink } from "@/types/scenarios";
@@ -93,6 +94,9 @@ function ScenarioDetailContent() {
   const { data: progress } = useScenarioProgress(assignment?.template_id, id);
   const attemptNumber = assignment?.attempt_number ?? 1;
   const isRevision = attemptNumber > 1;
+  const isModuleLinked = !!assignment?.module_id;
+  const linkedModuleTitle = (assignment as any)?.program_modules?.title;
+  const linkedProgramId = (assignment as any)?.client_enrollments?.program_id;
 
   // Initialize local responses from fetched data
   useEffect(() => {
@@ -215,11 +219,15 @@ function ScenarioDetailContent() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate("/scenarios")}
+            onClick={() =>
+              isModuleLinked && linkedProgramId
+                ? navigate(`/programs/${linkedProgramId}/modules/${assignment.module_id}`)
+                : navigate("/assignments")
+            }
             className="mb-2 -ml-2"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Scenarios
+            {isModuleLinked ? `Back to ${linkedModuleTitle || "Module"}` : "Back to Assignments"}
           </Button>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             {template?.title || "Untitled Scenario"}
@@ -257,10 +265,26 @@ function ScenarioDetailContent() {
           )}
 
           {!isReadOnly && !isPreviewMode && (
-            <Button onClick={() => setShowSubmitDialog(true)}>
-              <Send className="h-4 w-4 mr-2" />
-              Submit
-            </Button>
+            isModuleLinked ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted px-3 py-1.5 rounded-md">
+                <Info className="h-4 w-4 shrink-0" />
+                <span>Auto-saved. Submit via your module assignment.</span>
+                {linkedProgramId && assignment?.module_id && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/programs/${linkedProgramId}/modules/${assignment.module_id}`)}
+                  >
+                    Go to Module
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <Button onClick={() => setShowSubmitDialog(true)}>
+                <Send className="h-4 w-4 mr-2" />
+                Submit
+              </Button>
+            )
           )}
           {isEvaluated && (
             <Badge variant="default" className="flex items-center gap-1">

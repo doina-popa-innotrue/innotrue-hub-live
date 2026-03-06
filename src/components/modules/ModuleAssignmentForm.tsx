@@ -108,6 +108,22 @@ export function ModuleAssignmentForm({
   const [showAttachmentForm, setShowAttachmentForm] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  // Count draft scenario assignments linked to this module (for submit confirmation)
+  const { data: draftScenarioCount = 0 } = useQuery({
+    queryKey: ["draft-scenarios-for-module", moduleId, user?.id],
+    queryFn: async () => {
+      if (!moduleId || !user?.id) return 0;
+      const { count } = await supabase
+        .from("scenario_assignments")
+        .select("id", { count: "exact", head: true })
+        .eq("module_id", moduleId)
+        .eq("user_id", user.id)
+        .eq("status", "draft");
+      return count || 0;
+    },
+    enabled: !!moduleId && !!user?.id && !isInstructor,
+  });
+
   // Fetch linked capability assessment from module_assignment_configs
   const { data: linkedAssessmentConfig } = useQuery({
     queryKey: ["module-assignment-config-linked", moduleId, assignmentType.id],
@@ -199,8 +215,34 @@ export function ModuleAssignmentForm({
         assignmentId = data.id;
       }
 
-      // If submitting, send notification to coaches/instructors
+      // If submitting, cascade-submit linked scenario assignments and notify
       if (status === "submitted" && assignmentId) {
+        // Cascade-submit draft scenario assignments linked to this module
+        if (moduleId && user?.id) {
+          try {
+            const { data: draftScenarios } = await supabase
+              .from("scenario_assignments")
+              .select("id")
+              .eq("module_id", moduleId)
+              .eq("user_id", user.id)
+              .eq("status", "draft");
+
+            if (draftScenarios && draftScenarios.length > 0) {
+              const scenarioIds = draftScenarios.map((s) => s.id);
+              await supabase
+                .from("scenario_assignments")
+                .update({
+                  status: "submitted",
+                  submitted_at: new Date().toISOString(),
+                })
+                .in("id", scenarioIds);
+            }
+          } catch (cascadeError) {
+            console.error("Failed to cascade-submit scenarios:", cascadeError);
+            // Don't fail the main submission
+          }
+        }
+
         try {
           await supabase.functions.invoke("notify-assignment-submitted", {
             body: {
@@ -219,6 +261,11 @@ export function ModuleAssignmentForm({
       queryClient.invalidateQueries({
         queryKey: ["module-assignment", moduleProgressId, assignmentType.id],
       });
+      // Also invalidate scenario and client-assignments queries for cascade updates
+      if (status === "submitted") {
+        queryClient.invalidateQueries({ queryKey: ["scenario-assignments"] });
+        queryClient.invalidateQueries({ queryKey: ["client-assignments"] });
+      }
       const messages: Record<string, string> = {
         draft: "Assignment saved as draft",
         submitted: "Assignment submitted for review",
@@ -743,7 +790,10 @@ export function ModuleAssignmentForm({
               onClick={() => saveMutation.mutate({ status: "submitted" })}
               disabled={saveMutation.isPending}
             >
-              <Send className="h-4 w-4 mr-2" /> Submit for Review
+              <Send className="h-4 w-4 mr-2" />
+              {draftScenarioCount > 0
+                ? `Submit All for Review (+ ${draftScenarioCount} scenario${draftScenarioCount !== 1 ? "s" : ""})`
+                : "Submit for Review"}
             </Button>
           </div>
         )}

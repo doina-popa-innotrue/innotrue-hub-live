@@ -35,7 +35,7 @@ export class ScenarioErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      const { fallbackPath = "/scenarios", fallbackLabel = "Back to Scenarios" } = this.props;
+      const { fallbackPath = "/assignments", fallbackLabel = "Back to Assignments" } = this.props;
 
       return (
         <div className="container py-12">
