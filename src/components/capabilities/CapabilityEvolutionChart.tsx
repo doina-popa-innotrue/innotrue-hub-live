@@ -83,6 +83,9 @@ export function CapabilityEvolutionChart({
   instructorSnapshots,
   assessment,
 }: CapabilityEvolutionChartProps) {
+  // Guard: ensure capability_domains is always an array
+  const domains = domains ?? [];
+
   const [compareMode, setCompareMode] = useState<"latest-vs-first" | "custom">("latest-vs-first");
   const [viewMode, setViewMode] = useState<"radar" | "line">("radar");
   const [radarMode, setRadarMode] = useState<"domains" | "types">("domains");
@@ -166,7 +169,7 @@ export function CapabilityEvolutionChart({
     if (radarMode === "types" && questionTypes) {
       return getTypeRadarData();
     }
-    return assessment.capability_domains.map((domain) => ({
+    return domains.map((domain) => ({
       domain: domain.name,
       current: snapshot1 ? getDomainAverageForSnapshot(snapshot1, domain) : 0,
       previous: snapshot2 ? getDomainAverageForSnapshot(snapshot2, domain) : 0,
@@ -177,7 +180,7 @@ export function CapabilityEvolutionChart({
   const getTypeRadarDataForSnapshot = (snapshot: Snapshot) => {
     if (!questionTypes) return [];
     const allQuestions: ScoredQuestion[] = [];
-    for (const domain of assessment.capability_domains) {
+    for (const domain of domains) {
       for (const q of domain.capability_domain_questions) {
         const rating = snapshot.capability_snapshot_ratings.find((r) => r.question_id === q.id);
         allQuestions.push({
@@ -214,7 +217,7 @@ export function CapabilityEvolutionChart({
           fullDate: snapshot.completed_at,
           type: snapshot.is_self_assessment ? "Self" : "Evaluator",
         };
-        assessment.capability_domains.forEach((domain) => {
+        domains.forEach((domain) => {
           data[domain.name] = getDomainAverageForSnapshot(snapshot, domain);
         });
         return data;
@@ -225,16 +228,16 @@ export function CapabilityEvolutionChart({
     if (!snapshot1 || !snapshot2) return 0;
 
     const current =
-      assessment.capability_domains.reduce(
+      domains.reduce(
         (sum, domain) => sum + getDomainAverageForSnapshot(snapshot1, domain),
         0,
-      ) / assessment.capability_domains.length;
+      ) / domains.length;
 
     const previous =
-      assessment.capability_domains.reduce(
+      domains.reduce(
         (sum, domain) => sum + getDomainAverageForSnapshot(snapshot2, domain),
         0,
-      ) / assessment.capability_domains.length;
+      ) / domains.length;
 
     return current - previous;
   };
@@ -535,7 +538,7 @@ export function CapabilityEvolutionChart({
                     <YAxis domain={[0, assessment.rating_scale]} tick={{ fontSize: 11 }} />
                     <Tooltip />
                     <Legend />
-                    {assessment.capability_domains.map((domain, index) => (
+                    {domains.map((domain, index) => (
                       <Line
                         key={domain.id}
                         type="monotone"
@@ -568,7 +571,7 @@ export function CapabilityEvolutionChart({
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {assessment.capability_domains.map((domain) => {
+            {domains.map((domain) => {
               const current = snapshot1 ? getDomainAverageForSnapshot(snapshot1, domain) : 0;
               const previous = snapshot2 ? getDomainAverageForSnapshot(snapshot2, domain) : 0;
               const change = current - previous;

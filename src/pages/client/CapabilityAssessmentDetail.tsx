@@ -68,7 +68,9 @@ export default function CapabilityAssessmentDetail() {
               id,
               question_text,
               description,
-              order_index
+              order_index,
+              question_type,
+              type_weight
             )
           )
         `,
@@ -78,17 +80,20 @@ export default function CapabilityAssessmentDetail() {
 
       if (error) throw error;
 
-      // Sort domains and questions by order_index
-      if (data.capability_domains) {
-        data.capability_domains.sort((a: any, b: any) => a.order_index - b.order_index);
-        data.capability_domains.forEach((domain: any) => {
-          if (domain.capability_domain_questions) {
-            domain.capability_domain_questions.sort(
-              (a: any, b: any) => a.order_index - b.order_index,
-            );
-          }
-        });
+      // Ensure capability_domains is always an array (RLS can cause null FK joins)
+      if (!data.capability_domains) {
+        data.capability_domains = [];
       }
+
+      // Sort domains and questions by order_index
+      data.capability_domains.sort((a: any, b: any) => a.order_index - b.order_index);
+      data.capability_domains.forEach((domain: any) => {
+        if (domain.capability_domain_questions) {
+          domain.capability_domain_questions.sort(
+            (a: any, b: any) => a.order_index - b.order_index,
+          );
+        }
+      });
 
       return data;
     },
