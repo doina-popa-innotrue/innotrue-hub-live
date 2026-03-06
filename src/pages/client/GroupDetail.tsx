@@ -499,7 +499,7 @@ export default function GroupDetail() {
         {
           onSuccess: async (masterSession) => {
             // Create Google Calendar event with Meet link if enabled and user is a Leader
-            if (masterSession?.id && useGoogleCalendar && canManage) {
+            if (masterSession?.id && useGoogleCalendar) {
               try {
                 // Get active member user IDs - the edge function will fetch their emails server-side
                 const memberUserIds =
@@ -1015,9 +1015,9 @@ export default function GroupDetail() {
                   isCreating={createSessionMutation.isPending}
                   isUpdating={updateSessionMutation.isPending}
                   showPastSessions={true}
-                  showTimezone={canManage}
+                  showTimezone={true}
                   initialTimezone={userTimezone}
-                  showGoogleCalendarOption={canManage}
+                  showGoogleCalendarOption={true}
                   initialUseGoogleCalendar={true}
                 />
 
