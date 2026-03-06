@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, Sparkles } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { CheckCircle, ChevronDown, Sparkles } from "lucide-react";
 
 interface ProgramFeature {
   feature_id: string;
@@ -39,6 +41,8 @@ export function ProgramFeatureList({
   className,
   compact = false,
 }: ProgramFeatureListProps) {
+  const [open, setOpen] = useState(false);
+
   const { data: features, isLoading } = useQuery({
     queryKey: ["program-plan-features", programPlanId],
     queryFn: async (): Promise<ProgramFeature[]> => {
@@ -111,37 +115,47 @@ export function ProgramFeatureList({
   }
 
   return (
-    <Card className={className}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Sparkles className="h-4 w-4" />
-          What's Included
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          {features.map((f) => (
-            <div key={f.feature_id} className="flex items-start gap-2">
-              <CheckCircle className="h-4 w-4 text-success mt-0.5 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium capitalize">
-                    {f.features?.name ?? f.features?.key?.replace(/_/g, " ") ?? "Feature"}
-                  </span>
-                  {f.limit_value != null && (
-                    <Badge variant="secondary" className="text-[10px]">
-                      {f.limit_value}/mo
-                    </Badge>
-                  )}
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <Card className={className}>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="pb-3 cursor-pointer select-none hover:bg-accent/50 transition-colors rounded-t-lg">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              What's Included
+              <Badge variant="secondary" className="ml-auto text-xs font-normal">
+                {features.length} feature{features.length !== 1 ? "s" : ""}
+              </Badge>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+            </CardTitle>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent>
+            <div className="space-y-2">
+              {features.map((f) => (
+                <div key={f.feature_id} className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-success mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium capitalize">
+                        {f.features?.name ?? f.features?.key?.replace(/_/g, " ") ?? "Feature"}
+                      </span>
+                      {f.limit_value != null && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          {f.limit_value}/mo
+                        </Badge>
+                      )}
+                    </div>
+                    {f.features?.description && (
+                      <p className="text-xs text-muted-foreground">{f.features.description}</p>
+                    )}
+                  </div>
                 </div>
-                {f.features?.description && (
-                  <p className="text-xs text-muted-foreground">{f.features.description}</p>
-                )}
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
