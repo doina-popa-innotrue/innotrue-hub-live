@@ -729,7 +729,7 @@ export default function MyAssessments() {
               Self ({groupedSelfAssessments.length})
             </TabsTrigger>
             <TabsTrigger value="psychometric" className="text-xs sm:text-sm py-2">
-              Psycho ({psychometricAssessments?.length || 0})
+              Psychometric ({psychometricAssessments?.length || 0})
             </TabsTrigger>
           </TabsList>
 
