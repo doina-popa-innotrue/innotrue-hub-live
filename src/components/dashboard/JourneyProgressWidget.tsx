@@ -292,7 +292,6 @@ export function JourneyProgressWidget({
                     "flex flex-col items-center gap-1 p-1.5 sm:p-2 rounded-lg transition-all min-w-[50px] sm:min-w-[60px]",
                     isLocked && "opacity-60 cursor-not-allowed",
                     !isLocked && isCompleted && "text-green-700 dark:text-green-300",
-                    !isLocked && isNext && "ring-2 ring-secondary ring-offset-2",
                     !isLocked && !isCompleted && !isNext && "text-muted-foreground",
                     !isLocked && "hover:bg-accent",
                   )}
@@ -302,7 +301,7 @@ export function JourneyProgressWidget({
                       "relative p-1.5 sm:p-2 rounded-full",
                       isLocked && "bg-muted",
                       !isLocked && isCompleted && "bg-green-100 dark:bg-green-900/50",
-                      !isLocked && isNext && "bg-secondary/15 dark:bg-secondary/25",
+                      !isLocked && isNext && "bg-secondary/15 dark:bg-secondary/25 ring-2 ring-secondary ring-offset-2",
                       !isLocked && !isCompleted && !isNext && "bg-muted",
                     )}
                   >
