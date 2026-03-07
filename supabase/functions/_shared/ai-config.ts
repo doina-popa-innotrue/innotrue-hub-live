@@ -245,7 +245,7 @@ async function getVertexAccessToken(): Promise<string> {
 
 /**
  * Build the Vertex AI OpenAI-compatible endpoint URL.
- * Uses the global hostname with location in the path, per Google's docs:
+ * Uses the regional hostname with v1beta1, per Google's docs:
  * https://docs.cloud.google.com/vertex-ai/generative-ai/docs/start/openai
  */
 function getVertexEndpoint(): string {
@@ -254,7 +254,7 @@ function getVertexEndpoint(): string {
   if (!projectId) {
     throw new Error("GCP_PROJECT_ID is not configured");
   }
-  return `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/endpoints/openapi/chat/completions`;
+  return `https://${location}-aiplatform.googleapis.com/v1beta1/projects/${projectId}/locations/${location}/endpoints/openapi/chat/completions`;
 }
 
 // ─── Main chat completion function ───────────────────────────────────────────

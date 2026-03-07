@@ -76,12 +76,19 @@ export function WeeklyReflectionCard() {
 
     setIsSaving(true);
     try {
+      // Use the prompt question as the reflection title (truncated)
+      const title =
+        prompt.prompt_text.length > 80
+          ? prompt.prompt_text.slice(0, 77) + "..."
+          : prompt.prompt_text;
+
       // Create the development item
       const { data: newItem, error: insertError } = await supabase
         .from("development_items")
         .insert({
           user_id: user.id,
           item_type: "reflection",
+          title,
           content: reflectionContent.trim(),
           prompt_id: prompt.id,
         })

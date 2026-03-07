@@ -238,11 +238,22 @@ ${context.recentReflections.map(r => `- "${r.content}"`).join('\n') || 'No recen
         return errorResponse.badRequest("AI credits exhausted. Please upgrade your plan or purchase additional credits.", cors);
       }
 
-      throw new Error(`AI API error: ${aiResponse.status}`);
+      // Extract Google's error detail for debugging
+      let detail = "";
+      try {
+        const parsed = JSON.parse(errorText);
+        detail = parsed?.error?.message || parsed?.message || errorText.slice(0, 200);
+      } catch {
+        detail = errorText.slice(0, 200);
+      }
+      return errorResponse.serverErrorWithMessage(
+        `AI service error (${aiResponse.status}): ${detail}`,
+        cors,
+      );
     }
 
     const aiData = await aiResponse.json();
-    const promptText = aiData.choices?.[0]?.message?.content?.trim() || 
+    const promptText = aiData.choices?.[0]?.message?.content?.trim() ||
       "What's one thing you learned about yourself this week that you'd like to explore further?";
 
     console.log('Generated prompt:', promptText);
@@ -263,12 +274,33 @@ ${context.recentReflections.map(r => `- "${r.content}"`).join('\n') || 'No recen
 
     if (insertError) {
       console.error('Error saving prompt:', insertError);
-      throw insertError;
+      return errorResponse.serverErrorWithMessage(
+        "Failed to save generated prompt. Please try again.",
+        cors,
+      );
     }
 
     return successResponse.ok({ prompt: newPrompt, isNew: true }, cors);
 
   } catch (error: unknown) {
-    return errorResponse.serverError("GENERATE-REFLECTION-PROMPT", error, cors);
+    console.error("[GENERATE-REFLECTION-PROMPT] Internal error:", error);
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    // Expose safe error messages; hide credential/config details
+    if (msg.includes("not configured")) {
+      return errorResponse.serverErrorWithMessage(
+        "AI service is not configured. Please contact your administrator.",
+        cors,
+      );
+    }
+    if (msg.includes("access token") || msg.includes("oauth") || msg.includes("JWT")) {
+      return errorResponse.serverErrorWithMessage(
+        "AI service authentication failed. Please contact your administrator.",
+        cors,
+      );
+    }
+    return errorResponse.serverErrorWithMessage(
+      "Failed to generate reflection prompt. Please try again.",
+      cors,
+    );
   }
 });
