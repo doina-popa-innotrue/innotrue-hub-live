@@ -52,6 +52,7 @@ interface CapabilitySnapshotFormProps {
   onCancel: () => void;
   onComplete: () => void;
   existingDraftId?: string;
+  enrollmentId?: string;
 }
 
 const AUTO_SAVE_DELAY = 3000; // 3 seconds after last change
@@ -61,6 +62,7 @@ export function CapabilitySnapshotForm({
   onCancel,
   onComplete,
   existingDraftId,
+  enrollmentId,
 }: CapabilitySnapshotFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -318,6 +320,8 @@ export function CapabilitySnapshotForm({
             shared_with_instructor: shareWithInstructor,
             status: "draft",
             completed_at: null,
+            is_self_assessment: true,
+            enrollment_id: enrollmentId || null,
           } as any)
           .select()
           .single();

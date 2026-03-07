@@ -47,8 +47,9 @@ export default function CapabilityAssessmentDetail() {
   const [historyFilter, setHistoryFilter] = useState<SnapshotTypeFilter>("all");
   const [activeTab, setActiveTab] = useState<string>("current");
 
-  // Check for snapshotId in URL params to auto-open the form or view
+  // Check for snapshotId and enrollmentId in URL params
   const urlSnapshotId = searchParams.get("snapshotId");
+  const urlEnrollmentId = searchParams.get("enrollment_id");
 
   // Fetch assessment with domains and questions
   const { data: assessment, isLoading: assessmentLoading } = useQuery({
@@ -339,6 +340,7 @@ export default function CapabilityAssessmentDetail() {
               (assessment.assessment_mode as "self" | "evaluator" | "both") || "both",
           }}
           existingDraftId={urlSnapshotId ?? draftSnapshot?.id}
+          enrollmentId={urlEnrollmentId ?? undefined}
           onCancel={() => setShowForm(false)}
           onComplete={() => {
             setShowForm(false);
