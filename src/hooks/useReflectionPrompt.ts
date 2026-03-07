@@ -99,20 +99,20 @@ export function useReflectionPrompt(): UseReflectionPromptReturn {
 
       if (invokeError) {
         console.error("Error generating prompt:", invokeError);
-        // Parse the error context for a specific message from the edge function
-        const errorMessage =
-          (invokeError as any)?.context?.body
-            ? await (invokeError as any).context.body.text?.().catch(() => null)
-            : null;
-
-        let parsed: { error?: string } | null = null;
+        // Extract error message from Supabase FunctionsHttpError
+        // error.context is the Response object — use .json() to read the body
+        let errorMsg = "Failed to generate reflection prompt. Please try again.";
         try {
-          parsed = errorMessage ? JSON.parse(errorMessage) : null;
+          const ctx = (invokeError as any)?.context;
+          if (ctx && typeof ctx.json === "function") {
+            const body = await ctx.json();
+            if (body?.error) errorMsg = body.error;
+          }
         } catch {
-          // not JSON
+          // Failed to parse error body — use generic message
         }
 
-        setError(parsed?.error || "Failed to generate reflection prompt. Please try again.");
+        setError(errorMsg);
         return;
       }
 
