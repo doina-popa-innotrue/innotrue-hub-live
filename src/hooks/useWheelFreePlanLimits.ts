@@ -76,12 +76,11 @@ export function useWheelFreePlanLimits(): WheelPlanLimits {
         return;
       }
 
-      // Count goals with wheel_category (from Wheel of Life)
+      // Count goals linked to a wheel category
       const { count: goalCount } = await supabase
         .from("goals")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .not("wheel_category", "is", null);
+        .eq("user_id", user.id);
 
       // Count wheel domain reflections
       const { count: reflectionCount } = await supabase
