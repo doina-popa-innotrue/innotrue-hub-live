@@ -5954,6 +5954,178 @@ export type Database = {
           },
         ]
       }
+      group_session_activities: {
+        Row: {
+          assessor_user_id: string | null
+          assignment_type_id: string | null
+          capability_assessment_id: string | null
+          created_at: string
+          created_by: string
+          evaluated_at: string | null
+          evaluator_notes: string | null
+          id: string
+          overall_comments: string | null
+          presenter_user_id: string | null
+          resource_id: string | null
+          resource_url: string | null
+          responses: Json | null
+          scenario_template_id: string | null
+          scoring_snapshot_id: string | null
+          session_id: string
+          status: string
+          submitted_at: string | null
+          topic_description: string | null
+          topic_title: string
+          updated_at: string
+        }
+        Insert: {
+          assessor_user_id?: string | null
+          assignment_type_id?: string | null
+          capability_assessment_id?: string | null
+          created_at?: string
+          created_by: string
+          evaluated_at?: string | null
+          evaluator_notes?: string | null
+          id?: string
+          overall_comments?: string | null
+          presenter_user_id?: string | null
+          resource_id?: string | null
+          resource_url?: string | null
+          responses?: Json | null
+          scenario_template_id?: string | null
+          scoring_snapshot_id?: string | null
+          session_id: string
+          status?: string
+          submitted_at?: string | null
+          topic_description?: string | null
+          topic_title: string
+          updated_at?: string
+        }
+        Update: {
+          assessor_user_id?: string | null
+          assignment_type_id?: string | null
+          capability_assessment_id?: string | null
+          created_at?: string
+          created_by?: string
+          evaluated_at?: string | null
+          evaluator_notes?: string | null
+          id?: string
+          overall_comments?: string | null
+          presenter_user_id?: string | null
+          resource_id?: string | null
+          resource_url?: string | null
+          responses?: Json | null
+          scenario_template_id?: string | null
+          scoring_snapshot_id?: string | null
+          session_id?: string
+          status?: string
+          submitted_at?: string | null
+          topic_description?: string | null
+          topic_title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_session_activities_assignment_type_id_fkey"
+            columns: ["assignment_type_id"]
+            isOneToOne: false
+            referencedRelation: "module_assignment_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_session_activities_capability_assessment_id_fkey"
+            columns: ["capability_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "capability_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_session_activities_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resource_credit_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_session_activities_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resource_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_session_activities_scenario_template_id_fkey"
+            columns: ["scenario_template_id"]
+            isOneToOne: false
+            referencedRelation: "scenario_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_session_activities_scoring_snapshot_id_fkey"
+            columns: ["scoring_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "capability_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_session_activities_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "group_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_session_activity_attachments: {
+        Row: {
+          activity_id: string
+          attachment_type: string
+          created_at: string
+          description: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          title: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          activity_id: string
+          attachment_type: string
+          created_at?: string
+          description?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          title: string
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          activity_id?: string
+          attachment_type?: string
+          created_at?: string
+          description?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          title?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_session_activity_attachments_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "group_session_activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_session_participants: {
         Row: {
           created_at: string
@@ -15119,6 +15291,10 @@ export type Database = {
       }
       is_same_organization: {
         Args: { _user_id_1: string; _user_id_2: string }
+        Returns: boolean
+      }
+      is_session_group_member: {
+        Args: { p_session_id: string }
         Returns: boolean
       }
       is_session_instructor_or_coach: {

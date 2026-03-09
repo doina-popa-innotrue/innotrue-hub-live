@@ -1,5 +1,22 @@
 # Completed Work — Detailed History
 
+## Admin Signup Toggle (2026-03-06)
+
+Admin system setting to enable/disable public self-registration. Commit `7ec0216`.
+
+### What was built
+- **Migration** (`20260331100000`): `signup_enabled` system setting (default: `'true'`) + `get_signup_enabled()` SECURITY DEFINER RPC (grants anon + authenticated)
+- **Hook**: `src/hooks/useSignupEnabled.ts` — calls public RPC, fail-open default
+- **Admin UI**: Toggle in `SystemSettings.tsx` with warning icon when OFF
+- **Auth page**: Signup tab + "Create Account" link hidden when disabled; Google "Continue with Google" stays visible for existing users
+- **CompleteRegistration**: New Google OAuth users (zero roles) see "Signups Are Currently Closed" card + Sign Out
+- **Edge functions**: `signup-user` returns 403 if disabled; `complete-registration` blocks users with zero roles (defense-in-depth)
+
+### Design decisions
+- Google OAuth can't be blocked at login (Supabase auto-provisions users). Instead, new Google users are blocked at `/complete-registration` when they have zero roles.
+- RPC uses SECURITY DEFINER + GRANT to anon so unauthenticated Auth page can check the setting.
+- Fail-open default: if RPC call fails, signup stays enabled (avoids locking out users due to transient errors).
+
 ## Supabase Production Migration — London → Frankfurt (2026-03-05)
 
 Full production migration from London (`qfdztdgublwlmewobxmx`, eu-west-2) to Frankfurt (`pvrarqyktvnrmggjpbow`, eu-central-1) for GDPR data residency compliance.

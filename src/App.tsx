@@ -190,6 +190,7 @@ const GroupDetail = lazy(() => import("./pages/client/GroupDetail"));
 const MyFeedback = lazy(() => import("./pages/client/MyFeedback"));
 const GroupNoteDetail = lazy(() => import("./pages/client/GroupNoteDetail"));
 const GroupSessionDetail = lazy(() => import("./pages/client/GroupSessionDetail"));
+const PeerSessionEvaluationPage = lazy(() => import("./pages/client/PeerSessionEvaluationPage"));
 const GroupCheckInDetail = lazy(() => import("./pages/client/GroupCheckInDetail"));
 const GroupTaskDetail = lazy(() => import("./pages/client/GroupTaskDetail"));
 const SkillsMap = lazy(() => import("./pages/client/SkillsMap"));
@@ -1776,6 +1777,16 @@ const App = () => (
                       <ProtectedRoute requireRole="client">
                         <DashboardLayout>
                           <GroupSessionDetail />
+                        </DashboardLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/groups/:groupId/sessions/:sessionId/evaluate/:activityId"
+                    element={
+                      <ProtectedRoute requireRole="client">
+                        <DashboardLayout>
+                          <PeerSessionEvaluationPage />
                         </DashboardLayout>
                       </ProtectedRoute>
                     }

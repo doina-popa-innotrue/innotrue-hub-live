@@ -28,6 +28,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
+import { SessionActivityCard } from "@/components/groups/sessions/SessionActivityCard";
 import { toZonedTime } from "date-fns-tz";
 import { getTimezoneAbbreviation } from "@/components/profile/TimezoneSelect";
 import { useAuth } from "@/contexts/AuthContext";
@@ -482,6 +483,10 @@ export default function GroupSessionDetail() {
                 })}
               </div>
             </div>
+          )}
+          {/* Presentation Activity */}
+          {sessionId && groupId && (
+            <SessionActivityCard sessionId={sessionId} groupId={groupId} />
           )}
         </CardContent>
       </Card>

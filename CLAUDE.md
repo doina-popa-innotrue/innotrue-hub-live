@@ -107,3 +107,4 @@ Why: Schema drift causes silent failures (queries return empty results for non-e
 - New pages MUST be lazy-loaded in `src/App.tsx`
 - `useEntitlements()` for feature access checks, `<FeatureGate>` / `<CapabilityGate>` for UI gating
 - `useIsMaxPlan()` to detect max-plan users (show "Contact administrator" instead of "Upgrade")
+- `useSignupEnabled()` to check if public signup is enabled (works for unauthenticated users via anon RPC)
