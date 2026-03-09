@@ -210,6 +210,7 @@ Manages their organization's members and program access within the platform.
 - Status workflow: `not_started` → `in_progress` → `submitted` → `reviewed` (graded)
 
 **Client assignments page (`/assignments`):**
+- Unified view combining assignments, scenarios, and assessments in one page with tab navigation
 - Shows **all** assignments from enrolled programs, including those not yet started
 - Fetches `module_assignment_configs` across all enrolled program modules to discover unstarted assignments
 - Virtual entries created with `not_started` status for assignments the client hasn't begun
@@ -292,6 +293,7 @@ Groups bring clients together for peer learning:
 - **Group sessions:** scheduled events with participant tracking, meeting URLs, and attendance workflow (invited → registered → confirmed → attended/no_show)
 - **Collaboration tools:** shared tasks, check-ins (with mood tracking), shared notes, member links
 - **Peer assessments:** within-group peer evaluations
+- **Peer session presentations:** member-driven activity within a group session — one member presents a scenario solution (using structured assignment forms + file/link attachments), another member evaluates using a capability assessment rubric or free-text feedback. No admin involvement required; members self-nominate for presenter/assessor roles. Topic sources: scenario templates, library resources, external URLs, or freeform. Status: `open` → `presenter_assigned` → `submitted` → `assessor_assigned` → `evaluated`
 - **Integration slots:** Circle, Slack, Google Drive, Cal.com, Calendly connections per group
 
 ---
@@ -684,7 +686,7 @@ Email templates (database-stored, variable substitution), email assets, email qu
 Cal.com event type mappings, TalentLMS user management, Circle community management, Lucid/Google Drive connections
 
 ### Analytics & Monitoring
-Consumption analytics, user behavior analytics, program completions, system settings, auth contexts, audit trail
+Consumption analytics, user behavior analytics, program completions, system settings (including **signup toggle** — `system_settings.signup_enabled` to enable/disable public registration), auth contexts, audit trail
 
 ---
 
@@ -694,12 +696,12 @@ Consumption analytics, user behavior analytics, program completions, system sett
 |--------|-------|
 | Database tables | 380+ |
 | Database enums | 25 |
-| Database migrations | 481 |
+| Database migrations | 483 |
 | Edge functions | 80 |
-| Frontend pages | 182+ (71 admin, 58 client, 14 teaching, 9 org-admin, 13+ shared) |
-| React components | 278 |
-| React hooks | 77 |
-| Storage buckets | 16 |
+| Frontend pages | 183+ (71 admin, 59 client, 14 teaching, 9 org-admin, 13+ shared) |
+| React components | 281 |
+| React hooks | 84 |
+| Storage buckets | 17 |
 | Notification types | 31+ |
 | Session types | 8 |
 | Session roles | 10 |

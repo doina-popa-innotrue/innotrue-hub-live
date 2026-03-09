@@ -35,6 +35,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { DevelopmentItemDialog } from "@/components/capabilities/DevelopmentItemDialog";
 import { GuidedLearningSection } from "@/components/capabilities/GuidedLearningSection";
+import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import {
   parseQuestionTypes,
   calculateDomainScore,
@@ -497,9 +498,9 @@ export function CapabilitySnapshotView({
                             </div>
                           </div>
                           {questionNote && (
-                            <p className="text-sm text-muted-foreground pl-4 border-l-2 border-muted">
-                              {questionNote}
-                            </p>
+                            <div className="pl-4 border-l-2 border-muted">
+                              <RichTextDisplay content={questionNote} className="text-sm text-muted-foreground" />
+                            </div>
                           )}
                           {/* Show development items linked to this question */}
                           {questionDevItems?.[question.id] &&
@@ -590,7 +591,7 @@ export function CapabilitySnapshotView({
                     {domainNote && (
                       <div className="pt-3 border-t">
                         <p className="text-sm font-medium mb-1">Reflections</p>
-                        <p className="text-sm text-muted-foreground">{domainNote}</p>
+                        <RichTextDisplay content={domainNote} className="text-sm text-muted-foreground" />
                       </div>
                     )}
 
@@ -616,7 +617,7 @@ export function CapabilitySnapshotView({
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <p className="text-sm text-muted-foreground">{snapshot.notes}</p>
+            <RichTextDisplay content={snapshot.notes} className="text-sm text-muted-foreground" />
           </CardContent>
         </Card>
       )}

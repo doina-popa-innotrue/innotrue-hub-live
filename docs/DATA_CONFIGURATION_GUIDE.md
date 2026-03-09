@@ -390,7 +390,8 @@ Slider-based self/evaluator assessments where clients rate themselves (or are ra
 1. **Self-assessment** — client rates themselves via `CapabilityAssessments.tsx`
 2. **Module-linked** — triggered from `program_modules.capability_assessment_id` via `ModuleSelfAssessment.tsx`
 3. **Instructor/coach evaluation** — evaluator creates snapshot with `is_self_assessment=false`
-4. **Peer evaluation** — via `GroupPeerAssessmentsPanel.tsx` (configured in `group_peer_assessments`)
+4. **Peer evaluation (group config)** — via `GroupPeerAssessmentsPanel.tsx` (configured in `group_peer_assessments`)
+5. **Peer session evaluation** — via `PeerSessionEvaluationPage.tsx` (created from `group_session_activities` with `capability_assessment_id`)
 5. **Public** — unauthenticated access is NOT supported for capability assessments (see 3.10 below)
 
 **Scoring:** Two modes, selected automatically based on configuration:
@@ -916,6 +917,8 @@ Sessions are live scheduled meetings — coaching calls, workshops, group sessio
 | `program_cohorts` | Cohort management. Includes `lead_instructor_id` (G3) for cohort-level instructor assignment |
 | `module_sessions` | Link sessions to program modules |
 | `session_module_links` | Additional session-to-module mapping |
+| `group_session_activities` | Peer presentation activity per group session (UNIQUE on session_id). Links topic + assignment type + evaluation method. Tracks presenter/assessor user IDs, form responses, evaluation. Status: `open` → `presenter_assigned` → `submitted` → `assessor_assigned` → `evaluated` |
+| `group_session_activity_attachments` | Presenter file/link attachments for session activities. Types: link, file, image. Stored in `peer-presentation-attachments` bucket |
 
 **Individual vs Group Sessions:**
 
@@ -973,9 +976,21 @@ Complex session types have defined roles:
 - **Google Calendar** — OAuth sync for personal calendars
 - **Zoom / Microsoft Teams** — OAuth meeting creation (`oauth-create-meeting`)
 
+**Peer Session Presentations:**
+Member-driven activity within a group session. Any group member can set up an activity, self-nominate as presenter or assessor. No admin involvement required.
+
+Activity lifecycle:
+1. Member creates activity — picks topic (scenario template / library resource / external URL / freeform), optionally selects assignment type (structured form) and/or capability assessment (evaluation rubric)
+2. Member A volunteers as presenter → fills in assignment type form + attaches files/links → submits
+3. Member B volunteers as assessor
+4. If capability assessment linked: assessor completes evaluation via `PeerSessionEvaluationPage` (creates `capability_snapshot` with `evaluation_relationship = 'peer'`)
+5. If no rubric: assessor writes free-text `evaluator_notes` inline
+
+RLS: `is_session_group_member(p_session_id)` SECURITY DEFINER function checks group membership. 2 policies per table (admin + group members).
+
 **Admin UI:** Session Types Management, Cal.com Mappings Management
 **Instructor UI:** Module Session Manager (create sessions for modules)
-**Client UI:** Module Session Display (view/register), Group Session Detail
+**Client UI:** Module Session Display (view/register), Group Session Detail (with `SessionActivityCard` for peer presentations)
 
 **Dependencies:**
 - Requires: features (feature_key), Cal.com (event types created externally)
@@ -1155,6 +1170,7 @@ When `xapi-statements` receives a statement with a completion verb (`completed`,
 | `session-attachments` | Sessions | — | — | Session-related file uploads |
 | `scenario-attachments` | Scenarios | — | — | Scenario-related files |
 | `module-content-packages` | Modules | ZIP only | 500 MB | Rise/web content package storage (private, auth-gated via `serve-content-package` edge function) |
+| `peer-presentation-attachments` | Peer Sessions | Document | 25 MB | Presenter file/link/image attachments for group session activities |
 | `wheel-pdfs` | Wheel of Life | — | — | Generated Wheel PDF exports |
 
 **MIME categories** (defined in `src/lib/fileValidation.ts`):

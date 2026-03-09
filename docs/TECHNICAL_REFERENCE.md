@@ -59,7 +59,7 @@
 **Stack:** React 18 + Vite 5 + TypeScript (strict) + Supabase + Tailwind CSS + shadcn/ui
 
 **Key design decisions:**
-- SPA with lazy-loaded routes (182+ pages, code-split to ~1031KB main bundle)
+- SPA with lazy-loaded routes (183+ pages, code-split to ~1031KB main bundle)
 - Supabase for backend (auth, database, storage, edge functions) — no custom server
 - Google Vertex AI for AI features (EU data residency in Frankfurt, europe-west3)
 - Resend for transactional email (13 edge functions)
@@ -109,12 +109,13 @@ fi && npm run build
 ### Supabase project details
 
 Both preprod and prod have:
-- 481 database migrations applied (including Phase 5 self-registration, schema drift fixes, enrollment duration, certification, credit expiry, retention cleanup, cron restore, scenario paragraph RLS optimization)
+- 483 database migrations applied (including Phase 5 self-registration, schema drift fixes, enrollment duration, certification, credit expiry, retention cleanup, scenario paragraph RLS optimization, admin signup toggle, peer session presentations)
 - Seed data loaded (`supabase/seed.sql`)
 - 80 edge functions deployed (including `complete-registration`, `redeem-enrollment-code`, `redeem-partner-code`, `alumni-lifecycle`, `enforce-enrollment-deadlines`, `generate-certificate-pdf`, `verify-badge`, `credit-expiry-notifications`, `submit-wheel-intent`, `bulk-create-users`, `send-coach-invite`, `update-client-development-item`)
 - Google OAuth enabled (Phase 5)
 - Auth email hook pointing to `send-auth-email` edge function
 - Self-registration active: signup form + Google OAuth + role selection
+- Admin signup toggle: `system_settings.signup_enabled` controls public registration (default: true)
 
 ---
 
@@ -168,7 +169,7 @@ After login, users must accept the current platform terms before accessing the a
 
 ### Schema overview
 
-- **380+ tables**, 20+ enum types, 481 migrations
+- **380+ tables**, 20+ enum types, 483 migrations
 - All public tables have **RLS enabled** (276 tables total, 41 with explicit policies, 235 locked to service_role only)
 - Key enums: `app_role`, `program_category`, `module_type`, `enrollment_status`, `decision_status`, `goal_category`
 
@@ -743,6 +744,39 @@ Admins generate shareable enrollment codes per program. Authenticated users rede
 | `EnrollmentCodesManagement.tsx` | `/admin/enrollment-codes` | Admin CRUD with quick code generator, table with status badges, create/edit dialog |
 | `EnrollWithCode.tsx` | `/enroll?code=` | Public enrollment page — state machine (input → validating → valid → enrolling → enrolled → error), auth redirect |
 
+### 15e. Peer Session Presentations
+
+Member-driven presentation activities within group sessions. One member presents a scenario solution, another evaluates it — enabling peer-to-peer learning without admin involvement.
+
+**Database:**
+
+| Table/Object | Purpose |
+|-------------|---------|
+| `group_session_activities` | Links session to topic + assignment type + evaluation method. Tracks presenter/assessor roles, stores form responses and evaluation. `session_id` is UNIQUE (one activity per session). Status workflow: `open` → `presenter_assigned` → `submitted` → `assessor_assigned` → `evaluated` |
+| `group_session_activity_attachments` | Presenter file/link attachments (link, file, image types). FK cascade from activity. |
+| `is_session_group_member(p_session_id)` | SECURITY DEFINER function — returns TRUE if `auth.uid()` is an active member of the group owning the session |
+
+**Storage:** `peer-presentation-attachments` bucket — authenticated upload/read, files stored at `{activityId}/{uuid}.{ext}`
+
+**RLS:** 2 policies per table — admin full access via `has_role()`, group members via `is_session_group_member()` SECURITY DEFINER
+
+**Topic sources (optional, pick one):**
+- `scenario_template_id` FK → structured scenario template
+- `resource_id` FK → library resource
+- `resource_url` → external link (Google Doc, etc.)
+- Or just `topic_title` + `topic_description` (freeform)
+
+**Evaluation:** Evaluator creates `capability_snapshot` with `evaluation_relationship = 'peer'`, reusing the existing `CapabilitySnapshotForm` component. Alternative: free-text `evaluator_notes` for assessments without a rubric.
+
+**Frontend:**
+
+| Component/Page | Location | Purpose |
+|---------------|----------|---------|
+| `SessionActivityCard` | `src/components/groups/sessions/` | Stateful card on GroupSessionDetail — setup dialog, volunteering, submission, evaluation states |
+| `PeerSubmissionForm` | `src/components/groups/sessions/` | Assignment type field rendering (text, textarea, number, rating, checkbox, select) + attachment management |
+| `PeerSessionEvaluationPage` | `src/pages/client/` | Route: `/groups/:groupId/sessions/:sessionId/evaluate/:activityId` — capability assessment evaluation page |
+| `useGroupSessionActivity` | `src/hooks/` | React Query hook — query + 5 mutations (setup, volunteerPresenter, volunteerAssessor, submitPresentation, submitEvaluation) |
+
 ---
 
 ## 16. Developer Tooling
@@ -870,7 +904,7 @@ All paginated pages follow the `EnrolmentsManagement.tsx` pattern: `PAGE_SIZE = 
 
 Tables with FK constraints to `auth.users(id)` (different schema from `public`) have those constraints **invisible to PostgREST**. Using FK hints like `profiles!program_coaches_coach_id_fkey` causes **400 errors** because PostgREST can't resolve the relationship chain through `auth.users`.
 
-**Broken tables (FK → `auth.users`):** `program_coaches`, `program_instructors`, `module_coaches`, `module_instructors`, `client_instructors`, `client_coaches`, `client_enrollments`, `program_cohorts`, `cohort_sessions`
+**Broken tables (FK → `auth.users`):** `program_coaches`, `program_instructors`, `module_coaches`, `module_instructors`, `client_instructors`, `client_coaches`, `client_enrollments`, `program_cohorts`, `cohort_sessions`, `group_session_activities`
 
 **Safe tables (FK → `profiles` directly):** `capability_snapshots`, `decision_comments`, `decisions`, `tasks`, `notifications`, `client_badges`
 

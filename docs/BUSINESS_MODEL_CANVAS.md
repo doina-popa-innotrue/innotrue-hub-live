@@ -295,7 +295,7 @@ The most important assets required to deliver the value propositions.
 
 | Resource | Description | Criticality |
 |----------|-------------|-------------|
-| **Platform codebase** | React + TypeScript frontend (181+ pages), 80 Deno edge functions, 380+ PostgreSQL tables, 481 migrations. Represents 2+ years of development | Critical |
+| **Platform codebase** | React + TypeScript frontend (183+ pages), 80 Deno edge functions, 380+ PostgreSQL tables, 483 migrations. Represents 2+ years of development | Critical |
 | **Entitlements engine** | 5-source merging logic with deny override — the system that enables flexible monetization. Difficult to replicate | Critical |
 | **3-tier staff assignment** | Program → module → enrollment hierarchy with Cal.com URL resolution. Core operational differentiator | Critical |
 | **3 assessment systems** | Capability (radar/evolution), definition (server-side scoring), psychometric (catalog). Unique combination for coaching platforms | High |

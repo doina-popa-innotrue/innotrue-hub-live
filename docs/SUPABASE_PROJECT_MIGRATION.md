@@ -7,7 +7,7 @@
 > **Created:** 2026-03-30 | **Completed:** 2026-03-05
 >
 > ### Migration Summary
-> - Schema: 295 tables via 481 migrations (already pushed before migration)
+> - Schema: 295 tables via 483 migrations (already pushed before migration)
 > - Data: Full data import with `SET session_replication_role = 'replica'`
 > - Auth: 8 users + 9 identities — **re-created via Admin API** (direct SQL INSERT breaks GoTrue)
 > - Storage: 662 files (~112MB) across 4 active buckets — 0 failures
@@ -59,7 +59,7 @@
 
 ### What Makes It Manageable
 
-- Schema fully captured in 481 migrations → `npm run push:migrations` recreates entire DB
+- Schema fully captured in 483 migrations → `npm run push:migrations` recreates entire DB
 - Edge functions deploy in one command → `npm run deploy:functions` handles all 80
 - Cron jobs auto-create from migrations → `20260228120000_restore_all_cron_jobs.sql`
 - Storage backup script exists → `npm run backup:storage`
@@ -361,7 +361,7 @@ Do NOT commit yet — wait until cutover is complete.
 # Link CLI to new project
 npx supabase link --project-ref <NEW_REF>
 
-# Push all 481 migrations
+# Push all 483 migrations
 npx supabase db push
 
 # Verify migration count
@@ -413,7 +413,7 @@ In new project Dashboard → Edge Function Secrets, set all 28 secrets from Sect
 
 #### Step 1.6 — Create storage buckets (~10 min)
 
-The 481 migrations should create the buckets, but verify all 16 exist:
+The 483 migrations should create the buckets, but verify all 17 exist:
 
 ```sql
 SELECT id, name, public FROM storage.buckets ORDER BY name;
@@ -510,7 +510,7 @@ WHERE email = '<your-email>';
 ```bash
 # Backup from old project
 npm run backup:storage
-# This downloads all 16 buckets to ./storage-backup/
+# This downloads all 17 buckets to ./storage-backup/
 
 # Upload user-generated buckets to new project
 # Use supabase CLI or a custom script

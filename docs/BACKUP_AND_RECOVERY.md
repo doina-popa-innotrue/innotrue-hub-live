@@ -82,7 +82,7 @@ No action needed — backups are automatic.
 
 ### Buckets
 
-The app uses 16 storage buckets:
+The app uses 17 storage buckets:
 
 | Bucket | Content | Priority |
 |--------|---------|----------|

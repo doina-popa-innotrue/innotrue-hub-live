@@ -160,3 +160,15 @@ Cross-referenced all 6 RLS fix migrations against 15+ later migrations (Feb 14�
   2. **Client:** Access via `can_access_scenario_paragraph()` SECURITY DEFINER function — checks admin role first, then verifies enrollment → module_progress → scenario_instance chain
 - Also consolidated INSERT/UPDATE/DELETE policies similarly.
 - **Result:** SELECT query time dropped from timeout (>30s) to sub-second.
+
+**`group_session_activities` + `group_session_activity_attachments` RLS** — migration `20260401100000_add_peer_session_activities.sql`:
+
+- **Pattern:** 2 policies per table (admin + group members) to avoid policy-count timeouts.
+- **SECURITY DEFINER:** `is_session_group_member(p_session_id UUID)` — checks `auth.uid()` is an active member of the group owning the session (via `group_sessions → group_memberships` join).
+- **`group_session_activities`:**
+  1. Admin: full CRUD via `has_role(auth.uid(), 'admin'::app_role)`
+  2. Group members: SELECT + INSERT + UPDATE via `is_session_group_member(session_id)`
+- **`group_session_activity_attachments`:**
+  1. Admin: full CRUD via `has_role(auth.uid(), 'admin'::app_role)`
+  2. Authenticated users: SELECT + INSERT where parent activity is accessible; DELETE restricted to own attachments
+- **Storage:** `peer-presentation-attachments` bucket — INSERT/SELECT for authenticated users, DELETE restricted to own uploads

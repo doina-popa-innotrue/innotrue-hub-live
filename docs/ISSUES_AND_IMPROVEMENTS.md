@@ -1879,9 +1879,15 @@ These were analyzed but intentionally excluded from the prioritized roadmap:
 32. ~~**Instructor dev item RLS**~~ ✅ DONE (2026-03-29) — `update-client-development-item` edge function for RLS bypass, `client_instructors` check added to RLS policy
 33. ~~**Scenario paragraph RLS optimization**~~ ✅ DONE (2026-03-30) — Consolidated 6 SELECT policies to 2 via SECURITY DEFINER function, eliminated query timeouts
 34. ~~**PostgREST FK hint fixes**~~ ✅ DONE (2026-03-30) — Fixed broken FK hints in 5 files (StaffAssignments, Cohorts, CohortDashboard, CohortDetail, ModuleTeamContact), replaced with batch profile queries
-35. **SC-4 Organisation Functionality Audit** (future) — org tables/pages not yet audited, will grow with enterprise adoption
-30. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
-31. Remaining phases based on business priorities
+35. ~~**Supabase Production Migration**~~ ✅ DONE (2026-03-05) — London → Frankfurt, auth user re-creation via Admin API, DNS cutover, zero-downtime
+36. ~~**Admin Signup Toggle**~~ ✅ DONE (2026-03-08) — `system_settings.signup_enabled` with admin UI toggle, `useSignupEnabled()` hook, gated Auth + CompleteRegistration pages
+37. ~~**AI Reflection Prompt fixes**~~ ✅ DONE (2026-03-08) — Vertex AI regional endpoint format, edge function error.context Response parsing, reflection title from prompt text
+38. ~~**Unified Client View**~~ ✅ DONE (2026-03-08) — Assignments, scenarios, and assessments combined into tabbed client `/assignments` page
+39. ~~**Peer Session Presentations**~~ ✅ DONE (2026-03-09) — `group_session_activities` + `group_session_activity_attachments` tables, `SessionActivityCard`, `PeerSubmissionForm`, `PeerSessionEvaluationPage`, `useGroupSessionActivity` hook, `peer-presentation-attachments` storage bucket, `is_session_group_member()` SECURITY DEFINER
+40. ~~**Bug fixes**~~ ✅ DONE (2026-03-05 through 2026-03-09) — Self-assessments missing enrollment_id, capability_domains undefined crash, "Psycho" tab rename, group session creation for all members, collapsible "What's included", wheel goal count query fix, journey ring overlap fix
+41. **SC-4 Organisation Functionality Audit** (future) — org tables/pages not yet audited, will grow with enterprise adoption
+42. Phase 3 AI features (system prompt hardening first, then AI Learning Companion)
+43. Remaining phases based on business priorities
 
 ### 11.8 New Data Tables Required by Roadmap
 
@@ -1902,6 +1908,8 @@ Several roadmap items require new database tables or fields. These should be pla
 | ~~Priority 0~~ | ~~G8 Enrollment codes~~ | ✅ DONE — `enrollment_codes` table (program_id, cohort_id, code, code_type, max_uses, grants_tier, is_free, discount_percent, expires_at), `client_enrollments.enrollment_code_id` FK, `validate_enrollment_code` RPC, `redeem-enrollment-code` edge function |
 | ~~Priority 0~~ | ~~Assignment routing~~ | ✅ DONE — async via `create_notification` RPC, My Queue via `enrollment_module_staff` |
 | ~~Priority 0~~ | ~~Assignment transfer~~ | ✅ DONE — `TransferAssignmentDialog` component |
+| ~~Peer Sessions~~ | ~~Peer session presentations~~ | ✅ DONE — `group_session_activities` (session_id UNIQUE, topic/assignment/assessment FKs, presenter/assessor user IDs, responses JSONB, status workflow), `group_session_activity_attachments` (link/file/image), `peer-presentation-attachments` storage bucket, `is_session_group_member()` SECURITY DEFINER |
+| ~~Admin Toggle~~ | ~~Signup enable/disable~~ | ✅ DONE — `system_settings.signup_enabled` (boolean, default true) |
 | Phase 1 | Onboarding | `profiles.onboarding_completed` (boolean) |
 | Phase 3 | Streaks/XP | `engagement_streaks` (user, streak_type, current_count, longest_count, last_activity_date), `user_xp` (user, total_xp, level) |
 | Phase 3 | Activity feed | `activity_feed_events` (user_id, event_type, target_type, target_id, created_at) |
