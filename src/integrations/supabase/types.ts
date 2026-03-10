@@ -5969,6 +5969,7 @@ export type Database = {
           resource_id: string | null
           resource_url: string | null
           responses: Json | null
+          scenario_assignment_id: string | null
           scenario_template_id: string | null
           scoring_snapshot_id: string | null
           session_id: string
@@ -5992,6 +5993,7 @@ export type Database = {
           resource_id?: string | null
           resource_url?: string | null
           responses?: Json | null
+          scenario_assignment_id?: string | null
           scenario_template_id?: string | null
           scoring_snapshot_id?: string | null
           session_id: string
@@ -6015,6 +6017,7 @@ export type Database = {
           resource_id?: string | null
           resource_url?: string | null
           responses?: Json | null
+          scenario_assignment_id?: string | null
           scenario_template_id?: string | null
           scoring_snapshot_id?: string | null
           session_id?: string
@@ -6051,6 +6054,13 @@ export type Database = {
             columns: ["resource_id"]
             isOneToOne: false
             referencedRelation: "resource_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_session_activities_scenario_assignment_id_fkey"
+            columns: ["scenario_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scenario_assignments"
             referencedColumns: ["id"]
           },
           {

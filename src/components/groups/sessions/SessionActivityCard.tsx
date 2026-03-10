@@ -64,6 +64,7 @@ export function SessionActivityCard({ sessionId, groupId }: SessionActivityCardP
     setupActivity,
     volunteerAsPresenter,
     volunteerAsAssessor,
+    createScenarioAssignment,
     submitPresentation,
     submitEvaluation,
   } = useGroupSessionActivity(sessionId);
@@ -441,6 +442,34 @@ export function SessionActivityCard({ sessionId, groupId }: SessionActivityCardP
               Scenario: {activity.scenario_template.title}
             </Badge>
           )}
+          {isPresenter && activity.scenario_template_id && (
+            activity.scenario_assignment_id ? (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => navigate(`/scenarios/${activity.scenario_assignment_id}`)}
+                className="gap-1"
+              >
+                <BookOpen className="h-4 w-4" />
+                Open Scenario
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() =>
+                  createScenarioAssignment.mutate(activity.id, {
+                    onSuccess: (assignmentId) => navigate(`/scenarios/${assignmentId}`),
+                  })
+                }
+                disabled={createScenarioAssignment.isPending}
+                className="gap-1"
+              >
+                <BookOpen className="h-4 w-4" />
+                {createScenarioAssignment.isPending ? "Starting..." : "Start Scenario"}
+              </Button>
+            )
+          )}
           {activity.resource && (
             <Badge variant="outline" className="gap-1">
               <FileText className="h-3 w-3" />
@@ -539,6 +568,20 @@ export function SessionActivityCard({ sessionId, groupId }: SessionActivityCardP
           <p className="text-sm text-muted-foreground">
             Waiting for {activity.presenter_profile?.name || "presenter"} to submit...
           </p>
+        )}
+
+        {/* Link to scenario for non-presenter after submission */}
+        {["submitted", "assessor_assigned", "evaluated"].includes(activity.status) &&
+          activity.scenario_assignment_id && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/scenarios/${activity.scenario_assignment_id}`)}
+            className="gap-1"
+          >
+            <BookOpen className="h-4 w-4" />
+            View Scenario Answers
+          </Button>
         )}
 
         {/* Show submitted responses (read-only) */}

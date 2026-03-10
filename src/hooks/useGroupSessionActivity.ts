@@ -10,6 +10,7 @@ export interface SessionActivity {
   topic_title: string;
   topic_description: string | null;
   scenario_template_id: string | null;
+  scenario_assignment_id: string | null;
   resource_id: string | null;
   resource_url: string | null;
   assignment_type_id: string | null;
@@ -114,6 +115,27 @@ export function useGroupSessionActivity(sessionId: string | undefined) {
   const setupActivity = useMutation({
     mutationFn: async (params: SetupActivityParams) => {
       if (!user) throw new Error("Not authenticated");
+
+      // If presenter is volunteering and a scenario template is linked,
+      // create a scenario assignment so they can open and answer the scenario
+      let scenarioAssignmentId: string | null = null;
+      if (params.volunteerAsPresenter && params.scenarioTemplateId) {
+        const { data: sa, error: saErr } = await supabase
+          .from("scenario_assignments")
+          .insert({
+            template_id: params.scenarioTemplateId,
+            user_id: user.id,
+            status: "draft",
+          })
+          .select("id")
+          .single();
+        if (saErr) {
+          console.error("Error creating scenario assignment:", saErr);
+          throw saErr;
+        }
+        scenarioAssignmentId = sa.id;
+      }
+
       const { data, error } = await supabase
         .from("group_session_activities")
         .insert({
@@ -121,6 +143,7 @@ export function useGroupSessionActivity(sessionId: string | undefined) {
           topic_title: params.topicTitle,
           topic_description: params.topicDescription || null,
           scenario_template_id: params.scenarioTemplateId || null,
+          scenario_assignment_id: scenarioAssignmentId,
           resource_id: params.resourceId || null,
           resource_url: params.resourceUrl || null,
           assignment_type_id: params.assignmentTypeId || null,
@@ -147,10 +170,39 @@ export function useGroupSessionActivity(sessionId: string | undefined) {
   const volunteerAsPresenter = useMutation({
     mutationFn: async (activityId: string) => {
       if (!user) throw new Error("Not authenticated");
+
+      // Check if the activity has a scenario template that needs an assignment
+      const { data: actData } = await supabase
+        .from("group_session_activities")
+        .select("scenario_template_id, scenario_assignment_id")
+        .eq("id", activityId)
+        .single();
+
+      let scenarioAssignmentId: string | null = actData?.scenario_assignment_id ?? null;
+
+      // Create scenario assignment if template exists and no assignment yet
+      if (actData?.scenario_template_id && !scenarioAssignmentId) {
+        const { data: sa, error: saErr } = await supabase
+          .from("scenario_assignments")
+          .insert({
+            template_id: actData.scenario_template_id,
+            user_id: user.id,
+            status: "draft",
+          })
+          .select("id")
+          .single();
+        if (saErr) {
+          console.error("Error creating scenario assignment:", saErr);
+          throw saErr;
+        }
+        scenarioAssignmentId = sa.id;
+      }
+
       const { error } = await supabase
         .from("group_session_activities")
         .update({
           presenter_user_id: user.id,
+          scenario_assignment_id: scenarioAssignmentId,
           status: "presenter_assigned",
         })
         .eq("id", activityId);
@@ -185,6 +237,49 @@ export function useGroupSessionActivity(sessionId: string | undefined) {
     onError: (err) => {
       console.error("Error volunteering as assessor:", err);
       toast.error("Failed to volunteer as assessor");
+    },
+  });
+
+  // Creates a scenario assignment for activities that were set up before
+  // the scenario_assignment_id column existed (backfill)
+  const createScenarioAssignment = useMutation({
+    mutationFn: async (activityId: string) => {
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: actData, error: fetchErr } = await supabase
+        .from("group_session_activities")
+        .select("scenario_template_id, scenario_assignment_id")
+        .eq("id", activityId)
+        .single();
+      if (fetchErr) throw fetchErr;
+      if (actData.scenario_assignment_id) return actData.scenario_assignment_id;
+      if (!actData.scenario_template_id) throw new Error("No scenario template linked");
+
+      const { data: sa, error: saErr } = await supabase
+        .from("scenario_assignments")
+        .insert({
+          template_id: actData.scenario_template_id,
+          user_id: user.id,
+          status: "draft",
+        })
+        .select("id")
+        .single();
+      if (saErr) throw saErr;
+
+      const { error: upErr } = await supabase
+        .from("group_session_activities")
+        .update({ scenario_assignment_id: sa.id })
+        .eq("id", activityId);
+      if (upErr) throw upErr;
+
+      return sa.id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+    onError: (err) => {
+      console.error("Error creating scenario assignment:", err);
+      toast.error("Failed to start scenario");
     },
   });
 
@@ -241,6 +336,7 @@ export function useGroupSessionActivity(sessionId: string | undefined) {
     setupActivity,
     volunteerAsPresenter,
     volunteerAsAssessor,
+    createScenarioAssignment,
     submitPresentation,
     submitEvaluation,
   };
