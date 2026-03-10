@@ -1889,3 +1889,26 @@ Plan in `.claude/plans/snazzy-wishing-quilt.md`.
 **New page:** `ScenarioPrintPage.tsx`
 **New route:** `/scenarios/:id/print`
 **Migrations deployed:** `20260412120000`, `20260412140000`
+
+## Capability Assessment Self/Evaluator Results Toggle (2026-04-12)
+
+Commit `55a0110`. When both self and evaluator capability assessments exist for a module, users can now view either one directly.
+
+### Problem
+The module's Capability Assessment card had a single "View Results" button that always opened the most recent snapshot on the Current tab. If both self-evaluation and evaluator assessment existed, there was no way to choose which to view — the user had to dig into the History tab and filter.
+
+### Solution
+
+**ModuleSelfAssessment card** (`src/components/modules/ModuleSelfAssessment.tsx`):
+- When both `completedSelfSnapshot` and `completedEvaluatorSnapshot` exist, replaces single "View Results" button with two: "Self Results" (icon: User) and "Evaluator Results" (icon: UserCheck)
+- Each passes `?view=self` or `?view=evaluator` query param to the results page
+- When only one type exists, keeps original single "View Results" button (no param)
+
+**CapabilityAssessmentDetail page** (`src/pages/client/CapabilityAssessmentDetail.tsx`):
+- Reads `?view=self|evaluator` URL param to initialize `currentView` state
+- Computes `latestSelfSnapshot` and `latestEvaluatorSnapshot` from completed snapshots
+- Current tab shows a **Self / Evaluator toggle** (pill-style button group) when both types exist
+- Toggle switches `currentView` state, which controls which snapshot is displayed
+- Fallback: if selected view has no snapshot, falls through to the other type
+
+**Files changed:** 2 (`ModuleSelfAssessment.tsx`, `CapabilityAssessmentDetail.tsx`)
