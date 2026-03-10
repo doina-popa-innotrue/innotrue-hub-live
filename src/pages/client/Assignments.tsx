@@ -659,7 +659,10 @@ export default function ClientAssignments() {
                       if (assignment.type === "scenario" && assignment.scenario_assignment_id) {
                         navigate(`/scenarios/${assignment.scenario_assignment_id}`);
                       } else if (assignment.type === "assessment" && assignment.assessment_id) {
-                        navigate(`/capabilities/${assignment.assessment_id}`);
+                        const params = assignment.enrollment_id
+                          ? `?enrollment_id=${assignment.enrollment_id}`
+                          : "";
+                        navigate(`/capabilities/${assignment.assessment_id}${params}`);
                       } else {
                         navigate(
                           `/programs/${assignment.program_id}/modules/${assignment.module_id}`,
