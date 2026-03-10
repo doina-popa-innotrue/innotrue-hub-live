@@ -271,8 +271,17 @@ export default function ClientAssignments() {
 
       // Map scenario assignments to the common Assignment interface
       // Filter out peer-session scenarios (no enrollment) — those are managed from the group session page
+      // Deduplicate by (template_id, module_id): query is ordered by updated_at DESC,
+      // so first occurrence per key is the most recent (handles duplicate starts + revisions)
+      const seenScenarioKeys = new Set<string>();
       const scenarioAssignmentsList: Assignment[] = (scenarioResult.data || [])
         .filter((sa) => sa.enrollment_id || sa.module_id)
+        .filter((sa) => {
+          const key = `${sa.template_id}:${sa.module_id || ""}`;
+          if (seenScenarioKeys.has(key)) return false;
+          seenScenarioKeys.add(key);
+          return true;
+        })
         .map((sa) => {
         const enrollment = enrollments.find((e) => e.id === sa.enrollment_id);
         const scenarioModule = sa.program_modules as any;
