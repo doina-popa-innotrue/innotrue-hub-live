@@ -16,19 +16,22 @@ import {
  */
 const tourStepFeatureMapping: Record<string, string> = {
   // Client tour step mappings
-  '[data-tour="client-groups"]': "groups",
+  '[data-tour="client-feedback"]': "feedback_reviews",
   '[data-tour="client-guided-paths"]': "guided_paths",
-  '[data-tour="client-analytics"]': "usage",
-  '[data-tour="client-recommendations"]': "ai_recommendations",
-  '[data-tour="client-external-courses"]': "external_courses",
+  '[data-tour="client-groups"]': "groups",
+  '[data-tour="client-skills"]': "skills_map",
+  '[data-tour="client-services"]': "services",
+  '[data-tour="client-credits"]': "credits",
+  '[data-tour="client-usage"]': "usage",
+  '[data-tour="client-wheel-of-life"]': "wheel_of_life",
   '[data-tour="client-goals"]': "goals",
   '[data-tour="client-decisions"]': "decision_toolkit_basic",
-  '[data-tour="client-tasks"]': "tasks",
+  '[data-tour="client-tasks"]': "decision_toolkit_basic",
   '[data-tour="client-development-items"]': "development_items",
-  '[data-tour="client-timeline"]': "development_timeline",
-  '[data-tour="client-credits"]': "credits",
-  '[data-tour="client-wheel-of-life"]': "wheel_of_life",
-  '[data-tour="client-assessments"]': "assessments",
+  '[data-tour="client-development-timeline"]': "development_timeline",
+  '[data-tour="client-my-assessments"]': "assessments",
+  '[data-tour="client-capability-assessments"]': "assessments",
+  '[data-tour="client-recommendations"]': "ai_recommendations",
 
   // Instructor tour step mappings
   '[data-tour="teaching-groups"]': "groups",
@@ -37,7 +40,7 @@ const tourStepFeatureMapping: Record<string, string> = {
   '[data-tour="coaching-tasks"]': "tasks",
 
   // Admin tour step mappings (mostly always visible for admins, but some can be gated)
-  '[data-tour="admin-guided-paths"]': "guided_paths",
+  '[data-tour="admin-guided-path-templates"]': "guided_paths",
   '[data-tour="admin-groups"]': "groups",
   '[data-tour="admin-credit-services"]': "credits",
 
