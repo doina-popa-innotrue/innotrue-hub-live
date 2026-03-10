@@ -72,15 +72,15 @@ const handler = async (req: Request): Promise<Response> => {
       programId = moduleData?.program_id;
     }
 
-    // Get program title
+    // Get program name
     const { data: program } = await supabase
       .from("programs")
-      .select("title")
+      .select("name")
       .eq("id", programId)
       .single();
 
     const clientUserId = enrollment?.client_user_id;
-    const programTitle = program?.title || "Unknown Program";
+    const programTitle = program?.name || "Unknown Program";
 
     // Get client name
     const { data: clientProfile } = await supabase
