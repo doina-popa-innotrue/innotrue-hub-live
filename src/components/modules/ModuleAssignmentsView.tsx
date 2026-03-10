@@ -27,6 +27,7 @@ interface ModuleAssignmentsViewProps {
   isEditable: boolean; // true for coach/instructor, false for client
   isInstructor?: boolean; // true when instructor/coach is viewing
   hideHeader?: boolean; // true when embedded inside AssignmentSection (avoids duplicate heading)
+  clientUserId?: string; // the client's user ID (for instructor view → scenario linking)
 }
 
 export function ModuleAssignmentsView({
@@ -35,6 +36,7 @@ export function ModuleAssignmentsView({
   isEditable,
   isInstructor = false,
   hideHeader = false,
+  clientUserId,
 }: ModuleAssignmentsViewProps) {
   const { data: assignedTypes, isLoading } = useQuery({
     queryKey: ["module-assigned-assignments", moduleId],
@@ -81,6 +83,7 @@ export function ModuleAssignmentsView({
           assignmentType={type}
           isEditable={isEditable}
           isInstructor={isInstructor}
+          clientUserId={clientUserId}
         />
       ))}
     </div>

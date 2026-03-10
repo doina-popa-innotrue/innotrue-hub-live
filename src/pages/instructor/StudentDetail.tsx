@@ -1054,6 +1054,7 @@ export default function StudentDetail() {
                 moduleProgressId={viewingReflections.moduleProgressId}
                 isEditable={true}
                 isInstructor={true}
+                clientUserId={studentInfo?.id}
               />
             </div>
           )}

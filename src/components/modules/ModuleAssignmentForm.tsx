@@ -31,6 +31,8 @@ import {
   CheckCircle,
   EyeOff,
   FolderOpen,
+  FileText,
+  Printer,
 } from "lucide-react";
 import { useGoogleDriveSSO } from "@/hooks/useGoogleDriveSSO";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +83,7 @@ interface ModuleAssignmentFormProps {
   isEditable: boolean;
   isInstructor?: boolean; // true when instructor/coach is viewing
   moduleId?: string; // needed to fetch linked capability assessment from config
+  clientUserId?: string; // the client's user ID (for instructor view → scenario linking)
 }
 
 export function ModuleAssignmentForm({
@@ -89,6 +92,7 @@ export function ModuleAssignmentForm({
   isEditable,
   isInstructor = false,
   moduleId,
+  clientUserId,
 }: ModuleAssignmentFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -139,6 +143,23 @@ export function ModuleAssignmentForm({
       return data;
     },
     enabled: !!moduleId && isInstructor,
+  });
+
+  // Query linked scenario assignments for instructor banner
+  const { data: linkedScenarios } = useQuery({
+    queryKey: ["linked-scenarios-for-module", moduleId, clientUserId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("scenario_assignments")
+        .select("id, status, template_id, scenario_templates(title)")
+        .eq("module_id", moduleId!)
+        .eq("user_id", clientUserId!)
+        .neq("status", "draft")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!moduleId && !!clientUserId && isInstructor,
   });
 
   const { data: existingAssignment, isLoading } = useQuery({
@@ -812,6 +833,70 @@ export function ModuleAssignmentForm({
         {!isInstructor && status === "reviewed" && existingAssignment && (
           <div className="pt-4 border-t">
             <ClientAssignmentFeedback assignmentId={existingAssignment.id} />
+          </div>
+        )}
+
+        {/* Linked Scenario Banner — instructor view only */}
+        {isInstructor && linkedScenarios && linkedScenarios.length > 0 && (
+          <div className="pt-4 border-t space-y-2">
+            {linkedScenarios.map((scenario) => {
+              const title =
+                (scenario.scenario_templates as { title: string } | null)?.title ||
+                "Untitled Scenario";
+              const statusLabels: Record<string, string> = {
+                submitted: "Submitted",
+                in_review: "In Review",
+                evaluated: "Evaluated",
+              };
+              const statusVariants: Record<string, "outline" | "default" | "secondary"> = {
+                submitted: "outline",
+                in_review: "secondary",
+                evaluated: "default",
+              };
+              return (
+                <div
+                  key={scenario.id}
+                  className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/30 p-3"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                    <span className="text-sm font-medium truncate">
+                      Linked Scenario: {title}
+                    </span>
+                    <Badge variant={statusVariants[scenario.status] || "secondary"}>
+                      {statusLabels[scenario.status] || scenario.status}
+                    </Badge>
+                  </div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      onClick={() =>
+                        window.open(
+                          `/teaching/scenarios/${scenario.id}`,
+                          "_blank",
+                        )
+                      }
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Evaluate
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      onClick={() =>
+                        window.open(`/scenarios/${scenario.id}/print`, "_blank")
+                      }
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                      Print
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 

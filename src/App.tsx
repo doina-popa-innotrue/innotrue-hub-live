@@ -204,6 +204,7 @@ const TermsHistory = lazy(() => import("./pages/client/TermsHistory"));
 const AllNotifications = lazy(() => import("./pages/client/AllNotifications"));
 const NotificationSettings = lazy(() => import("./pages/client/NotificationSettings"));
 const ClientScenarioDetail = lazy(() => import("./pages/client/ScenarioDetail"));
+const ScenarioPrintPage = lazy(() => import("./pages/scenarios/ScenarioPrintPage"));
 const DevelopmentProfile = lazy(() => import("./pages/client/DevelopmentProfile"));
 
 // Lazy-loaded pages — Org Admin
@@ -1864,6 +1865,14 @@ const App = () => (
                   <Route
                     path="/scenarios"
                     element={<Navigate to="/assignments" replace />}
+                  />
+                  <Route
+                    path="/scenarios/:id/print"
+                    element={
+                      <ProtectedRoute>
+                        <ScenarioPrintPage />
+                      </ProtectedRoute>
+                    }
                   />
                   <Route
                     path="/scenarios/:id"

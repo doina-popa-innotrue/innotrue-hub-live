@@ -179,3 +179,22 @@ All colors MUST be HSL.
     display: none;
   }
 }
+
+@media print {
+  .print\:hidden,
+  [data-sidebar],
+  nav,
+  .toaster {
+    display: none !important;
+  }
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .break-inside-avoid-page {
+    break-inside: avoid-page;
+  }
+  .break-inside-avoid {
+    break-inside: avoid;
+  }
+}

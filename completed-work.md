@@ -1828,3 +1828,64 @@ Created `docs/DATA_CONFIGURATION_GUIDE.md` (~900 lines) — comprehensive data m
 **New components (4):** `BulkUserImport.tsx`, `CoachingSessionNotes.tsx`, `InviteClientDialog.tsx`, `TeachingGuide.tsx`
 **New migration:** `20260326140000_phase5_r4_coach_invites.sql`
 **Deployed:** All 3 environments + Lovable + 79 edge functions + migration
+
+## Client Assignments Bugfix Sprint (2026-04-12)
+Commits: `e7dfdd8` → `2214634` → `3c9df02` → `35c99e9` → `f6c0baf` → `bd55cdf` → `944ae8a` → `310486a`
+- Fixed crash on Assignments page from peer session scenario with empty `program_id` (`e7dfdd8`)
+- Fixed duplicate self-assessments when modules share the same assessment — deduplicate by `assessment_id` (`2214634`)
+- Deduplicated scenario assignments by `template_id`+`module_id` in Assignments page (`3c9df02`)
+- Prevented duplicate scenario assignment creation + migration to cleanup stale drafts (`35c99e9`)
+- Added count badge to Reviewed tab in Assignments page (`bd55cdf`)
+- Fixed table-level RLS: clients couldn't add attachments on their own assignments (`944ae8a`)
+- Fixed self-assessments started from Assignments page missing `enrollment_id` (`310486a`)
+- Linked peer presentation to scenario assignment (`33dd60b`)
+- Moved My Notes below Scenarios and Assignments on client module page (`438e5c2`)
+
+## Attachment Storage RLS Fix (2026-04-12)
+Commit `5b0e30a`. Migration `20260412120000_fix_assignment_attachment_storage_policies.sql`.
+- **Root cause:** Storage bucket renamed from `module-assessment-attachments` to `module-assignment-attachments` but `storage.objects` policies still referenced the OLD bucket name. Code uploads to new bucket, no policy matches → silent RLS violation.
+- Dropped 3 stale storage policies referencing `module-assessment-attachments`
+- Created 3 replacement policies referencing `module-assignment-attachments`
+- Added `is_assignment_owner(p_assignment_id)` SECURITY DEFINER function for table-level RLS (bypasses nested RLS on `module_assignments` → `module_progress` → `client_enrollments`)
+- Replaced inline-subquery table policy with SECURITY DEFINER version
+
+## E2E Test Fix (2026-04-12)
+Commit `6b6cb20`.
+- Client dashboard test timed out in CI (10s insufficient for preprod Supabase network latency)
+- Increased timeout to 30s, targeted specific "My Dashboard" heading for better diagnostics
+
+## Assignment Submitted Notification Fix (2026-04-12)
+Commit `3d7c37f`. Migration `20260412140000_add_assignment_submitted_notification_type.sql`.
+- **Bug 1:** `notification_types` table had no `assignment_submitted` entry — `create_notification()` RPC threw RAISE EXCEPTION, edge function catch block swallowed it silently
+- **Bug 2:** Edge function `notify-assignment-submitted` queried `programs.title` but column is `programs.name` — program name always showed as "Unknown Program"
+- Added missing notification type row via migration (ON CONFLICT DO NOTHING)
+- Fixed column name in edge function (`title` → `name`)
+
+## Instructor Scenario Access from Assignment Review (2026-04-12)
+Plan in `.claude/plans/snazzy-wishing-quilt.md`.
+- **Problem:** Instructors reviewing assignments with linked scenarios couldn't access the scenario — had to navigate separately to `/teaching/scenarios`
+- **Solution:** Added linked scenario banner in assignment review + print-friendly scenario page
+
+### Component Changes
+- `ModuleAssignmentsView.tsx` — added `clientUserId` prop, passes through to `ModuleAssignmentForm`
+- `ModuleAssignmentForm.tsx` — added `clientUserId` prop, linked scenario query (`scenario_assignments` by `module_id` + `user_id`, excludes drafts), blue banner card per linked scenario with title + status badge + "Evaluate" button (→ `/teaching/scenarios/:id` in new tab) + "Print" button (→ `/scenarios/:id/print` in new tab)
+- `StudentDetail.tsx` — passes `clientUserId={studentInfo?.id}` to `ModuleAssignmentsView`
+
+### New Page
+- `src/pages/scenarios/ScenarioPrintPage.tsx` — print-friendly scenario page (no sidebar/DashboardLayout)
+  - Document header: scenario title, client name, status, dates, module, program
+  - Score summary with domain breakdown (if evaluated)
+  - Evaluator notes + revision notes
+  - All sections → paragraphs with scenario content, client responses, domain scores, evaluator feedback
+  - Fetches client + evaluator profiles separately (PostgREST FK hint rule)
+  - Reuses existing hooks: `useScenarioAssignment`, `useScenarioSections`, `useSectionParagraphs`, `useParagraphResponses`, `useParagraphEvaluations`, `useParagraphQuestionScores`, `useScenarioScoreSummary`
+  - Print button hidden when printing via `print:hidden`
+
+### Route & CSS
+- `App.tsx` — lazy import + route `/scenarios/:id/print` (ProtectedRoute, no role restriction, no DashboardLayout)
+- `index.css` — added `@media print` styles (hide sidebar/nav/toaster, color-adjust, break-inside-avoid)
+
+**Files changed:** 6 (3 modified, 1 new page, 1 route update, 1 CSS update)
+**New page:** `ScenarioPrintPage.tsx`
+**New route:** `/scenarios/:id/print`
+**Migrations deployed:** `20260412120000`, `20260412140000`
