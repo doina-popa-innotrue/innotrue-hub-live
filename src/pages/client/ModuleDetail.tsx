@@ -1022,6 +1022,19 @@ export default function ModuleDetail() {
           </Card>
         )}
 
+        {!isLocked && module.progress?.id && enrollment?.id && (
+          <>
+            <Separator />
+            <ModuleScenariosSection moduleId={module.id} enrollmentId={enrollment.id} />
+            <AssignmentSection
+              clientContent={clientContent}
+              moduleId={module.id}
+              moduleProgressId={module.progress.id}
+              enrollmentId={enrollment.id}
+            />
+          </>
+        )}
+
         {!isLocked && (
           <Card>
             <CardHeader>
@@ -1082,19 +1095,6 @@ export default function ModuleDetail() {
               )}
             </CardContent>
           </Card>
-        )}
-
-        {!isLocked && module.progress?.id && enrollment?.id && (
-          <>
-            <Separator />
-            <ModuleScenariosSection moduleId={module.id} enrollmentId={enrollment.id} />
-            <AssignmentSection
-              clientContent={clientContent}
-              moduleId={module.id}
-              moduleProgressId={module.progress.id}
-              enrollmentId={enrollment.id}
-            />
-          </>
         )}
       </div>
     </SessionMismatchGuard>
