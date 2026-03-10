@@ -61,6 +61,33 @@ interface SubmitEvaluationParams {
   evaluatorNotes?: string;
 }
 
+// Reuse an existing draft scenario assignment for the same template+user,
+// or create a new one.  Prevents duplicate drafts from accumulating.
+async function findOrCreateScenarioAssignment(
+  templateId: string,
+  userId: string,
+): Promise<string> {
+  const { data: existing } = await supabase
+    .from("scenario_assignments")
+    .select("id")
+    .eq("template_id", templateId)
+    .eq("user_id", userId)
+    .eq("status", "draft")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) return existing.id;
+
+  const { data: created, error } = await supabase
+    .from("scenario_assignments")
+    .insert({ template_id: templateId, user_id: userId, status: "draft" })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return created.id;
+}
+
 export function useGroupSessionActivity(sessionId: string | undefined) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -117,23 +144,13 @@ export function useGroupSessionActivity(sessionId: string | undefined) {
       if (!user) throw new Error("Not authenticated");
 
       // If presenter is volunteering and a scenario template is linked,
-      // create a scenario assignment so they can open and answer the scenario
+      // find or create a scenario assignment so they can open and answer the scenario
       let scenarioAssignmentId: string | null = null;
       if (params.volunteerAsPresenter && params.scenarioTemplateId) {
-        const { data: sa, error: saErr } = await supabase
-          .from("scenario_assignments")
-          .insert({
-            template_id: params.scenarioTemplateId,
-            user_id: user.id,
-            status: "draft",
-          })
-          .select("id")
-          .single();
-        if (saErr) {
-          console.error("Error creating scenario assignment:", saErr);
-          throw saErr;
-        }
-        scenarioAssignmentId = sa.id;
+        scenarioAssignmentId = await findOrCreateScenarioAssignment(
+          params.scenarioTemplateId,
+          user.id,
+        );
       }
 
       const { data, error } = await supabase
@@ -180,22 +197,12 @@ export function useGroupSessionActivity(sessionId: string | undefined) {
 
       let scenarioAssignmentId: string | null = actData?.scenario_assignment_id ?? null;
 
-      // Create scenario assignment if template exists and no assignment yet
+      // Find or create scenario assignment if template exists and no assignment yet
       if (actData?.scenario_template_id && !scenarioAssignmentId) {
-        const { data: sa, error: saErr } = await supabase
-          .from("scenario_assignments")
-          .insert({
-            template_id: actData.scenario_template_id,
-            user_id: user.id,
-            status: "draft",
-          })
-          .select("id")
-          .single();
-        if (saErr) {
-          console.error("Error creating scenario assignment:", saErr);
-          throw saErr;
-        }
-        scenarioAssignmentId = sa.id;
+        scenarioAssignmentId = await findOrCreateScenarioAssignment(
+          actData.scenario_template_id,
+          user.id,
+        );
       }
 
       const { error } = await supabase
@@ -255,24 +262,18 @@ export function useGroupSessionActivity(sessionId: string | undefined) {
       if (actData.scenario_assignment_id) return actData.scenario_assignment_id;
       if (!actData.scenario_template_id) throw new Error("No scenario template linked");
 
-      const { data: sa, error: saErr } = await supabase
-        .from("scenario_assignments")
-        .insert({
-          template_id: actData.scenario_template_id,
-          user_id: user.id,
-          status: "draft",
-        })
-        .select("id")
-        .single();
-      if (saErr) throw saErr;
+      const assignmentId = await findOrCreateScenarioAssignment(
+        actData.scenario_template_id,
+        user.id,
+      );
 
       const { error: upErr } = await supabase
         .from("group_session_activities")
-        .update({ scenario_assignment_id: sa.id })
+        .update({ scenario_assignment_id: assignmentId })
         .eq("id", activityId);
       if (upErr) throw upErr;
 
-      return sa.id;
+      return assignmentId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });

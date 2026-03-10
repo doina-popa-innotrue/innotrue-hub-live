@@ -204,6 +204,31 @@ export function useScenarioAssignmentMutations() {
       const { error } = await supabase.from("scenario_assignments").update(updateData).eq("id", id);
 
       if (error) throw error;
+
+      // Cleanup: when submitting, delete other stale draft assignments for
+      // the same (template_id, user_id) to prevent duplicate accumulation
+      if (status === "submitted" && user?.id) {
+        const { data: submitted } = await supabase
+          .from("scenario_assignments")
+          .select("template_id")
+          .eq("id", id)
+          .single();
+
+        if (submitted?.template_id) {
+          const { error: cleanupErr } = await supabase
+            .from("scenario_assignments")
+            .delete()
+            .eq("template_id", submitted.template_id)
+            .eq("user_id", user.id)
+            .eq("status", "draft")
+            .neq("id", id);
+
+          if (cleanupErr) {
+            // Non-critical — log but don't fail the submission
+            console.error("Error cleaning up stale draft assignments:", cleanupErr);
+          }
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["scenario-assignments"] });

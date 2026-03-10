@@ -165,26 +165,43 @@ function ScenarioItem({
 
     setIsStarting(true);
     try {
-      // Create a new assignment for this user
-      const { data: newAssignment, error } = await supabase
+      // Reuse an existing draft assignment for the same template+user if one exists
+      const { data: existing } = await supabase
         .from("scenario_assignments")
-        .insert({
-          template_id: templateId,
-          user_id: user.id,
-          module_id: moduleId,
-          enrollment_id: enrollmentId || null,
-          status: "draft",
-        })
         .select("id")
-        .single();
+        .eq("template_id", templateId)
+        .eq("user_id", user.id)
+        .eq("status", "draft")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      if (error) throw error;
+      let assignmentId: string;
+
+      if (existing) {
+        assignmentId = existing.id;
+      } else {
+        const { data: newAssignment, error } = await supabase
+          .from("scenario_assignments")
+          .insert({
+            template_id: templateId,
+            user_id: user.id,
+            module_id: moduleId,
+            enrollment_id: enrollmentId || null,
+            status: "draft",
+          })
+          .select("id")
+          .single();
+
+        if (error) throw error;
+        assignmentId = newAssignment.id;
+      }
 
       toast.success("Scenario started!");
       onAssignmentCreated();
 
       // Navigate to the scenario
-      navigate(`/scenarios/${newAssignment.id}`);
+      navigate(`/scenarios/${assignmentId}`);
     } catch (error: any) {
       console.error("Error starting scenario:", error);
       toast.error("Failed to start scenario");
