@@ -270,7 +270,10 @@ export default function ClientAssignments() {
       }
 
       // Map scenario assignments to the common Assignment interface
-      const scenarioAssignmentsList: Assignment[] = (scenarioResult.data || []).map((sa) => {
+      // Filter out peer-session scenarios (no enrollment) — those are managed from the group session page
+      const scenarioAssignmentsList: Assignment[] = (scenarioResult.data || [])
+        .filter((sa) => sa.enrollment_id || sa.module_id)
+        .map((sa) => {
         const enrollment = enrollments.find((e) => e.id === sa.enrollment_id);
         const scenarioModule = sa.program_modules as any;
         let mappedStatus = sa.status;
@@ -502,7 +505,9 @@ export default function ClientAssignments() {
 
   const uniquePrograms = Array.from(
     new Map(
-      assignments.map((a) => [a.program_id, { id: a.program_id, name: a.program_name }]),
+      assignments
+        .filter((a) => a.program_id) // exclude assignments without a program (safety)
+        .map((a) => [a.program_id, { id: a.program_id, name: a.program_name }]),
     ).values(),
   );
 
