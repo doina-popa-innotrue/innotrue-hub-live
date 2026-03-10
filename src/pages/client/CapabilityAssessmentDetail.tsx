@@ -47,9 +47,11 @@ export default function CapabilityAssessmentDetail() {
   const [historyFilter, setHistoryFilter] = useState<SnapshotTypeFilter>("all");
   const [activeTab, setActiveTab] = useState<string>("current");
 
-  // Check for snapshotId and enrollmentId in URL params
+  // Check for snapshotId, enrollmentId, and view filter in URL params
   const urlSnapshotId = searchParams.get("snapshotId");
   const urlEnrollmentId = searchParams.get("enrollment_id");
+  const urlView = searchParams.get("view") as "self" | "evaluator" | null;
+  const [currentView, setCurrentView] = useState<"self" | "evaluator">(urlView || "self");
 
   // Fetch assessment with domains and questions
   const { data: assessment, isLoading: assessmentLoading } = useQuery({
@@ -233,7 +235,12 @@ export default function CapabilityAssessmentDetail() {
 
   const completedSnapshots = snapshots?.filter((s) => s.status === "completed") || [];
   const draftSnapshot = snapshots?.find((s) => s.status === "draft");
-  const latestSnapshot = completedSnapshots[0];
+  const latestSelfSnapshot = completedSnapshots.find((s) => s.is_self_assessment) || null;
+  const latestEvaluatorSnapshot = completedSnapshots.find((s) => !s.is_self_assessment) || null;
+  const hasBothTypes = !!latestSelfSnapshot && !!latestEvaluatorSnapshot;
+  const currentSnapshot = currentView === "evaluator" ? (latestEvaluatorSnapshot ?? latestSelfSnapshot) : (latestSelfSnapshot ?? latestEvaluatorSnapshot);
+  // Legacy fallback for unchanged behavior when no view param
+  const latestSnapshot = currentSnapshot ?? completedSnapshots[0];
 
   // Filter snapshots for history tab
   const filteredHistorySnapshots = useMemo(() => {
@@ -357,6 +364,28 @@ export default function CapabilityAssessmentDetail() {
           </TabsList>
 
           <TabsContent value="current" className="space-y-6">
+            {hasBothTypes && (
+              <div className="flex items-center gap-1 p-1 bg-muted rounded-lg w-fit">
+                <Button
+                  variant={currentView === "self" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setCurrentView("self")}
+                  className="gap-1.5"
+                >
+                  <User className="h-3.5 w-3.5" />
+                  Self
+                </Button>
+                <Button
+                  variant={currentView === "evaluator" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setCurrentView("evaluator")}
+                  className="gap-1.5"
+                >
+                  <UserCheck className="h-3.5 w-3.5" />
+                  Evaluator
+                </Button>
+              </div>
+            )}
             {latestSnapshot ? (
               <CapabilitySnapshotView
                 snapshot={latestSnapshot}

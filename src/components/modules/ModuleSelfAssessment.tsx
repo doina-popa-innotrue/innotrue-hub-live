@@ -88,9 +88,9 @@ export function ModuleSelfAssessment({ moduleId, enrollmentId }: ModuleSelfAsses
     navigate(`/capabilities/${assessment.id}?enrollment_id=${enrollmentId}`);
   };
 
-  const handleViewResults = () => {
-    // Navigate to assessment detail page
-    navigate(`/capabilities/${assessment.id}`);
+  const handleViewResults = (view?: "self" | "evaluator") => {
+    const params = view ? `?view=${view}` : "";
+    navigate(`/capabilities/${assessment.id}${params}`);
   };
 
   const handleContinueAssessment = () => {
@@ -162,12 +162,25 @@ export function ModuleSelfAssessment({ moduleId, enrollmentId }: ModuleSelfAsses
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {hasAnyCompleted ? (
             <>
-              <Button onClick={handleViewResults} variant="default">
-                View Results <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              {completedSelfSnapshot && completedEvaluatorSnapshot ? (
+                <>
+                  <Button onClick={() => handleViewResults("self")} variant="default" size="sm">
+                    <User className="mr-1.5 h-4 w-4" />
+                    Self Results <ArrowRight className="ml-1.5 h-4 w-4" />
+                  </Button>
+                  <Button onClick={() => handleViewResults("evaluator")} variant="default" size="sm">
+                    <UserCheck className="mr-1.5 h-4 w-4" />
+                    Evaluator Results <ArrowRight className="ml-1.5 h-4 w-4" />
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => handleViewResults()} variant="default">
+                  View Results <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
               {!completedSelfSnapshot && (
                 <Button onClick={handleStartAssessment} variant="outline">
                   Take Self-Assessment
