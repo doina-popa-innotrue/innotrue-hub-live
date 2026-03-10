@@ -332,12 +332,24 @@ export default function ClientAssignments() {
           snapshotsByAssessment.set(s.assessment_id, existing);
         });
 
-        for (const mod of modulesWithAssessment) {
+        // Deduplicate by capability_assessment_id — multiple modules may share the
+        // same assessment; show one entry per unique assessment, using the first module
+        // (by order_index) as the display context.
+        const seenAssessmentIds = new Set<string>();
+        const sortedModules = [...modulesWithAssessment].sort(
+          (a, b) => (a.order_index ?? 0) - (b.order_index ?? 0),
+        );
+
+        for (const mod of sortedModules) {
           const modAny = mod as any;
+          const assessmentId = modAny.capability_assessment_id as string;
+          if (seenAssessmentIds.has(assessmentId)) continue;
+          seenAssessmentIds.add(assessmentId);
+
           const enrollment = enrollments.find((e) => e.program_id === modAny.program_id);
           if (!enrollment) continue;
 
-          const assessmentSnapshots = snapshotsByAssessment.get(modAny.capability_assessment_id) || [];
+          const assessmentSnapshots = snapshotsByAssessment.get(assessmentId) || [];
           const hasCompleted = assessmentSnapshots.some((s: any) => s.status === "completed");
           const hasDraft = assessmentSnapshots.some((s: any) => s.status === "draft");
 
@@ -356,7 +368,7 @@ export default function ClientAssignments() {
           const assessmentName = modAny.capability_assessments?.name || "Assessment";
 
           assessmentAssignments.push({
-            id: `assessment-${modAny.id}-${modAny.capability_assessment_id}`,
+            id: `assessment-${modAny.id}-${assessmentId}`,
             module_progress_id: "",
             assignment_type_name: `Self-Assessment: ${assessmentName}`,
             status,
@@ -370,7 +382,7 @@ export default function ClientAssignments() {
             program_id: modAny.program_id,
             enrollment_id: enrollment.id,
             type: "assessment" as const,
-            assessment_id: modAny.capability_assessment_id,
+            assessment_id: assessmentId,
           });
         }
       }
