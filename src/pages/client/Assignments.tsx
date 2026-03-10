@@ -570,6 +570,11 @@ export default function ClientAssignments() {
           <TabsTrigger value="reviewed" className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4" />
             Reviewed
+            {reviewedCount > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {reviewedCount}
+              </Badge>
+            )}
           </TabsTrigger>
         </TabsList>
 
