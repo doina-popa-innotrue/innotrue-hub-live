@@ -7,10 +7,12 @@ test.describe('Client Dashboard', () => {
     // Should stay on /dashboard
     await expect(clientPage).toHaveURL(/\/dashboard/);
 
-    // Should show dashboard content (heading or main content area)
+    // Wait for the dashboard data to finish loading — the page shows a
+    // spinner (no heading) while queries are in flight against Supabase.
+    // In CI, network latency to the live preprod instance can be >10 s.
     await expect(
-      clientPage.getByRole('heading').first(),
-    ).toBeVisible({ timeout: 10_000 });
+      clientPage.getByRole('heading', { name: 'My Dashboard' }),
+    ).toBeVisible({ timeout: 30_000 });
   });
 
   test('client can navigate to decisions page', async ({ clientPage }) => {
