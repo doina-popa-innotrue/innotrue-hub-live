@@ -8,6 +8,7 @@ import {
   UserCog,
   GraduationCap,
   Target,
+  ArrowUp,
   Brain,
   CheckSquare,
   BarChart3,
@@ -825,6 +826,12 @@ export function AppSidebar() {
       url: "/admin/payment-schedules",
       icon: Coins,
       tourId: "admin-payment-schedules",
+    },
+    {
+      title: "Tier Upgrades",
+      url: "/admin/tier-upgrade-requests",
+      icon: ArrowUp,
+      tourId: "admin-tier-upgrade-requests",
     },
   ];
 
