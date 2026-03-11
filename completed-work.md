@@ -2000,3 +2000,64 @@ Tour steps referenced orphaned `data-tour` targets that no longer existed in the
 - Removed stale: `client-external-courses`, `client-assessments`, `client-timeline`
 
 **Files changed:** 2 (`tourSteps.ts`, `useDynamicTourSteps.ts`)
+
+## Supabase Audit Fixes (2026-04-13)
+
+Commit `01a138e`. Migration `20260413120000_fix_search_path_and_rls_audit.sql`.
+
+### Problem
+Supabase security audit flagged 8 warnings. Two were genuine security concerns:
+1. `is_session_group_member()` SECURITY DEFINER function had no `SET search_path` — a malicious user could shadow `auth.uid()` by creating a function in the `public` schema
+2. `enrollment_module_staff` UPDATE policy had `WITH CHECK (true)` — allowed reassigning rows to a different `staff_user_id`
+
+### Fix
+- Recreated `is_session_group_member()` with `SET search_path = ''` (fully schema-qualified calls)
+- Replaced `enrollment_module_staff` UPDATE policy: changed `WITH CHECK (true)` to `WITH CHECK (staff_user_id = auth.uid())`
+- Also guided user to enable Leaked Password Protection in Supabase dashboard (Auth → Settings)
+
+**Files changed:** 1 migration
+
+## B2C Email Journey Fixes (2026-04-13)
+
+Commit `5595b8a`. Two critical gaps in the B2C client email journey identified during go-live readiness audit.
+
+### Gap 1: No client notification on enrollment code redemption
+`redeem-enrollment-code` edge function notified the admin but not the client. Added step 9b to call `create_notification()` with the existing `program_enrolled` notification type (already has email template `program_enrollment`).
+
+**File:** `supabase/functions/redeem-enrollment-code/index.ts`
+
+### Gap 2: No welcome email for OAuth users
+OAuth users (Google SSO) bypass the `verify-signup` flow entirely, so they never received a welcome email. Added step 13 to `complete-registration` that detects OAuth users (`app_metadata.provider !== "email"`) and calls `send-welcome-email` via internal service-to-service fetch.
+
+**File:** `supabase/functions/complete-registration/index.ts`
+
+**Edge functions deployed:** `redeem-enrollment-code` + `complete-registration` to prod and preprod
+
+## CTA Enrollment Codes + Enrolments Source Filter (2026-04-13)
+
+Commits `72a6876`, `8b80a40`. Migration `20260413130000_cta_immersion_enrollment_codes.sql`.
+
+### Part A: 4 Enrollment Codes for B2C Launch
+
+Created 4 free, multi-use enrollment codes for the CTA Immersion programme's B2C launch:
+
+| Code | Tier | Referral Source |
+|------|------|----------------|
+| `CTAINNOTRUE-E` | Essentials | InnoTrue (organic) |
+| `CTAINNOTRUE-P` | Premium | InnoTrue (organic) |
+| `CTACLOUDEARLY-E` | Essentials | CloudEarly (partner) |
+| `CTACLOUDEARLY-P` | Premium | CloudEarly (partner) |
+
+Migration uses a `DO` block with program lookup (by ID or slug) — skips gracefully if the programme doesn't exist (safe for preprod/sandbox). Seed file updated with same defensive pattern.
+
+### Part B: Enrolments Page Enhancement
+
+Enhanced `/admin/enrolments` (`EnrolmentsManagement.tsx`) with referral tracking:
+
+- **Enrollment Code filter dropdown** — between Status and Enrolled From filters, auto-filtered by selected programme
+- **Source column** in table — shows code as a `Badge` with tag icon, or dim `enrollment_source` text, or dash
+- **Expanded data query** — added `enrollment_code_id`, `enrollment_source`, FK join to `enrollment_codes(id, code)`
+- **CSV export** — includes "Enrollment Code" and "Source" columns
+- **Clear Filters** resets code filter
+
+**Files changed:** 3 (`EnrolmentsManagement.tsx`, migration, `seed.sql`)
