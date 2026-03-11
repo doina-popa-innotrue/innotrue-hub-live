@@ -1,5 +1,33 @@
 # Completed Work — Detailed History
 
+## Admin Tier Upgrade Requests (2026-04-13)
+
+Commit `68de0df`. Migration `20260413110000_add_tier_upgrade_notification_type.sql`.
+
+### Problem
+Clients could submit tier upgrade requests from their program detail page, but admins had no UI to view, approve, or reject these requests. The `tier_upgrade_requests` table existed with proper RLS policies but no admin management page was built.
+
+### Changes
+
+**New admin page** (`/admin/tier-upgrade-requests`):
+- Query `tier_upgrade_requests` with status filter (pending/approved/declined/all)
+- Batch-fetch profiles separately (user_id FK → auth.users, NOT safe for PostgREST FK hints)
+- FK join `client_enrollments` (safe — FK in `Relationships[]`), batch-fetch programs for name + tiers
+- Table columns: Client name, Program, Current → Requested tier, Reason, Status, Date, Actions
+- Review dialog with approve/decline actions + admin notes textarea
+- **Approve mutation**: updates `client_enrollments.tier` to requested tier, then updates request status
+- Uses `getTierDisplayName()` from `@/lib/tierUtils` for proper tier display (e.g., "1. Essentials")
+
+**Migration** — notification types:
+- `tier_upgrade_requested` — for admin awareness when client submits request
+- `tier_upgrade_approved` — for client notification when request is approved
+- Both with `ON CONFLICT (key) DO NOTHING` safety, category: `programs`
+
+**Files created:** 2 (`TierUpgradeRequests.tsx`, migration)
+**Files modified:** 2 (`App.tsx` — lazy import + route, `AppSidebar.tsx` — sidebar entry with ArrowUp icon in Monetization section)
+
+---
+
 ## Admin Data Cleanup (2026-04-13)
 
 Migration `20260413100000_admin_data_cleanup_rpcs.sql`. New admin page for ongoing test data removal.
