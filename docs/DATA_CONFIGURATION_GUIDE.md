@@ -339,7 +339,7 @@ Credit packages let users and organizations purchase additional credits via Stri
 **Needed by:** Notification types
 
 ### 3.7 Notification Types (`notification_types`)
-31+ types organized under the 8 categories. Each type has:
+33+ types organized under the 8 categories. Each type has:
 - `key` — used in code to trigger notifications
 - `is_critical` — if true, cannot be disabled by user
 - `is_system` — if true, cannot be deleted by admin (protects system-critical types)
@@ -351,6 +351,8 @@ Examples:
 - `assignment_due_soon` (assignments) → "Assignment due in 48h"
 - `credits_low` (credits) → "Your credit balance is running low"
 - `security_alert` (system, critical) → "New login from unknown device"
+- `tier_upgrade_requested` (programs) → "A client submitted a tier upgrade request"
+- `tier_upgrade_approved` (programs) → "Your tier upgrade request was approved"
 
 **Admin UI:** Notifications Management → Types tab
 **Depends on:** notification_categories
@@ -734,6 +736,28 @@ Shareable enrollment codes for self-enrollment without admin intervention.
 **Depends on:** programs, program_cohorts (optional), plans (optional), auth.users
 
 **Depends on:** users (profiles), programs, program_plans (optional), enrollment_codes (optional)
+
+### 5.3c Tier Upgrade Requests (`tier_upgrade_requests`)
+
+Client-initiated requests to move to a higher tier within a program enrollment. Admins review and approve/decline from the admin panel.
+
+| Field | Purpose |
+|-------|---------|
+| `user_id` | The requesting client |
+| `enrollment_id` | FK to `client_enrollments` — which enrollment to upgrade |
+| `current_tier` | Tier at time of request (e.g., `essentials`) |
+| `requested_tier` | Desired tier (e.g., `premium`) |
+| `reason` | Client's justification (optional) |
+| `status` | `pending`, `approved`, or `declined` |
+| `admin_notes` | Reviewer's notes (optional) |
+| `reviewed_by` | Admin who reviewed (FK to auth.users) |
+| `reviewed_at` | When reviewed |
+
+**Client UI:** Program Detail page → "Request Tier Upgrade" button → `TierUpgradeDialog` (only shown when higher tiers exist)
+**Admin UI:** Tier Upgrade Requests (`/admin/tier-upgrade-requests`) — filterable table with review dialog
+**Approval flow:** On approve, admin page updates `client_enrollments.tier` to `requested_tier` and sets request status to `approved` with `reviewed_by`/`reviewed_at`.
+**Notification types:** `tier_upgrade_requested` (admin awareness), `tier_upgrade_approved` (client notification)
+**Depends on:** client_enrollments, auth.users (reviewed_by), programs (for tier names display)
 
 ### 5.4 Credit Balances (`user_credit_balances`)
 Each user has a credit balance initialized from their plan's `credit_allowance`.
@@ -1497,6 +1521,8 @@ After population, verify each path works:
 - [ ] Resource access: enrolled resource visible → public resource visible → private resource hidden
 - [ ] Wheel of Life: client accesses from dashboard → rates categories → sees radar chart
 - [ ] File uploads: validate MIME type + size against bucket presets, filename sanitized
+- [ ] Tier upgrade: client requests upgrade from program detail → admin sees pending request → approve updates enrollment tier
+- [ ] Admin data cleanup: preview shows cascade counts → execute deletes selected entities + orphaned storage files
 - [ ] Auth error handling: roleless user sees "Account Not Configured" (not silent client fallback)
 - [ ] Goal assessment link (DP1): create goal → link to capability domain → badge shows on GoalCard → score history on GoalDetail
 - [ ] Development Profile (DP2): navigate to /development-profile → all 5 sections render (or empty states) → coach/instructor can view client's profile via /teaching/students/:enrollmentId/development-profile
@@ -1822,3 +1848,6 @@ These tables will be needed as the enhancement roadmap (ISSUES_AND_IMPROVEMENTS.
 | G10 Session homework | `development_items.cohort_session_id` (UUID FK to `cohort_sessions`) | Links development items to specific cohort sessions as homework |
 | DP5 Module↔domain mapping | `module_domain_mappings` table (module_id, capability_domain_id, relevance) | Maps modules to assessment domains for evidence tracking |
 | NTH-4 Personal instructor | (no schema change — queries `enrollment_module_staff`) | `ModuleTeamContact` shows personal instructor to clients with highlighted styling |
+| Admin data cleanup | `admin_data_cleanup_preview()` + `admin_data_cleanup_execute()` RPCs | SECURITY DEFINER RPCs for safe bulk deletion of test data (scenario_assignments, capability_snapshots, module_assignments, module_progress) with cascade preview |
+| Tier upgrade requests | `tier_upgrade_requests` table | Client-initiated tier upgrade workflow with admin review (see 5.3c) |
+| Tier upgrade notifications | `tier_upgrade_requested` + `tier_upgrade_approved` notification types | Notification support for tier upgrade request lifecycle |

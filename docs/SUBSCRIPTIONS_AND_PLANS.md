@@ -333,6 +333,20 @@ Credits are used for AI operations (coaching, insights, recommendations), sessio
 | `/org-admin/billing` | Org subscription + credit purchases | `org-platform-subscription`, `org-purchase-credits` |
 | `/admin/plans` | Admin CRUD for plans + Stripe price IDs | Read/write `plan_prices.stripe_price_id` |
 | `/admin/payment-schedules` | Admin installment tracking dashboard | Reads `payment_schedules` table |
+| `/admin/tier-upgrade-requests` | Review/approve/decline client tier upgrade requests | Updates `client_enrollments.tier` on approval |
+
+### Tier Upgrade Requests
+
+Clients can request a tier upgrade from their program detail page (`ProgramDetail.tsx`) when they have locked modules requiring a higher tier. The request flow:
+
+1. **Client submits** — `TierUpgradeDialog.tsx` lets clients select a higher tier + optional reason → inserts to `tier_upgrade_requests` with `status: 'pending'`
+2. **Admin reviews** — `/admin/tier-upgrade-requests` shows all requests with status filtering (Pending/Approved/Declined/All)
+3. **Admin approves** — updates `client_enrollments.tier` to the requested tier, unlocking higher-tier modules immediately
+4. **Admin declines** — records admin notes explaining the decision
+
+**Table:** `tier_upgrade_requests` (id, user_id, enrollment_id, current_tier, requested_tier, reason, status, admin_notes, reviewed_by, reviewed_at)
+**RLS:** Users can view/create own requests. Admins can view/update all.
+**Constraint:** `UNIQUE(enrollment_id, status)` prevents duplicate pending requests per enrollment.
 
 ---
 

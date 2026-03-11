@@ -910,7 +910,32 @@ Tables with FK constraints to `auth.users(id)` (different schema from `public`) 
 
 **Fix pattern:** Fetch raw user IDs, then batch-query `profiles` separately. Verify in `src/integrations/supabase/types.ts` — if FK name appears in `Relationships[]`, it references a public table and works. If absent, it references `auth.users` and is broken.
 
-Fixed across: `StaffAssignments.tsx`, `Cohorts.tsx`, `CohortDashboard.tsx`, `CohortDetail.tsx`, `ModuleTeamContact.tsx` (commits `32af6ac`, `84683d1`).
+Fixed across: `StaffAssignments.tsx`, `Cohorts.tsx`, `CohortDashboard.tsx`, `CohortDetail.tsx`, `ModuleTeamContact.tsx` (commits `32af6ac`, `84683d1`), `TierUpgradeRequests.tsx` (commit `68de0df`).
+
+### Storage Bucket Rename Caveat
+
+Renaming a Supabase storage bucket (e.g., `module-assessment-attachments` → `module-assignment-attachments`) does **NOT** auto-update `storage.objects` RLS policies. Policies reference `bucket_id` as a text literal — the old bucket name stays in the policy condition, causing uploads to the renamed bucket to silently fail RLS checks.
+
+**Fix pattern:** After renaming a bucket, always drop old policies and create new ones with the new bucket name:
+```sql
+DROP POLICY IF EXISTS "old_policy_name" ON storage.objects;
+CREATE POLICY "new_policy_name" ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'new-bucket-name' AND ...);
+```
+Fixed in migration `20260412120000` (commit `5b0e30a`).
+
+### Missing notification_types Row Caveat
+
+`create_notification()` RPC does `RAISE EXCEPTION` for unknown notification type keys. Edge functions that silently catch errors (`try/catch` with just `console.error`) will never deliver the notification. Always verify the `notification_types` table has the expected key before deploying an edge function that calls `create_notification()`.
+
+Fixed: `assignment_submitted` (migration `20260412140000`), `tier_upgrade_requested` + `tier_upgrade_approved` (migration `20260413110000`).
+
+### Admin Data Cleanup RPCs
+
+SECURITY DEFINER RPCs for admin data removal (migration `20260413100000`):
+- `admin_data_cleanup_preview(entity_type, user_id, program_id, created_before, status)` — returns cascade counts
+- `admin_data_cleanup_execute(...)` — handles SET NULL on FK refs, then DELETE with cascades
+- Supports: scenario_assignments, capability_snapshots, module_assignments, module_progress
 
 ### Development caveats
 

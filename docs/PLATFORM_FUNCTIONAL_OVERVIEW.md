@@ -67,7 +67,7 @@ The platform operator. Full control over all configuration, users, programs, and
 - Monitor email queue, notifications, analytics, and audit logs
 - Manage organizations, platform terms, and system settings
 
-**Key pages:** 71 admin pages covering every aspect of platform management
+**Key pages:** 84 admin pages covering every aspect of platform management
 
 ### Client (Learner)
 The end user going through a development program.
@@ -665,7 +665,7 @@ Content packages can be uploaded once to a **shared library** (`content_packages
 
 ## 8. Admin Tooling
 
-The admin area is the most extensive part of the platform with 75+ pages. Key areas:
+The admin area is the most extensive part of the platform with 84 pages. Key areas:
 
 ### Program Management
 Programs, modules, module types, assignment types, scenario templates, guided paths, partner programs, tracks, skills/categories, feedback templates
@@ -677,7 +677,7 @@ User creation with role assignment, client detail with enrollment management, in
 Assessment builder (custom assessments), capability assessments with domain/question configuration and **question type management** (dynamic types with weighted scoring), assessment families and categories, wheel of life categories, psychometric assessment catalog
 
 ### Plans & Billing
-Subscription plans (tier 0-4), program plans (per-enrollment features), features management with deny override, add-ons, credit services, discount codes, consumption analytics
+Subscription plans (tier 0-4), program plans (per-enrollment features), features management with deny override, add-ons, credit services, discount codes, consumption analytics, **tier upgrade requests** (admin review/approve/decline of client tier change requests)
 
 ### Communication
 Email templates (database-stored, variable substitution), email assets, email queue monitoring, notifications management, announcements with categories
@@ -688,6 +688,9 @@ Cal.com event type mappings, TalentLMS user management, Circle community managem
 ### Analytics & Monitoring
 Consumption analytics, user behavior analytics, program completions, system settings (including **signup toggle** — `system_settings.signup_enabled` to enable/disable public registration), auth contexts, audit trail
 
+### Data Management
+**Data Cleanup** — admin tool for ongoing test data removal with preview/execute RPCs. Supports 4 entity types (scenario assignments, capability snapshots, module assignments, module progress) with shared filters (client, program, date range) and cascade-aware deletion
+
 ---
 
 ## 9. Platform Numbers at a Glance
@@ -696,9 +699,9 @@ Consumption analytics, user behavior analytics, program completions, system sett
 |--------|-------|
 | Database tables | 380+ |
 | Database enums | 25 |
-| Database migrations | 483 |
+| Database migrations | 490 |
 | Edge functions | 80 |
-| Frontend pages | 183+ (71 admin, 59 client, 14 teaching, 9 org-admin, 13+ shared) |
+| Frontend pages | 186 (84 admin, 59 client, 14 teaching, 9 org-admin, 13+ shared) |
 | React components | 281 |
 | React hooks | 84 |
 | Storage buckets | 17 |

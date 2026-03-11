@@ -337,6 +337,50 @@ The seed data no longer creates an "Enterprise" plan (it was replaced by "Elite"
 
 ---
 
+## Recently Resolved (April 2026)
+
+### Attachment Storage RLS Fix — RESOLVED (2026-04-12)
+**Commit:** `5b0e30a` | **Migration:** `20260412120000`
+**Issue:** Renaming storage bucket from `module-assessment-attachments` to `module-assignment-attachments` did not update `storage.objects` RLS policies (they reference `bucket_id` as text). Uploads to the renamed bucket silently failed RLS checks.
+**Fix:** Dropped 3 stale policies referencing old bucket name, created 3 replacement policies with correct name. Added `is_assignment_owner()` SECURITY DEFINER function for table-level RLS.
+**Lesson:** Storage bucket renames do NOT auto-update RLS policies. Always drop old + create new policies manually.
+
+### Assignment Notification Fix — RESOLVED (2026-04-12)
+**Commit:** `3d7c37f` | **Migration:** `20260412140000`
+**Issue:** Two root causes: (1) `notification_types` table had no `assignment_submitted` entry — `create_notification()` threw RAISE EXCEPTION silently swallowed by edge function catch block. (2) Edge function queried `programs.title` but the actual column is `programs.name`.
+**Fix:** Added missing notification type row + fixed column name in `notify-assignment-submitted` edge function.
+
+### Client Assignments Bugfix Sprint — RESOLVED (2026-04-12)
+**Commits:** `e7dfdd8` → `310486a` (8 commits)
+- Fixed crash from peer session scenario with empty `program_id`
+- Deduplicated scenario assignments in Assignments page (same template + module)
+- Prevented duplicate scenario assignment creation + cleanup migration for stale drafts
+- Added count badge to Reviewed tab
+- Fixed RLS: allowed clients to add attachments on own assignments (table-level policy)
+- Fixed self-assessments started from Assignments page missing `enrollment_id`
+
+### Guided Tours Update — RESOLVED (2026-04-12)
+**Commit:** `1dd1d45`
+Fixed all orphaned tour targets pointing to non-existent `data-tour` attributes. Updated all 3 roles: Client (20 steps, was 17), Instructor (13, was 10), Admin (24, was 20). Updated feature key mappings in `useDynamicTourSteps.ts`.
+
+### Capability Assessment Self/Evaluator Toggle — RESOLVED (2026-04-12)
+**Commit:** `55a0110`
+When both self-assessment and evaluator assessment are completed, the module card now shows separate "Self Results" / "Evaluator Results" buttons. The detail page reads `?view=self|evaluator` param and shows a toggle when both types exist.
+
+### Instructor Scenario Access — RESOLVED (2026-04-12)
+**Commit:** `46cbfa0`
+Instructors reviewing a client's module assignment can now see the linked scenario with title, status, and Evaluate/Print buttons. New `ScenarioPrintPage.tsx` at `/scenarios/:id/print` provides a print-friendly view.
+
+### Admin Data Cleanup — NEW (2026-04-13)
+**Commit:** `e3c5739` | **Migration:** `20260413100000`
+New admin page at `/admin/data-cleanup` for ongoing test data removal. Two SECURITY DEFINER RPCs (preview + execute) handle 4 entity types with shared filters and cascade-aware deletion.
+
+### Admin Tier Upgrade Requests — NEW (2026-04-13)
+**Commit:** `68de0df` | **Migration:** `20260413110000`
+New admin page at `/admin/tier-upgrade-requests` to review/approve/decline client tier upgrade requests. Approval automatically updates `client_enrollments.tier`. Added notification types for future delivery.
+
+---
+
 ## Part 3: Business Enhancement Recommendations
 
 ### Tier 1 — High Impact, Differentiators
