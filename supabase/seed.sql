@@ -1166,6 +1166,49 @@ VALUES (
 ON CONFLICT DO NOTHING;
 
 -- =============================================================================
+-- SECTION 14: CTA IMMERSION ENROLLMENT CODES
+-- =============================================================================
+-- 4 free, multi-use enrollment codes for referral tracking (B2C launch)
+-- Two referral sources: InnoTrue (organic) + CloudEarly (partner)
+-- Two tiers: Essentials + Premium
+
+INSERT INTO public.enrollment_codes (
+  code, program_id, created_by,
+  code_type, grants_tier, is_free, is_active,
+  max_uses, discount_percent
+)
+VALUES
+  (
+    'CTAINNOTRUE-E',
+    (SELECT id FROM public.programs WHERE slug = 'cta-immersion' LIMIT 1),
+    (SELECT ur.user_id FROM public.user_roles ur WHERE ur.role = 'admin' LIMIT 1),
+    'multi_use', 'Essentials', true, true,
+    NULL, NULL
+  ),
+  (
+    'CTAINNOTRUE-P',
+    (SELECT id FROM public.programs WHERE slug = 'cta-immersion' LIMIT 1),
+    (SELECT ur.user_id FROM public.user_roles ur WHERE ur.role = 'admin' LIMIT 1),
+    'multi_use', 'Premium', true, true,
+    NULL, NULL
+  ),
+  (
+    'CTACLOUDEARLY-E',
+    (SELECT id FROM public.programs WHERE slug = 'cta-immersion' LIMIT 1),
+    (SELECT ur.user_id FROM public.user_roles ur WHERE ur.role = 'admin' LIMIT 1),
+    'multi_use', 'Essentials', true, true,
+    NULL, NULL
+  ),
+  (
+    'CTACLOUDEARLY-P',
+    (SELECT id FROM public.programs WHERE slug = 'cta-immersion' LIMIT 1),
+    (SELECT ur.user_id FROM public.user_roles ur WHERE ur.role = 'admin' LIMIT 1),
+    'multi_use', 'Premium', true, true,
+    NULL, NULL
+  )
+ON CONFLICT (code) DO NOTHING;
+
+-- =============================================================================
 -- DONE! Summary of seeded data:
 -- =============================================================================
 -- - 7 system settings
@@ -1182,6 +1225,7 @@ ON CONFLICT DO NOTHING;
 -- - 2 sample programs with 11 total modules
 -- - 6 demo users (2 admins, 2 clients, 1 coach, 1 instructor) with enrollments and progress
 -- - 1 platform terms document
+-- - 4 CTA Immersion enrollment codes (InnoTrue + CloudEarly, Essentials + Premium)
 -- =============================================================================
 --
 -- Demo Login Credentials:

@@ -26,7 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Users, ExternalLink, Search, X, Download, Loader2, UserPlus } from "lucide-react";
+import { Users, ExternalLink, Search, X, Download, Loader2, UserPlus, Tag } from "lucide-react";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 import {
   Pagination,
@@ -44,6 +44,12 @@ const PAGE_SIZE = 25;
 interface Program {
   id: string;
   name: string;
+}
+
+interface EnrollmentCode {
+  id: string;
+  code: string;
+  program_id: string;
 }
 
 function getStatusVariant(status: string): "default" | "secondary" | "outline" | "destructive" {
@@ -68,6 +74,7 @@ export default function EnrolmentsManagement() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [programFilter, setProgramFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [codeFilter, setCodeFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(0);
@@ -88,6 +95,27 @@ export default function EnrolmentsManagement() {
       return data as Program[];
     },
   });
+
+  // ── Enrollment codes for filter dropdown ────────────────────────────
+  const { data: enrollmentCodes } = useQuery({
+    queryKey: ["admin-enrollment-codes-filter"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("enrollment_codes")
+        .select("id, code, program_id")
+        .eq("is_active", true)
+        .order("code");
+      if (error) throw error;
+      return data as EnrollmentCode[];
+    },
+  });
+
+  // Filter codes by selected program (if a program filter is active)
+  const filteredCodes = useMemo(() => {
+    if (!enrollmentCodes) return [];
+    if (programFilter === "all") return enrollmentCodes;
+    return enrollmentCodes.filter((c) => c.program_id === programFilter);
+  }, [enrollmentCodes, programFilter]);
 
   // ── Stats (lightweight count queries) ────────────────────────────────
   const { data: stats } = useQuery({
@@ -114,7 +142,7 @@ export default function EnrolmentsManagement() {
     isLoading,
     isFetching,
   } = useQuery({
-    queryKey: ["admin-enrolments", page, statusFilter, programFilter, dateFrom, dateTo],
+    queryKey: ["admin-enrolments", page, statusFilter, programFilter, codeFilter, dateFrom, dateTo],
     queryFn: async () => {
       // Build server-side filtered query
       let countQuery = supabase
@@ -125,8 +153,10 @@ export default function EnrolmentsManagement() {
         .from("client_enrollments")
         .select(
           `id, client_user_id, program_id, status, tier, start_date, end_date, created_at,
+           enrollment_code_id, enrollment_source,
            programs (id, name, slug),
-           program_plans (id, name, tier_level)`,
+           program_plans (id, name, tier_level),
+           enrollment_codes (id, code)`,
         )
         .order("created_at", { ascending: false });
 
@@ -147,6 +177,10 @@ export default function EnrolmentsManagement() {
         const toEnd = `${dateTo}T23:59:59.999Z`;
         countQuery = countQuery.lte("created_at", toEnd);
         dataQuery = dataQuery.lte("created_at", toEnd);
+      }
+      if (codeFilter !== "all") {
+        countQuery = countQuery.eq("enrollment_code_id", codeFilter);
+        dataQuery = dataQuery.eq("enrollment_code_id", codeFilter);
       }
 
       // Execute count + paginated data in parallel
@@ -258,13 +292,16 @@ export default function EnrolmentsManagement() {
         .from("client_enrollments")
         .select(
           `id, client_user_id, program_id, status, tier, start_date, created_at,
+           enrollment_code_id, enrollment_source,
            programs (name),
-           program_plans (name)`,
+           program_plans (name),
+           enrollment_codes (code)`,
         )
         .order("created_at", { ascending: false });
 
       if (statusFilter !== "all") query = query.eq("status", statusFilter);
       if (programFilter !== "all") query = query.eq("program_id", programFilter);
+      if (codeFilter !== "all") query = query.eq("enrollment_code_id", codeFilter);
       if (dateFrom) query = query.gte("created_at", dateFrom);
       if (dateTo) query = query.lte("created_at", `${dateTo}T23:59:59.999Z`);
 
@@ -288,7 +325,7 @@ export default function EnrolmentsManagement() {
         );
       }
 
-      const headers = ["Client Name", "Email", "Programme", "Status", "Tier", "Plan", "Start Date", "Enrolled On"];
+      const headers = ["Client Name", "Email", "Programme", "Status", "Tier", "Plan", "Start Date", "Enrolled On", "Enrollment Code", "Source"];
       const rows = (allData || []).map((e: any) => {
         const profile = profilesMap[e.client_user_id];
         return [
@@ -300,6 +337,8 @@ export default function EnrolmentsManagement() {
           e.program_plans?.name || "",
           e.start_date ? format(new Date(e.start_date), "yyyy-MM-dd") : "",
           format(new Date(e.created_at), "yyyy-MM-dd"),
+          e.enrollment_codes?.code || "",
+          e.enrollment_source || "",
         ];
       });
 
@@ -397,7 +436,7 @@ export default function EnrolmentsManagement() {
           <CardTitle className="text-lg">Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-6">
             <div className="space-y-2">
               <Label>Search Client</Label>
               <div className="relative">
@@ -457,6 +496,29 @@ export default function EnrolmentsManagement() {
             </div>
 
             <div className="space-y-2">
+              <Label>Enrollment Code</Label>
+              <Select
+                value={codeFilter}
+                onValueChange={(v) => {
+                  setCodeFilter(v);
+                  resetPage();
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sources</SelectItem>
+                  {filteredCodes?.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label>Enrolled From</Label>
               <Input
                 type="date"
@@ -488,6 +550,7 @@ export default function EnrolmentsManagement() {
               onClick={() => {
                 setStatusFilter("all");
                 setProgramFilter("all");
+                setCodeFilter("all");
                 setSearchQuery("");
                 setDateFrom("");
                 setDateTo("");
@@ -543,6 +606,7 @@ export default function EnrolmentsManagement() {
                     <TableHead className="min-w-[100px]">Plan</TableHead>
                     <TableHead className="min-w-[110px]">Start Date</TableHead>
                     <TableHead className="min-w-[110px]">Enrolled On</TableHead>
+                    <TableHead className="min-w-[120px]">Source</TableHead>
                     <TableHead className="min-w-[80px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -616,6 +680,20 @@ export default function EnrolmentsManagement() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           {format(new Date(enrolment.created_at), "dd MMM yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          {enrolment.enrollment_codes?.code ? (
+                            <Badge variant="outline" className="gap-1">
+                              <Tag className="h-3 w-3" />
+                              {enrolment.enrollment_codes.code}
+                            </Badge>
+                          ) : enrolment.enrollment_source ? (
+                            <span className="text-sm text-muted-foreground capitalize">
+                              {enrolment.enrollment_source}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Button
