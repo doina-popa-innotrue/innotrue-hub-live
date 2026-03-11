@@ -1,5 +1,33 @@
 # Completed Work — Detailed History
 
+## Admin Data Cleanup (2026-04-13)
+
+Migration `20260413100000_admin_data_cleanup_rpcs.sql`. New admin page for ongoing test data removal.
+
+### Problem
+Admin had no UI to clean up test data (scenario assignments, capability snapshots, module assignments, module progress). These tables lacked DELETE RLS policies, requiring direct SQL access for any cleanup.
+
+### Changes
+
+**Migration — Two SECURITY DEFINER RPCs:**
+- `admin_data_cleanup_preview(p_entity_type, p_user_id, p_program_id, p_created_before, p_status)` — STABLE, returns JSONB with primary count, cascade counts, FK nullify counts, and attachment file paths
+- `admin_data_cleanup_execute(...)` — same params, handles SET NULL on FK refs, then DELETE (cascades handle children), returns `{deleted: N}`
+- Both guarded by `has_role(auth.uid(), 'admin')`
+- Handles: self-ref FK on `scenario_assignments.parent_assignment_id` (SET NULL before DELETE), non-CASCADE FK `goal_assessment_links.capability_snapshot_id` (explicit DELETE), SET NULL on `module_assignments.scoring_snapshot_id` and `group_session_activities.scoring_snapshot_id`
+
+**Admin page** (`/admin/data-cleanup`):
+- Shared filters card: client combobox (reuses `ClientFilterCombobox`), program select, "created before" date picker
+- 4 entity-type cards using `DataCleanupEntityCard` component
+- Each card has its own status dropdown (entity-specific statuses)
+- "Preview" button → calls preview RPC → shows primary count + cascade breakdown (collapsible)
+- "Delete" button → confirmation dialog with full breakdown → calls execute RPC
+- Storage cleanup: after DB delete, removes orphaned files from `module-assignment-attachments` bucket
+
+**Files created:** 3 (migration, `DataCleanupEntityCard.tsx`, `DataCleanup.tsx`)
+**Files modified:** 2 (`App.tsx` — route, `AppSidebar.tsx` — sidebar entry with Trash2 icon)
+
+---
+
 ## Admin Signup Toggle (2026-03-06)
 
 Admin system setting to enable/disable public self-registration. Commit `7ec0216`.
@@ -1912,3 +1940,35 @@ The module's Capability Assessment card had a single "View Results" button that 
 - Fallback: if selected view has no snapshot, falls through to the other type
 
 **Files changed:** 2 (`ModuleSelfAssessment.tsx`, `CapabilityAssessmentDetail.tsx`)
+
+## Guided Tours Update (2026-04-12)
+
+Commit `1dd1d45`. Updated all role-based guided tours to match current sidebar navigation.
+
+### Problem
+Tour steps referenced orphaned `data-tour` targets that no longer existed in the sidebar, causing steps to render without highlighting any element. Several new sidebar items added over time had no corresponding tour steps.
+
+### Changes
+
+**Client tour** (20 steps, was 17):
+- Removed orphaned: `client-assessments`, `client-external-courses`, `client-timeline`, `client-profile`
+- Fixed target: `client-timeline` → `client-development-timeline`
+- Added: `client-assignments` (Assignments), `client-feedback` (My Feedback), `client-skills` (Skills Map), `client-services` (Services), `client-usage` (Usage), `client-my-assessments` (Assessment Results), `client-capability-assessments` (Capability Assessments)
+- Updated content: Groups (mentions peer presentations), Development Items (mentions linked resources)
+
+**Instructor/Coach tour** (13 steps, was 10):
+- Removed orphaned: `teaching-pending-assignments`, `teaching-session-management`, `teaching-external-platforms`
+- Added: `teaching-readiness` (Readiness), `teaching-cohorts` (Cohorts), `teaching-assessments` (Assessments), `teaching-scenarios` (Scenarios), `teaching-guide` (Teaching Guide)
+- Updated content: Assignments (mentions linked scenarios), Groups (mentions peer presentations)
+
+**Admin tour** (24 steps, was 20):
+- Fixed orphaned: `admin-guided-paths` → `admin-guided-path-templates`
+- Added: `admin-settings` (System Settings), `admin-content-library` (Content Library), `admin-scenario-templates` (Scenario Templates), `admin-capability-assessments` (Capability Assessments), `admin-staff-assignments` (Staff Assignments), `admin-email-templates` (Email & Notifications)
+- Split assessments step into psychometric + capability assessments
+
+**Feature mappings** (`useDynamicTourSteps.ts`):
+- Updated all client mappings to match sidebar `featureKey` values: `feedback_reviews`, `skills_map`, `services`, `decision_toolkit_basic` (for tasks)
+- Fixed admin: `admin-guided-paths` → `admin-guided-path-templates`
+- Removed stale: `client-external-courses`, `client-assessments`, `client-timeline`
+
+**Files changed:** 2 (`tourSteps.ts`, `useDynamicTourSteps.ts`)

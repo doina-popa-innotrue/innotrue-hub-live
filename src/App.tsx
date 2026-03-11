@@ -129,6 +129,7 @@ const AnnouncementCategoriesManagement = lazy(
 const UserBehaviorAnalytics = lazy(() => import("./pages/admin/UserBehaviorAnalytics"));
 const CohortAnalytics = lazy(() => import("./pages/admin/CohortAnalytics"));
 const AuthContexts = lazy(() => import("./pages/admin/AuthContexts"));
+const DataCleanup = lazy(() => import("./pages/admin/DataCleanup"));
 
 // Lazy-loaded pages — Instructor / Coach
 const InstructorCoachDashboard = lazy(() => import("./pages/instructor/InstructorCoachDashboard"));
@@ -1207,6 +1208,16 @@ const App = () => (
                       <ProtectedRoute requireRole="admin">
                         <DashboardLayout>
                           <CohortAnalytics />
+                        </DashboardLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/data-cleanup"
+                    element={
+                      <ProtectedRoute requireRole="admin">
+                        <DashboardLayout>
+                          <DataCleanup />
                         </DashboardLayout>
                       </ProtectedRoute>
                     }

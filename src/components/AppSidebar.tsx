@@ -48,6 +48,7 @@ import {
   Megaphone,
   Gauge,
   Ticket,
+  Trash2,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -446,6 +447,12 @@ export function AppSidebar() {
       url: "/admin/settings",
       icon: Settings,
       tourId: "admin-settings",
+    },
+    {
+      title: "Data Cleanup",
+      url: "/admin/data-cleanup",
+      icon: Trash2,
+      tourId: "admin-data-cleanup",
     },
   ];
 

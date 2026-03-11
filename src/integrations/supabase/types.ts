@@ -14888,6 +14888,26 @@ export type Database = {
         Args: { notification_ids: string[] }
         Returns: number
       }
+      admin_data_cleanup_execute: {
+        Args: {
+          p_created_before?: string
+          p_entity_type: string
+          p_program_id?: string
+          p_status?: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
+      admin_data_cleanup_preview: {
+        Args: {
+          p_created_before?: string
+          p_entity_type: string
+          p_program_id?: string
+          p_status?: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
       are_group_peers: {
         Args: { user_a: string; user_b: string }
         Returns: boolean

@@ -416,7 +416,9 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - **Client Assignments — show unstarted (2026-03-29):** Page only showed started assignments. Now fetches `program_modules` + `module_assignment_configs` for enrolled programs, creates virtual entries with `not_started` status for unconfigured assignments. Commit `b9d82fe`.
 - **Scenario paragraph RLS timeout (2026-03-30):** 6 SELECT policies on `scenario_paragraphs` caused query timeouts. Consolidated to 2 policies (admin + client via SECURITY DEFINER function). Migration `20260330100000`. Commits `03c19b7`, `ad5a93a`.
 - **Broken PostgREST FK hints (2026-03-30):** Tables with FK to `auth.users(id)` have constraints invisible to PostgREST — FK hints like `profiles!program_coaches_coach_id_fkey` cause 400 errors. Fixed in 5 files (StaffAssignments, Cohorts, CohortDashboard, CohortDetail, ModuleTeamContact) by replacing with separate batch profile queries. Commits `32af6ac`, `84683d1`.
+- **Admin Data Cleanup (2026-04-13):** New admin page at `/admin/data-cleanup` for ongoing test data removal. SECURITY DEFINER RPCs (`admin_data_cleanup_preview` + `admin_data_cleanup_execute`) handle 4 entity types: scenario_assignments, capability_snapshots, module_assignments, module_progress. Shared filters (client, program, created-before) + per-entity status filter. Preview shows primary + cascade counts before delete. Storage file cleanup for attachments.
 - **Next steps:** SC-4 Organisation audit → M13 Zod Validation + R6/R7 Phase 2 → Phase 3 AI
+- **Future: Inactive Client Data Retention Policy** — build scheduled task to identify clients inactive for X years (no login, no progress updates), surface them on the cleanup page for admin review before deletion. Extend Data Cleanup page with an "Inactive Clients" tab.
 
 ## Scalability & Performance Audit (2026-03-24)
 
