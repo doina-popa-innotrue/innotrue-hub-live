@@ -215,6 +215,30 @@ serve(async (req) => {
     // Google OAuth bypasses verify-signup, so check for placeholder here
     await transferPlaceholderIfExists(supabase, userId, userEmail);
 
+    // 13. Send welcome email for OAuth users
+    // Email/password users already receive it from verify-signup.
+    // OAuth users (Google) bypass verify-signup entirely and never get one.
+    const isOAuthUser = userData.user.app_metadata?.provider !== "email";
+    if (isOAuthUser) {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+        await fetch(`${supabaseUrl}/functions/v1/send-welcome-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({ userId }),
+        });
+        console.log(`Welcome email triggered for OAuth user ${userEmail}`);
+      } catch (welcomeError) {
+        // Non-fatal — registration succeeded even if welcome email fails
+        console.error("Failed to send welcome email for OAuth user:", welcomeError);
+      }
+    }
+
     console.log(`Registration completed for ${userEmail}: role_choice=${role_choice}, status=${registrationStatus}`);
 
     return successResponse.ok({

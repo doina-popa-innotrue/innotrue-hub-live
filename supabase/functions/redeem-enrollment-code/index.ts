@@ -323,7 +323,7 @@ serve(async (req) => {
       }
     }
 
-    // 9. Notify code creator
+    // 9. Notify code creator (admin)
     try {
       await supabase.rpc("create_notification", {
         p_user_id: enrollCode.created_by,
@@ -341,7 +341,26 @@ serve(async (req) => {
       });
     } catch (notifError) {
       // Non-fatal — enrollment succeeded even if notification fails
-      console.error("Failed to send notification:", notifError);
+      console.error("Failed to send admin notification:", notifError);
+    }
+
+    // 9b. Notify the CLIENT of successful enrollment (in-app + email)
+    try {
+      await supabase.rpc("create_notification", {
+        p_user_id: userId,
+        p_type_key: "program_enrolled",
+        p_title: `Welcome to ${enrollCode.programs.name}!`,
+        p_message: `You've been successfully enrolled in ${enrollCode.programs.name}. Visit your dashboard to get started!`,
+        p_link: `/programs/${enrollCode.program_id}`,
+        p_metadata: {
+          enrollment_id: enrollmentId,
+          program_name: enrollCode.programs.name,
+          program_id: enrollCode.program_id,
+        },
+      });
+    } catch (notifError) {
+      // Non-fatal — enrollment succeeded even if notification fails
+      console.error("Failed to send client enrollment notification:", notifError);
     }
 
     console.log(
