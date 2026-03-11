@@ -1171,42 +1171,33 @@ ON CONFLICT DO NOTHING;
 -- 4 free, multi-use enrollment codes for referral tracking (B2C launch)
 -- Two referral sources: InnoTrue (organic) + CloudEarly (partner)
 -- Two tiers: Essentials + Premium
+-- Skips gracefully if the CTA Immersion programme doesn't exist in this env.
 
-INSERT INTO public.enrollment_codes (
-  code, program_id, created_by,
-  code_type, grants_tier, is_free, is_active,
-  max_uses, discount_percent
-)
-VALUES
-  (
-    'CTAINNOTRUE-E',
-    (SELECT id FROM public.programs WHERE slug = 'cta-immersion' LIMIT 1),
-    (SELECT ur.user_id FROM public.user_roles ur WHERE ur.role = 'admin' LIMIT 1),
-    'multi_use', 'Essentials', true, true,
-    NULL, NULL
-  ),
-  (
-    'CTAINNOTRUE-P',
-    (SELECT id FROM public.programs WHERE slug = 'cta-immersion' LIMIT 1),
-    (SELECT ur.user_id FROM public.user_roles ur WHERE ur.role = 'admin' LIMIT 1),
-    'multi_use', 'Premium', true, true,
-    NULL, NULL
-  ),
-  (
-    'CTACLOUDEARLY-E',
-    (SELECT id FROM public.programs WHERE slug = 'cta-immersion' LIMIT 1),
-    (SELECT ur.user_id FROM public.user_roles ur WHERE ur.role = 'admin' LIMIT 1),
-    'multi_use', 'Essentials', true, true,
-    NULL, NULL
-  ),
-  (
-    'CTACLOUDEARLY-P',
-    (SELECT id FROM public.programs WHERE slug = 'cta-immersion' LIMIT 1),
-    (SELECT ur.user_id FROM public.user_roles ur WHERE ur.role = 'admin' LIMIT 1),
-    'multi_use', 'Premium', true, true,
-    NULL, NULL
+DO $$
+DECLARE
+  v_program_id UUID;
+  v_admin_id UUID;
+BEGIN
+  SELECT id INTO v_program_id FROM public.programs WHERE slug = 'cta-immersion' LIMIT 1;
+  SELECT ur.user_id INTO v_admin_id FROM public.user_roles ur WHERE ur.role = 'admin' LIMIT 1;
+
+  IF v_program_id IS NULL OR v_admin_id IS NULL THEN
+    RAISE NOTICE 'CTA Immersion programme or admin user not found — skipping enrollment codes';
+    RETURN;
+  END IF;
+
+  INSERT INTO public.enrollment_codes (
+    code, program_id, created_by,
+    code_type, grants_tier, is_free, is_active,
+    max_uses, discount_percent
   )
-ON CONFLICT (code) DO NOTHING;
+  VALUES
+    ('CTAINNOTRUE-E',   v_program_id, v_admin_id, 'multi_use', 'Essentials', true, true, NULL, NULL),
+    ('CTAINNOTRUE-P',   v_program_id, v_admin_id, 'multi_use', 'Premium',    true, true, NULL, NULL),
+    ('CTACLOUDEARLY-E', v_program_id, v_admin_id, 'multi_use', 'Essentials', true, true, NULL, NULL),
+    ('CTACLOUDEARLY-P', v_program_id, v_admin_id, 'multi_use', 'Premium',    true, true, NULL, NULL)
+  ON CONFLICT (code) DO NOTHING;
+END $$;
 
 -- =============================================================================
 -- DONE! Summary of seeded data:
