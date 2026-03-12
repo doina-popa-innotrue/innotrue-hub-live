@@ -19,7 +19,7 @@ export function useModuleScenarios(moduleId: string | undefined) {
           `
           *,
           scenario_templates(
-            id, title, description, is_active, is_protected,
+            id, title, description, is_active, is_protected, allows_resubmission,
             capability_assessments(id, name, slug)
           )
         `,

@@ -31,23 +31,65 @@ export function AssignedScenarioItem({
 
     setIsLoading(true);
     try {
-      // First, check if an assignment already exists for this user and template
-      const { data: existingAssignment, error: fetchError } = await supabase
+      // Fetch all assignments for this template+user, newest first
+      const { data: existingAssignments, error: fetchError } = await supabase
         .from("scenario_assignments")
-        .select("id")
+        .select("id, status, attempt_number")
         .eq("template_id", scenarioTemplateId)
         .eq("user_id", user.id)
-        .maybeSingle();
+        .order("created_at", { ascending: false });
 
       if (fetchError) throw fetchError;
 
-      if (existingAssignment) {
-        // Navigate to existing assignment
-        navigate(`/scenarios/${existingAssignment.id}`);
+      // Prefer a draft assignment (most recent)
+      const draft = existingAssignments?.find((a) => a.status === "draft");
+      if (draft) {
+        navigate(`/scenarios/${draft.id}`);
         return;
       }
 
-      // Create a new assignment
+      // If there's a completed/evaluated assignment, check if resubmission is allowed
+      const completed = existingAssignments?.find(
+        (a) => a.status === "evaluated" || a.status === "submitted" || a.status === "in_review",
+      );
+
+      if (completed) {
+        // Check if template allows resubmission
+        const { data: template } = await supabase
+          .from("scenario_templates")
+          .select("allows_resubmission")
+          .eq("id", scenarioTemplateId)
+          .single();
+
+        if (template?.allows_resubmission) {
+          // Create a fresh attempt
+          const { data: newAssignment, error: createError } = await supabase
+            .from("scenario_assignments")
+            .insert({
+              template_id: scenarioTemplateId,
+              user_id: user.id,
+              module_id: moduleId,
+              enrollment_id: enrollmentId || null,
+              status: "draft",
+              parent_assignment_id: completed.id,
+              attempt_number: (completed.attempt_number || 1) + 1,
+            })
+            .select("id")
+            .single();
+
+          if (createError) throw createError;
+
+          toast.success("New attempt started!");
+          navigate(`/scenarios/${newAssignment.id}`);
+          return;
+        }
+
+        // Resubmission not allowed — view existing (read-only)
+        navigate(`/scenarios/${completed.id}`);
+        return;
+      }
+
+      // No existing assignment at all — create a new one
       const { data: newAssignment, error: createError } = await supabase
         .from("scenario_assignments")
         .insert({
