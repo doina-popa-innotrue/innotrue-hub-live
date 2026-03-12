@@ -106,11 +106,16 @@ serve(async (req) => {
       stripeCustomerId = existingSub.stripe_customer_id;
       logStep("Found existing Stripe customer", { stripeCustomerId });
     } else {
-      const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-      if (customers.data.length > 0) {
-        stripeCustomerId = customers.data[0].id;
-        logStep("Found Stripe customer by email", { stripeCustomerId });
+      // Search Stripe by email, then filter by org metadata to prevent cross-org reuse
+      const customers = await stripe.customers.list({ email: user.email, limit: 100 });
+      const orgCustomer = customers.data.find(
+        (c) => c.metadata?.organization_id === organizationId
+      );
+      if (orgCustomer) {
+        stripeCustomerId = orgCustomer.id;
+        logStep("Found Stripe customer by email+org", { stripeCustomerId });
       } else {
+        // Create new customer scoped to this org
         const newCustomer = await stripe.customers.create({
           email: user.email,
           name: org.name,

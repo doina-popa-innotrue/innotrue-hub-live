@@ -160,14 +160,22 @@ Restrictive features (is_restrictive = true) → deny override regardless of oth
 
 ## 4. Known Issues / Technical Debt
 
+### Resolved (2026-04-13)
+
+| Issue | Resolution |
+|-------|------------|
+| **Stripe customer reuse risk** | **FIXED.** Both `org-purchase-credits` and `org-platform-subscription` searched Stripe by email only (`limit: 1`), allowing two orgs with the same billing email to share a Stripe customer. Now searches `limit: 100` and filters by `metadata.organization_id`. New customers always include org metadata. |
+| **Missing notification_types rows** | **FIXED.** `org_seat_limit_warning` and `org_seat_limit_reached` types were missing from `notification_types` (email templates existed but the RPC would throw RAISE EXCEPTION). Migration `20260413140000` adds both rows. |
+| **RLS cross-org data leakage** | **AUDITED — SAFE.** All 11 org-scoped tables have proper RLS policies using `organization_members` subqueries. No cross-org data leakage found. Two minor gaps: `auth_contexts` world-readable (intentional for signup flows), `credit_consumption_log.org_id` unused in RLS (analytics gap, not security). |
+
+### Remaining
+
 | Issue | Description | Severity |
 |-------|-------------|----------|
-| **Stripe customer reuse risk** | `org-purchase-credits` searches by billing email. Multiple orgs with same billing contact could share a Stripe customer ID. | Low |
-| **Email template seeding** | `send-org-invite` supports custom templates from DB with fallback. Verify `email_templates.org_invite` row exists in migrations (not just seed). | Low |
 | **No test coverage** | Org edge functions have no automated tests. | Medium |
-| **`profiles.organisation` legacy field** | String column (not FK) — legacy from before the org system. Could confuse developers. | Low |
-| **RLS cross-org data leakage** | Orgs share a single database. Periodic RLS audit recommended — especially for new tables. | Medium |
+| **`profiles.organisation` legacy field** | String column (not FK) — legacy from before the org system. Used in AccountSettings, PublicProfile, PublicProfileSettings. Could confuse developers. Separate from B2B `organization_members`. Consider deprecating or unifying. | Low |
 | **Org settings validation** | `organizations.settings` is free-form JSONB. No schema validation on write. | Low |
+| **`credit_consumption_log` org gap** | `org_id` column exists but isn't used in RLS. Org admins can't see credit consumption for their members — only platform admins can. Analytics gap. | Low |
 
 ---
 
