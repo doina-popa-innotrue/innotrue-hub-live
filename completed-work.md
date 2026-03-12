@@ -2061,3 +2061,59 @@ Enhanced `/admin/enrolments` (`EnrolmentsManagement.tsx`) with referral tracking
 - **Clear Filters** resets code filter
 
 **Files changed:** 3 (`EnrolmentsManagement.tsx`, migration, `seed.sql`)
+
+## SC-4 Org B2B Audit (2026-04-13)
+
+Commit `1d603fd`. Created `docs/ORG_B2B_AUDIT_AND_ROADMAP.md`.
+
+Full audit of organisation-related functionality for B2B selling:
+- Inventoried 13 org tables, 6 edge functions, 17 frontend pages, full security model
+- Confirmed RLS is safe across all 11 org-scoped tables (no cross-org data leakage)
+- Identified 15 B2B features needed, prioritised in 4 phases
+- Documented 4 remaining tech debt items
+
+### Critical Fixes During Audit
+
+**Stripe customer cross-org reuse (CRITICAL)** — Commit `5609dcd`:
+- Both `org-purchase-credits` and `org-platform-subscription` searched Stripe customers by email with `limit: 1`, ignoring org context
+- Two orgs with same billing email would share a Stripe customer, causing billing contamination
+- Fixed: search `limit: 100` + filter by `metadata.organization_id`, new customers always include org metadata
+
+**Missing notification_types rows** — Migration `20260413140000`:
+- `org_seat_limit_warning` and `org_seat_limit_reached` email templates existed but no matching `notification_types` rows
+- `create_notification()` RPC threw RAISE EXCEPTION, silently swallowed by edge function
+- Fixed: added both rows with `ON CONFLICT (key) DO NOTHING`
+
+**Files changed:** `org-purchase-credits/index.ts`, `org-platform-subscription/index.ts`, migration, `docs/ORG_B2B_AUDIT_AND_ROADMAP.md`
+
+## Org Analytics Phase 1 — Foundation (2026-04-14)
+
+Commit `bdea56c`. Migration `20260414100000_org_analytics_foundation.sql`.
+
+### Migration
+
+1. **Index** on `credit_consumption_log.organization_id` (partial, WHERE NOT NULL) for org-level query performance
+2. **RLS policy** on `credit_consumption_log` — org admins/managers can now view credit consumption for their org (was missing, blocking analytics)
+3. **`get_org_analytics_summary(p_org_id, p_date_from, p_date_to)`** — single SECURITY DEFINER RPC returning comprehensive JSONB:
+   - Enrollment stats: total/active/completed/paused/cancelled, completion rate, new/completed in period, unique learners, avg enrollments per member
+   - Module progress: total/completed/in_progress/not_started, completion rate, avg days to complete, completed in period
+   - Scenario assignments: total by status, evaluated in period, unique participants
+   - Capability assessments: total, self vs evaluator, completed in period, unique assessed
+   - Credit usage: available/purchased/consumed/reserved, consumed in period, 10 recent transactions
+   - Program breakdown: per-program enrollment + module completion rates
+   - Member engagement: top 20 members with activity across enrollments, modules, scenarios, assessments
+   - Enrollment trends: weekly buckets for chart display
+
+### Frontend
+
+- **New hook:** `useOrgAnalyticsSummary(orgId, { dateFrom, dateTo })` — TanStack Query wrapper (replaces raw useEffect + client-side computation)
+- **Rewritten `OrgAnalytics.tsx`:**
+  - Date range filtering with quick presets (30/90/180/365 days) + calendar range picker
+  - 8 KPI stat cards: members, enrollments, completion rate, credits available, modules completed, scenarios evaluated, assessments completed, avg module time
+  - Weekly enrollment trends bar chart with legend
+  - Enrollment status pie chart with legend
+  - Program progress section with module completion rate badges
+  - Credit usage section: 4 balance cards + recent transactions table
+  - Member engagement table: top 20 members with columns for enrollments, completed, modules, scenarios, assessments, last activity
+
+**Files changed:** 3 (`useOrgAnalyticsSummary.ts` new, `OrgAnalytics.tsx` rewritten, migration new)

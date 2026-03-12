@@ -2,7 +2,7 @@
 
 Full audit of organisation-related functionality for B2B selling.
 
-Last updated: 2026-04-13
+Last updated: 2026-04-14
 
 ---
 
@@ -107,10 +107,9 @@ Restrictive features (is_restrictive = true) → deny override regardless of oth
 ## 2. Partially Built / Needs Attention
 
 ### A. Org Analytics Dashboard
-- **Status:** Page exists (`/org-admin/analytics`) but content is basic
-- **Gap:** No ROI metrics (completion rates, skills gaps closed, engagement, credits consumed vs purchased)
-- **Impact:** Org admins can't justify spend to leadership — critical for B2B retention/expansion
-- **Priority:** High
+- **Status:** Phase 1 (Foundation) ✅ DONE (2026-04-14). Server-side `get_org_analytics_summary()` RPC with date-range filtering, 8 KPI cards, weekly trends, program breakdown with module completion rates, credit usage section, expanded member engagement table (top 20). RLS on `credit_consumption_log` for org admins added.
+- **Remaining (Phase 2):** ROI metrics (cost-per-completion, credits-per-skill-improvement), capability/skills gap analysis (aggregate capability snapshots), cohort retention analysis, CSV/PDF export, AI-powered insights
+- **Priority:** Medium (foundation done, enhancements for Phase 2)
 
 ### B. Bulk Enrollment
 - **Status:** `BulkEnrollmentDialog.tsx` exists for platform admin
@@ -130,7 +129,7 @@ Restrictive features (is_restrictive = true) → deny override regardless of oth
 
 | # | Feature | Description | Effort |
 |---|---------|-------------|--------|
-| 1 | **Org Analytics & ROI Dashboard** | Aggregate dashboard: programs completed, skills gaps closed, session utilisation, credits consumed vs purchased, engagement scores. Required for org admins to justify spend. | Large |
+| 1 | **Org Analytics & ROI Dashboard** | ~~Phase 1 (Foundation) DONE~~ — server-side RPC, 8 KPIs, trends, program breakdown, credit usage, member engagement. **Phase 2 remaining:** ROI metrics, skills gap analysis, cohort retention, CSV/PDF export, AI insights. | Medium |
 | 2 | **Bulk Invite (CSV)** | Upload CSV of emails to invite multiple members at once. Currently one-by-one only. | Small |
 | 3 | **SSO / SAML** | Enterprise buyers expect this. Currently password + Google OAuth only. Supabase supports SAML via Auth config. | Large |
 | 4 | **Audit Logging** | Action history for org changes (who invited whom, plan changes, enrollment actions, billing events). Required for compliance in enterprise. | Medium |
@@ -166,7 +165,8 @@ Restrictive features (is_restrictive = true) → deny override regardless of oth
 |-------|------------|
 | **Stripe customer reuse risk** | **FIXED.** Both `org-purchase-credits` and `org-platform-subscription` searched Stripe by email only (`limit: 1`), allowing two orgs with the same billing email to share a Stripe customer. Now searches `limit: 100` and filters by `metadata.organization_id`. New customers always include org metadata. |
 | **Missing notification_types rows** | **FIXED.** `org_seat_limit_warning` and `org_seat_limit_reached` types were missing from `notification_types` (email templates existed but the RPC would throw RAISE EXCEPTION). Migration `20260413140000` adds both rows. |
-| **RLS cross-org data leakage** | **AUDITED — SAFE.** All 11 org-scoped tables have proper RLS policies using `organization_members` subqueries. No cross-org data leakage found. Two minor gaps: `auth_contexts` world-readable (intentional for signup flows), `credit_consumption_log.org_id` unused in RLS (analytics gap, not security). |
+| **RLS cross-org data leakage** | **AUDITED — SAFE.** All 11 org-scoped tables have proper RLS policies using `organization_members` subqueries. No cross-org data leakage found. One minor gap: `auth_contexts` world-readable (intentional for signup flows). |
+| **`credit_consumption_log` org gap** | **FIXED.** RLS policy added for org admins/managers (migration `20260414100000`). Index on `organization_id` also added. Org admins can now view credit consumption for their members. |
 
 ### Remaining
 
@@ -175,7 +175,6 @@ Restrictive features (is_restrictive = true) → deny override regardless of oth
 | **No test coverage** | Org edge functions have no automated tests. | Medium |
 | **`profiles.organisation` legacy field** | String column (not FK) — legacy from before the org system. Used in AccountSettings, PublicProfile, PublicProfileSettings. Could confuse developers. Separate from B2B `organization_members`. Consider deprecating or unifying. | Low |
 | **Org settings validation** | `organizations.settings` is free-form JSONB. No schema validation on write. | Low |
-| **`credit_consumption_log` org gap** | `org_id` column exists but isn't used in RLS. Org admins can't see credit consumption for their members — only platform admins can. Analytics gap. | Low |
 
 ---
 
