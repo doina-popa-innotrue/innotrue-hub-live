@@ -2117,3 +2117,38 @@ Commit `bdea56c`. Migration `20260414100000_org_analytics_foundation.sql`.
   - Member engagement table: top 20 members with columns for enrollments, completed, modules, scenarios, assessments, last activity
 
 **Files changed:** 3 (`useOrgAnalyticsSummary.ts` new, `OrgAnalytics.tsx` rewritten, migration new)
+
+---
+
+## Scenario Assignment Cross-Module Fix (2026-04-14)
+
+**Commit:** `735f786`
+
+### Problem
+When the same scenario template was assigned to a client on two different modules within the same program enrollment, clicking the second module's scenario showed "Failed to access scenario". Root cause: `UNIQUE(template_id, user_id, enrollment_id)` constraint on `scenario_assignments` prevented creating a second assignment for the same template+user+enrollment, even on a different module. Additionally, assignment queries didn't filter by `module_id`, causing cross-module interference.
+
+### Fix
+
+- **Migration `20260414120000`:** Dropped old constraint, added `UNIQUE(template_id, user_id, COALESCE(module_id), attempt_number)` — allows same template on different modules + resubmissions on the same module
+- **`AssignedScenarioItem.tsx`:** Added `.eq("module_id", moduleId)` to the assignment query so it only finds assignments for the current module
+- **`ModuleScenariosSection.tsx`:** Same `module_id` filter on the draft reuse query
+
+**Files changed:** 3 (2 components modified, 1 migration new)
+
+---
+
+## Data Cleanup Record Inspection (2026-04-14)
+
+**Commit:** `8d818c4`
+
+### Enhancement
+Admin data cleanup page now allows inspecting the actual records that match filters before deleting, not just counts.
+
+### Migration
+- **`20260414130000_admin_data_cleanup_list_records.sql`:** New `admin_data_cleanup_list_records` SECURITY DEFINER RPC with same 5 filter params + `p_limit`/`p_offset` pagination. Returns `{ total_count, records }` JSONB. Reuses identical CTE matching logic from preview/execute but SELECTs actual rows with LEFT JOINs for display names (scenario template titles, assessment names, module titles, program names). User IDs returned as raw UUIDs for frontend batch profile fetch.
+
+### Frontend
+- **New `DataCleanupRecordInspector.tsx`:** Dialog component (max-w-5xl) with entity-specific table columns, batch-fetched profile names, status badges, date formatting, and pagination (50 records/page). Column configs defined per entity type via a map pattern.
+- **Modified `DataCleanupEntityCard.tsx`:** Added "View Records" button (with Search icon) next to Delete button in preview results. Exported `CleanupFilters` interface for use by inspector.
+
+**Files changed:** 3 (`DataCleanupRecordInspector.tsx` new, `DataCleanupEntityCard.tsx` modified, migration new)

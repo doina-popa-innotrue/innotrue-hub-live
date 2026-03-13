@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -42,7 +43,11 @@ import {
 } from "recharts";
 import { format, subDays } from "date-fns";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
-import { useOrgAnalyticsSummary, type OrgAnalyticsSummary } from "@/hooks/useOrgAnalyticsSummary";
+import { useOrgAnalyticsSummary } from "@/hooks/useOrgAnalyticsSummary";
+import { useOrgAnalyticsAdvanced } from "@/hooks/useOrgAnalyticsAdvanced";
+import { OrgAnalyticsROI } from "@/components/org-analytics/OrgAnalyticsROI";
+import { OrgAnalyticsCapabilityGap } from "@/components/org-analytics/OrgAnalyticsCapabilityGap";
+import { OrgAnalyticsCohortRetention } from "@/components/org-analytics/OrgAnalyticsCohortRetention";
 
 // ---------- Date range helpers ----------
 
@@ -106,6 +111,9 @@ export default function OrgAnalytics() {
   const { organizationMembership } = useAuth();
   const orgId = organizationMembership?.organization_id ?? undefined;
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState("overview");
+
   // Date range state
   const [dateRange, setDateRange] = useState<DateRange>({
     from: subDays(new Date(), 90),
@@ -120,8 +128,19 @@ export default function OrgAnalytics() {
     [dateRange],
   );
 
-  // Main analytics query via server RPC
+  // Phase 1 analytics (overview tab — always loaded)
   const { data: analytics, isLoading, error } = useOrgAnalyticsSummary(orgId, queryOptions);
+
+  // Phase 2 analytics (lazy-loaded when non-overview tab is active)
+  const isAdvancedTabActive = activeTab !== "overview";
+  const {
+    data: advanced,
+    isLoading: advancedLoading,
+    error: advancedError,
+  } = useOrgAnalyticsAdvanced(orgId, {
+    ...queryOptions,
+    enabled: isAdvancedTabActive,
+  });
 
   // Batch-fetch profile names for member engagement table
   const [profileMap, setProfileMap] = useState<Map<string, string>>(new Map());
@@ -272,336 +291,403 @@ export default function OrgAnalytics() {
         </div>
       </div>
 
-      {/* ---- Overview KPI Cards ---- */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Members"
-          value={analytics.total_members}
-          subtitle={`${es.unique_learners} enrolled in programs`}
-          icon={Users}
-        />
-        <StatCard
-          title="Total Enrollments"
-          value={es.total}
-          subtitle={`${es.new_in_period} new in period`}
-          icon={GraduationCap}
-        />
-        <StatCard
-          title="Completion Rate"
-          value={`${es.completion_rate}%`}
-          subtitle={`${es.completed} of ${es.total} completed`}
-          icon={TrendingUp}
-        />
-        <StatCard
-          title="Credits Available"
-          value={cr.available}
-          subtitle={`${cr.total_consumed} consumed total`}
-          icon={Coins}
-          iconClassName="h-4 w-4 text-amber-500"
-        />
-      </div>
+      {/* Tabbed content */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="roi">ROI</TabsTrigger>
+          <TabsTrigger value="capabilities">Capabilities &amp; Skills</TabsTrigger>
+          <TabsTrigger value="cohorts">Cohort Retention</TabsTrigger>
+        </TabsList>
 
-      {/* ---- Period Activity Row ---- */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Modules Completed"
-          value={ms.completed_in_period}
-          subtitle={`${ms.completion_rate}% overall module completion`}
-          icon={Layers}
-        />
-        <StatCard
-          title="Scenarios Evaluated"
-          value={ss.evaluated_in_period}
-          subtitle={`${ss.unique_participants} unique participants`}
-          icon={FileText}
-        />
-        <StatCard
-          title="Assessments Completed"
-          value={cs.completed_in_period}
-          subtitle={`${cs.unique_assessed} members assessed`}
-          icon={ClipboardCheck}
-        />
-        <StatCard
-          title="Avg Module Time"
-          value={ms.avg_completion_days > 0 ? `${ms.avg_completion_days}d` : "—"}
-          subtitle="Average days to complete a module"
-          icon={CheckCircle2}
-          iconClassName="h-4 w-4 text-green-500"
-        />
-      </div>
-
-      {/* ---- Charts Row ---- */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Enrollment Trends Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Enrollment Trends</CardTitle>
-            <CardDescription>Weekly new enrollments and completions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {trendChartData.length > 0 &&
-            trendChartData.some(
-              (t) => t["New Enrollments"] > 0 || t.Completions > 0,
-            ) ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={trendChartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="week" tick={{ fontSize: 12 }} interval="preserveStartEnd" />
-                  <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--background))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Legend />
-                  <Bar
-                    dataKey="New Enrollments"
-                    fill="hsl(var(--primary))"
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="Completions"
-                    fill="hsl(var(--chart-4))"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[280px] text-muted-foreground">
-                No enrollment activity in this period
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Enrollment Status Pie Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Enrollment Status</CardTitle>
-            <CardDescription>Distribution of all enrollment statuses</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {enrollmentPieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={enrollmentPieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
-                  >
-                    {enrollmentPieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[280px] text-muted-foreground">
-                No enrollments yet
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ---- Program Progress ---- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            Program Progress
-          </CardTitle>
-          <CardDescription>
-            Enrollment and module completion rates by program
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {analytics.program_breakdown.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No program enrollments yet
-            </div>
-          ) : (
-            <div className="space-y-5">
-              {analytics.program_breakdown.map((program) => (
-                <div key={program.program_id} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{program.program_name}</span>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <span>
-                        {program.completed}/{program.total_enrolled} completed ({program.completion_rate}%)
-                      </span>
-                      <Badge variant="outline" className="text-xs">
-                        Modules: {program.module_completion_rate}%
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <Progress value={program.completion_rate} className="h-2" />
-                    </div>
-                  </div>
-                  <div className="flex gap-4 text-xs text-muted-foreground">
-                    <span>{program.active} active</span>
-                    <span>{program.completed} completed</span>
-                    <span>{program.total_enrolled} total enrolled</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ---- Credit Usage ---- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Coins className="h-5 w-5 text-amber-500" />
-            Credit Usage
-          </CardTitle>
-          <CardDescription>Organisation credit balance and consumption</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg border p-3">
-              <p className="text-sm text-muted-foreground">Available</p>
-              <p className="text-2xl font-bold">{cr.available}</p>
-            </div>
-            <div className="rounded-lg border p-3">
-              <p className="text-sm text-muted-foreground">Total Purchased</p>
-              <p className="text-2xl font-bold">{cr.total_purchased}</p>
-            </div>
-            <div className="rounded-lg border p-3">
-              <p className="text-sm text-muted-foreground">Total Consumed</p>
-              <p className="text-2xl font-bold">{cr.total_consumed}</p>
-            </div>
-            <div className="rounded-lg border p-3">
-              <p className="text-sm text-muted-foreground">Consumed in Period</p>
-              <p className="text-2xl font-bold">{cr.consumed_in_period}</p>
-            </div>
+        {/* ===== OVERVIEW TAB ===== */}
+        <TabsContent value="overview" className="space-y-6">
+          {/* Overview KPI Cards */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Total Members"
+              value={analytics.total_members}
+              subtitle={`${es.unique_learners} enrolled in programs`}
+              icon={Users}
+            />
+            <StatCard
+              title="Total Enrollments"
+              value={es.total}
+              subtitle={`${es.new_in_period} new in period`}
+              icon={GraduationCap}
+            />
+            <StatCard
+              title="Completion Rate"
+              value={`${es.completion_rate}%`}
+              subtitle={`${es.completed} of ${es.total} completed`}
+              icon={TrendingUp}
+            />
+            <StatCard
+              title="Credits Available"
+              value={cr.available}
+              subtitle={`${cr.total_consumed} consumed total`}
+              icon={Coins}
+              iconClassName="h-4 w-4 text-amber-500"
+            />
           </div>
-          {cr.recent_transactions.length > 0 && (
-            <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">Recent Transactions</h4>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cr.recent_transactions.map((tx, i) => (
-                    <TableRow key={i}>
-                      <TableCell>
-                        <Badge variant={tx.amount > 0 ? "default" : "secondary"}>
-                          {tx.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell
-                        className={tx.amount > 0 ? "text-green-600 font-medium" : "text-muted-foreground"}
-                      >
-                        {tx.amount > 0 ? "+" : ""}
-                        {tx.amount}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground max-w-[200px] truncate">
-                        {tx.description || "—"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {tx.created_at ? format(new Date(tx.created_at), "MMM d, yyyy") : "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* ---- Member Engagement ---- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Member Engagement
-          </CardTitle>
-          <CardDescription>
-            Individual member progress across enrollments, modules, scenarios, and assessments (top 20)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {analytics.member_engagement.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No members in your organisation yet
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Member</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-center">Enrollments</TableHead>
-                    <TableHead className="text-center">Completed</TableHead>
-                    <TableHead className="text-center">Modules</TableHead>
-                    <TableHead className="text-center">Scenarios</TableHead>
-                    <TableHead className="text-center">Assessments</TableHead>
-                    <TableHead>Last Activity</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {analytics.member_engagement.map((member) => {
-                    const name = profileMap.get(member.user_id) ?? "Loading...";
-                    const status = getMemberStatus(member.last_activity);
-                    return (
-                      <TableRow key={member.user_id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                              <span className="text-sm font-medium text-primary">
-                                {name[0]?.toUpperCase() ?? "?"}
-                              </span>
-                            </div>
-                            <span className="font-medium truncate max-w-[150px]">{name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>{getStatusBadge(status)}</TableCell>
-                        <TableCell className="text-center">{member.enrollment_count}</TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                            {member.completed_enrollments}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">{member.modules_completed}</TableCell>
-                        <TableCell className="text-center">{member.scenarios_evaluated}</TableCell>
-                        <TableCell className="text-center">{member.assessments_completed}</TableCell>
-                        <TableCell className="text-muted-foreground whitespace-nowrap">
-                          {member.last_activity
-                            ? format(new Date(member.last_activity), "MMM d, yyyy")
-                            : "No activity"}
-                        </TableCell>
+          {/* Period Activity Row */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Modules Completed"
+              value={ms.completed_in_period}
+              subtitle={`${ms.completion_rate}% overall module completion`}
+              icon={Layers}
+            />
+            <StatCard
+              title="Scenarios Evaluated"
+              value={ss.evaluated_in_period}
+              subtitle={`${ss.unique_participants} unique participants`}
+              icon={FileText}
+            />
+            <StatCard
+              title="Assessments Completed"
+              value={cs.completed_in_period}
+              subtitle={`${cs.unique_assessed} members assessed`}
+              icon={ClipboardCheck}
+            />
+            <StatCard
+              title="Avg Module Time"
+              value={ms.avg_completion_days > 0 ? `${ms.avg_completion_days}d` : "—"}
+              subtitle="Average days to complete a module"
+              icon={CheckCircle2}
+              iconClassName="h-4 w-4 text-green-500"
+            />
+          </div>
+
+          {/* Charts Row */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Enrollment Trends Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Enrollment Trends</CardTitle>
+                <CardDescription>Weekly new enrollments and completions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {trendChartData.length > 0 &&
+                trendChartData.some(
+                  (t) => t["New Enrollments"] > 0 || t.Completions > 0,
+                ) ? (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={trendChartData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="week" tick={{ fontSize: 12 }} interval="preserveStartEnd" />
+                      <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--background))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Legend />
+                      <Bar
+                        dataKey="New Enrollments"
+                        fill="hsl(var(--primary))"
+                        radius={[4, 4, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="Completions"
+                        fill="hsl(var(--chart-4))"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[280px] text-muted-foreground">
+                    No enrollment activity in this period
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Enrollment Status Pie Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Enrollment Status</CardTitle>
+                <CardDescription>Distribution of all enrollment statuses</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {enrollmentPieData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <PieChart>
+                      <Pie
+                        data={enrollmentPieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={5}
+                        dataKey="value"
+                        label={({ name, value }) => `${name}: ${value}`}
+                      >
+                        {enrollmentPieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[280px] text-muted-foreground">
+                    No enrollments yet
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Program Progress */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                Program Progress
+              </CardTitle>
+              <CardDescription>
+                Enrollment and module completion rates by program
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {analytics.program_breakdown.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No program enrollments yet
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {analytics.program_breakdown.map((program) => (
+                    <div key={program.program_id} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{program.program_name}</span>
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                          <span>
+                            {program.completed}/{program.total_enrolled} completed ({program.completion_rate}%)
+                          </span>
+                          <Badge variant="outline" className="text-xs">
+                            Modules: {program.module_completion_rate}%
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <Progress value={program.completion_rate} className="h-2" />
+                        </div>
+                      </div>
+                      <div className="flex gap-4 text-xs text-muted-foreground">
+                        <span>{program.active} active</span>
+                        <span>{program.completed} completed</span>
+                        <span>{program.total_enrolled} total enrolled</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Credit Usage */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Coins className="h-5 w-5 text-amber-500" />
+                Credit Usage
+              </CardTitle>
+              <CardDescription>Organisation credit balance and consumption</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-lg border p-3">
+                  <p className="text-sm text-muted-foreground">Available</p>
+                  <p className="text-2xl font-bold">{cr.available}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-sm text-muted-foreground">Total Purchased</p>
+                  <p className="text-2xl font-bold">{cr.total_purchased}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-sm text-muted-foreground">Total Consumed</p>
+                  <p className="text-2xl font-bold">{cr.total_consumed}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-sm text-muted-foreground">Consumed in Period</p>
+                  <p className="text-2xl font-bold">{cr.consumed_in_period}</p>
+                </div>
+              </div>
+              {cr.recent_transactions.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium mb-2">Recent Transactions</h4>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Date</TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {cr.recent_transactions.map((tx, i) => (
+                        <TableRow key={i}>
+                          <TableCell>
+                            <Badge variant={tx.amount > 0 ? "default" : "secondary"}>
+                              {tx.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell
+                            className={tx.amount > 0 ? "text-green-600 font-medium" : "text-muted-foreground"}
+                          >
+                            {tx.amount > 0 ? "+" : ""}
+                            {tx.amount}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                            {tx.description || "—"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {tx.created_at ? format(new Date(tx.created_at), "MMM d, yyyy") : "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Member Engagement */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Member Engagement
+              </CardTitle>
+              <CardDescription>
+                Individual member progress across enrollments, modules, scenarios, and assessments (top 20)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {analytics.member_engagement.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No members in your organisation yet
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Member</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-center">Enrollments</TableHead>
+                        <TableHead className="text-center">Completed</TableHead>
+                        <TableHead className="text-center">Modules</TableHead>
+                        <TableHead className="text-center">Scenarios</TableHead>
+                        <TableHead className="text-center">Assessments</TableHead>
+                        <TableHead>Last Activity</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {analytics.member_engagement.map((member) => {
+                        const name = profileMap.get(member.user_id) ?? "Loading...";
+                        const status = getMemberStatus(member.last_activity);
+                        return (
+                          <TableRow key={member.user_id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                  <span className="text-sm font-medium text-primary">
+                                    {name[0]?.toUpperCase() ?? "?"}
+                                  </span>
+                                </div>
+                                <span className="font-medium truncate max-w-[150px]">{name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{getStatusBadge(status)}</TableCell>
+                            <TableCell className="text-center">{member.enrollment_count}</TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                                {member.completed_enrollments}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">{member.modules_completed}</TableCell>
+                            <TableCell className="text-center">{member.scenarios_evaluated}</TableCell>
+                            <TableCell className="text-center">{member.assessments_completed}</TableCell>
+                            <TableCell className="text-muted-foreground whitespace-nowrap">
+                              {member.last_activity
+                                ? format(new Date(member.last_activity), "MMM d, yyyy")
+                                : "No activity"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ===== ROI TAB ===== */}
+        <TabsContent value="roi" className="space-y-6">
+          {advancedLoading ? (
+            <PageLoadingState message="Loading ROI metrics..." />
+          ) : advancedError ? (
+            <div className="text-center py-16 text-muted-foreground">
+              Failed to load ROI metrics. Please try again later.
+            </div>
+          ) : advanced?.roi_metrics ? (
+            <OrgAnalyticsROI data={advanced.roi_metrics} />
+          ) : (
+            <div className="text-center py-16 text-muted-foreground">
+              No ROI data available.
             </div>
           )}
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        {/* ===== CAPABILITIES & SKILLS TAB ===== */}
+        <TabsContent value="capabilities" className="space-y-6">
+          {advancedLoading ? (
+            <PageLoadingState message="Loading capability analysis..." />
+          ) : advancedError ? (
+            <div className="text-center py-16 text-muted-foreground">
+              Failed to load capability data. Please try again later.
+            </div>
+          ) : advanced?.capability_gap ? (
+            <OrgAnalyticsCapabilityGap
+              data={advanced.capability_gap}
+              totalMembers={advanced.total_members}
+            />
+          ) : (
+            <div className="text-center py-16 text-muted-foreground">
+              No capability data available.
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ===== COHORT RETENTION TAB ===== */}
+        <TabsContent value="cohorts" className="space-y-6">
+          {advancedLoading ? (
+            <PageLoadingState message="Loading cohort retention data..." />
+          ) : advancedError ? (
+            <div className="text-center py-16 text-muted-foreground">
+              Failed to load cohort data. Please try again later.
+            </div>
+          ) : advanced?.cohort_retention ? (
+            <OrgAnalyticsCohortRetention data={advanced.cohort_retention} />
+          ) : (
+            <div className="text-center py-16 text-muted-foreground">
+              No cohort data available.
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
