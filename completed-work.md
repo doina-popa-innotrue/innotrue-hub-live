@@ -1,5 +1,72 @@
 # Completed Work — Detailed History
 
+## R7 Test Phase 2 — React Hook Tests (2026-04-14)
+
+Commit `a2538ef`. 97 new tests across 12 hook test files + 3 infrastructure files. Total: 554 → 651 tests.
+
+### Problem
+Zero React hook tests existed. 116+ exported hooks across 87 files had no safety net. Recent feature work (org analytics, scenarios, assessments, credits, enrollments) needed regression protection.
+
+### Changes
+
+**Test infrastructure (3 new files):**
+- `src/test/mocks/supabase.ts` — `MockQueryBuilder` class with every chainable method as `vi.fn().mockReturnThis()`, thenable terminal methods, `createMockSupabase({ tables, rpcs, functions })` factory
+- `src/test/mocks/auth.ts` — `createMockAuth(options)` factory matching `AuthContextType`, `mockAuthProfiles` with prebuilt client/admin/instructor/orgAdmin/unauthenticated profiles
+- `src/test/test-utils.tsx` — `createTestQueryClient()` (retry: false, gcTime: 0), `renderHookWithProviders()` wrapping renderHook with QueryClientProvider
+
+**Tier 1 — Core business logic (46 tests):**
+- `useEntitlements.test.ts` (12) — 5-source feature merging, priority resolution (add-on > track > org > sub > plan), limit merging (null = unlimited), deny override
+- `useAdminCRUD.test.ts` (10) — CRUD operations, dialog state management, form mode routing, confirm guard
+- `useProgramEnrollment.test.ts` (10) — tier pricing, canAffordTier, enrollment flow, duplicate handling (23505)
+- `useCreditBatches.test.ts` (14) — RPC calls, canConsume, consume mutations, cache invalidation
+
+**Tier 2 — High impact (29 tests):**
+- `useNotifications.test.ts` (8) — fetch with joins, unreadCount, mutations, realtime subscription
+- `useScenarioAssignments.test.ts` (9) — filters, batch profile fetch (PostgREST FK workaround), CRUD, module-level filtering
+- `useFeatureVisibility.test.ts` (6) — null key, inactive feature, entitlement gating, sourceDisplayName bug prevention
+- `useReflectionPrompt.test.ts` (6) — edge function calls, error.context Response parsing bug prevention
+
+**Tier 3 — Supporting (21 tests):**
+- `useOrgAnalyticsSummary.test.ts` (5) — RPC params, enabled flags, error propagation
+- `useGoalAssessmentLinks.test.ts` (5) — single/batch queries, create/delete mutations
+- `useWheelFreePlanLimits.test.ts` (5) — paid vs free plan, limit enforcement, correct column name
+- `useActionItems.test.ts` (6) — filters, status filter, toggle completed_at
+
+**Key pattern:** `vi.hoisted()` for mock objects (avoids TDZ with `vi.mock()` hoisting) → `vi.mock()` for module substitution → `renderHookWithProviders()` for isolated hook rendering
+
+**Files created:** 15 (3 infrastructure + 12 test files)
+**Files modified:** 3 (package.json, package-lock.json, vitest.config.ts)
+
+---
+
+## Org Analytics Phase 2 — ROI, Capability Gap, Cohort Retention (2026-04-14)
+
+Commit `b9f4cc7`. Migration `20260414140000_org_analytics_advanced.sql`.
+
+### Problem
+Org admin dashboard only had basic summary metrics (Phase 1). Missing: ROI/credit investment analysis, capability assessment gap analysis (domain-level with self vs evaluator), skills coverage gaps, and cohort retention comparison.
+
+### Changes
+
+**Migration — `get_org_analytics_advanced` SECURITY DEFINER RPC:**
+- **ROI metrics:** total credit investment, cost per completion, cost per active learner, completion efficiency, avg completion days, skills acquired in period, credits per skill, program-level ROI breakdown
+- **Capability gap:** domain-level scores aggregated from `capability_snapshot_ratings → capability_domain_questions → capability_domains`, self vs evaluator gap analysis, skills coverage (required by programs vs acquired by members), top skill gaps
+- **Cohort retention:** per-cohort completion/dropout/attendance/module rates, overall averages, capacity tracking
+
+**Hook:** `useOrgAnalyticsAdvanced(orgId, { dateFrom, dateTo, enabled })` — lazy-loaded via `enabled` flag for tab-based loading
+
+**3 new components:**
+- `OrgAnalyticsROI.tsx` — 6 KPI StatCards + Program ROI comparison table
+- `OrgAnalyticsCapabilityGap.tsx` — collapsible assessment cards with horizontal bar charts (recharts), self vs evaluator gap table, skills coverage progress bar + top gaps table
+- `OrgAnalyticsCohortRetention.tsx` — 4 summary cards + cohort comparison table with color-coded RateBadge components
+
+**Refactored `OrgAnalytics.tsx`:** 4 tabs (Overview, ROI, Capabilities & Skills, Cohort Retention), date range shared across all tabs, Phase 2 data only loads when non-overview tab is active
+
+**Files created:** 5 (migration, hook, 3 components)
+**Files modified:** 1 (OrgAnalytics.tsx)
+
+---
+
 ## Admin Tier Upgrade Requests (2026-04-13)
 
 Commit `68de0df`. Migration `20260413110000_add_tier_upgrade_notification_type.sql`.

@@ -56,7 +56,8 @@
 - Assessment scoring: `src/lib/assessmentScoring.ts` (weighted question type scoring for capability assessments)
 - Guided path instantiation: `src/lib/guidedPathInstantiation.ts` (shared template→goals service with pace/date logic)
 - Sentry utils: `src/lib/sentry-utils.ts` (captureSupabaseError, breadcrumbs, withSpan, fingerprinting)
-- Tests: `src/lib/__tests__/` (20 files, 453 tests) + `supabase/functions/_shared/__tests__/` (5 files, 101 tests) | CI: `.github/workflows/ci.yml`
+- Tests: `src/lib/__tests__/` (20 files, 453 tests) + `supabase/functions/_shared/__tests__/` (5 files, 101 tests) + `src/hooks/__tests__/` (11 files) + `src/hooks/scenarios/__tests__/` (1 file) — 97 hook tests | CI: `.github/workflows/ci.yml`
+- Test mocks: `src/test/mocks/supabase.ts` (chainable MockQueryBuilder), `src/test/mocks/auth.ts` (auth context factories), `src/test/test-utils.tsx` (renderHookWithProviders)
 - Seed: `supabase/seed.sql` | Cursor rules: `.cursorrules`
 
 ## Database Schema
@@ -116,7 +117,7 @@
 **Critical (C1-C4):** ~~All resolved~~ ✅
 **High (H1-H10):** ~~All resolved~~ ✅
 **Medium (remaining):** ~~M2 (psychometric interest tracking)~~ ✅ DONE, ~~M9 (async notifications)~~ ✅ DONE, ~~M11 (console.log cleanup)~~ ✅ DONE, M12 (resource ratings), M13 (Zod validation — see analysis below), M16 (assessment templates)
-**New roadmap items (R1-R7):** ~~R1 assessment question types~~ ✅ DONE, ~~R2 coach/instructor onboarding (Phase 1)~~ ✅ DONE, ~~R3 enhanced coach↔client interaction (Phase 1)~~ ✅ DONE, ~~R4 coaches invite own clients (Phase 5)~~ ✅ DONE, ~~R5 enhanced org management (Phase 6)~~ SC-4 Org Audit ✅ DONE + Org Analytics Phase 1 ✅ DONE, ~~R6 Sentry coverage Phase 1~~ ✅ DONE (sentry-utils, breadcrumbs, source maps, fingerprinting), ~~R7 test coverage Phase 1~~ ✅ DONE (edge function shared utils — 101 tests)
+**New roadmap items (R1-R7):** ~~R1 assessment question types~~ ✅ DONE, ~~R2 coach/instructor onboarding (Phase 1)~~ ✅ DONE, ~~R3 enhanced coach↔client interaction (Phase 1)~~ ✅ DONE, ~~R4 coaches invite own clients (Phase 5)~~ ✅ DONE, ~~R5 enhanced org management (Phase 6)~~ SC-4 Org Audit ✅ DONE + Org Analytics Phase 1 ✅ DONE, ~~R6 Sentry coverage Phase 1~~ ✅ DONE (sentry-utils, breadcrumbs, source maps, fingerprinting), ~~R7 test coverage Phase 1~~ ✅ DONE (edge function shared utils — 101 tests), ~~R7 test coverage Phase 2~~ ✅ DONE (React hook tests — 97 tests across 12 files)
 **Coach-created development items:** ✅ DONE
 
 **Priority 0 — Status (updated 2026-02-18):**
@@ -159,7 +160,7 @@ Implemented: 1 migration (`20260224100000_ct3_shared_content_packages.sql`), 4 e
 - ~~**CT3b: Cross-Program Completion**~~ ✅ — `content_completions` table. `xapi-statements` writes completion on xAPI verb. `useCrossProgramCompletion` extended with 3rd data source. Client `ModuleDetail` auto-accepts completion from shared content. `CanonicalCodesManagement` now shows content packages tab.
 - **`canonical_code` override** — kept as manual override for different content that should count as equivalent.
 
-**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → ~~Enrollment Scale + Bulk Enrollment~~ ✅ → ~~SC-1 Critical Indexes~~ ✅ → ~~SC-2 N+1 Rewrites~~ ✅ → ~~2B.5 Certification~~ ✅ → ~~2B.10 Enrollment Duration~~ ✅ → ~~SC-3 Pagination~~ ✅ → ~~SC-5 Retention~~ ✅ → ~~SC-6 RLS Indexes~~ ✅ → ~~SC-7 Search Indexes~~ ✅ → ~~Phase 5 remaining (Steps 7+9 + R2/R3/R4)~~ ✅ → ~~Action Items ↔ Timeline & Tasks~~ ✅ → ~~R6 Sentry Phase 1~~ ✅ → ~~R7 Test Phase 1~~ ✅ → ~~Admin Signup Toggle~~ ✅ → ~~Peer Session Presentations~~ ✅ → ~~Client Assignments Bugfixes + Attachment Storage RLS + Notification Fix~~ ✅ → ~~Instructor Scenario Access~~ ✅ → ~~SC-4 Organisation Audit~~ ✅ → ~~Org Analytics Phase 1~~ ✅ → ~~Scenario Cross-Module Fix + Data Cleanup Record Inspection~~ ✅ → Org Analytics Phase 2 + Org B2B Quick Wins → M13 Zod Validation + R6/R7 Phase 2 → 3-AI/Engagement
+**Phases:** ~~P0 cohort scheduling gaps (G1-G7)~~ ✅ → ~~Development Profile (DP1-DP4)~~ ✅ → ~~Content Tier 2 xAPI~~ ✅ → ~~Cohort quality (G9-G10, GT1)~~ ✅ → ~~DP5~~ ✅ → ~~CT3 Shared Content~~ ✅ → ~~DP6-DP7~~ ✅ → ~~G8 Enrollment Codes~~ ✅ → ~~5-Self-Registration core (Batches 1-3)~~ ✅ → ~~2B.7 Module Prerequisite UI + Time-Gating~~ ✅ → ~~2B.6 Waitlist/Cohort Management~~ ✅ → ~~2B.2 Partner Codes~~ ✅ → ~~2B.1 Alumni Lifecycle~~ ✅ → ~~2B.3 Pricing Update~~ ✅ → ~~Credit Economy Redesign (Phases 1-4)~~ ✅ → ~~Enrollment Scale + Bulk Enrollment~~ ✅ → ~~SC-1 Critical Indexes~~ ✅ → ~~SC-2 N+1 Rewrites~~ ✅ → ~~2B.5 Certification~~ ✅ → ~~2B.10 Enrollment Duration~~ ✅ → ~~SC-3 Pagination~~ ✅ → ~~SC-5 Retention~~ ✅ → ~~SC-6 RLS Indexes~~ ✅ → ~~SC-7 Search Indexes~~ ✅ → ~~Phase 5 remaining (Steps 7+9 + R2/R3/R4)~~ ✅ → ~~Action Items ↔ Timeline & Tasks~~ ✅ → ~~R6 Sentry Phase 1~~ ✅ → ~~R7 Test Phase 1~~ ✅ → ~~Admin Signup Toggle~~ ✅ → ~~Peer Session Presentations~~ ✅ → ~~Client Assignments Bugfixes + Attachment Storage RLS + Notification Fix~~ ✅ → ~~Instructor Scenario Access~~ ✅ → ~~SC-4 Organisation Audit~~ ✅ → ~~Org Analytics Phase 1~~ ✅ → ~~Scenario Cross-Module Fix + Data Cleanup Record Inspection~~ ✅ → ~~Org Analytics Phase 2~~ ✅ → ~~R7 Test Phase 2~~ ✅ → Org B2B Quick Wins → M13 Zod Validation + R6 Sentry Phase 2 + R7 Phase 3 → 3-AI/Engagement
 
 ## Coach/Instructor Readiness
 - **Teaching workflows:** ✅ All production-ready (assignments, scenarios, badges, assessments, groups, cohorts, client progress, notes)
@@ -576,22 +577,22 @@ Migration `20260326100000_sc7_search_trigram_indexes.sql`. Enables `pg_trgm` ext
 - Add `withSpan()` to critical async paths (enrollment, xAPI launch)
 - Evaluate edge function monitoring (Deno SDK or HTTP API)
 
-## R7: Test Coverage (2026-03-27, Phase 1 ✅)
+## R7: Test Coverage (Phase 1 ✅, Phase 2 ✅)
 
-**Status:** Roadmap Phase 1 (edge function shared utils) complete. 554 total tests (was 453). See `docs/TESTING_ROADMAP.md` for full plan.
+**Status:** Phase 1 (edge function utils) + Phase 2 (React hooks) complete. 651 total tests (was 453). See `docs/TESTING_ROADMAP.md` for full plan.
 
 | Layer | Tests | Coverage | Status |
 |-------|-------|----------|--------|
 | `src/lib/` unit tests | 453 across 20 files | 97% stmt / 95% branch | ✅ Done |
 | E2E (Playwright) | 13 specs, ~45 scenarios | Major journeys | ✅ Done |
 | Edge function shared utils | 101 across 5 files | validation, ai-limits, cors, error-response, request-signing | ✅ Done |
-| React hooks (76 custom) | ~0 | 0% | ⏳ Phase 2 (70-90 tests) |
+| React hooks | 97 across 12 files | Core business logic + high-impact hooks | ✅ Done |
 | E2E expansion | — | — | ⏳ Phase 3 (50-70 tests) |
 | Edge function integration | ~0 | 0% | ⏳ Phase 4 (70-90 tests) |
 | React components (273) | 0 | 0% | ⏳ Phase 5 (60-80 tests) |
 | CI gates + coverage thresholds | Unit required, no thresholds | — | ⏳ Phase 6 |
 
-**Edge function test infrastructure:**
+**Edge function test infrastructure (Phase 1):**
 - `vitest.config.ts` extended to include `supabase/functions/_shared/__tests__/`
 - `supabase/functions/_shared/__tests__/deno-mock.ts` — mock `Deno.env.get()` for Node/jsdom environment
 - Tests use dynamic `import()` + `vi.resetModules()` for Deno-dependent modules (cors, request-signing)
@@ -604,7 +605,18 @@ Migration `20260326100000_sc7_search_trigram_indexes.sql`. Enables `pg_trgm` ext
 - `cors.test.ts` — getAllowedOrigins, isOriginAllowed (production, localhost, Cloudflare Pages, evil domains), getCorsHeaders
 - `request-signing.test.ts` — HMAC signature verification, expired timestamps, tampered signatures, graceful degradation
 
-**Total target:** ~820 tests (from current 554) over ~13-18 sessions remaining.
+**React hook test infrastructure (Phase 2):**
+- `src/test/mocks/supabase.ts` — `MockQueryBuilder` class with chainable methods + thenable, `createMockSupabase()` factory
+- `src/test/mocks/auth.ts` — `createMockAuth()` factory, `mockAuthProfiles` prebuilt profiles (client, admin, instructor, orgAdmin, unauthenticated)
+- `src/test/test-utils.tsx` — `createTestQueryClient()`, `renderHookWithProviders()` with QueryClientProvider
+- Pattern: `vi.hoisted()` for mock objects → `vi.mock()` for module substitution → `renderHookWithProviders()` for hook testing
+
+**Phase 2 test files (97 tests across 12 files):**
+- Tier 1 — Core: `useEntitlements` (12), `useAdminCRUD` (10), `useProgramEnrollment` (10), `useCreditBatches` (14)
+- Tier 2 — High impact: `useNotifications` (8), `useScenarioAssignments` (9), `useFeatureVisibility` (6), `useReflectionPrompt` (6)
+- Tier 3 — Supporting: `useOrgAnalyticsSummary` (5), `useGoalAssessmentLinks` (5), `useWheelFreePlanLimits` (5), `useActionItems` (6)
+
+**Total target:** ~820 tests (from current 651) over ~10-15 sessions remaining.
 
 ## npm Scripts
 ```
