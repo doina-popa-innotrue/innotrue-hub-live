@@ -13,6 +13,7 @@ export default defineConfig({
       'supabase/functions/_shared/__tests__/*.{test,spec}.ts',
     ],
     exclude: ['node_modules', 'dist', 'e2e'],
+    pool: 'threads',
   },
   resolve: {
     alias: {
