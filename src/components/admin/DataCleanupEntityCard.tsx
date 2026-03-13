@@ -30,8 +30,9 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { DataCleanupRecordInspector } from "./DataCleanupRecordInspector";
 
-interface CleanupFilters {
+export interface CleanupFilters {
   userId: string;
   programId: string;
   createdBefore: string;
@@ -90,6 +91,7 @@ export function DataCleanupEntityCard({
   const [preview, setPreview] = useState<CleanupPreview | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isInspectOpen, setIsInspectOpen] = useState(false);
   const [showCascadeDetails, setShowCascadeDetails] = useState(false);
 
   const buildParams = () => ({
@@ -307,22 +309,43 @@ export function DataCleanupEntityCard({
                     </p>
                   )}
 
-                  {/* Delete button */}
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setIsConfirmOpen(true)}
-                    className="gap-1.5"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete {preview.primary_count.toLocaleString()} Records
-                  </Button>
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsInspectOpen(true)}
+                      className="gap-1.5"
+                    >
+                      <Search className="h-3.5 w-3.5" />
+                      View Records
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setIsConfirmOpen(true)}
+                      className="gap-1.5"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete {preview.primary_count.toLocaleString()} Records
+                    </Button>
+                  </div>
                 </>
               )}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Record inspection dialog */}
+      <DataCleanupRecordInspector
+        entityType={entityType}
+        title={title}
+        filters={filters}
+        status={status}
+        open={isInspectOpen}
+        onOpenChange={setIsInspectOpen}
+      />
 
       {/* Confirmation dialog */}
       <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
