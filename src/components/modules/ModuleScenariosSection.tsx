@@ -172,12 +172,13 @@ function ScenarioItem({
 
     setIsStarting(true);
     try {
-      // Reuse an existing draft assignment for the same template+user if one exists
+      // Reuse an existing draft assignment for the same template+user+module if one exists
       const { data: existing } = await supabase
         .from("scenario_assignments")
         .select("id")
         .eq("template_id", templateId)
         .eq("user_id", user.id)
+        .eq("module_id", moduleId)
         .eq("status", "draft")
         .order("created_at", { ascending: false })
         .limit(1)

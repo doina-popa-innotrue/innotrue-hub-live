@@ -31,12 +31,13 @@ export function AssignedScenarioItem({
 
     setIsLoading(true);
     try {
-      // Fetch all assignments for this template+user, newest first
+      // Fetch all assignments for this template+user+module, newest first
       const { data: existingAssignments, error: fetchError } = await supabase
         .from("scenario_assignments")
         .select("id, status, attempt_number")
         .eq("template_id", scenarioTemplateId)
         .eq("user_id", user.id)
+        .eq("module_id", moduleId)
         .order("created_at", { ascending: false });
 
       if (fetchError) throw fetchError;
