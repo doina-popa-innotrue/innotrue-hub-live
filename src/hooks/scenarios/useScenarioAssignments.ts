@@ -210,18 +210,25 @@ export function useScenarioAssignmentMutations() {
       if (status === "submitted" && user?.id) {
         const { data: submitted } = await supabase
           .from("scenario_assignments")
-          .select("template_id")
+          .select("template_id, module_id")
           .eq("id", id)
           .single();
 
         if (submitted?.template_id) {
-          const { error: cleanupErr } = await supabase
+          let cleanupQuery = supabase
             .from("scenario_assignments")
             .delete()
             .eq("template_id", submitted.template_id)
             .eq("user_id", user.id)
             .eq("status", "draft")
             .neq("id", id);
+
+          // Scope cleanup to same module to avoid deleting drafts from other modules
+          if (submitted.module_id) {
+            cleanupQuery = cleanupQuery.eq("module_id", submitted.module_id);
+          }
+
+          const { error: cleanupErr } = await cleanupQuery;
 
           if (cleanupErr) {
             // Non-critical — log but don't fail the submission

@@ -15,7 +15,6 @@ import {
   Award,
   Play,
   Loader2,
-  RotateCcw,
 } from "lucide-react";
 import {
   useScenariosForModule,
@@ -65,7 +64,10 @@ export function ModuleScenariosSection({ moduleId, enrollmentId }: ModuleScenari
   // Prefer draft assignments over completed ones so fresh attempts are shown
   const scenariosWithAssignments = linkedScenarios.map((linked) => {
     const matching = assignments?.filter(
-      (a) => a.template_id === linked.template_id && a.user_id === user?.id,
+      (a) =>
+        a.template_id === linked.template_id &&
+        a.user_id === user?.id &&
+        a.module_id === moduleId,
     ) || [];
     // Prefer draft, then most recent (assignments are already ordered created_at DESC)
     const assignment = matching.find((a) => a.status === "draft") || matching[0];
@@ -96,7 +98,6 @@ export function ModuleScenariosSection({ moduleId, enrollmentId }: ModuleScenari
             description={linked.scenario_templates?.description}
             isProtected={linked.scenario_templates?.is_protected || false}
             isRequiredForCertification={linked.is_required_for_certification}
-            allowsResubmission={linked.scenario_templates?.allows_resubmission || false}
             assignment={assignment}
             moduleId={moduleId}
             enrollmentId={enrollmentId}
@@ -115,7 +116,6 @@ interface ScenarioItemProps {
   description?: string | null;
   isProtected: boolean;
   isRequiredForCertification: boolean;
-  allowsResubmission: boolean;
   assignment?: ScenarioAssignment;
   moduleId: string;
   enrollmentId?: string;
@@ -129,7 +129,6 @@ function ScenarioItem({
   description,
   isProtected,
   isRequiredForCertification,
-  allowsResubmission,
   assignment,
   moduleId,
   enrollmentId,
@@ -284,26 +283,6 @@ function ScenarioItem({
               <ChevronRight className="h-4 w-4 ml-1" />
             </Link>
           </Button>
-          {status === "evaluated" && allowsResubmission && (
-            <Button
-              size="sm"
-              onClick={() =>
-                handleStartScenario({
-                  id: assignment.id,
-                  attempt_number: assignment.attempt_number,
-                })
-              }
-              disabled={isStarting}
-              className="w-full sm:w-auto"
-            >
-              {isStarting ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <RotateCcw className="h-4 w-4 mr-2" />
-              )}
-              Start New Attempt
-            </Button>
-          )}
         </div>
       ) : (
         <Button
