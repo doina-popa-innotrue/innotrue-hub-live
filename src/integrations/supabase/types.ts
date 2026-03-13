@@ -14898,6 +14898,18 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_data_cleanup_list_records: {
+        Args: {
+          p_created_before?: string
+          p_entity_type: string
+          p_limit?: number
+          p_offset?: number
+          p_program_id?: string
+          p_status?: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
       admin_data_cleanup_preview: {
         Args: {
           p_created_before?: string
@@ -15218,6 +15230,14 @@ export type Database = {
           timezone: string
           user_id: string
         }[]
+      }
+      get_org_analytics_advanced: {
+        Args: { p_date_from?: string; p_date_to?: string; p_org_id: string }
+        Returns: Json
+      }
+      get_org_analytics_summary: {
+        Args: { p_date_from?: string; p_date_to?: string; p_org_id: string }
+        Returns: Json
       }
       get_org_credit_summary: {
         Args: { p_organization_id: string }
