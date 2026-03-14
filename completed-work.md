@@ -1,5 +1,53 @@
 # Completed Work — Detailed History
 
+## Capability Assessment Card Scoping + Dashboard Reorganisation + Sentry Bugfixes (2026-05-14)
+
+Commits: `8fab4e6`, `5796b9e`, `fd56084`, `db7cb0e`. Four improvements across module UX, dashboard layout, and production crash fixes.
+
+### Capability Assessment Card Scoping (commit `8fab4e6`)
+
+**Problem:** The ModuleSelfAssessment component on client module pages queried ALL capability_snapshots for an assessment+user+enrollment. This showed historical evaluator results from other modules or past evaluations — confusing when the client hadn't even started this module's assignment yet.
+
+**Solution:** Complete rewrite of `ModuleSelfAssessment.tsx`:
+- **Evaluator results** now gated by `scoring_snapshot_id` FK on `module_assignments`. Only shows evaluator assessment when the instructor has actually scored THIS module's assignment.
+- **Three evaluator states:** (1) "Submit your work first" when no assignment submitted, (2) "Awaiting evaluator assessment" when submitted but not scored, (3) Full results with View Results button when scored.
+- **Scenario link:** When a linked scenario exists (via `scenario_assignment_id`), shows scenario title + status badge in the evaluator section.
+- **Self-assessment** kept as optional standalone section with clear messaging: "You are free to self-assess yourself. This is optional."
+- **Context-aware:** Hides "Optional" badge when there are no assignments (self-assessment is the primary activity).
+- Added `moduleProgressId` prop, threaded through `AssignmentSection.tsx`.
+
+**Files:** `ModuleSelfAssessment.tsx`, `AssignmentSection.tsx`
+
+### Sentry Bugfixes (commits `5796b9e`, `fd56084`)
+
+**Bug 1 — CapabilityEvolutionChart TDZ crash:**
+- `const domains = domains ?? []` — self-referential const declaration causes Temporal Dead Zone crash
+- Fixed to `const domains = assessment.capability_domains ?? []`
+
+**Bug 2 — Credits page source_type null:**
+- `batch.source_type.replace("_", " ")` crashes when `source_type` is null (DB allows null)
+- Fixed with `(batch.source_type ?? "unknown").replace(...)` in both `Credits.tsx` and `ClientCreditAudit.tsx`
+
+**Bug 3 — Credits LARGE_PACKAGE_THRESHOLD_CENTS undefined:**
+- Constant was used but never defined, causing ReferenceError
+- Added `const LARGE_PACKAGE_THRESHOLD_CENTS = 10000` (€100 threshold)
+
+**Files:** `CapabilityEvolutionChart.tsx`, `Credits.tsx`, `ClientCreditAudit.tsx`
+
+### Dashboard Reorganisation (commit `db7cb0e`)
+
+**Problem:** Client dashboard had duplicate content — "Recent Feedback" (top, section 5) included scenario/assignment feedback that overlapped with "Recently Graded Assignments" (section 11). Information hierarchy was wrong — graded assignments more relevant near Active Programs than Upcoming Sessions.
+
+**Changes:**
+- `useFeedbackInbox` signature changed from `(limit?: number)` to `(options?: { limit?, types? })` — backward-compatible
+- `RecentFeedbackWidget` now filters to `types: ["module", "goal"]` only — excludes scenario + assignment feedback
+- Moved `RecentGradedAssignmentsWidget` to section 5 grid (next to Active Programs)
+- Moved Upcoming Sessions to section 11 (lower, 3-column grid)
+
+**Files:** `useFeedbackInbox.ts`, `RecentFeedbackWidget.tsx`, `ClientDashboard.tsx`
+
+---
+
 ## Scenario Evaluation UX Sprint (2026-04-14)
 
 Commits: `ba47b3e` → `6163bb1` → `5e03f80` → `a989e35`. Four UX improvements to the instructor scenario evaluation flow.
