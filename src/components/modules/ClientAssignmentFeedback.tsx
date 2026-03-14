@@ -17,6 +17,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { ProtectedContent } from "@/components/ui/protected-content";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
@@ -403,7 +404,7 @@ export function ClientAssignmentFeedback({ assignmentId }: ClientAssignmentFeedb
             return (
               <div key={domain.id} className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-sm">{domain.name}</h4>
+                  <ProtectedContent className="font-semibold text-sm">{domain.name}</ProtectedContent>
                   {domainAvg !== null && (
                     <Badge variant="outline" className="text-xs">
                       {domainAvg.toFixed(1)} / {ratingScale}
@@ -425,9 +426,9 @@ export function ClientAssignmentFeedback({ assignmentId }: ClientAssignmentFeedb
                     return (
                       <div key={question.id} className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">
+                          <ProtectedContent className="text-sm text-muted-foreground">
                             {question.question_text}
-                          </span>
+                          </ProtectedContent>
                           {rating !== undefined && (
                             <div className="flex items-center gap-1">
                               {Array.from({ length: ratingScale }).map((_, i) => (

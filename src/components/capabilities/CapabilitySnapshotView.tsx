@@ -36,6 +36,7 @@ import { format } from "date-fns";
 import { DevelopmentItemDialog } from "@/components/capabilities/DevelopmentItemDialog";
 import { GuidedLearningSection } from "@/components/capabilities/GuidedLearningSection";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { ProtectedContent } from "@/components/ui/protected-content";
 import {
   parseQuestionTypes,
   calculateDomainScore,
@@ -409,7 +410,7 @@ export function CapabilitySnapshotView({
                         ) : (
                           <ChevronRight className="h-4 w-4 shrink-0" />
                         )}
-                        <span className="font-medium truncate">{domain.name}</span>
+                        <ProtectedContent className="font-medium truncate">{domain.name}</ProtectedContent>
                         {domainNote && (
                           <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0" />
                         )}
@@ -453,7 +454,7 @@ export function CapabilitySnapshotView({
                       return (
                         <div key={question.id} className="space-y-2">
                           <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
+                            <ProtectedContent className="flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <p className="text-sm">{displayText}</p>
                                 {question.question_type && (
@@ -467,7 +468,7 @@ export function CapabilitySnapshotView({
                                   {question.description}
                                 </p>
                               )}
-                            </div>
+                            </ProtectedContent>
                             <div className="flex items-center gap-2 shrink-0">
                               <Progress
                                 value={(rating / assessment.rating_scale) * 100}

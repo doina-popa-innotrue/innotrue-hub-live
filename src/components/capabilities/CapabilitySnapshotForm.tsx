@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ProtectedContent } from "@/components/ui/protected-content";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronDown, ChevronRight, Save, X, CloudOff, Cloud, Loader2 } from "lucide-react";
 import { useClientStaffRelationships } from "@/hooks/useClientStaffRelationships";
@@ -641,14 +642,14 @@ export function CapabilitySnapshotForm({
                         ) : (
                           <ChevronRight className="h-5 w-5" />
                         )}
-                        <div>
+                        <ProtectedContent>
                           <CardTitle className="text-base">{domain.name}</CardTitle>
                           {domain.description && (
                             <CardDescription className="text-xs mt-1">
                               {domain.description}
                             </CardDescription>
                           )}
-                        </div>
+                        </ProtectedContent>
                       </div>
                       <Badge variant="secondary">
                         {questionTypes ? "Weighted" : "Avg"}: {getDomainAverage(domain).toFixed(1)}
@@ -661,7 +662,7 @@ export function CapabilitySnapshotForm({
                     {domain.capability_domain_questions.map((question) => (
                       <div key={question.id} className="space-y-3">
                         <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
+                          <ProtectedContent className="flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <Label className="text-sm font-medium">{question.question_text}</Label>
                               {question.question_type && (
@@ -675,7 +676,7 @@ export function CapabilitySnapshotForm({
                                 {question.description}
                               </p>
                             )}
-                          </div>
+                          </ProtectedContent>
                           <Badge variant="outline" className="shrink-0">
                             {ratings[question.id]}/{assessment.rating_scale}
                           </Badge>

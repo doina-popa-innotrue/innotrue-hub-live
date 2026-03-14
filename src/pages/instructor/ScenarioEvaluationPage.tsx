@@ -40,6 +40,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { ProtectedContent } from "@/components/ui/protected-content";
 import {
   useScenarioAssignment,
   useScenarioSections,
@@ -503,7 +504,11 @@ function SectionEvaluationView({
     <Card>
       <CardHeader>
         <CardTitle>{section.title}</CardTitle>
-        {section.instructions && <CardDescription>{section.instructions}</CardDescription>}
+        {section.instructions && (
+          <ProtectedContent>
+            <CardDescription>{section.instructions}</CardDescription>
+          </ProtectedContent>
+        )}
       </CardHeader>
       <CardContent className="space-y-6">
         {paragraphs?.map((paragraph, index) => (
@@ -618,9 +623,9 @@ function ParagraphEvaluationItem({
           <Badge variant="outline">¶{paragraphNumber}</Badge>
           <span className="text-xs text-muted-foreground">Scenario Content</span>
         </div>
-        <div className="text-sm bg-muted/50 p-3 rounded">
+        <ProtectedContent className="text-sm bg-muted/50 p-3 rounded">
           <RichTextDisplay content={paragraph.content} />
-        </div>
+        </ProtectedContent>
       </div>
 
       {/* Client Response */}

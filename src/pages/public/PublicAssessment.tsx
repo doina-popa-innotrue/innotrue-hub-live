@@ -17,6 +17,7 @@ import { Link } from "react-router-dom";
 import jsPDF from "jspdf";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { ProtectedContent } from "@/components/ui/protected-content";
 
 const emailSchema = z.string().email("Please enter a valid email address");
 
@@ -272,7 +273,9 @@ export default function PublicAssessment() {
             </CardHeader>
             <CardContent className="space-y-4">
               {assessment.instructions && (
-                <p className="text-muted-foreground">{assessment.instructions}</p>
+                <ProtectedContent>
+                  <p className="text-muted-foreground">{assessment.instructions}</p>
+                </ProtectedContent>
               )}
               <Button onClick={() => setStep("questions")} className="w-full">
                 Start Assessment
@@ -297,7 +300,9 @@ export default function PublicAssessment() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              <h2 className="text-lg font-medium">{currentQuestion.question_text}</h2>
+              <ProtectedContent>
+                <h2 className="text-lg font-medium">{currentQuestion.question_text}</h2>
+              </ProtectedContent>
 
               <RadioGroup
                 value={answers[currentQuestion.id] || ""}

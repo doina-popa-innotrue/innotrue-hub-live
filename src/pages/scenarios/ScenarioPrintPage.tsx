@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Printer, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { ProtectedContent } from "@/components/ui/protected-content";
 import {
   useScenarioAssignment,
   useScenarioSections,
@@ -94,7 +95,7 @@ export default function ScenarioPrintPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8 bg-background min-h-screen">
+    <ProtectedContent className="max-w-4xl mx-auto px-6 py-8 bg-background min-h-screen">
       {/* Print button — hidden when printing */}
       <div className="print:hidden mb-6 flex items-center justify-between">
         <Button variant="outline" onClick={() => window.history.back()}>
@@ -227,7 +228,7 @@ export default function ScenarioPrintPage() {
         Printed from InnoTrue Hub &mdash;{" "}
         {format(new Date(), "PPP 'at' HH:mm")}
       </footer>
-    </div>
+    </ProtectedContent>
   );
 }
 

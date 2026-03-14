@@ -23,6 +23,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
+import { ProtectedContent } from "@/components/ui/protected-content";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -85,7 +86,6 @@ function ScenarioDetailContent() {
   const pendingSaves = useRef<Set<string>>(new Set());
 
   const template = assignment?.scenario_templates;
-  const isProtected = template?.is_protected ?? false;
   const isReadOnly = assignment?.status !== "draft";
   const isEvaluated = assignment?.status === "evaluated";
 
@@ -209,10 +209,7 @@ function ScenarioDetailContent() {
   }
 
   return (
-    <div
-      className={cn("container py-6 space-y-6", isProtected && "select-none")}
-      onContextMenu={isProtected ? (e) => e.preventDefault() : undefined}
-    >
+    <ProtectedContent className="container py-6 space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
@@ -236,12 +233,10 @@ function ScenarioDetailContent() {
                 Attempt #{attemptNumber}
               </Badge>
             )}
-            {isProtected && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <Shield className="h-3 w-3" />
-                Protected
-              </Badge>
-            )}
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <Shield className="h-3 w-3" />
+              Protected
+            </Badge>
           </h1>
           {template?.description && <p className="text-muted-foreground">{template.description}</p>}
         </div>
@@ -294,15 +289,6 @@ function ScenarioDetailContent() {
           )}
         </div>
       </div>
-
-      {/* IP Protection Watermark */}
-      {isProtected && (
-        <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center opacity-5">
-          <div className="text-6xl font-bold text-foreground rotate-[-30deg] whitespace-nowrap">
-            {user?.email || "Confidential"}
-          </div>
-        </div>
-      )}
 
       {/* Progress Indicator (for draft assignments) */}
       {!isReadOnly && progress && progress.total > 0 && (
@@ -452,7 +438,6 @@ function ScenarioDetailContent() {
           localResponses={localResponses}
           onResponseChange={handleResponseChange}
           isReadOnly={isReadOnly || isPreviewMode}
-          isProtected={isProtected}
           evaluations={evaluations}
           scores={scores}
           ratingScale={ratingScale}
@@ -476,7 +461,7 @@ function ScenarioDetailContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </ProtectedContent>
   );
 }
 
@@ -496,7 +481,6 @@ interface SectionContentProps {
   localResponses: Record<string, string>;
   onResponseChange: (paragraphId: string, value: string) => void;
   isReadOnly: boolean;
-  isProtected: boolean;
   evaluations: any[] | undefined;
   scores: any[] | undefined;
   ratingScale: number;
@@ -509,7 +493,6 @@ function SectionContent({
   localResponses,
   onResponseChange,
   isReadOnly,
-  isProtected,
   evaluations,
   scores,
   ratingScale,
@@ -540,7 +523,6 @@ function SectionContent({
             response={localResponses[paragraph.id] || ""}
             onResponseChange={(value) => onResponseChange(paragraph.id, value)}
             isReadOnly={isReadOnly}
-            isProtected={isProtected}
             evaluation={evaluations?.find((e) => e.paragraph_id === paragraph.id)}
             paragraphScores={scores?.filter((s) => s.paragraph_id === paragraph.id)}
             ratingScale={ratingScale}
@@ -559,7 +541,6 @@ interface ParagraphBlockProps {
   response: string;
   onResponseChange: (value: string) => void;
   isReadOnly: boolean;
-  isProtected: boolean;
   evaluation: any | undefined;
   paragraphScores: any[] | undefined;
   ratingScale: number;
@@ -572,7 +553,6 @@ function ParagraphBlock({
   response,
   onResponseChange,
   isReadOnly,
-  isProtected,
   evaluation,
   paragraphScores,
   ratingScale,
@@ -583,9 +563,7 @@ function ParagraphBlock({
       {index > 0 && <Separator />}
 
       {/* Paragraph Content */}
-      <div
-        className={cn("prose prose-sm max-w-none dark:prose-invert", isProtected && "select-none")}
-      >
+      <div className="prose prose-sm max-w-none dark:prose-invert">
         <RichTextDisplay content={paragraph.content} />
       </div>
 
