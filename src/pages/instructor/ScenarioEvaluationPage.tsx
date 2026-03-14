@@ -63,6 +63,7 @@ export default function ScenarioEvaluationPage() {
 
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [overallNotes, setOverallNotes] = useState("");
+  const [notesSaveStatus, setNotesSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [showRevisionDialog, setShowRevisionDialog] = useState(false);
   const [revisionNotes, setRevisionNotes] = useState("");
 
@@ -83,11 +84,34 @@ export default function ScenarioEvaluationPage() {
   const isLoading = assignmentLoading || sectionsLoading;
 
   // Initialize overall notes from assignment
+  const savedOverallNotes = assignment?.overall_notes || "";
   useEffect(() => {
     if (assignment?.overall_notes) {
       setOverallNotes(assignment.overall_notes);
     }
   }, [assignment?.overall_notes]);
+
+  // Auto-save overall notes with 2s debounce
+  useEffect(() => {
+    if (overallNotes === savedOverallNotes) return;
+    if (!overallNotes && !savedOverallNotes) return;
+    // Don't auto-save while page is still loading assignment data
+    if (!assignment?.id) return;
+
+    setNotesSaveStatus("idle");
+    const timer = setTimeout(() => {
+      setNotesSaveStatus("saving");
+      updateStatusMutation.mutate(
+        { id: assignment.id, status: assignment.status, notes: overallNotes },
+        {
+          onSuccess: () => setNotesSaveStatus("saved"),
+          onError: () => setNotesSaveStatus("idle"),
+        },
+      );
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [overallNotes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading) {
     return <AdminLoadingState message="Loading scenario evaluation..." />;
@@ -106,17 +130,6 @@ export default function ScenarioEvaluationPage() {
         onSuccess: () => {
           toast({ description: "Evaluation completed!" });
           navigate("/teaching/scenarios");
-        },
-      },
-    );
-  };
-
-  const handleSaveOverallNotes = () => {
-    updateStatusMutation.mutate(
-      { id: assignment.id, status: assignment.status, notes: overallNotes },
-      {
-        onSuccess: () => {
-          toast({ description: "Notes saved" });
         },
       },
     );
@@ -268,32 +281,36 @@ export default function ScenarioEvaluationPage() {
       {assignment.status !== "evaluated" && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Overall Evaluation Notes
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Overall Evaluation Notes
+              </CardTitle>
+              <span className="text-xs text-muted-foreground">
+                {notesSaveStatus === "saving" && (
+                  <span className="flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Saving…
+                  </span>
+                )}
+                {notesSaveStatus === "saved" && (
+                  <span className="flex items-center gap-1 text-green-600">
+                    <CheckCircle className="h-3 w-3" />
+                    Saved
+                  </span>
+                )}
+              </span>
+            </div>
             <CardDescription>
               Add summary notes that will be visible to the client upon completion
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <RichTextEditor
               value={overallNotes}
               onChange={setOverallNotes}
               placeholder="Enter overall feedback, observations, and recommendations..."
             />
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
-                onClick={handleSaveOverallNotes}
-                disabled={updateStatusMutation.isPending}
-              >
-                {updateStatusMutation.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Save Notes
-              </Button>
-            </div>
           </CardContent>
         </Card>
       )}
@@ -503,7 +520,9 @@ function ParagraphEvaluationItem({
   ratingScale: number;
   sectionId: string;
 }) {
-  const [feedback, setFeedback] = useState(evaluation?.feedback || "");
+  const savedFeedback = evaluation?.feedback || "";
+  const [feedback, setFeedback] = useState(savedFeedback);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [localScores, setLocalScores] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
     existingScores.forEach((s) => {
@@ -517,9 +536,27 @@ function ParagraphEvaluationItem({
 
   const questionLinks = paragraph.paragraph_question_links || [];
 
-  const handleSaveFeedback = () => {
-    evaluationMutation.mutate({ paragraphId: paragraph.id, feedback });
-  };
+  // Auto-save feedback with 1.5s debounce
+  useEffect(() => {
+    // Skip if feedback matches the saved version (no change)
+    if (feedback === savedFeedback) return;
+    // Skip empty feedback if there's nothing saved yet (don't create empty records)
+    if (!feedback && !savedFeedback) return;
+
+    setSaveStatus("idle");
+    const timer = setTimeout(() => {
+      setSaveStatus("saving");
+      evaluationMutation.mutate(
+        { paragraphId: paragraph.id, feedback },
+        {
+          onSuccess: () => setSaveStatus("saved"),
+          onError: () => setSaveStatus("idle"),
+        },
+      );
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [feedback]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleScoreChange = (questionId: string, score: number) => {
     setLocalScores((prev) => ({ ...prev, [questionId]: score }));
@@ -607,15 +644,20 @@ function ParagraphEvaluationItem({
         <div>
           <div className="flex items-center justify-between mb-2">
             <Label className="text-sm font-medium">Evaluator Feedback</Label>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSaveFeedback}
-              disabled={evaluationMutation.isPending}
-            >
-              {evaluationMutation.isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-              Save Feedback
-            </Button>
+            <span className="text-xs text-muted-foreground">
+              {saveStatus === "saving" && (
+                <span className="flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Saving…
+                </span>
+              )}
+              {saveStatus === "saved" && (
+                <span className="flex items-center gap-1 text-green-600">
+                  <CheckCircle className="h-3 w-3" />
+                  Saved
+                </span>
+              )}
+            </span>
           </div>
           <RichTextEditor
             value={feedback}
