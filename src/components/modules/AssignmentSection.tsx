@@ -183,7 +183,7 @@ export function AssignmentSection({
         </Card>
 
         {/* Self-Assessment (renders own Card, returns null if not configured) */}
-        <ModuleSelfAssessment moduleId={moduleId} enrollmentId={enrollmentId} />
+        <ModuleSelfAssessment moduleId={moduleId} enrollmentId={enrollmentId} moduleProgressId={moduleProgressId} />
 
         {/* Submission form(s) — header hidden since we're inside "Your Assignment" */}
         <div>
@@ -211,7 +211,7 @@ export function AssignmentSection({
   // Non-individualised module — render sub-components independently (same as before)
   return (
     <>
-      <ModuleSelfAssessment moduleId={moduleId} enrollmentId={enrollmentId} />
+      <ModuleSelfAssessment moduleId={moduleId} enrollmentId={enrollmentId} moduleProgressId={moduleProgressId} />
       <ModuleAssignmentsView
         moduleId={moduleId}
         moduleProgressId={moduleProgressId}
