@@ -1028,7 +1028,7 @@ export default function StudentDetail() {
 
       {/* Reflections & Feedback Dialog */}
       <Dialog open={!!viewingReflections} onOpenChange={handleCloseReflectionsDialog}>
-        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Reflections & Feedback</DialogTitle>
             <DialogDescription>{viewingReflections?.moduleTitle}</DialogDescription>
