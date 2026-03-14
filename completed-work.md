@@ -1,5 +1,50 @@
 # Completed Work — Detailed History
 
+## Scenario Evaluation UX Sprint (2026-04-14)
+
+Commits: `ba47b3e` → `6163bb1` → `5e03f80` → `a989e35`. Four UX improvements to the instructor scenario evaluation flow.
+
+### Problem
+1. **"Evaluated assignment still shows as Pending":** Instructor evaluated a scenario but it stayed in "Pending Review" tab. Root cause: "Complete Evaluation" button was only at the top of the page — after scrolling through sections to give per-paragraph feedback, the button was invisible. Instructor gave feedback but never clicked Complete Evaluation.
+2. **Per-paragraph manual save was tedious:** Each paragraph had its own "Save Feedback" button. Instructor had to save individually for every question, easy to miss some.
+3. **Data loss when switching sections:** Changing sections unmounted paragraph components; if auto-save debounce hadn't fired yet, unsaved feedback was lost.
+4. **Race condition in status transitions:** `handleStartReview()` auto-fires on page load (setting status to `in_review`). If "Complete Evaluation" clicked quickly, both DB updates could run concurrently and `in_review` could commit last, overwriting `evaluated` back to `in_review`.
+5. **Student module dialog too narrow:** 700px dialog truncated scoring content with rating buttons.
+
+### Changes
+
+**Commit `ba47b3e` — Sticky Complete Evaluation bar + race condition fix:**
+- Added sticky bottom action bar (`sticky bottom-0`) with Complete Evaluation, Request Revision buttons, and overall score summary — always visible regardless of scroll position
+- Added `.eq("status", "submitted")` guard in `useScenarioAssignments.ts` when transitioning to `in_review` — prevents overwriting a later status (evaluated, revision_requested) back to in_review
+- Files: `ScenarioEvaluationPage.tsx`, `useScenarioAssignments.ts`
+
+**Commit `6163bb1` — Auto-save instructor feedback:**
+- Replaced per-paragraph "Save Feedback" buttons with debounced auto-save (1.5s delay)
+- Added auto-save for Overall Evaluation Notes (2s debounce)
+- Shows subtle "Saving…" / "Saved ✓" indicators next to each feedback textarea
+- Scores already auto-saved on click (unchanged)
+- Files: `ScenarioEvaluationPage.tsx`
+
+**Commit `5e03f80` — Save All button + flush on unmount:**
+- Added "Save All" button in sticky bottom bar — immediately saves all visible feedback + overall notes
+- Uses `saveAllTrigger` counter pattern: parent increments state, children watch via `useEffect` and save immediately
+- Added flush-on-unmount: `useEffect` cleanup calls `saveFeedbackNow()` when paragraph components unmount (e.g., switching sections) — prevents data loss
+- Uses `useRef` to track "saved" vs "current" feedback values for efficient dirty checking
+- Files: `ScenarioEvaluationPage.tsx`
+
+**Commit `a989e35` — Widen student module dialog:**
+- Changed `StudentDetail.tsx` dialog from `sm:max-w-[700px]` to `sm:max-w-[900px]`
+- Files: `StudentDetail.tsx`
+
+**Key patterns introduced:**
+- **Save-all trigger:** Parent holds `saveAllTrigger` counter state, children react via `useEffect` to save immediately when counter changes
+- **Flush-on-unmount:** `useEffect` cleanup calls save function using refs (not state) to capture latest values even during unmount
+- **Conditional DB update guard:** `.eq("status", "submitted")` on Supabase update prevents race conditions by only applying the update if the current status matches expectations
+
+**Files modified:** 3 (`ScenarioEvaluationPage.tsx`, `useScenarioAssignments.ts`, `StudentDetail.tsx`)
+
+---
+
 ## ScenarioEvaluationPage Infinite Loop Fix (2026-04-14)
 
 Commit `5fbfaf4`. Critical production bug fix.

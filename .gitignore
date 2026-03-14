@@ -64,3 +64,4 @@ supabase/.temp/
 
 # Test coverage output
 coverage/
+.sfdx

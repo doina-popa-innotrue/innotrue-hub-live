@@ -117,7 +117,7 @@
 **Critical (C1-C4):** ~~All resolved~~ ✅
 **High (H1-H10):** ~~All resolved~~ ✅
 **Medium (remaining):** ~~M2 (psychometric interest tracking)~~ ✅ DONE, ~~M9 (async notifications)~~ ✅ DONE, ~~M11 (console.log cleanup)~~ ✅ DONE, M12 (resource ratings), M13 (Zod validation — see analysis below), M16 (assessment templates)
-**New roadmap items (R1-R7):** ~~R1 assessment question types~~ ✅ DONE, ~~R2 coach/instructor onboarding (Phase 1)~~ ✅ DONE, ~~R3 enhanced coach↔client interaction (Phase 1)~~ ✅ DONE, ~~R4 coaches invite own clients (Phase 5)~~ ✅ DONE, ~~R5 enhanced org management (Phase 6)~~ SC-4 Org Audit ✅ DONE + Org Analytics Phase 1 ✅ DONE, ~~R6 Sentry coverage Phase 1~~ ✅ DONE (sentry-utils, breadcrumbs, source maps, fingerprinting), ~~R7 test coverage Phase 1~~ ✅ DONE (edge function shared utils — 101 tests), ~~R7 test coverage Phase 2~~ ✅ DONE (React hook tests — 97 tests across 12 files)
+**New roadmap items (R1-R7):** ~~R1 assessment question types~~ ✅ DONE, ~~R2 coach/instructor onboarding (Phase 1)~~ ✅ DONE, ~~R3 enhanced coach↔client interaction (Phase 1)~~ ✅ DONE, ~~R4 coaches invite own clients (Phase 5)~~ ✅ DONE, ~~R5 enhanced org management (Phase 6)~~ SC-4 Org Audit ✅ DONE + Org Analytics Phase 1+2 ✅ DONE, ~~R6 Sentry coverage Phase 1~~ ✅ DONE (sentry-utils, breadcrumbs, source maps, fingerprinting), ~~R7 test coverage Phase 1~~ ✅ DONE (edge function shared utils — 101 tests), ~~R7 test coverage Phase 2~~ ✅ DONE (React hook tests — 97 tests across 12 files)
 **Coach-created development items:** ✅ DONE
 
 **Priority 0 — Status (updated 2026-02-18):**
