@@ -486,7 +486,7 @@ export function ClientCreditAudit({ userId }: ClientCreditAuditProps) {
                   <TableRow key={batch.id}>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
-                        {batch.source_type.replace("_", " ")}
+                        {(batch.source_type ?? "unknown").replace("_", " ")}
                       </Badge>
                     </TableCell>
                     <TableCell>{batch.feature_key || "General"}</TableCell>

@@ -402,7 +402,7 @@ export default function Credits() {
                           className="flex items-center justify-between text-xs"
                         >
                           <span className="text-muted-foreground capitalize">
-                            {batch.source_type.replace("_", " ")}
+                            {(batch.source_type ?? "unknown").replace("_", " ")}
                           </span>
                           <span className={daysLeft <= 3 ? "text-destructive font-medium" : "text-amber-600"}>
                             {formatCredits(batch.remaining)} cr &middot;{" "}
@@ -617,7 +617,7 @@ export default function Credits() {
                       </div>
                       <div>
                         <div className="font-medium capitalize text-sm">
-                          {batch.source_type.replace("_", " ")}
+                          {(batch.source_type ?? "unknown").replace("_", " ")}
                         </div>
                         {batch.description && (
                           <div className="text-xs text-muted-foreground">{batch.description}</div>

@@ -84,7 +84,7 @@ export function CapabilityEvolutionChart({
   assessment,
 }: CapabilityEvolutionChartProps) {
   // Guard: ensure capability_domains is always an array
-  const domains = domains ?? [];
+  const domains = assessment.capability_domains ?? [];
 
   const [compareMode, setCompareMode] = useState<"latest-vs-first" | "custom">("latest-vs-first");
   const [viewMode, setViewMode] = useState<"radar" | "line">("radar");
