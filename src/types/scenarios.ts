@@ -94,6 +94,7 @@ export interface ScenarioAssignment {
   parent_assignment_id?: string | null;
   attempt_number?: number;
   revision_notes?: string | null;
+  scoring_snapshot_id?: string | null;
   created_at: string;
   updated_at: string;
   // Joined data

@@ -75,6 +75,7 @@ const FRIENDLY_NAMES: Record<string, string> = {
   coach_module_feedback: "Coach Feedback",
   instructor_module_notes: "Instructor Notes",
   development_item_module_links: "Dev Item Links (Module)",
+  scenario_assignments: "Scenario Assignments",
 };
 
 export function DataCleanupEntityCard({

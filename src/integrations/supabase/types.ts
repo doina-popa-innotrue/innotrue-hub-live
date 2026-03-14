@@ -7240,6 +7240,7 @@ export type Database = {
           overall_comments: string | null
           overall_score: number | null
           responses: Json
+          scenario_assignment_id: string | null
           scored_at: string | null
           scored_by: string | null
           scoring_snapshot_id: string | null
@@ -7258,6 +7259,7 @@ export type Database = {
           overall_comments?: string | null
           overall_score?: number | null
           responses?: Json
+          scenario_assignment_id?: string | null
           scored_at?: string | null
           scored_by?: string | null
           scoring_snapshot_id?: string | null
@@ -7276,6 +7278,7 @@ export type Database = {
           overall_comments?: string | null
           overall_score?: number | null
           responses?: Json
+          scenario_assignment_id?: string | null
           scored_at?: string | null
           scored_by?: string | null
           scoring_snapshot_id?: string | null
@@ -7295,6 +7298,13 @@ export type Database = {
             columns: ["module_progress_id"]
             isOneToOne: false
             referencedRelation: "module_progress"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_assignments_scenario_assignment_id_fkey"
+            columns: ["scenario_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scenario_assignments"
             referencedColumns: ["id"]
           },
           {
@@ -7347,6 +7357,7 @@ export type Database = {
       module_client_content_attachments: {
         Row: {
           attachment_type: string
+          content_role: string
           created_at: string
           description: string | null
           file_path: string | null
@@ -7359,6 +7370,7 @@ export type Database = {
         }
         Insert: {
           attachment_type: string
+          content_role?: string
           created_at?: string
           description?: string | null
           file_path?: string | null
@@ -7371,6 +7383,7 @@ export type Database = {
         }
         Update: {
           attachment_type?: string
+          content_role?: string
           created_at?: string
           description?: string | null
           file_path?: string | null
@@ -7394,6 +7407,7 @@ export type Database = {
       module_client_content_resources: {
         Row: {
           assigned_by: string | null
+          content_role: string
           created_at: string
           id: string
           module_client_content_id: string
@@ -7402,6 +7416,7 @@ export type Database = {
         }
         Insert: {
           assigned_by?: string | null
+          content_role?: string
           created_at?: string
           id?: string
           module_client_content_id: string
@@ -7410,6 +7425,7 @@ export type Database = {
         }
         Update: {
           assigned_by?: string | null
+          content_role?: string
           created_at?: string
           id?: string
           module_client_content_id?: string
@@ -11890,6 +11906,7 @@ export type Database = {
           overall_notes: string | null
           parent_assignment_id: string | null
           revision_notes: string | null
+          scoring_snapshot_id: string | null
           status: string
           submitted_at: string | null
           template_id: string
@@ -11909,6 +11926,7 @@ export type Database = {
           overall_notes?: string | null
           parent_assignment_id?: string | null
           revision_notes?: string | null
+          scoring_snapshot_id?: string | null
           status?: string
           submitted_at?: string | null
           template_id: string
@@ -11928,6 +11946,7 @@ export type Database = {
           overall_notes?: string | null
           parent_assignment_id?: string | null
           revision_notes?: string | null
+          scoring_snapshot_id?: string | null
           status?: string
           submitted_at?: string | null
           template_id?: string
@@ -11961,6 +11980,13 @@ export type Database = {
             columns: ["parent_assignment_id"]
             isOneToOne: false
             referencedRelation: "scenario_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scenario_assignments_scoring_snapshot_id_fkey"
+            columns: ["scoring_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "capability_snapshots"
             referencedColumns: ["id"]
           },
           {

@@ -37,6 +37,15 @@ import { ResourcePickerDialog } from "@/components/modules/ResourcePickerDialog"
 import { ScenarioPickerDialog } from "@/components/modules/ScenarioPickerDialog";
 import { validateFile, acceptStringForBucket, sanitizeFilename } from "@/lib/fileValidation";
 
+type ContentRole = "scenario" | "reference" | "rubric" | "other";
+
+const CONTENT_ROLE_LABELS: Record<ContentRole, string> = {
+  scenario: "Scenario",
+  reference: "Reference",
+  rubric: "Rubric",
+  other: "Other",
+};
+
 interface Attachment {
   id?: string;
   title: string;
@@ -44,6 +53,7 @@ interface Attachment {
   file_path?: string;
   url?: string;
   description?: string;
+  content_role?: ContentRole;
   file?: File;
 }
 
@@ -74,6 +84,7 @@ interface LinkedScenario {
 interface LinkedResource {
   id: string;
   resource_id: string;
+  content_role?: ContentRole;
   resource: {
     id: string;
     title: string;
@@ -95,6 +106,7 @@ interface PendingResource {
   title: string;
   description: string | null;
   resource_type: string;
+  content_role?: ContentRole;
 }
 
 interface ModuleClientContentManagerProps {
@@ -129,7 +141,7 @@ export default function ModuleClientContentManager({
   async function fetchData() {
     const { data: contents } = await supabase
       .from("module_client_content")
-      .select("*, module_client_content_attachments(*)")
+      .select("*, module_client_content_attachments(*), module_client_content_resources(*, resource:resource_library(id, title, resource_type))")
       .eq("module_id", moduleId);
 
     const { data: enrollments } = await supabase
@@ -160,6 +172,12 @@ export default function ModuleClientContentManager({
         ...c,
         user_name: profiles?.find((p) => p.id === c.user_id)?.name || "Unknown",
         attachments: (c as any).module_client_content_attachments || [],
+        resources: ((c as any).module_client_content_resources || []).map((r: any) => ({
+          id: r.id,
+          resource_id: r.resource_id,
+          content_role: r.content_role,
+          resource: r.resource,
+        })),
       }));
       setClientContents(contentsWithNames);
     }
@@ -207,6 +225,7 @@ export default function ModuleClientContentManager({
             mime_type: attachment.file.type,
             file_size: attachment.file.size,
             description: attachment.description,
+            content_role: attachment.content_role || "other",
           });
         } else if (attachment.url && !attachment.id) {
           await supabase.from("module_client_content_attachments").insert({
@@ -215,6 +234,7 @@ export default function ModuleClientContentManager({
             attachment_type: attachment.attachment_type,
             url: attachment.url,
             description: attachment.description,
+            content_role: attachment.content_role || "other",
           });
         }
       }
@@ -239,6 +259,7 @@ export default function ModuleClientContentManager({
           module_client_content_id: savedContent.id,
           resource_id: resource.id,
           assigned_by: currentUser?.id,
+          content_role: resource.content_role || "other",
         });
         if (resError) {
           console.error("Failed to assign resource:", resource.id, resError);
@@ -303,6 +324,7 @@ export default function ModuleClientContentManager({
     const newAttachments: Attachment[] = validFiles.map((file) => ({
       title: file.name,
       attachment_type: file.type.startsWith("image/") ? "image" : "file",
+      content_role: "other" as ContentRole,
       file,
     }));
     setAttachments([...attachments, ...newAttachments]);
@@ -310,7 +332,7 @@ export default function ModuleClientContentManager({
   }
 
   function addLinkAttachment() {
-    setAttachments([...attachments, { title: "", attachment_type: "link", url: "" }]);
+    setAttachments([...attachments, { title: "", attachment_type: "link", url: "", content_role: "other" }]);
   }
 
   function updateAttachment(index: number, field: keyof Attachment, value: string) {
@@ -393,12 +415,35 @@ export default function ModuleClientContentManager({
                           >
                             <Paperclip className="h-3 w-3" />
                             {att.title}
+                            {att.content_role && att.content_role !== "other" && (
+                              <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                                {CONTENT_ROLE_LABELS[att.content_role as ContentRole] || att.content_role}
+                              </Badge>
+                            )}
                             <button
                               onClick={() => deleteAttachment(att.id, att.file_path)}
                               className="ml-1 hover:text-destructive"
                             >
                               <X className="h-3 w-3" />
                             </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {cc.resources && cc.resources.length > 0 && (
+                      <div className="flex flex-wrap gap-2 pt-2 border-t">
+                        {cc.resources.map((res: LinkedResource) => (
+                          <div
+                            key={res.id}
+                            className="flex items-center gap-1 bg-primary/10 px-2 py-1 rounded text-xs"
+                          >
+                            <Library className="h-3 w-3" />
+                            {res.resource?.title}
+                            {res.content_role && res.content_role !== "other" && (
+                              <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                                {CONTENT_ROLE_LABELS[res.content_role as ContentRole] || res.content_role}
+                              </Badge>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -509,6 +554,21 @@ export default function ModuleClientContentManager({
                           <span className="text-sm">{att.title}</span>
                         </div>
                       )}
+                      <Select
+                        value={att.content_role || "other"}
+                        onValueChange={(val) => updateAttachment(index, "content_role", val)}
+                      >
+                        <SelectTrigger className="w-28 h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(CONTENT_ROLE_LABELS).map(([value, label]) => (
+                            <SelectItem key={value} value={value}>
+                              {label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <Button
                         type="button"
                         variant="ghost"
@@ -531,9 +591,25 @@ export default function ModuleClientContentManager({
                     <Badge variant="secondary" className="text-xs capitalize">
                       {res.resource_type}
                     </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      New
-                    </Badge>
+                    <Select
+                      value={res.content_role || "other"}
+                      onValueChange={(val) => {
+                        const updated = [...pendingResources];
+                        updated[index] = { ...updated[index], content_role: val as ContentRole };
+                        setPendingResources(updated);
+                      }}
+                    >
+                      <SelectTrigger className="w-28 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(CONTENT_ROLE_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Button
                       type="button"
                       variant="ghost"

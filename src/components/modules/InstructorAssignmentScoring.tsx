@@ -589,6 +589,36 @@ export function InstructorAssignmentScoring({
         })
         .eq("id", assignmentId);
       if (updateError) throw updateError;
+
+      // Auto-link scenario ↔ assignment ↔ snapshot when scoring completes
+      if (status === "completed" && progressData?.module_id) {
+        try {
+          const moduleId = progressData.module_id;
+          const { data: scenarios } = await supabase
+            .from("scenario_assignments")
+            .select("id")
+            .eq("module_id", moduleId)
+            .eq("user_id", clientUserId)
+            .neq("status", "draft")
+            .order("created_at", { ascending: false });
+
+          // Auto-link if exactly 1 non-draft scenario for this module+client
+          if (scenarios && scenarios.length === 1) {
+            const scenarioId = scenarios[0].id;
+            await supabase
+              .from("module_assignments")
+              .update({ scenario_assignment_id: scenarioId })
+              .eq("id", assignmentId);
+            await supabase
+              .from("scenario_assignments")
+              .update({ scoring_snapshot_id: snapshotId })
+              .eq("id", scenarioId);
+          }
+        } catch (linkErr) {
+          // Non-critical — log but don't fail the scoring
+          console.error("Failed to auto-link scenario to scoring:", linkErr);
+        }
+      }
     },
     onSuccess: async (_, { status }) => {
       queryClient.invalidateQueries({ queryKey: ["assignment-scoring-snapshot", assignmentId] });
