@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -32,6 +32,7 @@ import {
   AlertTriangle,
   RotateCcw,
   History,
+  Save,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdminLoadingState } from "@/components/admin";
@@ -66,6 +67,8 @@ export default function ScenarioEvaluationPage() {
   const [notesSaveStatus, setNotesSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [showRevisionDialog, setShowRevisionDialog] = useState(false);
   const [revisionNotes, setRevisionNotes] = useState("");
+  // Incremented to trigger immediate save on all visible paragraph feedback
+  const [saveAllTrigger, setSaveAllTrigger] = useState(0);
 
   const { data: assignment, isLoading: assignmentLoading } = useScenarioAssignment(id);
   const { data: sections, isLoading: sectionsLoading } = useScenarioSections(
@@ -139,6 +142,23 @@ export default function ScenarioEvaluationPage() {
     if (assignment.status === "submitted") {
       updateStatusMutation.mutate({ id: assignment.id, status: "in_review" });
     }
+  };
+
+  const handleSaveAll = () => {
+    // 1. Save overall notes immediately (skip debounce)
+    if (overallNotes !== savedOverallNotes) {
+      setNotesSaveStatus("saving");
+      updateStatusMutation.mutate(
+        { id: assignment.id, status: assignment.status, notes: overallNotes },
+        {
+          onSuccess: () => setNotesSaveStatus("saved"),
+          onError: () => setNotesSaveStatus("idle"),
+        },
+      );
+    }
+    // 2. Trigger all visible paragraph items to save immediately
+    setSaveAllTrigger((prev) => prev + 1);
+    toast({ description: "All feedback saved" });
   };
 
   const handleRequestRevision = () => {
@@ -376,6 +396,7 @@ export default function ScenarioEvaluationPage() {
           evaluations={evaluations || []}
           scores={scores || []}
           ratingScale={ratingScale}
+          saveAllTrigger={saveAllTrigger}
         />
       )}
 
@@ -395,6 +416,10 @@ export default function ScenarioEvaluationPage() {
                   Request Revision
                 </Button>
               )}
+              <Button variant="outline" size="sm" onClick={handleSaveAll}>
+                <Save className="h-4 w-4 mr-2" />
+                Save All
+              </Button>
               <Button onClick={handleCompleteEvaluation} disabled={updateStatusMutation.isPending}>
                 {updateStatusMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -458,6 +483,7 @@ function SectionEvaluationView({
   evaluations,
   scores,
   ratingScale,
+  saveAllTrigger,
 }: {
   section: ScenarioSection;
   assignmentId: string;
@@ -465,6 +491,7 @@ function SectionEvaluationView({
   evaluations: any[];
   scores: any[];
   ratingScale: number;
+  saveAllTrigger: number;
 }) {
   const { data: paragraphs, isLoading } = useSectionParagraphs(section.id);
 
@@ -490,6 +517,7 @@ function SectionEvaluationView({
             existingScores={scores.filter((s) => s.paragraph_id === paragraph.id)}
             ratingScale={ratingScale}
             sectionId={section.id}
+            saveAllTrigger={saveAllTrigger}
           />
         ))}
       </CardContent>
@@ -510,6 +538,7 @@ function ParagraphEvaluationItem({
   existingScores,
   ratingScale,
   sectionId,
+  saveAllTrigger,
 }: {
   paragraph: SectionParagraph & { paragraph_question_links?: ParagraphQuestionLink[] };
   paragraphNumber: number;
@@ -519,10 +548,13 @@ function ParagraphEvaluationItem({
   existingScores: any[];
   ratingScale: number;
   sectionId: string;
+  saveAllTrigger: number;
 }) {
-  const savedFeedback = evaluation?.feedback || "";
-  const [feedback, setFeedback] = useState(savedFeedback);
+  const savedFeedbackRef = useRef(evaluation?.feedback || "");
+  const [feedback, setFeedback] = useState(savedFeedbackRef.current);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const feedbackRef = useRef(feedback);
+  feedbackRef.current = feedback;
   const [localScores, setLocalScores] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
     existingScores.forEach((s) => {
@@ -536,27 +568,42 @@ function ParagraphEvaluationItem({
 
   const questionLinks = paragraph.paragraph_question_links || [];
 
+  const saveFeedbackNow = useCallback(() => {
+    const current = feedbackRef.current;
+    if (current === savedFeedbackRef.current) return;
+    if (!current && !savedFeedbackRef.current) return;
+    setSaveStatus("saving");
+    savedFeedbackRef.current = current; // optimistic — mark as saved to prevent re-fires
+    evaluationMutation.mutate(
+      { paragraphId: paragraph.id, feedback: current },
+      {
+        onSuccess: () => setSaveStatus("saved"),
+        onError: () => setSaveStatus("idle"),
+      },
+    );
+  }, [evaluationMutation, paragraph.id]);
+
   // Auto-save feedback with 1.5s debounce
   useEffect(() => {
-    // Skip if feedback matches the saved version (no change)
-    if (feedback === savedFeedback) return;
-    // Skip empty feedback if there's nothing saved yet (don't create empty records)
-    if (!feedback && !savedFeedback) return;
+    if (feedback === savedFeedbackRef.current) return;
+    if (!feedback && !savedFeedbackRef.current) return;
 
     setSaveStatus("idle");
-    const timer = setTimeout(() => {
-      setSaveStatus("saving");
-      evaluationMutation.mutate(
-        { paragraphId: paragraph.id, feedback },
-        {
-          onSuccess: () => setSaveStatus("saved"),
-          onError: () => setSaveStatus("idle"),
-        },
-      );
-    }, 1500);
-
+    const timer = setTimeout(saveFeedbackNow, 1500);
     return () => clearTimeout(timer);
-  }, [feedback]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [feedback, saveFeedbackNow]);
+
+  // Flush unsaved feedback on unmount (e.g. switching sections)
+  useEffect(() => {
+    return () => saveFeedbackNow();
+  }, [saveFeedbackNow]);
+
+  // React to "Save All" trigger from parent — save immediately
+  useEffect(() => {
+    if (saveAllTrigger > 0) {
+      saveFeedbackNow();
+    }
+  }, [saveAllTrigger, saveFeedbackNow]);
 
   const handleScoreChange = (questionId: string, score: number) => {
     setLocalScores((prev) => ({ ...prev, [questionId]: score }));
