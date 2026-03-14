@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -155,10 +155,14 @@ export default function ScenarioEvaluationPage() {
   const allowsResubmission = assignment.scenario_templates?.allows_resubmission ?? false;
   const attemptNumber = assignment.attempt_number ?? 1;
 
-  // Start review when page loads if status is submitted
-  if (assignment.status === "submitted") {
-    handleStartReview();
-  }
+  // Start review when page loads if status is submitted (use ref to prevent re-triggering)
+  const reviewStartedRef = useRef(false);
+  useEffect(() => {
+    if (assignment?.status === "submitted" && !reviewStartedRef.current) {
+      reviewStartedRef.current = true;
+      handleStartReview();
+    }
+  }, [assignment?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-6">
