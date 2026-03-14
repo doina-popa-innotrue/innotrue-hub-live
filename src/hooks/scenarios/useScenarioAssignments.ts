@@ -201,7 +201,15 @@ export function useScenarioAssignmentMutations() {
         updateData.overall_notes = notes;
       }
 
-      const { error } = await supabase.from("scenario_assignments").update(updateData).eq("id", id);
+      // Guard: "in_review" should only apply to "submitted" assignments,
+      // preventing a race condition where a concurrent "evaluated" update
+      // gets overwritten back to "in_review"
+      let query = supabase.from("scenario_assignments").update(updateData).eq("id", id);
+      if (status === "in_review") {
+        query = query.eq("status", "submitted");
+      }
+
+      const { error } = await query;
 
       if (error) throw error;
 

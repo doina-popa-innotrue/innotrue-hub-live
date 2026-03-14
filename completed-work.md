@@ -1,5 +1,76 @@
 # Completed Work — Detailed History
 
+## ScenarioEvaluationPage Infinite Loop Fix (2026-04-14)
+
+Commit `5fbfaf4`. Critical production bug fix.
+
+### Problem
+Sentry reported "Maximum update depth exceeded" on `/teaching/scenarios/:id` (ScenarioEvaluationPage). The page entered an infinite re-render loop, eventually crashing the browser tab and causing "fetchUserRolesAndMembership timed out after 8000ms" downstream.
+
+### Root Cause
+`handleStartReview()` was called directly in the render body (not in a `useEffect`). When an assignment had `status === "submitted"`, every render called `handleStartReview()` → mutation → query invalidation → re-render → infinite loop.
+
+### Fix
+Replaced the inline call with a `useEffect` + `useRef` guard pattern:
+- Added `reviewStartedRef = useRef(false)` to prevent re-execution
+- Moved the call into `useEffect` with `[assignment?.status]` dependency
+- Ref guard ensures `handleStartReview()` runs exactly once per mount
+
+**Files modified:** 1 (`src/pages/instructor/ScenarioEvaluationPage.tsx`)
+
+---
+
+## Assignment-Scenario Linking + Content Role Tagging (2026-04-14)
+
+Commit `f756c7b`. Migration `20260414160000_assignment_scenario_linking.sql`.
+
+### Problem
+When an instructor evaluates a module assignment (e.g. CTA mock), the capability snapshot (scoring result) had no connection to the scenario the client worked on. You couldn't answer "which scenario was this evaluation for?" or "how was this scenario scored?" Also, when the scenario is a doc/resource rather than a structured template, there was no way to identify which attachment is "the scenario" vs supporting material.
+
+### Changes
+
+**Migration — 4 schema changes:**
+- `module_assignments.scenario_assignment_id` UUID FK → `scenario_assignments(id)` ON DELETE SET NULL — the assignment "pack" now knows which scenario the client was given
+- `scenario_assignments.scoring_snapshot_id` UUID FK → `capability_snapshots(id)` ON DELETE SET NULL — the scenario now knows its evaluation result
+- `module_client_content_attachments.content_role` TEXT NOT NULL DEFAULT 'other' — tags content as 'scenario', 'reference', 'rubric', or 'other'
+- `module_client_content_resources.content_role` TEXT NOT NULL DEFAULT 'other' — same for resources
+- Partial indexes on both new FK columns
+- Updated `admin_data_cleanup_preview` and `admin_data_cleanup_execute` RPCs to handle new FKs (nullification before delete)
+
+**Frontend — auto-linking logic in `InstructorAssignmentScoring.tsx`:**
+- After scoring completes (status = "completed"), queries `scenario_assignments` for the module+client
+- If exactly 1 non-draft scenario exists → auto-links both FKs (module_assignment → scenario, scenario → snapshot)
+- If 0 or multiple scenarios → skips (no ambiguous auto-linking)
+- Non-critical: failures logged but don't block the scoring
+
+**Frontend — content role UI in `ModuleClientContentManager.tsx`:**
+- Added `ContentRole` type and `CONTENT_ROLE_LABELS` constant (Scenario, Reference, Rubric, Other)
+- Role selector `<Select>` dropdown for new file attachments
+- Role selector for pending resource links
+- Role badges displayed on existing attachments and resources
+- `content_role` saved on insert for both attachments and resources
+
+**Type + UI updates:**
+- `ScenarioAssignment` interface: added `scoring_snapshot_id?: string | null`
+- `DataCleanupEntityCard.tsx`: added `scenario_assignments` to `FRIENDLY_NAMES`
+- Types regenerated from preprod
+
+**Navigability after implementation:**
+| From → To | Path |
+|---|---|
+| Assignment → Scenario | `module_assignments.scenario_assignment_id` (direct FK) |
+| Assignment → Snapshot | `module_assignments.scoring_snapshot_id` (existing) |
+| Scenario → Snapshot | `scenario_assignments.scoring_snapshot_id` (new FK) |
+| Scenario → Assignment | `module_assignments WHERE scenario_assignment_id = ?` |
+| Snapshot → Scenario | `scenario_assignments WHERE scoring_snapshot_id = ?` |
+
+**Files created:** 1 (migration)
+**Files modified:** 5 (`InstructorAssignmentScoring.tsx`, `ModuleClientContentManager.tsx`, `scenarios.ts`, `DataCleanupEntityCard.tsx`, `types.ts`)
+
+**Note:** Prod migration pending due to Supabase CLI connection timeout on login role creation. Preprod + sandbox applied successfully.
+
+---
+
 ## R7 Test Phase 2 — React Hook Tests (2026-04-14)
 
 Commit `a2538ef`. 97 new tests across 12 hook test files + 3 infrastructure files. Total: 554 → 651 tests.

@@ -362,6 +362,34 @@ export default function ScenarioEvaluationPage() {
         />
       )}
 
+      {/* Sticky Bottom Action Bar — always visible while scrolling */}
+      {assignment.status !== "evaluated" && (
+        <div className="sticky bottom-0 z-10 -mx-4 px-4 py-3 bg-background/95 backdrop-blur border-t shadow-lg">
+          <div className="flex items-center justify-between max-w-full">
+            <p className="text-sm text-muted-foreground">
+              {scoreSummary
+                ? `Overall Score: ${scoreSummary.overall_percentage.toFixed(1)}%`
+                : "Complete all scoring before finishing the evaluation"}
+            </p>
+            <div className="flex items-center gap-2">
+              {allowsResubmission && (
+                <Button variant="outline" size="sm" onClick={() => setShowRevisionDialog(true)}>
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Request Revision
+                </Button>
+              )}
+              <Button onClick={handleCompleteEvaluation} disabled={updateStatusMutation.isPending}>
+                {updateStatusMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Complete Evaluation
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Request Revision Dialog */}
       <Dialog open={showRevisionDialog} onOpenChange={setShowRevisionDialog}>
         <DialogContent>
