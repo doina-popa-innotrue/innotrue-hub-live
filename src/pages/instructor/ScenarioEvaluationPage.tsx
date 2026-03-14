@@ -574,26 +574,28 @@ function ParagraphEvaluationItem({
         </div>
       )}
 
-      {/* Evaluator Feedback */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <Label className="text-sm font-medium">Evaluator Feedback</Label>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSaveFeedback}
-            disabled={evaluationMutation.isPending}
-          >
-            {evaluationMutation.isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-            Save Feedback
-          </Button>
+      {/* Evaluator Feedback — only for paragraphs that require a response */}
+      {paragraph.requires_response && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-sm font-medium">Evaluator Feedback</Label>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveFeedback}
+              disabled={evaluationMutation.isPending}
+            >
+              {evaluationMutation.isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+              Save Feedback
+            </Button>
+          </div>
+          <RichTextEditor
+            value={feedback}
+            onChange={setFeedback}
+            placeholder="Add feedback for this response..."
+          />
         </div>
-        <RichTextEditor
-          value={feedback}
-          onChange={setFeedback}
-          placeholder="Add feedback for this response..."
-        />
-      </div>
+      )}
     </div>
   );
 }
