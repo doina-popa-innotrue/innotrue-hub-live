@@ -42,6 +42,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { toast } from "sonner";
 
+// Minimum package price (in cents) to show installment payment options
+const LARGE_PACKAGE_THRESHOLD_CENTS = 10000; // €100
+
 interface PendingEnrollmentData {
   programId: string;
   tierName: string;
