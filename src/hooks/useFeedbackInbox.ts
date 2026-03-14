@@ -219,19 +219,23 @@ async function fetchGoalComments(userId: string): Promise<FeedbackItem[]> {
   }));
 }
 
-export function useFeedbackInbox(limit?: number) {
+export function useFeedbackInbox(options?: { limit?: number; types?: FeedbackType[] }) {
   const { user } = useAuth();
+  const limit = options?.limit;
+  const types = options?.types;
 
   return useQuery({
-    queryKey: ["feedback-inbox", user?.id],
+    queryKey: ["feedback-inbox", user?.id, types],
     queryFn: async () => {
       if (!user?.id) return [];
 
+      const includeAll = !types || types.length === 0;
+
       const [scenarios, modules, assignments, goals] = await Promise.all([
-        fetchScenarioFeedback(user.id),
-        fetchModuleFeedback(user.id),
-        fetchAssignmentFeedback(user.id),
-        fetchGoalComments(user.id),
+        includeAll || types?.includes("scenario") ? fetchScenarioFeedback(user.id) : Promise.resolve([]),
+        includeAll || types?.includes("module") ? fetchModuleFeedback(user.id) : Promise.resolve([]),
+        includeAll || types?.includes("assignment") ? fetchAssignmentFeedback(user.id) : Promise.resolve([]),
+        includeAll || types?.includes("goal") ? fetchGoalComments(user.id) : Promise.resolve([]),
       ]);
 
       const allItems = [...scenarios, ...modules, ...assignments, ...goals];

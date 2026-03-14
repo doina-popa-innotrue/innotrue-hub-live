@@ -867,7 +867,7 @@ export default function ClientDashboard() {
         </Card>
       </div>
 
-      {/* Section 5: Active Programs & Upcoming Sessions */}
+      {/* Section 5: Active Programs & Recently Graded Assignments */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Active Programs */}
         <div>
@@ -920,54 +920,8 @@ export default function ClientDashboard() {
           )}
         </div>
 
-        {/* Upcoming Sessions */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Upcoming Sessions
-            </h2>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/calendar")}>
-              View Calendar
-            </Button>
-          </div>
-          {upcomingSessions.length === 0 ? (
-            <EmptyState
-              icon={Calendar}
-              title="No upcoming sessions"
-              description="Check your calendar for scheduling options"
-              actionLabel="View Calendar"
-              actionHref="/calendar"
-            />
-          ) : (
-            <div className="space-y-3">
-              {upcomingSessions.slice(0, 3).map((session) => (
-                <Card
-                  key={session.id}
-                  className="hover:border-primary transition-colors cursor-pointer"
-                  onClick={() =>
-                    session.type === "group"
-                      ? navigate(`/groups/${session.group_id}`)
-                      : navigate(`/programs/${session.program_id}`)
-                  }
-                >
-                  <CardContent className="pt-4 pb-4">
-                    <div className="space-y-1">
-                      <p className="font-medium truncate">{session.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {session.type === "group" ? session.group_name : session.program_name}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {format(session.next_occurrence, "MMM d, yyyy h:mm a")}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Recently Graded Assignments */}
+        <RecentGradedAssignmentsWidget />
       </div>
 
       {/* Section 6: Development Hub (Goals, Decisions, Tasks) */}
@@ -1158,8 +1112,54 @@ export default function ClientDashboard() {
       {/* Section 10: Weekly Reflection */}
       {hasFeature("ai_insights") && <WeeklyReflectionCard />}
 
-      {/* Section 11: Recently Graded Assignments */}
-      <RecentGradedAssignmentsWidget />
+      {/* Section 11: Upcoming Sessions */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Upcoming Sessions
+          </h2>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/calendar")}>
+            View Calendar
+          </Button>
+        </div>
+        {upcomingSessions.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title="No upcoming sessions"
+            description="Check your calendar for scheduling options"
+            actionLabel="View Calendar"
+            actionHref="/calendar"
+          />
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {upcomingSessions.slice(0, 3).map((session) => (
+              <Card
+                key={session.id}
+                className="hover:border-primary transition-colors cursor-pointer"
+                onClick={() =>
+                  session.type === "group"
+                    ? navigate(`/groups/${session.group_id}`)
+                    : navigate(`/programs/${session.program_id}`)
+                }
+              >
+                <CardContent className="pt-4 pb-4">
+                  <div className="space-y-1">
+                    <p className="font-medium truncate">{session.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {session.type === "group" ? session.group_name : session.program_name}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      {format(session.next_occurrence, "MMM d, yyyy h:mm a")}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Section 12: My Coaches & Instructors (Bottom) */}
       <MyCoachesSection />

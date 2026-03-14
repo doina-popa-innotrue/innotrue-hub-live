@@ -7,7 +7,10 @@ import { useFeedbackInbox } from "@/hooks/useFeedbackInbox";
 
 export function RecentFeedbackWidget() {
   const navigate = useNavigate();
-  const { data: items = [], isLoading } = useFeedbackInbox(3);
+  const { data: items = [], isLoading } = useFeedbackInbox({
+    limit: 3,
+    types: ["module", "goal"],
+  });
 
   // Don't render if loading or no feedback
   if (isLoading || items.length === 0) return null;
