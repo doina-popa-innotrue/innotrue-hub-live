@@ -14,6 +14,7 @@ import { PlatformTermsAcceptanceGate } from "@/components/terms/PlatformTermsAcc
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { SkipLink } from "@/components/accessibility/SkipLink";
 import { BackButton } from "@/components/navigation/BackButton";
+import { PrintWatermark } from "@/components/ui/print-watermark";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -130,6 +131,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </div>
         <OnboardingTour />
+        <PrintWatermark />
       </SidebarProvider>
     </PlatformTermsAcceptanceGate>
   );

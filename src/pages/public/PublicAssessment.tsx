@@ -18,6 +18,7 @@ import jsPDF from "jspdf";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { ProtectedContent } from "@/components/ui/protected-content";
+import { PrintWatermark } from "@/components/ui/print-watermark";
 
 const emailSchema = z.string().email("Please enter a valid email address");
 
@@ -252,6 +253,7 @@ export default function PublicAssessment() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4 md:p-8">
+      <PrintWatermark userLabel={email || "Public User"} />
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">

@@ -243,9 +243,17 @@ function installLmsApiOnWindow(
 /**
  * Inject copy-protection CSS + JS into HTML content before creating a blob URL.
  * Blocks text selection, copy, right-click, and drag inside the iframe.
+ * Also adds a print watermark with the user's identity for traceability.
  * This is necessary because parent-page CSS/JS cannot reach into iframe content.
  */
-function injectCopyProtection(html: string): string {
+function injectCopyProtection(html: string, userLabel?: string): string {
+  const dateStr = new Date().toLocaleDateString("en-GB", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+  const wmText = `\u00A9 InnoTrue \u00B7 ${userLabel || "User"} \u00B7 ${dateStr}`;
+
   const snippet = `
 <style>
   body, body * {
@@ -261,13 +269,71 @@ function injectCopyProtection(html: string): string {
     -ms-user-select: text !important;
     user-select: text !important;
   }
+  /* Print watermark — invisible on screen, visible when printing */
+  @media print {
+    body::after {
+      content: "";
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 99999;
+      pointer-events: none;
+      background-image:
+        repeating-linear-gradient(
+          -35deg,
+          transparent,
+          transparent 60px,
+          rgba(0,0,64,0.06) 60px,
+          rgba(0,0,64,0.06) 61px,
+          transparent 61px,
+          transparent 120px
+        );
+    }
+    .print-wm-overlay {
+      display: block !important;
+    }
+  }
+  .print-wm-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    z-index: 99999;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .print-wm-inner {
+    position: absolute;
+    top: -25%; left: -25%;
+    width: 150%; height: 150%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    transform: rotate(-35deg);
+    transform-origin: center center;
+  }
+  .print-wm-line {
+    white-space: nowrap;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+    font-weight: 600;
+    color: rgba(0,0,64,0.08);
+    letter-spacing: 2px;
+    line-height: 1;
+    padding: 20px 0;
+  }
 </style>
 <script>
   document.addEventListener('copy', function(e) { e.preventDefault(); });
   document.addEventListener('cut', function(e) { e.preventDefault(); });
   document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
   document.addEventListener('dragstart', function(e) { e.preventDefault(); });
-</script>`;
+</script>
+<div class="print-wm-overlay" aria-hidden="true">
+  <div class="print-wm-inner">
+    ${Array(12).fill('<div class="print-wm-line">' + Array(4).fill(wmText).join("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;") + "</div>").join("\n    ")}
+  </div>
+</div>`;
 
   // Inject before </head> if present, otherwise before </body>, otherwise append
   if (html.includes("</head>")) {
@@ -306,10 +372,31 @@ export function ContentPackageViewer({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [xapiCompleted, setXapiCompleted] = useState(false);
+  const [userLabel, setUserLabel] = useState<string>("User");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const sessionIdRef = useRef<string | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lmsCleanupRef = useRef<(() => void) | null>(null);
+
+  // Fetch user identity for print watermark
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const userId = data?.user?.id;
+      const email = data?.user?.email;
+      if (userId) {
+        supabase
+          .from("profiles")
+          .select("name")
+          .eq("id", userId)
+          .single()
+          .then(({ data: profile }) => {
+            setUserLabel(profile?.name || email || "User");
+          });
+      } else if (email) {
+        setUserLabel(email);
+      }
+    });
+  }, []);
 
   // Keep a stable ref to the onXapiComplete callback so polling
   // doesn't trigger content-loading effect re-runs.
@@ -443,7 +530,7 @@ export function ContentPackageViewer({
 
           const html = await htmlResp.text();
           if (!cancelled) {
-            const protectedHtml = injectCopyProtection(html);
+            const protectedHtml = injectCopyProtection(html, userLabel);
             const blob = new Blob([protectedHtml], { type: "text/html" });
             objectUrl = URL.createObjectURL(blob);
             setBlobUrl(objectUrl);
@@ -461,7 +548,7 @@ export function ContentPackageViewer({
 
           const html = await resp.text();
           if (!cancelled) {
-            const protectedHtml = injectCopyProtection(html);
+            const protectedHtml = injectCopyProtection(html, userLabel);
             const blob = new Blob([protectedHtml], { type: "text/html" });
             objectUrl = URL.createObjectURL(blob);
             setBlobUrl(objectUrl);

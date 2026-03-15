@@ -197,4 +197,8 @@ All colors MUST be HSL.
   .break-inside-avoid {
     break-inside: avoid;
   }
+  /* Print watermark — hidden on screen, visible on every printed page */
+  .print-watermark {
+    display: block !important;
+  }
 }

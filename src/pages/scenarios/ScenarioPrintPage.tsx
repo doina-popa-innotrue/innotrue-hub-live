@@ -8,6 +8,7 @@ import { Printer, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { RichTextDisplay } from "@/components/ui/rich-text-display";
 import { ProtectedContent } from "@/components/ui/protected-content";
+import { PrintWatermark } from "@/components/ui/print-watermark";
 import {
   useScenarioAssignment,
   useScenarioSections,
@@ -96,6 +97,7 @@ export default function ScenarioPrintPage() {
 
   return (
     <ProtectedContent className="max-w-4xl mx-auto px-6 py-8 bg-background min-h-screen">
+      <PrintWatermark />
       {/* Print button — hidden when printing */}
       <div className="print:hidden mb-6 flex items-center justify-between">
         <Button variant="outline" onClick={() => window.history.back()}>
