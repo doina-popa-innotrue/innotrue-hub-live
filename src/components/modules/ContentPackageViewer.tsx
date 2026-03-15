@@ -241,6 +241,45 @@ function installLmsApiOnWindow(
 }
 
 /**
+ * Inject copy-protection CSS + JS into HTML content before creating a blob URL.
+ * Blocks text selection, copy, right-click, and drag inside the iframe.
+ * This is necessary because parent-page CSS/JS cannot reach into iframe content.
+ */
+function injectCopyProtection(html: string): string {
+  const snippet = `
+<style>
+  body, body * {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+  }
+  /* Allow selection in input/textarea so learners can type answers */
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+  }
+</style>
+<script>
+  document.addEventListener('copy', function(e) { e.preventDefault(); });
+  document.addEventListener('cut', function(e) { e.preventDefault(); });
+  document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+  document.addEventListener('dragstart', function(e) { e.preventDefault(); });
+</script>`;
+
+  // Inject before </head> if present, otherwise before </body>, otherwise append
+  if (html.includes("</head>")) {
+    return html.replace("</head>", snippet + "</head>");
+  }
+  if (html.includes("</body>")) {
+    return html.replace("</body>", snippet + "</body>");
+  }
+  return html + snippet;
+}
+
+/**
  * Renders a Rise content package inside an iframe.
  *
  * Supports two modes:
@@ -404,7 +443,8 @@ export function ContentPackageViewer({
 
           const html = await htmlResp.text();
           if (!cancelled) {
-            const blob = new Blob([html], { type: "text/html" });
+            const protectedHtml = injectCopyProtection(html);
+            const blob = new Blob([protectedHtml], { type: "text/html" });
             objectUrl = URL.createObjectURL(blob);
             setBlobUrl(objectUrl);
             startCompletionPolling(launchData.sessionId);
@@ -421,7 +461,8 @@ export function ContentPackageViewer({
 
           const html = await resp.text();
           if (!cancelled) {
-            const blob = new Blob([html], { type: "text/html" });
+            const protectedHtml = injectCopyProtection(html);
+            const blob = new Blob([protectedHtml], { type: "text/html" });
             objectUrl = URL.createObjectURL(blob);
             setBlobUrl(objectUrl);
           }
