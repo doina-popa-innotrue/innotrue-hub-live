@@ -39,6 +39,7 @@ import {
   Target,
   Film,
   ClipboardCheck,
+  Download,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ModuleForm from "@/components/admin/ModuleForm";
@@ -98,6 +99,7 @@ import { ProgramPlanConfig } from "@/components/admin/ProgramPlanConfig";
 import { ModuleDomainMapper } from "@/components/admin/ModuleDomainMapper";
 import { validateFile, acceptStringForBucket } from "@/lib/fileValidation";
 import { PageLoadingState } from "@/components/ui/page-loading-state";
+import { exportProgramStructure } from "@/lib/exportProgramStructure";
 
 interface ModuleMeta {
   sectionCount: number;
@@ -422,6 +424,7 @@ export default function ProgramDetail() {
   const [editingDescription, setEditingDescription] = useState("");
   const [editingProgramCode, setEditingProgramCode] = useState("");
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [programDeleteDialogOpen, setProgramDeleteDialogOpen] = useState(false);
   const [programDeleteEnrollmentCount, setProgramDeleteEnrollmentCount] = useState<number | null>(null);
   const [programDeleteLoading, setProgramDeleteLoading] = useState(false);
@@ -1262,6 +1265,28 @@ export default function ProgramDetail() {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={exporting}
+              onClick={async () => {
+                setExporting(true);
+                try {
+                  await exportProgramStructure(id);
+                  toast.success("Program structure exported");
+                } catch (e) {
+                  console.error("Export failed:", e);
+                  toast.error("Failed to export program structure");
+                } finally {
+                  setExporting(false);
+                }
+              }}
+              title="Export full program structure as Markdown"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              <span className="hidden xs:inline">{exporting ? "Exporting..." : "Export"}</span>
+              <span className="xs:hidden"><Download className="h-4 w-4" /></span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
